@@ -117,8 +117,10 @@ function parseQuick(text) {
   const qm = t.match(/(\d+)\s*(박스|낱개|개|장|본|단)/);
   const qty = qm ? Number(qm[1]) : '';
   let unit = qm ? qm[2] : '';
-  let cands = items.filter((it) => it.name && t.includes(it.name));
-  cands.sort((a, b) => b.name.length - a.name.length);
+  const aliasesOf = (it) => [it.name, ...String(it.aliases || '').split(/[,\n]/).map((s) => s.trim()).filter(Boolean)];
+  const matchLen = (it) => Math.max(0, ...aliasesOf(it).filter((a) => a && t.includes(a)).map((a) => a.length));
+  let cands = items.filter((it) => matchLen(it) > 0);
+  cands.sort((a, b) => matchLen(b) - matchLen(a));
   if (warehouse) { const inWh = cands.filter((it) => it.warehouse === warehouse); if (inWh.length) cands = inWh; }
   const item = cands[0] || null;
   if (item && !warehouse) warehouse = item.warehouse;
@@ -126,7 +128,7 @@ function parseQuick(text) {
   const d = parseDispatch(t);
   const status = /예정|내일|명일|모레|낼|다음|나중|가능할까|발주|주문/.test(t) ? '출고예정' : (d.hasDispatch ? '배차완료' : '출고완료');
   let rest = t;
-  if (item) rest = rest.split(item.name).join(' ');
+  if (item) aliasesOf(item).forEach((a) => { if (a) rest = rest.split(a).join(' '); });
   if (qm) rest = rest.split(qm[0]).join(' ');
   if (d.pm) rest = rest.split(d.pm[0]).join(' ');
   if (d.typeM) rest = rest.split(d.typeM[0]).join(' ');
@@ -138,6 +140,7 @@ function parseQuick(text) {
   const words = rest.split(/[\s,.\/]+/).filter((w) => w.length >= 2 && /[가-힣A-Za-z]/.test(w));
   return { warehouse: warehouse || '천안창고', itemId: item ? item.id : '', qty, unit,
     client: words[0] || '', status, note: d.note, matched: item ? item.name : null,
+    raw: t, guess: item ? '' : (words[0] || ''),   // 자동학습: 품목 못 찾으면 부른 말 추정
     dispatchVia: d.hasDispatch ? '이음물류' : '', driverName: d.driverName, driverPhone: d.driverPhone,
     vehicle: d.vehicle, freight: d.freight, payment: d.payment };
 }
@@ -631,6 +634,7 @@ function sheetShipForm() {
     <div class="field"><label>품목</label>
       <select name="itemId" id="f-item"></select>
       <p class="hint" id="f-stock" style="margin-top:8px"></p></div>
+    ${(shipPrefill && !shipPrefill.matched && shipPrefill.guess) ? `<div class="field"><label>별칭 학습 <span style="color:var(--faint);font-weight:400">이 문구에서 위 품목을 부른 말 → 저장하면 다음부터 자동인식</span></label><input name="learnAlias" value="${esc(shipPrefill.guess)}" placeholder="예: 다루끼" autocapitalize="none"></div>` : ''}
     <div class="field"><div class="row2">
       <div><label>수량</label><input name="qty" id="f-qty" type="number" min="1" inputmode="numeric" placeholder="0" value="${p.qty ?? ''}"></div>
       <div><label>단위 <span style="color:var(--faint);font-weight:400">박스/낱개</span></label><select name="unit" id="f-unit"></select></div>
@@ -798,6 +802,7 @@ function sheetItemForm(existing) {
     <div class="field"><label>구분</label>
       <div class="seg" data-seg="category">${CATEGORIES.map((c) => `<button type="button" data-v="${c}" class="${it.category === c ? 'on' : ''}">${c}</button>`).join('')}</div></div>
     <div class="field"><label>품목명 (색상 또는 규격)</label><input name="name" value="${esc(it.name)}" placeholder="예: 베이지 / 2*6*12"></div>
+    <div class="field"><label>별칭 <span style="color:var(--faint);font-weight:400">이렇게도 불러요 · 쉼표로 구분 (붙여넣기 자동인식)</span></label><input name="aliases" value="${esc(it.aliases || '')}" placeholder="예: 다루끼, 다루끼목, 30각" autocapitalize="none"></div>
     <div class="field"><div class="row2">
       <div><label>초기재고</label><input name="initial" type="number" inputmode="numeric" value="${it.initial}"></div>
       <div><label>단위</label><select name="unit">${UNITS.map((u) => `<option ${it.unit === u ? 'selected' : ''}>${u}</option>`).join('')}</select></div>
@@ -1314,7 +1319,7 @@ app.addEventListener('click', (e) => {
     });
     openSheet(sheetDoc(S.getShipments().find((s) => s.id === t.dataset.id)));
   }
-  else if (act === 'close' || (act === 'backdrop' && e.target === t)) { closeSheet(); }
+  else if (act === 'close') { closeSheet(); }   // 바깥 탭으로는 안 닫힘(입력 유실 방지) — 닫기/취소 버튼으로만
   else if (act === 'del-item') { if (confirm('이 품목을 삭제할까요?')) { S.deleteItem(t.dataset.id); closeSheet(); } }
   else if (act === 'del-wh') {
     if (confirm('이 창고를 삭제할까요?')) {
@@ -1396,6 +1401,11 @@ app.addEventListener('submit', (e) => {
       courier: form.courier.value.trim(), trackingNo: form.trackingNo.value.trim(), courierFee: form.courierFee.value,
       recvName: form.recvName.value.trim(), recvPhone: form.recvPhone.value.trim(), recvAddr: form.recvAddr.value.trim() });
     const newSh = saved;
+    const la = form.learnAlias ? form.learnAlias.value.trim() : '';   // 자동학습: 부른 말을 품목 별칭에 추가
+    if (la && it) {
+      const cur = String(it.aliases || '').split(/[,\n]/).map((s) => s.trim()).filter(Boolean);
+      if (!cur.includes(la)) S.updateItem(it.id, { aliases: [...cur, la].join(', ') });
+    }
     state.route = 'ship'; state.selDate = form.date.value;
     state.calY = +form.date.value.slice(0, 4); state.calM = +form.date.value.slice(5, 7);
     if (status === '출고예정' && newSh) openSheet(sheetPostSave(newSh.id)); else closeSheet();
@@ -1438,7 +1448,7 @@ app.addEventListener('submit', (e) => {
     if (!name) return alert('품목명을 입력하세요.');
     const payload = { warehouse, category, name, unit: form.unit.value, initial: form.initial.value,
       perBox: Number(form.perBox.value) || 0, unitPrice: Number(form.unitPrice.value) || 0,
-      supplier: form.supplier.value.trim(), note: form.note.value.trim() };
+      supplier: form.supplier.value.trim(), note: form.note.value.trim(), aliases: form.aliases.value.trim() };
     if (form.dataset.id) S.updateItem(form.dataset.id, payload); else S.addItem(payload);
     closeSheet();
   }

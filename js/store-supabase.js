@@ -108,7 +108,7 @@ export function stockStatus(item) { const c = currentStock(item); return c <= 0 
 // ── 품목 CRUD ──────────────────────────────────────
 export function addItem(o) {
   const it = { id: nid('it'), warehouse: o.warehouse, category: o.category, name: (o.name || '').trim(),
-    unit: o.unit, initial: num(o.initial), note: o.note || '', perBox: num(o.perBox), unitPrice: num(o.unitPrice), supplier: o.supplier || '' };
+    unit: o.unit, initial: num(o.initial), note: o.note || '', perBox: num(o.perBox), unitPrice: num(o.unitPrice), supplier: o.supplier || '', aliases: o.aliases || '' };
   items.push(it); sb.from('items').upsert(it); notify();
 }
 export function updateItem(id, patch) {
