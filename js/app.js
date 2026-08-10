@@ -84,6 +84,7 @@ let slLines = [];     // 출고 품목 줄 편집 중 임시 배열
 let slId = null;
 let quotePrefill = null;    // 스마트 붙여넣기 → 견적 프리필
 let smartDispatchText = ''; // 스마트 붙여넣기 → 배차 원문(어느 출고에 붙일지 선택 대기)
+let smartShipData = null;   // 스마트 붙여넣기 → 멀티 품목 출고 확인 대기
 
 // 배차 안내 문구 → 기사·차량·운임·결제·경로 인식 (물류업체 회신 복붙용)
 function parseDispatch(t) {
@@ -159,6 +160,26 @@ function parseQuoteText(t) {
   const client = (S.getPartners().find((p) => p.name && s.includes(p.name)) || {}).name || '';
   const phone = (s.match(/01[016789][-\s.]?\d{3,4}[-\s.]?\d{4}/) || [''])[0].replace(/[\s.]/g, '-');
   return { client, phone, content: s };
+}
+// 여러 품목+수량이 한 문구에 오는 출고 요청 파싱 (예: "라떼 5박스, 베이지 5박스, 상아 10박스")
+function parseMultiLines(t) {
+  const text = (t || '').trim();
+  const items = S.getItems();
+  const aliasesOf = (it) => [it.name, ...String(it.aliases || '').split(/[,\n]/).map((s) => s.trim()).filter(Boolean)];
+  const segs = text.split(/[,\n·]|그리고|및/).map((s) => s.trim()).filter(Boolean);
+  const lines = []; const seen = new Set();
+  segs.forEach((seg) => {
+    const qm = seg.match(/(\d+(?:\.\d+)?)\s*(박스|낱개|개|장|본|단|롤|plt|파렛트)?/);
+    if (!qm) return;
+    let cand = null, len = 0;
+    items.forEach((it) => aliasesOf(it).forEach((a) => { if (a && seg.includes(a) && a.length > len) { cand = it; len = a.length; } }));
+    if (!cand || seen.has(cand.warehouse + cand.name)) return;
+    seen.add(cand.warehouse + cand.name);
+    lines.push({ name: cand.name, category: cand.category, unit: qm[2] || cand.unit || '', qty: Number(qm[1]), unitPrice: cand.unitPrice || 0, warehouse: cand.warehouse });
+  });
+  const client = (S.getPartners().find((p) => p.name && text.includes(p.name)) || {}).name || '';
+  const status = /예정|내일|명일|모레|낼|다음|나중|가능할까|발주|주문/.test(text) ? '출고예정' : '출고완료';
+  return { lines, warehouse: lines[0] ? lines[0].warehouse : (S.warehouseNames()[0] || ''), client, status };
 }
 
 function esc(s) {
@@ -862,6 +883,30 @@ function sheetSmartDispatch(txt) {
   <button class="btn ghost" type="button" data-act="smart" style="margin-top:8px">← 다시 붙여넣기</button>
   <button class="btn danger" type="button" data-act="close">취소</button>`;
 }
+// 여러 품목 출고로 인식됨 — 확인 후 등록
+function sheetSmartShip(d) {
+  smartShipData = d;
+  const inp = 'width:100%;padding:11px 12px;border-radius:10px;background:var(--surface-2);color:var(--ink);border:0;font-size:15px';
+  return `<div class="grab"></div><h2>${I.bolt} 출고 인식됨 · ${d.lines.length}품목</h2>
+  <p class="hint">아래 품목으로 출고를 등록할게요. 거래처·창고만 확인해주세요.</p>
+  <div class="rows">
+    ${d.lines.map((l) => `<div class="row" style="box-shadow:none;background:var(--surface-2)">
+      ${swatchHTML(l.name)}
+      <div class="nm"><b>${esc(l.name)}</b><span>${esc(l.category || '')}</span></div>
+      <div class="qty"><b>${l.qty}</b><span>${esc(l.unit)}</span></div>
+    </div>`).join('')}
+  </div>
+  <div class="field" style="margin-top:12px"><label>거래처 (하차지)</label>
+    <input id="ss-client" list="ship-partners" value="${esc(d.client || '')}" placeholder="거래처 검색·선택" autocomplete="off" style="${inp}">
+    <datalist id="ship-partners">${S.getPartners().map((pt) => `<option value="${esc(pt.name)}"></option>`).join('')}</datalist></div>
+  <div class="field"><div class="row2">
+    <div><label>창고</label><select id="ss-wh" style="${inp}">${S.warehouseNames().map((w) => `<option ${w === d.warehouse ? 'selected' : ''}>${esc(w)}</option>`).join('')}</select></div>
+    <div><label>상태</label><select id="ss-status" style="${inp}">${['출고예정', '출고완료'].map((s) => `<option ${s === d.status ? 'selected' : ''}>${s}</option>`).join('')}</select></div>
+  </div></div>
+  <button class="btn" type="button" data-act="ss-save">출고 등록</button>
+  <button class="btn ghost" type="button" data-act="smart" style="margin-top:8px">← 다시 붙여넣기</button>
+  <button class="btn danger" type="button" data-act="close">취소</button>`;
+}
 function updateStockHint() {
   const id = document.getElementById('f-item').value;
   const it = S.findItem(id);
@@ -1250,7 +1295,21 @@ app.addEventListener('click', (e) => {
     const type = classifyPaste(txt);
     if (type === '견적') { quotePrefill = parseQuoteText(txt); state.route = 'quote'; openSheet(sheetQuoteForm(null)); }
     else if (type === '배차') { openSheet(sheetSmartDispatch(txt)); }
-    else { shipPrefill = parseQuick(txt); state.route = 'ship'; openSheet(sheetShipForm()); }
+    else {
+      const multi = parseMultiLines(txt);
+      if (multi.lines.length >= 2) { state.route = 'ship'; openSheet(sheetSmartShip(multi)); }
+      else { shipPrefill = parseQuick(txt); state.route = 'ship'; openSheet(sheetShipForm()); }
+    }
+  }
+  else if (act === 'ss-save') {
+    const d = smartShipData; if (!d) return;
+    const client = document.getElementById('ss-client').value.trim();
+    const wh = document.getElementById('ss-wh').value;
+    const status = document.getElementById('ss-status').value;
+    const lines = d.lines.map((l) => ({ name: l.name, category: l.category, spec: '', unit: l.unit, qty: l.qty, unitPrice: l.unitPrice }));
+    const sh = S.addShipment({ date: S.todayStr(), warehouse: wh, client, status, lines });
+    state.route = 'ship';
+    openSheet(sheetDoc(S.getShipments().find((s) => s.id === sh.id)));
   }
   else if (act === 'sm-dispatch-pick') {
     const sh = S.getShipments().find((s) => s.id === t.dataset.id);
