@@ -26,6 +26,7 @@ const I = {
   drop: '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></svg>',
   doc: '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M9 12h6M9 16h5"/></svg>',
   phone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h4l2 5-2.5 1.5a12 12 0 0 0 6 6L15 14l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 2 6a2 2 0 0 1 2-2z"/></svg>',
+  tag: '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12V4h8l9 9-8 8z"/><circle cx="7.5" cy="7.5" r="1.4"/></svg>',
 };
 const whShort = (n) => n.replace('창고', '').replace('로지스', '');
 
@@ -574,6 +575,30 @@ function rowShip(s) {
   </button>`;
 }
 
+// 단가표 마스터 — 품목별 최근 단가·공급처 (탭하면 단가 수정). 업데이트 시점·엑셀은 다음 단계.
+function screenPrice() {
+  const items = S.getItems().slice();
+  const byCat = {};
+  items.forEach((it) => { (byCat[it.category || '기타'] = byCat[it.category || '기타'] || []).push(it); });
+  Object.values(byCat).forEach((list) => list.sort((a, b) => (a.name || '').localeCompare(b.name || '')));
+  const cats = Object.keys(byCat).sort();
+  const priceRow = (it) => `<button class="ship" data-act="item" data-id="${it.id}">
+    ${swatchHTML(it.name)}
+    <div class="body"><b>${esc(it.name)}</b>
+      <div class="meta">${whTag(it.warehouse)} ${esc(it.unit || '')}${it.perBox ? ` · ${it.perBox}개입` : ''}${it.supplier ? ` · ${esc(it.supplier)}` : ''}</div></div>
+    <div class="right" style="flex-wrap:wrap;justify-content:flex-end;gap:6px">
+      <span class="q">${Number(it.unitPrice) > 0 ? Number(it.unitPrice).toLocaleString() + '원' : '단가 없음'}</span>
+      ${it.vatSeparate ? '<span class="pill low" style="font-size:11px">부가세 별도</span>' : ''}
+    </div>
+  </button>`;
+  const noPrice = items.filter((it) => !(Number(it.unitPrice) > 0)).length;
+  return `<div class="screen">
+    <div class="quickbar" style="cursor:default"><span class="tx">품목 <b>${items.length}</b>${noPrice ? ` · 단가 미입력 <b>${noPrice}</b>` : ''}</span></div>
+    ${cats.map((c) => `<div class="sec-title">${esc(c)} ${byCat[c].length}</div><div class="rows">${byCat[c].map(priceRow).join('')}</div>`).join('')}
+    <p class="hint" style="margin-top:16px">품목을 누르면 단가를 수정할 수 있어요. (단가 변경 이력·업데이트 시점·엑셀 추출은 다음 단계에 추가)</p>
+  </div>`;
+}
+
 function screenSettings() {
   const items = S.getItems();
   const whs = S.getWarehouses();
@@ -1100,18 +1125,18 @@ function sheetEditShip(sh) {
 }
 
 // ── 렌더 ──────────────────────────────────────────────
-const TITLES = { home: ['홈트레이더스', '재고 · 출고 관리'], quote: ['견적', '견적 요청 관리'], silicone: ['실리콘', '색상별 재고'], stock: ['창고', '창고별 재고'], ship: ['출고', '등록하면 재고 자동 차감'], settings: ['설정', '품목 · 데이터'] };
+const TITLES = { home: ['홈트레이더스', '재고 · 출고 관리'], quote: ['견적', '견적 요청 관리'], silicone: ['실리콘', '색상별 재고'], stock: ['창고', '창고별 재고'], ship: ['출고', '등록하면 재고 자동 차감'], price: ['단가표', '품목별 단가 마스터'], settings: ['설정', '품목 · 데이터'] };
 
 function render() {
   const [title, sub] = TITLES[state.route];
-  const body = { home: screenHome, quote: screenQuote, silicone: screenSilicone, stock: screenStock, ship: screenShip, settings: screenSettings }[state.route]();
+  const body = { home: screenHome, quote: screenQuote, silicone: screenSilicone, stock: screenStock, ship: screenShip, price: screenPrice, settings: screenSettings }[state.route]();
   const showFab = state.route === 'ship' || state.route === 'home';
   app.innerHTML = `
     <div class="appbar"><span class="logo">H</span><h1>${title}</h1><span class="sub">${sub}</span></div>
     ${body}
     ${showFab ? `<button class="fab" data-act="new-ship">${I.plus} 출고 등록</button>` : ''}
     <nav class="nav">
-      ${[['home', '홈', I.home], ['quote', '견적', I.doc], ['silicone', '실리콘', I.drop], ['stock', '창고', WH_ICONS.warehouse], ['ship', '출고', I.truck], ['settings', '설정', I.cog]]
+      ${[['home', '홈', I.home], ['quote', '견적', I.doc], ['silicone', '실리콘', I.drop], ['stock', '창고', WH_ICONS.warehouse], ['ship', '출고', I.truck], ['price', '단가', I.tag], ['settings', '설정', I.cog]]
         .map(([r, l, ic]) => `<button data-act="nav" data-r="${r}" class="${state.route === r ? 'on' : ''}">${ic}<span>${l}</span></button>`).join('')}
     </nav>
     ${state.sheet ? `<div class="sheet-bg" data-act="backdrop"><div class="sheet">${state.sheet}</div></div>` : ''}
