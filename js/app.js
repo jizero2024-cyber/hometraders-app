@@ -1073,7 +1073,9 @@ function sheetDispatchBuilder(shipId) {
   <p class="hint" style="margin-top:-4px"><b style="color:#e05a52">빨간 칸</b>만 채우면 돼요 (나머지는 출고에서 자동 입력)</p>
   <div class="field"><label>상차지</label><select id="db-from">${opts(fromName)}</select>
     <div class="addr-row"><input id="db-from-addr" placeholder="상차지 주소 (확인·수정)" value="${esc(fromAddr)}"><button type="button" data-act="db-search" data-t="from">주소검색</button></div></div>
-  <div class="field"><label>하차지</label><select id="db-to">${opts(toName)}</select>
+  <div class="field"><label>하차지 <span style="color:var(--faint);font-weight:400">선택 또는 직접 입력</span></label>
+    <input id="db-to" list="db-places" value="${esc(toName || '')}" placeholder="하차지 (거래처 선택 또는 직접 입력)" autocomplete="off" style="width:100%;padding:12px 13px;border-radius:11px;background:var(--surface-2);color:var(--ink);border:0">
+    <datalist id="db-places">${places.map((p) => `<option value="${esc(p.name)}"></option>`).join('')}</datalist>
     <div class="addr-row"><input id="db-to-addr" placeholder="하차지 주소 (확인·수정)" value="${esc(toAddr)}"><button type="button" data-act="db-search" data-t="to">주소검색</button></div></div>
   <div class="field"><label>하차지 거래처명 <span style="color:var(--faint);font-weight:400">물류업체에 보낼 때</span></label>
     <div class="seg" id="db-cust">
@@ -1130,13 +1132,12 @@ function sheetDoc(sh) {
   <p class="hint" style="text-align:center;margin-top:-8px">단계를 눌러 상태 변경</p>
   <div class="doc">
     <h3>${esc(sh.client || '거래처 미지정')}</h3>
-    <div class="docsub">출고일 ${esc(sh.date)}${isCourier ? ' · 택배' : ''}</div>
-    <div style="display:flex;align-items:center;gap:8px;margin:8px 0 12px"><span style="color:var(--muted);font-size:13px">출고 창고</span>${whTag(sh.warehouse)}</div>
+    <div class="docsub" style="margin-bottom:12px">출고일 ${esc(sh.date)}${isCourier ? ' · 택배' : ''}</div>
     ${(state.docEditLines && slId === sh.id) ? shipLinesEditor(sh) : `
     <table>
-      <tr><th>품목</th><th class="n">수량</th><th class="n">단가</th><th class="n">금액</th></tr>
-      ${S.shipLines(sh).map((l) => { const amt = (Number(l.qty) || 0) * (Number(l.unitPrice) || 0); return `<tr>
-        <td>${esc(l.name || '(미지정)')}${l.spec ? `<br><span style="color:var(--muted);font-size:12px">${esc(l.spec)}</span>` : ''}</td>
+      <tr><th style="width:40%">품목</th><th class="n" style="width:19%">수량</th><th class="n" style="width:20%">단가</th><th class="n" style="width:21%">금액</th></tr>
+      ${S.shipLines(sh).map((l) => { const amt = (Number(l.qty) || 0) * (Number(l.unitPrice) || 0); const lwh = l.warehouse || sh.warehouse; return `<tr>
+        <td><div style="font-weight:600">${esc(l.name || '(미지정)')}</div><div style="margin-top:3px">${whTag(lwh)}${l.spec ? ` <span style="color:var(--muted);font-size:12px">${esc(l.spec)}</span>` : ''}</div></td>
         <td class="n">${l.qty} ${esc(l.unit)}</td>
         <td class="n">${Number(l.unitPrice) > 0 ? Number(l.unitPrice).toLocaleString() : '-'}</td>
         <td class="n">${amt > 0 ? amt.toLocaleString() : '-'}</td>

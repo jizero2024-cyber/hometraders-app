@@ -288,8 +288,9 @@ textarea{resize:vertical;line-height:1.5;}
 .doc{background:var(--surface-2);border-radius:14px;padding:18px;}
 .doc h3{margin:0 0 2px;font-size:17px;}
 .doc .docsub{color:var(--muted);font-size:12px;margin-bottom:14px;}
-.doc table{width:100%;border-collapse:collapse;font-size:13px;}
-.doc th,.doc td{text-align:left;padding:8px 6px;box-shadow:inset 0 -1px 0 var(--surface-3);}
+.doc table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed;}
+.doc th,.doc td{text-align:left;padding:8px 6px;box-shadow:inset 0 -1px 0 var(--surface-3);vertical-align:top;}
+.doc td.n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .doc th{color:var(--muted);font-weight:600;font-size:12px;}
 .doc td.n{text-align:right;font-variant-numeric:tabular-nums;}
 .kv{display:flex;justify-content:space-between;font-size:13px;padding:5px 0;}
