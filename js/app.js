@@ -908,28 +908,33 @@ function readShipLinesDom() {   // 재렌더 전 현재 입력값을 임시배�
   const wh = shipWh();
   document.querySelectorAll('[data-sl]').forEach((el) => {
     const i = Number(el.dataset.i); if (!slLines[i]) return;
-    if (el.dataset.sl === 'qty') slLines[i].qty = el.value;
-    else if (el.dataset.sl === 'name') {
-      slLines[i].name = el.value;
-      const it = S.getItems().find((x) => x.name === el.value && x.warehouse === wh);
-      if (it) { slLines[i].category = it.category; if (!slLines[i].unit) slLines[i].unit = it.unit; }
+    const k = el.dataset.sl;
+    if (k === 'qty') slLines[i].qty = el.value;
+    else if (k === 'spec') slLines[i].spec = el.value;
+    else if (k === 'unit') slLines[i].unit = el.value.trim();
+    else if (k === 'name') {
+      slLines[i].name = el.value.trim();
+      const it = S.getItems().find((x) => x.name === slLines[i].name && x.warehouse === wh);
+      if (it) slLines[i].category = it.category;   // 기존 품목과 일치하면 재고 매칭용 구분 반영
     }
   });
 }
-// 출고 상세 안에서 바로 품목 표를 인라인 편집 (수량·품목 변경, 줄 삭제/추가)
+// 출고 상세 안에서 바로 품목 표를 인라인 편집 (품명·규격·수량·단위, 직접입력 가능 · ERP 동일 구조)
 function shipLinesEditor(sh) {
-  const whItems = S.getItems().filter((it) => it.warehouse === sh.warehouse);
-  const opts = (name) => {
-    let list = whItems.map((it) => it.name);
-    if (name && !list.includes(name)) list = [name, ...list];   // 창고에 없는 품목명(견적 자유입력 등)도 보존
-    return list.map((n) => `<option value="${esc(n)}" ${n === name ? 'selected' : ''}>${esc(n)}</option>`).join('');
-  };
-  return `<div class="rows" style="margin-top:2px">
-    ${slLines.map((l, i) => `<div class="row" style="box-shadow:none;background:var(--surface);gap:8px;align-items:center">
-      <select data-sl="name" data-i="${i}" style="flex:1;min-width:0;background:transparent;border:0;font-size:15px;color:var(--ink)">${opts(l.name)}</select>
-      <input data-sl="qty" data-i="${i}" type="number" min="0" inputmode="decimal" value="${l.qty}" style="width:60px;text-align:right">
-      <span style="color:var(--muted);font-size:13px;min-width:22px">${esc(l.unit || '')}</span>
-      <button class="pill" type="button" data-act="sl-del" data-i="${i}" style="min-width:32px">✕</button>
+  const names = [...new Set(S.getItems().filter((it) => it.warehouse === sh.warehouse).map((it) => it.name))];
+  const dl = `<datalist id="sl-items">${names.map((n) => `<option value="${esc(n)}"></option>`).join('')}</datalist>`;
+  const inp = 'padding:9px 10px;border-radius:9px;background:var(--surface);border:0;color:var(--ink);font-size:15px';
+  return `${dl}<div class="rows" style="margin-top:2px">
+    ${slLines.map((l, i) => `<div style="background:var(--surface-2);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:6px">
+      <div style="display:flex;gap:8px;align-items:center">
+        <input data-sl="name" data-i="${i}" list="sl-items" value="${esc(l.name || '')}" placeholder="품명 (직접 입력 가능)" autocapitalize="none" style="flex:1;min-width:0;${inp}">
+        <button class="pill" type="button" data-act="sl-del" data-i="${i}" style="min-width:34px">✕</button>
+      </div>
+      <div style="display:flex;gap:8px">
+        <input data-sl="spec" data-i="${i}" value="${esc(l.spec || '')}" placeholder="규격" style="flex:1;min-width:0;${inp}">
+        <input data-sl="qty" data-i="${i}" type="number" min="0" inputmode="decimal" value="${l.qty}" placeholder="수량" style="width:74px;text-align:right;${inp}">
+        <input data-sl="unit" data-i="${i}" value="${esc(l.unit || '')}" placeholder="단위" style="width:60px;${inp}">
+      </div>
     </div>`).join('')}
   </div>
   <button class="btn ghost" type="button" data-act="sl-add" style="margin-top:8px">+ 품목 추가</button>
@@ -1145,8 +1150,7 @@ app.addEventListener('click', (e) => {
   }
   else if (act === 'sl-add') {
     readShipLinesDom();
-    const it = S.getItems().find((x) => x.warehouse === shipWh()) || S.getItems()[0] || {};
-    slLines.push({ name: it.name || '', category: it.category || '', spec: '', unit: it.unit || '', qty: '', unitPrice: it.unitPrice || 0 });
+    slLines.push({ name: '', category: '', spec: '', unit: '', qty: '', unitPrice: 0 });   // 빈 줄 — 직접 입력
     openSheet(sheetDoc(S.getShipments().find((s) => s.id === slId)));
   }
   else if (act === 'sl-del') { readShipLinesDom(); slLines.splice(Number(t.dataset.i), 1); openSheet(sheetDoc(S.getShipments().find((s) => s.id === slId))); }
