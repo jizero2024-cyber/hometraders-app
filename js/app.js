@@ -309,6 +309,7 @@ function sheetColor(name) {
         <span class="whic sm">${whIcon((S.getWarehouses().find((w) => w.name === it.warehouse) || {}).icon || 'warehouse')}</span>
         <div class="nm"><b>${esc(it.warehouse)}</b><span>${it.perBox ? `${it.perBox}개입 · ` : ''}${S.reservedQty(it) ? `예정 ${S.reservedQty(it)}` : '　'}</span></div>
         <div class="qty"><b>${cur}</b><span>${esc(it.unit)}</span></div>
+        <button class="pill" data-act="stock-edit" data-id="${it.id}" style="margin-right:6px">수정</button>
         <button class="pill done" data-act="color-ship" data-id="${it.id}">출고</button>
       </div>`;
     }).join('')}
@@ -1315,6 +1316,12 @@ app.addEventListener('click', (e) => {
     const it = S.findItem(t.dataset.id);
     shipPrefill = { warehouse: it.warehouse, itemId: it.id, qty: '', unit: it.unit, client: '', status: '출고완료', note: '', matched: it.name };
     state.route = 'ship'; openSheet(sheetShipForm());
+  }
+  else if (act === 'stock-edit') {
+    const it = S.findItem(t.dataset.id);
+    if (!it) return;
+    const v = prompt(`${it.name} · ${it.warehouse}\n현재 재고를 실제 수량(${it.unit})으로 수정`, S.currentStock(it));
+    if (v !== null && String(v).trim() !== '') { S.setStock(it.id, v); openSheet(sheetColor(it.name)); }
   }
   else if (act === 'q-parse') {
     const txt = document.getElementById('q-text').value;
