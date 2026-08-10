@@ -85,6 +85,7 @@ let slId = null;
 let quotePrefill = null;    // 스마트 붙여넣기 → 견적 프리필
 let smartDispatchText = ''; // 스마트 붙여넣기 → 배차 원문(어느 출고에 붙일지 선택 대기)
 let smartShipData = null;   // 스마트 붙여넣기 → 멀티 품목 출고 확인 대기
+let sfExtra = [];           // 출고 등록 폼: 추가 품목 줄들(품명·수량·단위 직접입력)
 
 // 배차 안내 문구 → 기사·차량·운임·결제·경로 인식 (물류업체 회신 복붙용)
 function parseDispatch(t) {
@@ -748,8 +749,11 @@ function sheetShipForm() {
     ${(shipPrefill && !shipPrefill.matched && shipPrefill.guess) ? `<div class="field"><label>별칭 학습 <span style="color:var(--faint);font-weight:400">이 문구에서 위 품목을 부른 말 → 저장하면 다음부터 자동인식</span></label><input name="learnAlias" value="${esc(shipPrefill.guess)}" placeholder="예: 다루끼" autocapitalize="none"></div>` : ''}
     <div class="field"><div class="row2">
       <div><label>수량</label><input name="qty" id="f-qty" type="number" min="1" inputmode="numeric" placeholder="0" value="${p.qty ?? ''}"></div>
-      <div><label>단위 <span style="color:var(--faint);font-weight:400">박스/낱개</span></label><select name="unit" id="f-unit"></select></div>
+      <div><label>단위 <span style="color:var(--faint);font-weight:400">직접 입력</span></label><input name="unit" id="f-unit" list="f-unit-list" autocomplete="off" placeholder="박스" style="width:100%;padding:12px 13px;border-radius:11px;background:var(--surface-2);color:var(--ink);border:0"><datalist id="f-unit-list">${UNITS.map((u) => `<option value="${esc(u)}"></option>`).join('')}</datalist></div>
     </div></div>
+    <div id="sf-extra"></div>
+    <button class="btn ghost" type="button" data-act="sf-add" style="margin:-2px 0 14px;padding:11px;font-size:14px">+ 품목 추가</button>
+    <datalist id="sf-items"></datalist>
     <div class="field"><label>거래처 (하차지)</label>
       <input name="client" list="ship-partners" placeholder="거래처 검색·선택" value="${esc(p.client || '')}" autocomplete="off">
       <datalist id="ship-partners">${S.getPartners().map((pt) => `<option value="${esc(pt.name)}"></option>`).join('')}</datalist></div>
@@ -804,6 +808,7 @@ function fillItemSelect() {
   const sel = document.getElementById('f-item');
   const man = document.getElementById('f-manual');
   const items = S.getItems().filter((it) => it.warehouse === wh);
+  fillSfItems(wh); readSfExtra(); renderSfExtra();
   const manualMode = wh === '매입창고' || items.length === 0;   // 매입창고·품목없음 → 직접 입력
   if (man) man.style.display = manualMode ? 'block' : 'none';
   sel.style.display = manualMode ? 'none' : 'block';
@@ -811,7 +816,7 @@ function fillItemSelect() {
     const dl = document.getElementById('f-manual-list');
     if (dl) dl.innerHTML = [...new Set(S.getItems().map((it) => it.name))].map((n) => `<option value="${esc(n)}"></option>`).join('');
     const unitSel = document.getElementById('f-unit');
-    if (unitSel && !unitSel.value) unitSel.innerHTML = UNITS.map((u) => `<option>${esc(u)}</option>`).join('');
+    if (unitSel && !unitSel.value) unitSel.value = '박스';
     const hint = document.getElementById('f-stock');
     if (hint) hint.innerHTML = '<span style="color:var(--muted)">품목명을 직접 입력하세요 (재고 미차감)</span>';
     return;
@@ -822,6 +827,31 @@ function fillItemSelect() {
     sel.value = shipPrefill.itemId;
   }
   updateStockHint();
+}
+// 추가 품목 줄 (품명 datalist·수량·단위 직접입력)
+function fillSfItems(wh) {
+  const dl = document.getElementById('sf-items');
+  if (!dl) return;
+  wh = wh || (document.getElementById('f-wh') || {}).value;
+  const names = [...new Set(S.getItems().filter((it) => !wh || it.warehouse === wh).map((it) => it.name))];
+  dl.innerHTML = names.map((n) => `<option value="${esc(n)}"></option>`).join('');
+}
+function readSfExtra() {
+  document.querySelectorAll('#sf-extra [data-sf]').forEach((el) => {
+    const i = Number(el.dataset.i); if (!sfExtra[i]) return;
+    sfExtra[i][el.dataset.sf] = el.value;
+  });
+}
+function renderSfExtra() {
+  const box = document.getElementById('sf-extra');
+  if (!box) return;
+  const inp = 'padding:11px 10px;border-radius:10px;background:var(--surface-2);color:var(--ink);border:0;font-size:15px;min-width:0';
+  box.innerHTML = sfExtra.map((l, i) => `<div style="display:flex;gap:6px;margin-bottom:8px">
+    <input data-sf="name" data-i="${i}" list="sf-items" value="${esc(l.name || '')}" placeholder="품목명" autocapitalize="none" autocomplete="off" style="flex:1;${inp}">
+    <input data-sf="qty" data-i="${i}" type="number" min="0" inputmode="numeric" value="${esc(l.qty || '')}" placeholder="수량" style="width:62px;text-align:right;${inp}">
+    <input data-sf="unit" data-i="${i}" list="f-unit-list" value="${esc(l.unit || '')}" placeholder="단위" autocomplete="off" style="width:60px;${inp}">
+    <button class="pill" type="button" data-act="sf-del" data-i="${i}" style="flex:none">✕</button>
+  </div>`).join('');
 }
 
 function sheetInboundForm() {
@@ -944,9 +974,11 @@ function updateStockHint() {
     hint.innerHTML = `현재고 <b style="color:var(--ink)">${sp.whole}${esc(it.unit)}${sp.loose ? ` ${sp.loose}개` : ''}</b>${it.perBox ? ` · ${it.perBox}개입` : ''}`;
     const opts = [it.unit];
     if (Number(it.perBox) > 0 && it.unit !== '낱개') opts.push('낱개');
+    const dl = document.getElementById('f-unit-list');
+    if (dl) dl.innerHTML = [...new Set([...opts, ...UNITS])].map((u) => `<option value="${esc(u)}"></option>`).join('');
     const prev = (shipPrefill && shipPrefill.unit) || unitSel.value;
-    unitSel.innerHTML = opts.map((u) => `<option ${prev === u ? 'selected' : ''}>${esc(u)}</option>`).join('');
-  } else { hint.textContent = ''; unitSel.innerHTML = ''; }
+    unitSel.value = (prev && opts.concat(UNITS).includes(prev)) ? prev : it.unit;
+  } else { hint.textContent = ''; }
 }
 
 function sheetItemForm(existing) {
@@ -1327,7 +1359,7 @@ app.addEventListener('click', (e) => {
     else {
       const multi = parseMultiLines(txt);
       if (multi.lines.length >= 2) { state.route = 'ship'; openSheet(sheetSmartShip(multi)); }
-      else { shipPrefill = parseQuick(txt); state.route = 'ship'; openSheet(sheetShipForm()); }
+      else { shipPrefill = parseQuick(txt); sfExtra = []; state.route = 'ship'; openSheet(sheetShipForm()); }
     }
   }
   else if (act === 'ss-save') {
@@ -1450,7 +1482,9 @@ app.addEventListener('click', (e) => {
     if (m < 1) { m = 12; y--; } if (m > 12) { m = 1; y++; }
     state.calM = m; state.calY = y; render();
   }
-  else if (act === 'new-ship') { shipPrefill = null; openSheet(sheetShipForm()); }
+  else if (act === 'new-ship') { shipPrefill = null; sfExtra = []; openSheet(sheetShipForm()); }
+  else if (act === 'sf-add') { readSfExtra(); sfExtra.push({ name: '', qty: '', unit: '' }); renderSfExtra(); }
+  else if (act === 'sf-del') { readSfExtra(); sfExtra.splice(Number(t.dataset.i), 1); renderSfExtra(); }
   else if (act === 'quick') { shipPrefill = null; openSheet(sheetQuick()); }
   else if (act === 'add-inbound') { openSheet(sheetInboundForm()); }
   else if (act === 'color') { openSheet(sheetColor(t.dataset.c)); }
@@ -1458,7 +1492,7 @@ app.addEventListener('click', (e) => {
   else if (act === 'color-ship') {
     const it = S.findItem(t.dataset.id);
     shipPrefill = { warehouse: it.warehouse, itemId: it.id, qty: '', unit: it.unit, client: '', status: '출고완료', note: '', matched: it.name };
-    state.route = 'ship'; openSheet(sheetShipForm());
+    sfExtra = []; state.route = 'ship'; openSheet(sheetShipForm());
   }
   else if (act === 'stock-edit') {
     const it = S.findItem(t.dataset.id);
@@ -1476,7 +1510,7 @@ app.addEventListener('click', (e) => {
     const txt = document.getElementById('q-text').value;
     if (!txt.trim()) return alert('대표님 문구를 붙여넣으세요.');
     shipPrefill = parseQuick(txt);
-    state.route = 'ship';
+    sfExtra = []; state.route = 'ship';
     openSheet(sheetShipForm());
   }
   else if (act === 'add-item') { openSheet(sheetItemForm(null)); }
@@ -1584,10 +1618,11 @@ app.addEventListener('submit', (e) => {
     return;
   }
   if (form.id === 'ship-form') {
+    const wh = document.getElementById('f-wh').value;
     const manEl = document.getElementById('f-manual');
     const manualMode = manEl && manEl.style.display !== 'none';
-    const qty = Number(form.qty.value);
-    if (!qty || qty <= 0) return alert('수량을 입력하세요.');
+    const qty0 = Number(form.qty.value);
+    const unit0 = document.getElementById('f-unit').value.trim() || '박스';
     const status = form.querySelector('#f-status .on').dataset.v;
     const common = {
       date: form.date.value, time: form.time.value, client: form.client.value.trim(), status,
@@ -1597,24 +1632,30 @@ app.addEventListener('submit', (e) => {
       method: form.querySelector('#f-method .on')?.dataset.v || '배차',
       courier: form.courier.value.trim(), trackingNo: form.trackingNo.value.trim(), courierFee: form.courierFee.value,
       recvName: form.recvName.value.trim(), recvPhone: form.recvPhone.value.trim(), recvAddr: form.recvAddr.value.trim() };
-    let saved;
+    // 첫 품목
+    const lines = []; const stockRefs = [];
     if (manualMode) {
       const name = manEl.value.trim();
-      if (!name) return alert('품목명을 입력하세요.');
-      const unit = document.getElementById('f-unit').value || '박스';
-      saved = S.addShipment({ ...common, warehouse: document.getElementById('f-wh').value, category: '', name, qty, unit });
+      if (name && qty0 > 0) lines.push({ name, category: '', spec: '', unit: unit0, qty: qty0, unitPrice: 0 });
     } else {
       const it = S.findItem(document.getElementById('f-item').value);
-      if (!it) return alert('품목을 선택하세요.');
-      const unit = document.getElementById('f-unit').value || it.unit;
-      const cur = S.currentStock(it);
-      const reqBoxes = (unit === '낱개' && it.perBox) ? qty / it.perBox : qty;
-      if (reqBoxes > cur + 1e-9 && !confirm(`재고 부족 주의\n\n${it.name} (${it.warehouse})\n현재고 ${cur}${it.unit} · 요청 ${qty}${unit}\n\n재고보다 많습니다. 그래도 출고할까요?`)) return;
-      saved = S.addShipment({ ...common, warehouse: it.warehouse, category: it.category, name: it.name, qty, unit });
-      const la = form.learnAlias ? form.learnAlias.value.trim() : '';
-      if (la) { const al = String(it.aliases || '').split(/[,\n]/).map((s) => s.trim()).filter(Boolean); if (!al.includes(la)) S.updateItem(it.id, { aliases: [...al, la].join(', ') }); }
+      if (it && qty0 > 0) { lines.push({ name: it.name, category: it.category, spec: '', unit: unit0, qty: qty0, unitPrice: it.unitPrice || 0 }); stockRefs.push({ it, qty: qty0, unit: unit0 }); }
     }
-    const newSh = saved;
+    // 추가 품목
+    readSfExtra();
+    sfExtra.forEach((l) => {
+      const name = (l.name || '').trim(); const q = Number(l.qty);
+      if (!name || !(q > 0)) return;
+      const it = S.getItems().find((x) => x.name === name && x.warehouse === wh);
+      const unit = (l.unit || '').trim() || (it ? it.unit : '박스');
+      lines.push({ name, category: it ? it.category : '', spec: '', unit, qty: q, unitPrice: it ? it.unitPrice : 0 });
+      if (it) stockRefs.push({ it, qty: q, unit });
+    });
+    if (!lines.length) return alert('품목과 수량을 입력하세요.');
+    // 재고 초과 경고
+    const over = stockRefs.map(({ it, qty, unit }) => { const cur = S.currentStock(it); const req = (unit === '낱개' && it.perBox) ? qty / it.perBox : qty; return req > cur + 1e-9 ? `${it.name} (현재고 ${cur}${it.unit} < 요청 ${qty}${unit})` : null; }).filter(Boolean);
+    if (over.length && !confirm(`재고 부족 주의\n\n${over.join('\n')}\n\n재고보다 많습니다. 그래도 출고할까요?`)) return;
+    const newSh = S.addShipment({ ...common, warehouse: wh, lines });
     state.route = 'ship'; state.selDate = form.date.value;
     state.calY = +form.date.value.slice(0, 4); state.calM = +form.date.value.slice(5, 7);
     if (status === '출고예정' && newSh) openSheet(sheetPostSave(newSh.id)); else closeSheet();
