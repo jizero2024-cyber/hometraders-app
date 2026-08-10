@@ -736,6 +736,8 @@ function sheetShipForm() {
       <select name="warehouse" id="f-wh">${S.warehouseNames().map((w) => `<option ${p.warehouse === w ? 'selected' : ''}>${w}</option>`).join('')}</select></div>
     <div class="field"><label>품목</label>
       <select name="itemId" id="f-item"></select>
+      <input name="manualItem" id="f-manual" list="f-manual-list" placeholder="품목명 직접 입력" autocapitalize="none" autocomplete="off" style="display:none;width:100%;padding:12px 13px;border-radius:11px;background:var(--surface-2);color:var(--ink);border:0">
+      <datalist id="f-manual-list"></datalist>
       <p class="hint" id="f-stock" style="margin-top:8px"></p></div>
     ${(shipPrefill && !shipPrefill.matched && shipPrefill.guess) ? `<div class="field"><label>별칭 학습 <span style="color:var(--faint);font-weight:400">이 문구에서 위 품목을 부른 말 → 저장하면 다음부터 자동인식</span></label><input name="learnAlias" value="${esc(shipPrefill.guess)}" placeholder="예: 다루끼" autocapitalize="none"></div>` : ''}
     <div class="field"><div class="row2">
@@ -794,7 +796,20 @@ function sheetShipForm() {
 function fillItemSelect() {
   const wh = document.getElementById('f-wh').value;
   const sel = document.getElementById('f-item');
+  const man = document.getElementById('f-manual');
   const items = S.getItems().filter((it) => it.warehouse === wh);
+  const manualMode = wh === '매입창고' || items.length === 0;   // 매입창고·품목없음 → 직접 입력
+  if (man) man.style.display = manualMode ? 'block' : 'none';
+  sel.style.display = manualMode ? 'none' : 'block';
+  if (manualMode) {
+    const dl = document.getElementById('f-manual-list');
+    if (dl) dl.innerHTML = [...new Set(S.getItems().map((it) => it.name))].map((n) => `<option value="${esc(n)}"></option>`).join('');
+    const unitSel = document.getElementById('f-unit');
+    if (unitSel && !unitSel.value) unitSel.innerHTML = UNITS.map((u) => `<option>${esc(u)}</option>`).join('');
+    const hint = document.getElementById('f-stock');
+    if (hint) hint.innerHTML = '<span style="color:var(--muted)">품목명을 직접 입력하세요 (재고 미차감)</span>';
+    return;
+  }
   sel.innerHTML = items.map((it) => `<option value="${it.id}">${esc(it.name)} (${esc(it.category)})</option>`).join('')
     || '<option value="">품목 없음</option>';
   if (shipPrefill && shipPrefill.itemId && items.some((it) => it.id === shipPrefill.itemId)) {
@@ -1561,29 +1576,37 @@ app.addEventListener('submit', (e) => {
     return;
   }
   if (form.id === 'ship-form') {
-    const it = S.findItem(document.getElementById('f-item').value);
+    const manEl = document.getElementById('f-manual');
+    const manualMode = manEl && manEl.style.display !== 'none';
     const qty = Number(form.qty.value);
-    if (!it) return alert('품목을 선택하세요.');
     if (!qty || qty <= 0) return alert('수량을 입력하세요.');
-    const unit = document.getElementById('f-unit').value || it.unit;
-    const cur = S.currentStock(it);
-    const reqBoxes = (unit === '낱개' && it.perBox) ? qty / it.perBox : qty;
-    if (reqBoxes > cur + 1e-9 && !confirm(`재고 부족 주의\n\n${it.name} (${it.warehouse})\n현재고 ${cur}${it.unit} · 요청 ${qty}${unit}\n\n재고보다 많습니다. 그래도 출고할까요?`)) return;
     const status = form.querySelector('#f-status .on').dataset.v;
-    const saved = S.addShipment({ date: form.date.value, time: form.time.value, warehouse: it.warehouse, category: it.category,
-      name: it.name, qty, unit, client: form.client.value.trim(), status,
+    const common = {
+      date: form.date.value, time: form.time.value, client: form.client.value.trim(), status,
       dispatchVia: form.dispatchVia.value, driverName: form.driverName.value.trim(),
       driverPhone: form.driverPhone.value.trim(), vehicle: form.vehicle.value.trim(),
       freight: form.freight.value, payment: form.payment.value, note: form.note.value.trim(),
       method: form.querySelector('#f-method .on')?.dataset.v || '배차',
       courier: form.courier.value.trim(), trackingNo: form.trackingNo.value.trim(), courierFee: form.courierFee.value,
-      recvName: form.recvName.value.trim(), recvPhone: form.recvPhone.value.trim(), recvAddr: form.recvAddr.value.trim() });
-    const newSh = saved;
-    const la = form.learnAlias ? form.learnAlias.value.trim() : '';   // 자동학습: 부른 말을 품목 별칭에 추가
-    if (la && it) {
-      const cur = String(it.aliases || '').split(/[,\n]/).map((s) => s.trim()).filter(Boolean);
-      if (!cur.includes(la)) S.updateItem(it.id, { aliases: [...cur, la].join(', ') });
+      recvName: form.recvName.value.trim(), recvPhone: form.recvPhone.value.trim(), recvAddr: form.recvAddr.value.trim() };
+    let saved;
+    if (manualMode) {
+      const name = manEl.value.trim();
+      if (!name) return alert('품목명을 입력하세요.');
+      const unit = document.getElementById('f-unit').value || '박스';
+      saved = S.addShipment({ ...common, warehouse: document.getElementById('f-wh').value, category: '', name, qty, unit });
+    } else {
+      const it = S.findItem(document.getElementById('f-item').value);
+      if (!it) return alert('품목을 선택하세요.');
+      const unit = document.getElementById('f-unit').value || it.unit;
+      const cur = S.currentStock(it);
+      const reqBoxes = (unit === '낱개' && it.perBox) ? qty / it.perBox : qty;
+      if (reqBoxes > cur + 1e-9 && !confirm(`재고 부족 주의\n\n${it.name} (${it.warehouse})\n현재고 ${cur}${it.unit} · 요청 ${qty}${unit}\n\n재고보다 많습니다. 그래도 출고할까요?`)) return;
+      saved = S.addShipment({ ...common, warehouse: it.warehouse, category: it.category, name: it.name, qty, unit });
+      const la = form.learnAlias ? form.learnAlias.value.trim() : '';
+      if (la) { const al = String(it.aliases || '').split(/[,\n]/).map((s) => s.trim()).filter(Boolean); if (!al.includes(la)) S.updateItem(it.id, { aliases: [...al, la].join(', ') }); }
     }
+    const newSh = saved;
     state.route = 'ship'; state.selDate = form.date.value;
     state.calY = +form.date.value.slice(0, 4); state.calM = +form.date.value.slice(5, 7);
     if (status === '출고예정' && newSh) openSheet(sheetPostSave(newSh.id)); else closeSheet();
