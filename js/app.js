@@ -214,16 +214,14 @@ function screenHome() {
   const ships = S.getShipments();
   const items = S.getItems();
   const wait = ships.filter((s) => s.status === '출고예정').length;
-  const needDispatch = ships.filter((s) => s.status === '출고예정' && !s.driverName && !s.driverPhone);
+  const needDispatch = ships.filter((s) => s.status === '출고예정');   // 예정=무조건 배차 요청 필요 (상태 기준)
   const inTransit = ships.filter((s) => s.status === '배차완료').length;
   const needCheck = ships.filter((s) => !s.name || (s.note || '').includes('확인'));
   const docPending = ships.filter((s) => s.status === '출고완료' && !s.docDone);
   const lowItems = items.filter((it) => S.stockStatus(it) === 'out');   // 대시보드는 품절만 (부족은 제외)
-  // 출고예정(배차된 건)·배차완료는 날짜 무관 모두, 그 외는 오늘 건. 배차 안된 예정은 아래 '배차 요청 필요'에.
-  const todayList = ships.filter((s) => {
-    if (s.status === '출고예정' && !s.driverName && !s.driverPhone) return false;
-    return s.status === '출고예정' || s.status === '배차완료' || s.date === today;
-  }).sort((a, b) => ((a.date + (a.time || '~')).localeCompare(b.date + (b.time || '~'))));
+  // 배차완료(날짜무관) + 오늘 출고완료. 예정은 위 '배차 요청 필요'에.
+  const todayList = ships.filter((s) => s.status === '배차완료' || (s.date === today && s.status !== '출고예정'))
+    .sort((a, b) => ((a.date + (a.time || '~')).localeCompare(b.date + (b.time || '~'))));
 
   const tiles = [
     ['견적대기', S.quotesPending(), 'quote'],
@@ -238,7 +236,7 @@ function screenHome() {
 
   const boardRow = (s) => {
     const isPlan = s.status === '출고예정';
-    const needsDisp = isPlan && !s.driverName && !s.driverPhone;
+    const needsDisp = isPlan;
     const left = isPlan ? mdDow(s.date) : (s.time || '--:--');
     const pillCls = needsDisp ? 'low' : (isPlan ? 'plan' : STAGE_PILL[s.status]);
     const pillTxt = needsDisp ? '배차필요' : (isPlan ? '예정' : STAGE_SHORT[s.status]);
@@ -277,9 +275,9 @@ function screenHome() {
     ${needDispatch.length ? `<div class="rows">${needDispatch.map(boardRow).join('')}</div>`
       : `<div class="card" style="color:var(--muted);font-size:14px">배차 요청할 게 없어요.</div>`}
 
-    <div class="sec-title">출고 예정 · 오늘 도착</div>
+    <div class="sec-title">배차 완료 · 오늘 출고</div>
     ${todayList.length ? `<div class="rows">${todayList.map(boardRow).join('')}</div>`
-      : `<div class="card" style="color:var(--muted);font-size:14px">예정된 출고·도착이 없어요.</div>`}
+      : `<div class="card" style="color:var(--muted);font-size:14px">배차완료·오늘 출고가 없어요.</div>`}
 
     <div class="sec-title">체크리스트</div>
     ${problems.length ? problems.join('') : `<div class="card" style="color:var(--muted);font-size:14px">오늘 챙길 게 없어요. 정상입니다.</div>`}
@@ -289,8 +287,8 @@ function screenHome() {
 // 아침 출고 공지 — 출고예정 건들을 거래처·창고·품목·재고·메모로 정리 (카톡 복붙용)
 function buildBriefing() {
   const today = S.todayStr();
-  const ships = S.getShipments().filter((s) => s.status === '출고예정' || s.status === '배차완료')
-    .sort((a, b) => (a.date + a.id).localeCompare(b.date + a.id));
+  const ships = S.getShipments().filter((s) => s.status === '출고예정' || s.status === '배차완료' || (s.status === '출고완료' && s.date === today))
+    .sort((a, b) => (a.date + a.id).localeCompare(b.date + b.id));
   if (!ships.length) return `[출고 공지] ${mdDow(today)}\n\n예정된 출고가 없습니다.`;
   const L = [`[출고 공지] ${mdDow(today)}`, ''];
   ships.forEach((s, i) => {
@@ -1376,8 +1374,13 @@ app.addEventListener('click', (e) => {
   else if (act === 'smart') { openSheet(sheetSmart()); }
   else if (act === 'briefing') { openSheet(sheetBriefing()); }
   else if (act === 'briefing-copy') {
-    const txt = document.getElementById('brief-text').value;
-    navigator.clipboard.writeText(txt).then(() => alert('복사됐어요. 대표님께 붙여넣어 보내세요.'), () => alert('복사 실패 — 길게 눌러 직접 복사해주세요.'));
+    const ta = document.getElementById('brief-text');
+    const txt = ta.value;
+    const done = () => alert('복사됐어요. 대표님께 붙여넣어 보내세요.');
+    const fallback = () => { ta.focus(); ta.select(); ta.setSelectionRange(0, txt.length); try { document.execCommand('copy'); done(); } catch (e) { alert('복사가 안 되면, 위 칸을 길게 눌러 전체선택 후 복사해주세요.'); } };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(txt).then(done, fallback);
+    } else fallback();
   }
   else if (act === 'toggle-disp') {
     const el = document.getElementById('f-disp-fields');
