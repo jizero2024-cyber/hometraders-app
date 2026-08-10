@@ -873,10 +873,15 @@ function sheetDoc(sh) {
     <div class="docsub">출고일 ${esc(sh.date)} · ${esc(sh.warehouse)}</div>
     ${(state.docEditLines && slId === sh.id) ? shipLinesEditor(sh) : `
     <table>
-      <tr><th>품목</th><th>규격</th><th class="n">수량</th></tr>
-      ${S.shipLines(sh).map((l) => `<tr><td>${esc(l.name || '(미지정)')}</td><td>${esc(l.spec || l.category || '')}</td><td class="n">${l.qty} ${esc(l.unit)}</td></tr>`).join('')}
+      <tr><th>품목</th><th class="n">수량</th><th class="n">단가</th><th class="n">금액</th></tr>
+      ${S.shipLines(sh).map((l) => { const amt = (Number(l.qty) || 0) * (Number(l.unitPrice) || 0); return `<tr>
+        <td>${esc(l.name || '(미지정)')}${l.spec ? `<br><span style="color:var(--muted);font-size:12px">${esc(l.spec)}</span>` : ''}</td>
+        <td class="n">${l.qty} ${esc(l.unit)}</td>
+        <td class="n">${Number(l.unitPrice) > 0 ? Number(l.unitPrice).toLocaleString() : '-'}</td>
+        <td class="n">${amt > 0 ? amt.toLocaleString() : '-'}</td>
+      </tr>`; }).join('')}
     </table>
-    <button class="btn ghost" type="button" data-act="doc-edit-lines" data-id="${sh.id}" style="margin-top:10px;font-size:13px;padding:9px">수량 · 품목 수정</button>`}
+    <button class="btn ghost" type="button" data-act="doc-edit-lines" data-id="${sh.id}" style="margin-top:10px;font-size:13px;padding:9px">수량 · 품목 · 단가 수정</button>`}
     ${hasAddr ? `<div class="docblock">
       <div class="kv"><span>상차지</span><b>${esc(sh.loadPlace || sh.warehouse || '-')}</b></div>
       ${sh.loadAddr ? `<div style="text-align:right;font-size:12px;color:var(--muted);margin:-4px 0 8px">${esc(sh.loadAddr)}</div>` : ''}
@@ -892,7 +897,16 @@ function sheetDoc(sh) {
         : (sh.payment ? `<div class="kv"><span>결제</span><b>${esc(sh.payment)}</b></div>` : '')}
     </div>` : ''}
     ${sh.note ? `<div class="kv" style="margin-top:10px"><span>비고</span><b>${esc(sh.note)}</b></div>` : ''}
-    <div class="kv"><span>공급가액</span><b style="color:var(--muted)">단가 입력 후 자동계산 (2단계)</b></div>
+    ${(() => {
+      const supply = S.shipLines(sh).reduce((s, l) => s + (Number(l.qty) || 0) * (Number(l.unitPrice) || 0), 0);
+      if (supply <= 0) return `<div class="kv"><span>공급가액</span><b style="color:var(--muted)">단가 입력 시 자동계산</b></div>`;
+      const vat = Math.round(supply * 0.1);
+      return `<div class="docblock" style="margin-top:10px">
+        <div class="kv"><span>공급가액</span><b>${supply.toLocaleString()}원</b></div>
+        <div class="kv"><span>부가세 (10%)</span><b>${vat.toLocaleString()}원</b></div>
+        <div class="kv" style="border-top:1px solid var(--surface-3);padding-top:8px;margin-top:4px"><span>합계</span><b>${(supply + vat).toLocaleString()}원</b></div>
+      </div>`;
+    })()}
   </div>
   ${sh.status === '출고예정' ? `<button class="btn" type="button" data-act="copy-dispatch" data-id="${sh.id}">배차 요청 양식 만들기</button>
     <button class="btn ghost" type="button" data-act="dispatch-paste" data-id="${sh.id}" style="margin-top:8px">배차 확인 붙여넣기 (회신 받으면)</button>` : ''}
@@ -912,6 +926,7 @@ function readShipLinesDom() {   // 재렌더 전 현재 입력값을 임시배�
     if (k === 'qty') slLines[i].qty = el.value;
     else if (k === 'spec') slLines[i].spec = el.value;
     else if (k === 'unit') slLines[i].unit = el.value.trim();
+    else if (k === 'unitPrice') slLines[i].unitPrice = Number(el.value) || 0;
     else if (k === 'name') {
       slLines[i].name = el.value.trim();
       const it = S.getItems().find((x) => x.name === slLines[i].name && x.warehouse === wh);
@@ -932,8 +947,11 @@ function shipLinesEditor(sh) {
       </div>
       <div style="display:flex;gap:8px">
         <input data-sl="spec" data-i="${i}" value="${esc(l.spec || '')}" placeholder="규격" style="flex:1;min-width:0;${inp}">
-        <input data-sl="qty" data-i="${i}" type="number" min="0" inputmode="decimal" value="${l.qty}" placeholder="수량" style="width:74px;text-align:right;${inp}">
-        <input data-sl="unit" data-i="${i}" value="${esc(l.unit || '')}" placeholder="단위" style="width:60px;${inp}">
+        <input data-sl="unit" data-i="${i}" value="${esc(l.unit || '')}" placeholder="단위" style="width:64px;${inp}">
+      </div>
+      <div style="display:flex;gap:8px">
+        <input data-sl="qty" data-i="${i}" type="number" min="0" inputmode="decimal" value="${l.qty}" placeholder="수량" style="flex:1;min-width:0;text-align:right;${inp}">
+        <input data-sl="unitPrice" data-i="${i}" type="number" min="0" inputmode="numeric" value="${l.unitPrice || ''}" placeholder="단가" style="flex:1;min-width:0;text-align:right;${inp}">
       </div>
     </div>`).join('')}
   </div>
