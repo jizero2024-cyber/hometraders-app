@@ -907,6 +907,7 @@ function sheetDoc(sh) {
         <div class="kv" style="border-top:1px solid var(--surface-3);padding-top:8px;margin-top:4px"><span>합계</span><b>${(supply + vat).toLocaleString()}원</b></div>
       </div>`;
     })()}
+    <div class="kv" style="margin-top:10px"><span>명세서</span><span class="pill ${sh.docDone ? 'done' : 'low'}">${sh.docDone ? '발행완료' : '미발행'}</span></div>
   </div>
   ${sh.status === '출고예정' ? `<button class="btn" type="button" data-act="copy-dispatch" data-id="${sh.id}">배차 요청 양식 만들기</button>
     <button class="btn ghost" type="button" data-act="dispatch-paste" data-id="${sh.id}" style="margin-top:8px">배차 확인 붙여넣기 (회신 받으면)</button>` : ''}
