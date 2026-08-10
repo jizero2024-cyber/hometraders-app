@@ -213,14 +213,14 @@ function screenHome() {
   const ships = S.getShipments();
   const items = S.getItems();
   const wait = ships.filter((s) => s.status === '출고예정').length;
-  const needDispatch = ships.filter((s) => s.status === '출고예정' && !s.dispatchVia && !s.driverName);
+  const needDispatch = ships.filter((s) => s.status === '출고예정' && !s.driverName && !s.driverPhone);
   const inTransit = ships.filter((s) => s.status === '배차완료').length;
   const needCheck = ships.filter((s) => !s.name || (s.note || '').includes('확인'));
   const docPending = ships.filter((s) => s.status === '출고완료' && !s.docDone);
   const lowItems = items.filter((it) => S.stockStatus(it) === 'out');   // 대시보드는 품절만 (부족은 제외)
   // 출고예정(배차된 건)·배차완료는 날짜 무관 모두, 그 외는 오늘 건. 배차 안된 예정은 아래 '배차 요청 필요'에.
   const todayList = ships.filter((s) => {
-    if (s.status === '출고예정' && !s.dispatchVia && !s.driverName) return false;
+    if (s.status === '출고예정' && !s.driverName && !s.driverPhone) return false;
     return s.status === '출고예정' || s.status === '배차완료' || s.date === today;
   }).sort((a, b) => ((a.date + (a.time || '~')).localeCompare(b.date + (b.time || '~'))));
 
@@ -237,7 +237,7 @@ function screenHome() {
 
   const boardRow = (s) => {
     const isPlan = s.status === '출고예정';
-    const needsDisp = isPlan && !s.dispatchVia && !s.driverName;
+    const needsDisp = isPlan && !s.driverName && !s.driverPhone;
     const left = isPlan ? mdDow(s.date) : (s.time || '--:--');
     const pillCls = needsDisp ? 'low' : (isPlan ? 'plan' : STAGE_PILL[s.status]);
     const pillTxt = needsDisp ? '배차필요' : (isPlan ? '예정' : STAGE_SHORT[s.status]);
