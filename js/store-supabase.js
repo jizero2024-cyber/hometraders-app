@@ -129,7 +129,9 @@ export function addShipment(o) {
     client: o.client || '', status: o.status || '출고완료', note: o.note || '',
     dispatchVia: o.dispatchVia || '', driverName: o.driverName || '', driverPhone: o.driverPhone || '', vehicle: o.vehicle || '',
     freight: num(o.freight), payment: o.payment || '', docDone: !!o.docDone,
-    loadPlace: o.loadPlace || '', loadAddr: o.loadAddr || '', unloadPlace: o.unloadPlace || '', unloadAddr: o.unloadAddr || '' };
+    loadPlace: o.loadPlace || '', loadAddr: o.loadAddr || '', unloadPlace: o.unloadPlace || '', unloadAddr: o.unloadAddr || '',
+    method: o.method || '배차', courier: o.courier || '', trackingNo: o.trackingNo || '', courierFee: num(o.courierFee),
+    recvName: o.recvName || '', recvPhone: o.recvPhone || '', recvAddr: o.recvAddr || '' };
   shipments.push(sh); sb.from('shipments').upsert(sh); notify(); return sh;
 }
 export function updateShipment(id, patch) {

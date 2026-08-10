@@ -31,9 +31,10 @@ const whShort = (n) => n.replace('창고', '').replace('로지스', '');
 
 function shipStepper(sh) {
   const status = sh.status;
-  const cur = STAGES.indexOf(status);
+  const stages = sh.method === '택배' ? ['출고예정', '출고완료'] : STAGES;   // 택배는 배차 단계 없음
+  const cur = stages.indexOf(status);
   const final = status === '출고완료';
-  return `<div class="stepper">${STAGES.map((s, i) => {
+  return `<div class="stepper">${stages.map((s, i) => {
     const cls = i < cur ? 'done' : (i === cur ? (final ? 'done' : 'now') : '');
     const inner = (i < cur || final) ? I.check : '';
     return `<button type="button" class="sc ${cls}" data-act="ship-stage" data-id="${sh.id}" data-v="${s}"><span class="ci">${inner}</span><span class="tl">${STAGE_SHORT[s]}</span></button>`;
@@ -641,20 +642,38 @@ function sheetShipForm() {
       <div><label>출고일</label><input name="date" type="date" value="${state.selDate || S.todayStr()}"></div>
       <div><label>시간</label><input name="time" type="time" value="${p.time || ''}"></div>
     </div></div>
-    <div class="field"><label>배차 정보 <span style="color:var(--faint);font-weight:400">(선택)</span></label>
-      <select name="dispatchVia">
-        <option value="">배차 방법…</option>
-        ${DISPATCH.map((d) => `<option ${p.dispatchVia === d ? 'selected' : ''}>${d}</option>`).join('')}
-      </select></div>
-    <div class="field"><div class="row2">
-      <div><label>기사님 이름</label><input name="driverName" placeholder="예: 주정택" value="${esc(p.driverName || '')}"></div>
-      <div><label>기사님 전화</label><input name="driverPhone" type="tel" inputmode="tel" placeholder="010-0000-0000" value="${esc(p.driverPhone || '')}"></div>
-    </div></div>
-    <div class="field"><label>차량</label><input name="vehicle" placeholder="예: 1톤카고 / 경기85사7749" value="${esc(p.vehicle || '')}"></div>
-    <div class="field"><div class="row2">
-      <div><label>운임 (원)</label><input name="freight" type="number" inputmode="numeric" value="${p.freight || ''}" placeholder="예: 80000"></div>
-      <div><label>결제</label><select name="payment"><option value="">-</option><option ${p.payment === '현불' ? 'selected' : ''}>현불</option><option ${p.payment === '착불' ? 'selected' : ''}>착불</option></select></div>
-    </div></div>
+    <div class="field"><label>출고 방식</label>
+      <div class="seg" id="f-method">
+        ${['배차', '택배'].map((m) => `<button type="button" data-v="${m}" class="${(p.method || '배차') === m ? 'on' : ''}">${m}</button>`).join('')}
+      </div></div>
+    <div id="f-dispatch-block"${p.method === '택배' ? ' style="display:none"' : ''}>
+      <div class="field"><label>배차 정보 <span style="color:var(--faint);font-weight:400">(선택)</span></label>
+        <select name="dispatchVia">
+          <option value="">배차 방법…</option>
+          ${DISPATCH.map((d) => `<option ${p.dispatchVia === d ? 'selected' : ''}>${d}</option>`).join('')}
+        </select></div>
+      <div class="field"><div class="row2">
+        <div><label>기사님 이름</label><input name="driverName" placeholder="예: 주정택" value="${esc(p.driverName || '')}"></div>
+        <div><label>기사님 전화</label><input name="driverPhone" type="tel" inputmode="tel" placeholder="010-0000-0000" value="${esc(p.driverPhone || '')}"></div>
+      </div></div>
+      <div class="field"><label>차량</label><input name="vehicle" placeholder="예: 1톤카고 / 경기85사7749" value="${esc(p.vehicle || '')}"></div>
+      <div class="field"><div class="row2">
+        <div><label>운임 (원)</label><input name="freight" type="number" inputmode="numeric" value="${p.freight || ''}" placeholder="예: 80000"></div>
+        <div><label>결제</label><select name="payment"><option value="">-</option><option ${p.payment === '현불' ? 'selected' : ''}>현불</option><option ${p.payment === '착불' ? 'selected' : ''}>착불</option></select></div>
+      </div></div>
+    </div>
+    <div id="f-courier-block"${p.method === '택배' ? '' : ' style="display:none"'}>
+      <div class="field"><label>택배사</label>
+        <input name="courier" list="courier-list" value="${esc(p.courier || '')}" placeholder="예: 경동택배">
+        <datalist id="courier-list">${COURIERS.map((c) => `<option value="${c}"></option>`).join('')}</datalist></div>
+      <div class="field"><label>송장번호</label><input name="trackingNo" value="${esc(p.trackingNo || '')}" placeholder="예: 1234-5678-9012"></div>
+      <div class="field"><label>택배비 (원)</label><input name="courierFee" type="number" inputmode="numeric" value="${p.courierFee || ''}" placeholder="예: 4000"></div>
+      <div class="field"><div class="row2">
+        <div><label>받는 사람</label><input name="recvName" value="${esc(p.recvName || '')}" placeholder="성함"></div>
+        <div><label>연락처</label><input name="recvPhone" type="tel" inputmode="tel" value="${esc(p.recvPhone || '')}" placeholder="010-0000-0000"></div>
+      </div></div>
+      <div class="field"><label>받는 주소</label><input name="recvAddr" value="${esc(p.recvAddr || '')}" placeholder="배송지 주소"></div>
+    </div>
 
     <div class="field"><label>비고</label><input name="note" placeholder="경로 / 혼적 / 당착 등" value="${esc(p.note || '')}"></div>
     <button class="btn" type="submit">저장하기</button>
@@ -911,12 +930,13 @@ function dispatchText(sh) {
 function sheetDoc(sh) {
   const hasDispatch = sh.dispatchVia || sh.driverName || sh.driverPhone || sh.vehicle || sh.freight || sh.payment;
   const hasAddr = sh.loadAddr || sh.unloadAddr || sh.loadPlace || sh.unloadPlace;
+  const isCourier = sh.method === '택배';
   return `<div class="grab"></div><h2>출고 상세</h2>
   ${shipStepper(sh)}
   <p class="hint" style="text-align:center;margin-top:-8px">단계를 눌러 상태 변경</p>
   <div class="doc">
     <h3>${esc(sh.client || '거래처 미지정')}</h3>
-    <div class="docsub">출고일 ${esc(sh.date)} · ${esc(sh.warehouse)}</div>
+    <div class="docsub">출고일 ${esc(sh.date)} · ${esc(sh.warehouse)}${isCourier ? ' · 택배' : ''}</div>
     ${(state.docEditLines && slId === sh.id) ? shipLinesEditor(sh) : `
     <table>
       <tr><th>품목</th><th class="n">수량</th><th class="n">단가</th><th class="n">금액</th></tr>
@@ -942,6 +962,13 @@ function sheetDoc(sh) {
       ${sh.freight ? `<div class="kv"><span>운임</span><b>${Number(sh.freight).toLocaleString()}원${sh.payment ? ` · ${esc(sh.payment)}` : ''}</b></div>`
         : (sh.payment ? `<div class="kv"><span>결제</span><b>${esc(sh.payment)}</b></div>` : '')}
     </div>` : ''}
+    ${isCourier ? `<div class="docblock">
+      <div class="kv"><span>택배사</span><b>${esc(sh.courier || '-')}</b></div>
+      ${sh.trackingNo ? `<div class="kv"><span>송장번호</span><b>${esc(sh.trackingNo)}</b></div>` : ''}
+      ${sh.courierFee ? `<div class="kv"><span>택배비</span><b>${Number(sh.courierFee).toLocaleString()}원</b></div>` : ''}
+      ${sh.recvName ? `<div class="kv"><span>받는 사람</span><b>${esc(sh.recvName)}${sh.recvPhone ? ` · ${esc(sh.recvPhone)}` : ''}</b></div>` : ''}
+      ${sh.recvAddr ? `<div class="kv"><span>주소</span><b>${esc(sh.recvAddr)}</b></div>` : ''}
+    </div>` : ''}
     ${sh.note ? `<div class="kv" style="margin-top:10px"><span>비고</span><b>${esc(sh.note)}</b></div>` : ''}
     ${(() => {
       const supply = S.shipLines(sh).reduce((s, l) => s + (Number(l.qty) || 0) * (Number(l.unitPrice) || 0), 0);
@@ -955,9 +982,9 @@ function sheetDoc(sh) {
     })()}
     <div class="kv" style="margin-top:10px"><span>명세서</span><span class="pill ${sh.docDone ? 'done' : 'low'}">${sh.docDone ? '발행완료' : '미발행'}</span></div>
   </div>
-  ${sh.status === '출고예정' ? `<button class="btn" type="button" data-act="copy-dispatch" data-id="${sh.id}">배차 요청 양식 만들기</button>
+  ${sh.status === '출고예정' && !isCourier ? `<button class="btn" type="button" data-act="copy-dispatch" data-id="${sh.id}">배차 요청 양식 만들기</button>
     <button class="btn ghost" type="button" data-act="dispatch-paste" data-id="${sh.id}" style="margin-top:8px">배차 확인 붙여넣기 (회신 받으면)</button>` : ''}
-  ${sh.status === '배차완료' ? `<button class="btn ghost" type="button" data-act="dispatch-paste" data-id="${sh.id}">배차 정보 다시 붙여넣기</button>` : ''}
+  ${sh.status === '배차완료' && !isCourier ? `<button class="btn ghost" type="button" data-act="dispatch-paste" data-id="${sh.id}">배차 정보 다시 붙여넣기</button>` : ''}
   ${sh.status === '출고완료' ? `<button class="btn ${sh.docDone ? 'ghost' : ''}" type="button" data-act="toggle-doc" data-id="${sh.id}">${sh.docDone ? '명세서 발행됨 · 해제' : '명세서 발행 완료로 표시'}</button>` : ''}
   <button class="btn ghost" type="button" data-act="edit-ship" data-id="${sh.id}" style="margin-top:8px">출고 수정 (거래처 · 배차 · 상태)</button>
   <button class="btn danger" type="button" data-act="del-ship" data-id="${sh.id}">삭제</button>`;
@@ -1031,18 +1058,36 @@ function sheetEditShip(sh) {
       <div><label>출고일</label><input name="date" type="date" value="${esc(sh.date)}"></div>
     </div></div>
     <div class="field"><label>거래처</label><input name="client" value="${esc(sh.client)}"></div>
-    <div class="field"><label>배차 방법</label>
-      <select name="dispatchVia"><option value="">배차 방법…</option>
-        ${DISPATCH.map((d) => `<option ${sh.dispatchVia === d ? 'selected' : ''}>${d}</option>`).join('')}</select></div>
-    <div class="field"><div class="row2">
-      <div><label>기사님 이름</label><input name="driverName" value="${esc(sh.driverName || '')}" placeholder="예: 주정택"></div>
-      <div><label>기사님 전화</label><input name="driverPhone" type="tel" value="${esc(sh.driverPhone || '')}" placeholder="010-0000-0000"></div>
-    </div></div>
-    <div class="field"><label>차량</label><input name="vehicle" value="${esc(sh.vehicle || '')}" placeholder="예: 1톤카고 / 경기85사7749"></div>
-    <div class="field"><div class="row2">
-      <div><label>운임 (원)</label><input name="freight" type="number" inputmode="numeric" value="${sh.freight || ''}"></div>
-      <div><label>결제</label><select name="payment"><option value="">-</option><option ${sh.payment === '현불' ? 'selected' : ''}>현불</option><option ${sh.payment === '착불' ? 'selected' : ''}>착불</option></select></div>
-    </div></div>
+    <div class="field"><label>출고 방식</label>
+      <div class="seg" id="e-method">
+        ${['배차', '택배'].map((m) => `<button type="button" data-v="${m}" class="${(sh.method || '배차') === m ? 'on' : ''}">${m}</button>`).join('')}
+      </div></div>
+    <div id="e-dispatch-block"${sh.method === '택배' ? ' style="display:none"' : ''}>
+      <div class="field"><label>배차 방법</label>
+        <select name="dispatchVia"><option value="">배차 방법…</option>
+          ${DISPATCH.map((d) => `<option ${sh.dispatchVia === d ? 'selected' : ''}>${d}</option>`).join('')}</select></div>
+      <div class="field"><div class="row2">
+        <div><label>기사님 이름</label><input name="driverName" value="${esc(sh.driverName || '')}" placeholder="예: 주정택"></div>
+        <div><label>기사님 전화</label><input name="driverPhone" type="tel" value="${esc(sh.driverPhone || '')}" placeholder="010-0000-0000"></div>
+      </div></div>
+      <div class="field"><label>차량</label><input name="vehicle" value="${esc(sh.vehicle || '')}" placeholder="예: 1톤카고 / 경기85사7749"></div>
+      <div class="field"><div class="row2">
+        <div><label>운임 (원)</label><input name="freight" type="number" inputmode="numeric" value="${sh.freight || ''}"></div>
+        <div><label>결제</label><select name="payment"><option value="">-</option><option ${sh.payment === '현불' ? 'selected' : ''}>현불</option><option ${sh.payment === '착불' ? 'selected' : ''}>착불</option></select></div>
+      </div></div>
+    </div>
+    <div id="e-courier-block"${sh.method === '택배' ? '' : ' style="display:none"'}>
+      <div class="field"><label>택배사</label>
+        <input name="courier" list="courier-list-e" value="${esc(sh.courier || '')}" placeholder="예: 경동택배">
+        <datalist id="courier-list-e">${COURIERS.map((c) => `<option value="${c}"></option>`).join('')}</datalist></div>
+      <div class="field"><label>송장번호</label><input name="trackingNo" value="${esc(sh.trackingNo || '')}" placeholder="예: 1234-5678-9012"></div>
+      <div class="field"><label>택배비 (원)</label><input name="courierFee" type="number" inputmode="numeric" value="${sh.courierFee || ''}"></div>
+      <div class="field"><div class="row2">
+        <div><label>받는 사람</label><input name="recvName" value="${esc(sh.recvName || '')}" placeholder="성함"></div>
+        <div><label>연락처</label><input name="recvPhone" type="tel" value="${esc(sh.recvPhone || '')}" placeholder="010-0000-0000"></div>
+      </div></div>
+      <div class="field"><label>받는 주소</label><input name="recvAddr" value="${esc(sh.recvAddr || '')}" placeholder="배송지 주소"></div>
+    </div>
     <div class="field"><label>비고</label><input name="note" value="${esc(sh.note)}"></div>
     <button class="btn" type="submit">저장</button>
     <button class="btn danger" type="button" data-act="close">취소</button>
@@ -1081,6 +1126,13 @@ app.addEventListener('click', (e) => {
     segBtn.parentElement.querySelectorAll('button').forEach((b) => b.classList.remove('on'));
     segBtn.classList.add('on');
     segBtn.parentElement.classList.remove('need');
+    if (segBtn.parentElement.id === 'f-method' || segBtn.parentElement.id === 'e-method') {   // 출고 방식 → 배차/택배 칸 전환
+      const pfx = segBtn.parentElement.id[0];      // 'f' 또는 'e'
+      const courier = segBtn.dataset.v === '택배';
+      const db = document.getElementById(pfx + '-dispatch-block'); const cb = document.getElementById(pfx + '-courier-block');
+      if (db) db.style.display = courier ? 'none' : '';
+      if (cb) cb.style.display = courier ? '' : 'none';
+    }
     return;
   }
   const t = e.target.closest('[data-act]');
@@ -1339,7 +1391,10 @@ app.addEventListener('submit', (e) => {
       name: it.name, qty, unit, client: form.client.value.trim(), status,
       dispatchVia: form.dispatchVia.value, driverName: form.driverName.value.trim(),
       driverPhone: form.driverPhone.value.trim(), vehicle: form.vehicle.value.trim(),
-      freight: form.freight.value, payment: form.payment.value, note: form.note.value.trim() });
+      freight: form.freight.value, payment: form.payment.value, note: form.note.value.trim(),
+      method: form.querySelector('#f-method .on')?.dataset.v || '배차',
+      courier: form.courier.value.trim(), trackingNo: form.trackingNo.value.trim(), courierFee: form.courierFee.value,
+      recvName: form.recvName.value.trim(), recvPhone: form.recvPhone.value.trim(), recvAddr: form.recvAddr.value.trim() });
     const newSh = saved;
     state.route = 'ship'; state.selDate = form.date.value;
     state.calY = +form.date.value.slice(0, 4); state.calM = +form.date.value.slice(5, 7);
@@ -1411,7 +1466,10 @@ app.addEventListener('submit', (e) => {
       client: form.client.value.trim(), date: form.date.value,
       dispatchVia: form.dispatchVia.value, driverName: form.driverName.value.trim(),
       driverPhone: form.driverPhone.value.trim(), vehicle: form.vehicle.value.trim(),
-      freight: form.freight.value, payment: form.payment.value, note: form.note.value.trim() });
+      freight: form.freight.value, payment: form.payment.value, note: form.note.value.trim(),
+      method: form.querySelector('#e-method .on')?.dataset.v || '배차',
+      courier: form.courier.value.trim(), trackingNo: form.trackingNo.value.trim(), courierFee: form.courierFee.value,
+      recvName: form.recvName.value.trim(), recvPhone: form.recvPhone.value.trim(), recvAddr: form.recvAddr.value.trim() });
     closeSheet();
   }
 });
