@@ -261,7 +261,10 @@ function screenHome() {
   if (needDispatch.length) problems.push(`<div class="psec"><span class="pttl">배차 미정 (${needDispatch.length})</span>
     ${needDispatch.slice(0, 5).map((s) => `<button class="prow" data-act="ship" data-id="${s.id}"><span>${esc(s.name)} · ${esc(s.client || '-')}</span><span class="pill plan">배차필요</span></button>`).join('')}</div>`);
   if (docPending.length) problems.push(`<div class="psec"><span class="pttl">명세서 미발행 (${docPending.length})</span>
-    ${docPending.slice(0, 5).map((s) => `<button class="prow" data-act="ship" data-id="${s.id}"><span>${esc(s.client || '-')} · ${esc(s.name || '')} ${s.qty}${esc(s.unit)}</span><span class="pill low">미발행</span></button>`).join('')}</div>`);
+    ${docPending.slice(0, 8).map((s) => `<div class="prow" style="display:flex;align-items:center;gap:8px">
+      <button data-act="ship" data-id="${s.id}" style="flex:1;min-width:0;text-align:left;background:none;border:0;color:inherit;padding:0;font:inherit;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.client || '-')} · ${esc(s.name || '')} ${s.qty}${esc(s.unit)}</button>
+      <button class="pill done" data-act="doc-done" data-id="${s.id}" style="flex:none">발행완료</button>
+    </div>`).join('')}</div>`);
   if (needCheck.length) problems.push(`<div class="psec"><span class="pttl">확인 필요 (${needCheck.length})</span>
     ${needCheck.slice(0, 5).map((s) => `<button class="prow" data-act="ship" data-id="${s.id}"><span>${esc(s.client || '-')} · ${s.name ? esc(s.note || '확인 필요') : '품목 미지정'}</span><span class="pill chk">확인</span></button>`).join('')}</div>`);
 
@@ -1529,6 +1532,7 @@ app.addEventListener('click', (e) => {
     S.updateShipment(t.dataset.id, { docDone: !sh.docDone });
     openSheet(sheetDoc(S.getShipments().find((s) => s.id === t.dataset.id)));
   }
+  else if (act === 'doc-done') { S.updateShipment(t.dataset.id, { docDone: true }); render(); }
   else if (act === 'kakao') { alert('카카오톡 명세서 발송은 2단계에서 연동됩니다.\n(스튜디오밭 카카오 콘솔 템플릿 사용)'); }
   else if (act === 'export') { downloadJSON(); }
   else if (act === 'logout') { S.signOut(); }
