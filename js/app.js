@@ -171,9 +171,17 @@ function swatchHTML(name) {
 }
 const STATUS_KO = { ok: '정상', low: '부족', out: '품절' };
 
+// 창고마다 다른 칩 스타일 (정렬 순서 기반 고정) — NS/천안 라벨 한눈에 구분
+function whStyle(name) {
+  const names = S.getWarehouses().map((w) => w.name).sort();
+  const i = Math.max(0, names.indexOf(name));
+  const tints = [['var(--accent)', 'var(--accent-ink)'], ['var(--surface-3)', 'var(--ink)'], ['var(--accent-soft)', 'var(--ink)'], ['var(--out-bg)', 'var(--out-ink)']];
+  const [bg, fg] = tints[i % tints.length];
+  return `background:${bg};color:${fg}`;
+}
 function whTag(name) {
   const w = S.getWarehouses().find((x) => x.name === name);
-  return `<span class="whtag">${whIcon(w ? w.icon : 'warehouse')}<span>${esc(name)}</span></span>`;
+  return `<span class="whtag" style="${whStyle(name)}">${whIcon(w ? w.icon : 'warehouse')}<span>${esc(name)}</span></span>`;
 }
 
 // ── 화면들 ────────────────────────────────────────────
@@ -271,7 +279,10 @@ function screenStock() {
 function colorStatus(total) { return total <= 0 ? 'out' : (total <= 10 ? 'low' : 'ok'); }
 
 function screenSilicone() {
-  const sil = S.getItems().filter((it) => it.category === '실리콘');
+  const wh = state.silWH || null;
+  const allSil = S.getItems().filter((it) => it.category === '실리콘');
+  const sil = wh ? allSil.filter((it) => it.warehouse === wh) : allSil;
+  const silWhs = [...new Set(allSil.map((it) => it.warehouse))];
   const byName = {};
   sil.forEach((it) => { (byName[it.name] = byName[it.name] || []).push(it); });
   const rows = Object.keys(byName).map((name) => {
@@ -283,9 +294,10 @@ function screenSilicone() {
   rows.sort((a, b) => rank[a.st] - rank[b.st] || b.total - a.total);
 
   // 월별 실리콘 출고 내역 (어느 거래처에 몇 개)
-  const silNames = new Set(sil.map((it) => it.name));
+  const silNames = new Set(allSil.map((it) => it.name));
   const outs = [];
   S.getShipments().forEach((s) => {
+    if (wh && s.warehouse !== wh) return;
     S.shipLines(s).forEach((l) => {
       if (silNames.has(l.name) && Number(l.qty) > 0) outs.push({ id: s.id, date: s.date || '', month: (s.date || '').slice(0, 7), client: s.client || '거래처 미지정', name: l.name, qty: Number(l.qty), unit: l.unit || '', status: s.status });
     });
@@ -305,12 +317,18 @@ function screenSilicone() {
   const outList = months.length ? `<div class="sec-title" style="margin-top:26px">월별 출고 내역</div>${months.map(monthBlock).join('')}` : '';
 
   return `<div class="screen">
-    <div class="sec-title">색상 ${rows.length} · 창고 합산</div>
+    <div class="tabs" style="margin-bottom:12px">
+      <button data-act="sil-wh" data-w="" class="${!wh ? 'on' : ''}">전체</button>
+      ${silWhs.map((w) => `<button data-act="sil-wh" data-w="${esc(w)}" class="${wh === w ? 'on' : ''}">${esc(whShort(w))}</button>`).join('')}
+    </div>
+    <div class="sec-title">색상 ${rows.length} · ${wh ? esc(whShort(wh)) + ' 창고' : '창고 합산'}</div>
     <div class="rows">
       ${rows.map((r) => `<button class="row" data-act="color" data-c="${esc(r.name)}">
         ${swatchHTML(r.name)}
         <div class="nm"><b>${esc(r.name)}</b>
-          <div class="split">${r.list.map((it) => `<span class="wtag">${esc(whShort(it.warehouse))} ${boxText(it)}</span>`).join('')}</div></div>
+          <div class="split">${r.list.map((it) => `<span class="wtag" style="${whStyle(it.warehouse)}">${esc(whShort(it.warehouse))} ${boxText(it)}</span>`).join('')}</div>
+          ${(() => { const ns = r.list.filter((it) => (it.note || '').trim()).map((it) => esc((silWhs.length > 1 ? whShort(it.warehouse) + ' ' : '') + it.note)); return ns.length ? `<div style="color:#e05a52;font-size:12px;font-weight:600;margin-top:3px">${ns.join(' · ')}</div>` : ''; })()}
+          </div>
         <div class="qty"><b>${r.total}</b><span>${esc(r.unit)}</span></div>
         <span class="pill ${r.st}">${STATUS_KO[r.st]}</span>
       </button>`).join('')}
@@ -330,8 +348,10 @@ function sheetColor(name) {
       const cur = S.currentStock(it);
       return `<div class="row" style="box-shadow:none;background:var(--surface-2)">
         <span class="whic sm">${whIcon((S.getWarehouses().find((w) => w.name === it.warehouse) || {}).icon || 'warehouse')}</span>
-        <div class="nm"><b>${esc(it.warehouse)}</b><span>${it.perBox ? `${it.perBox}개입 · ` : ''}${S.reservedQty(it) ? `예정 ${S.reservedQty(it)}` : '　'}</span></div>
+        <div class="nm"><b>${esc(it.warehouse)}</b><span>${it.perBox ? `${it.perBox}개입 · ` : ''}${S.reservedQty(it) ? `예정 ${S.reservedQty(it)}` : '　'}</span>
+          ${(it.note || '').trim() ? `<span style="display:block;color:#e05a52;font-size:12px;font-weight:600;margin-top:2px">${esc(it.note)}</span>` : ''}</div>
         <div class="qty"><b>${cur}</b><span>${esc(it.unit)}</span></div>
+        <button class="pill" data-act="note-edit" data-id="${it.id}" style="margin-right:6px">비고</button>
         <button class="pill" data-act="stock-edit" data-id="${it.id}" style="margin-right:6px">수정</button>
         <button class="pill done" data-act="color-ship" data-id="${it.id}">출고</button>
       </div>`;
@@ -1335,6 +1355,7 @@ app.addEventListener('click', (e) => {
   else if (act === 'quick') { shipPrefill = null; openSheet(sheetQuick()); }
   else if (act === 'add-inbound') { openSheet(sheetInboundForm()); }
   else if (act === 'color') { openSheet(sheetColor(t.dataset.c)); }
+  else if (act === 'sil-wh') { state.silWH = t.dataset.w || null; render(); }
   else if (act === 'color-ship') {
     const it = S.findItem(t.dataset.id);
     shipPrefill = { warehouse: it.warehouse, itemId: it.id, qty: '', unit: it.unit, client: '', status: '출고완료', note: '', matched: it.name };
@@ -1345,6 +1366,12 @@ app.addEventListener('click', (e) => {
     if (!it) return;
     const v = prompt(`${it.name} · ${it.warehouse}\n현재 재고를 실제 수량(${it.unit})으로 수정`, S.currentStock(it));
     if (v !== null && String(v).trim() !== '') { S.setStock(it.id, v); openSheet(sheetColor(it.name)); }
+  }
+  else if (act === 'note-edit') {
+    const it = S.findItem(t.dataset.id);
+    if (!it) return;
+    const v = prompt(`${it.name} · ${it.warehouse}\n비고 (입고예정일 등 — 리스트에 빨간색 표시)`, it.note || '');
+    if (v !== null) { S.updateItem(it.id, { note: v.trim() }); openSheet(sheetColor(it.name)); }
   }
   else if (act === 'q-parse') {
     const txt = document.getElementById('q-text').value;
