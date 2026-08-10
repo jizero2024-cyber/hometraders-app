@@ -135,6 +135,12 @@ export function updateItem(id, patch) {
   put('items', it); notify();
 }
 export function deleteItem(id) { items = items.filter((x) => x.id !== id); sb.from('items').delete().eq('id', id); notify(); }
+// 현재고를 실사 수량(target)으로 맞춤 — 초기재고를 보정(입고·출고완료는 그대로 유지)
+export function setStock(id, target) {
+  const it = findItem(id); if (!it) return;
+  it.initial = num(it.initial) + (num(target) - currentStock(it));
+  put('items', it); notify();
+}
 
 // ── 출고 CRUD ──────────────────────────────────────
 export function addShipment(o) {

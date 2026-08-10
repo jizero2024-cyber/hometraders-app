@@ -843,7 +843,7 @@ function sheetItemForm(existing) {
     <div class="field"><label>품목명 (색상 또는 규격)</label><input name="name" value="${esc(it.name)}" placeholder="예: 베이지 / 2*6*12"></div>
     <div class="field"><label>별칭 <span style="color:var(--faint);font-weight:400">이렇게도 불러요 · 쉼표로 구분 (붙여넣기 자동인식)</span></label><input name="aliases" value="${esc(it.aliases || '')}" placeholder="예: 다루끼, 다루끼목, 30각" autocapitalize="none"></div>
     <div class="field"><div class="row2">
-      <div><label>초기재고</label><input name="initial" type="number" inputmode="numeric" value="${it.initial}"></div>
+      <div><label>${existing ? '현재 재고 (실사 수정)' : '초기 재고'}</label><input name="stock" type="number" inputmode="decimal" value="${existing ? S.currentStock(it) : (it.initial || 0)}"></div>
       <div><label>단위</label><select name="unit">${UNITS.map((u) => `<option ${it.unit === u ? 'selected' : ''}>${u}</option>`).join('')}</select></div>
     </div></div>
     <div class="field"><div class="row2">
@@ -1490,10 +1490,11 @@ app.addEventListener('submit', (e) => {
     const category = form.querySelector('[data-seg="category"] .on').dataset.v;
     const name = form.name.value.trim();
     if (!name) return alert('품목명을 입력하세요.');
-    const payload = { warehouse, category, name, unit: form.unit.value, initial: form.initial.value,
+    const payload = { warehouse, category, name, unit: form.unit.value,
       perBox: Number(form.perBox.value) || 0, unitPrice: Number(form.unitPrice.value) || 0,
       supplier: form.supplier.value.trim(), note: form.note.value.trim(), aliases: form.aliases.value.trim() };
-    if (form.dataset.id) S.updateItem(form.dataset.id, payload); else S.addItem(payload);
+    if (form.dataset.id) { S.updateItem(form.dataset.id, payload); S.setStock(form.dataset.id, form.stock.value); }
+    else S.addItem({ ...payload, initial: form.stock.value });
     closeSheet();
   }
   else if (form.id === 'wh-form') {
