@@ -16,7 +16,15 @@ const nid = (p) => `${p}_${Date.now().toString(36)}_${(_id++).toString(36)}`;
 const num = (v) => Number(v) || 0;
 
 // ── 초기 로드 + 최초 시드 + 실시간 ─────────────────────
-export async function init() {
+// init()은 토큰 갱신(onAuthChange) 등으로 여러 번 불릴 수 있어 중복/동시 호출을 막는다.
+// 실패하면 promise를 비워 다음 재시도를 허용, 성공하면 캐시된 promise를 재사용.
+let _initPromise = null;
+export function init() {
+  if (_initPromise) return _initPromise;
+  _initPromise = _init().catch((e) => { _initPromise = null; throw e; });
+  return _initPromise;
+}
+async function _init() {
   const [w, p, i, n, s, q] = await Promise.all([
     sb.from('warehouses').select('*'),
     sb.from('partners').select('*'),
@@ -34,10 +42,20 @@ export async function init() {
   if (!items.length) { items = seedItems(); await sb.from('items').upsert(items); }
   if (!partners.length) { partners = seedPartners(); await sb.from('partners').upsert(partners); }
 
-  ['warehouses', 'partners', 'items', 'inbounds', 'shipments', 'quotes'].forEach((tbl) => {
-    sb.channel('rt_' + tbl).on('postgres_changes', { event: '*', schema: 'public', table: tbl }, () => refetch(tbl)).subscribe();
-  });
+  setupRealtime();
   notify();
+}
+// 실시간 구독은 딱 1회만. 이미 붙은 채널이 있으면 제거 후 재구독(재진입 안전) →
+// "cannot add postgres_changes callbacks after subscribe()" 방지.
+let _realtimeOn = false;
+function setupRealtime() {
+  if (_realtimeOn) return;
+  _realtimeOn = true;
+  ['warehouses', 'partners', 'items', 'inbounds', 'shipments', 'quotes'].forEach((tbl) => {
+    const topic = 'rt_' + tbl;
+    sb.getChannels().filter((c) => c.topic === 'realtime:' + topic).forEach((c) => sb.removeChannel(c));
+    sb.channel(topic).on('postgres_changes', { event: '*', schema: 'public', table: tbl }, () => refetch(tbl)).subscribe();
+  });
 }
 async function refetch(tbl) {
   const { data } = await sb.from(tbl).select('*');
@@ -226,4 +244,4 @@ export async function signIn(id, password) {
   const { error } = await sb.auth.signInWithPassword({ email: idToEmail(id), password });
   if (error) throw error;
 }
-export async function signOut() { await sb.auth.signOut(); }
+export async function signOut() { _initPromise = null; await sb.auth.signOut(); }
