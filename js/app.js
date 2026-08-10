@@ -888,21 +888,27 @@ function sheetSmartShip(d) {
   smartShipData = d;
   const inp = 'width:100%;padding:11px 12px;border-radius:10px;background:var(--surface-2);color:var(--ink);border:0;font-size:15px';
   return `<div class="grab"></div><h2>${I.bolt} 출고 인식됨 · ${d.lines.length}품목</h2>
-  <p class="hint">아래 품목으로 출고를 등록할게요. 거래처·창고만 확인해주세요.</p>
-  <div class="rows">
-    ${d.lines.map((l) => `<div class="row" style="box-shadow:none;background:var(--surface-2)">
-      ${swatchHTML(l.name)}
-      <div class="nm"><b>${esc(l.name)}</b><span>${esc(l.category || '')}</span></div>
-      <div class="qty"><b>${l.qty}</b><span>${esc(l.unit)}</span></div>
-    </div>`).join('')}
+  <p class="hint">품목마다 나가는 <b>창고</b>를 확인하세요. 창고가 다르면 자동으로 나눠서 등록됩니다.</p>
+  <div>
+    ${d.lines.map((l, i) => {
+      const whs = [...new Set(S.getItems().filter((it) => it.name === l.name).map((it) => it.warehouse))];
+      const opts = whs.length ? whs : S.warehouseNames();
+      return `<div style="background:var(--surface-2);border-radius:12px;padding:10px 12px;margin-bottom:8px">
+        <div style="display:flex;align-items:center;gap:9px">
+          ${swatchHTML(l.name)}
+          <b style="flex:1;min-width:0">${esc(l.name)}</b>
+          <b>${l.qty}</b><span style="color:var(--muted);font-size:13px">${esc(l.unit)}</span>
+        </div>
+        <select data-ss-wh="${i}" style="width:100%;margin-top:8px;padding:9px 11px;border-radius:9px;background:var(--surface);border:0;color:var(--ink);font-size:14px">
+          ${opts.map((w) => `<option ${w === l.warehouse ? 'selected' : ''}>${esc(w)}</option>`).join('')}
+        </select>
+      </div>`;
+    }).join('')}
   </div>
   <div class="field" style="margin-top:12px"><label>거래처 (하차지)</label>
     <input id="ss-client" list="ship-partners" value="${esc(d.client || '')}" placeholder="거래처 검색·선택" autocomplete="off" style="${inp}">
     <datalist id="ship-partners">${S.getPartners().map((pt) => `<option value="${esc(pt.name)}"></option>`).join('')}</datalist></div>
-  <div class="field"><div class="row2">
-    <div><label>창고</label><select id="ss-wh" style="${inp}">${S.warehouseNames().map((w) => `<option ${w === d.warehouse ? 'selected' : ''}>${esc(w)}</option>`).join('')}</select></div>
-    <div><label>상태</label><select id="ss-status" style="${inp}">${['출고예정', '출고완료'].map((s) => `<option ${s === d.status ? 'selected' : ''}>${s}</option>`).join('')}</select></div>
-  </div></div>
+  <div class="field"><label>상태</label><select id="ss-status" style="${inp}">${['출고예정', '출고완료'].map((s) => `<option ${s === d.status ? 'selected' : ''}>${s}</option>`).join('')}</select></div>
   <button class="btn" type="button" data-act="ss-save">출고 등록</button>
   <button class="btn ghost" type="button" data-act="smart" style="margin-top:8px">← 다시 붙여넣기</button>
   <button class="btn danger" type="button" data-act="close">취소</button>`;
@@ -1304,12 +1310,21 @@ app.addEventListener('click', (e) => {
   else if (act === 'ss-save') {
     const d = smartShipData; if (!d) return;
     const client = document.getElementById('ss-client').value.trim();
-    const wh = document.getElementById('ss-wh').value;
     const status = document.getElementById('ss-status').value;
-    const lines = d.lines.map((l) => ({ name: l.name, category: l.category, spec: '', unit: l.unit, qty: l.qty, unitPrice: l.unitPrice }));
-    const sh = S.addShipment({ date: S.todayStr(), warehouse: wh, client, status, lines });
+    d.lines.forEach((l, i) => { const sel = document.querySelector(`[data-ss-wh="${i}"]`); if (sel) l.warehouse = sel.value; });
+    const byWh = {};
+    d.lines.forEach((l) => { (byWh[l.warehouse] = byWh[l.warehouse] || []).push(l); });
+    const whList = Object.keys(byWh);
+    let first = null;
+    whList.forEach((wh) => {
+      const lines = byWh[wh].map((l) => ({ name: l.name, category: l.category, spec: '', unit: l.unit, qty: l.qty, unitPrice: l.unitPrice }));
+      const sh = S.addShipment({ date: S.todayStr(), warehouse: wh, client, status, lines });
+      if (!first) first = sh;
+    });
     state.route = 'ship';
-    openSheet(sheetDoc(S.getShipments().find((s) => s.id === sh.id)));
+    if (whList.length > 1) { state.shipView = 'list'; closeSheet(); alert(`창고가 달라 ${whList.length}건으로 나눠 등록했어요.\n(${whList.join(', ')})`); }
+    else if (first) openSheet(sheetDoc(S.getShipments().find((s) => s.id === first.id)));
+    else closeSheet();
   }
   else if (act === 'sm-dispatch-pick') {
     const sh = S.getShipments().find((s) => s.id === t.dataset.id);
