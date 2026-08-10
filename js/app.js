@@ -871,10 +871,12 @@ function sheetDoc(sh) {
   <div class="doc">
     <h3>${esc(sh.client || '거래처 미지정')}</h3>
     <div class="docsub">출고일 ${esc(sh.date)} · ${esc(sh.warehouse)}</div>
+    ${(state.docEditLines && slId === sh.id) ? shipLinesEditor(sh) : `
     <table>
       <tr><th>품목</th><th>규격</th><th class="n">수량</th></tr>
       ${S.shipLines(sh).map((l) => `<tr><td>${esc(l.name || '(미지정)')}</td><td>${esc(l.spec || l.category || '')}</td><td class="n">${l.qty} ${esc(l.unit)}</td></tr>`).join('')}
     </table>
+    <button class="btn ghost" type="button" data-act="doc-edit-lines" data-id="${sh.id}" style="margin-top:10px;font-size:13px;padding:9px">수량 · 품목 수정</button>`}
     ${hasAddr ? `<div class="docblock">
       <div class="kv"><span>상차지</span><b>${esc(sh.loadPlace || sh.warehouse || '-')}</b></div>
       ${sh.loadAddr ? `<div style="text-align:right;font-size:12px;color:var(--muted);margin:-4px 0 8px">${esc(sh.loadAddr)}</div>` : ''}
@@ -896,8 +898,7 @@ function sheetDoc(sh) {
     <button class="btn ghost" type="button" data-act="dispatch-paste" data-id="${sh.id}" style="margin-top:8px">배차 확인 붙여넣기 (회신 받으면)</button>` : ''}
   ${sh.status === '배차완료' ? `<button class="btn ghost" type="button" data-act="dispatch-paste" data-id="${sh.id}">배차 정보 다시 붙여넣기</button>` : ''}
   ${sh.status === '출고완료' ? `<button class="btn ${sh.docDone ? 'ghost' : ''}" type="button" data-act="toggle-doc" data-id="${sh.id}">${sh.docDone ? '명세서 발행됨 · 해제' : '명세서 발행 완료로 표시'}</button>` : ''}
-  <button class="btn ghost" type="button" data-act="ship-lines" data-id="${sh.id}" style="margin-top:8px">품목 편집 (추가 · 삭제 · 수량)</button>
-  <button class="btn ghost" type="button" data-act="edit-ship" data-id="${sh.id}" style="margin-top:8px">출고 수정 (품목·수량·거래처)</button>
+  <button class="btn ghost" type="button" data-act="edit-ship" data-id="${sh.id}" style="margin-top:8px">출고 수정 (거래처 · 배차 · 상태)</button>
   <button class="btn danger" type="button" data-act="del-ship" data-id="${sh.id}">삭제</button>`;
 }
 
@@ -915,27 +916,27 @@ function readShipLinesDom() {   // 재렌더 전 현재 입력값을 임시배�
     }
   });
 }
-function sheetShipLines(id) {
-  const sh = S.getShipments().find((s) => s.id === id);
+// 출고 상세 안에서 바로 품목 표를 인라인 편집 (수량·품목 변경, 줄 삭제/추가)
+function shipLinesEditor(sh) {
   const whItems = S.getItems().filter((it) => it.warehouse === sh.warehouse);
   const opts = (name) => {
     let list = whItems.map((it) => it.name);
     if (name && !list.includes(name)) list = [name, ...list];   // 창고에 없는 품목명(견적 자유입력 등)도 보존
     return list.map((n) => `<option value="${esc(n)}" ${n === name ? 'selected' : ''}>${esc(n)}</option>`).join('');
   };
-  return `<div class="grab"></div><h2>품목 편집</h2>
-  <p style="color:var(--muted);font-size:13px;margin:-4px 0 12px">${esc(sh.client || '거래처 미지정')} · ${esc(sh.date)} · ${esc(sh.warehouse)}</p>
-  <div class="rows">
-    ${slLines.map((l, i) => `<div class="row" style="box-shadow:none;background:var(--surface-2);gap:8px;align-items:center">
+  return `<div class="rows" style="margin-top:2px">
+    ${slLines.map((l, i) => `<div class="row" style="box-shadow:none;background:var(--surface);gap:8px;align-items:center">
       <select data-sl="name" data-i="${i}" style="flex:1;min-width:0;background:transparent;border:0;font-size:15px;color:var(--ink)">${opts(l.name)}</select>
-      <input data-sl="qty" data-i="${i}" type="number" min="0" inputmode="decimal" value="${l.qty}" style="width:66px;text-align:right">
-      <span style="color:var(--muted);font-size:13px;min-width:24px">${esc(l.unit || '')}</span>
-      <button class="pill" type="button" data-act="sl-del" data-i="${i}" style="min-width:34px">✕</button>
+      <input data-sl="qty" data-i="${i}" type="number" min="0" inputmode="decimal" value="${l.qty}" style="width:60px;text-align:right">
+      <span style="color:var(--muted);font-size:13px;min-width:22px">${esc(l.unit || '')}</span>
+      <button class="pill" type="button" data-act="sl-del" data-i="${i}" style="min-width:32px">✕</button>
     </div>`).join('')}
   </div>
   <button class="btn ghost" type="button" data-act="sl-add" style="margin-top:8px">+ 품목 추가</button>
-  <button class="btn" type="button" data-act="sl-save" data-id="${id}" style="margin-top:12px">저장</button>
-  <button class="btn danger" type="button" data-act="close">취소</button>`;
+  <div style="display:flex;gap:8px;margin-top:10px">
+    <button class="btn" type="button" data-act="sl-save" data-id="${sh.id}" style="flex:1">저장</button>
+    <button class="btn ghost" type="button" data-act="sl-cancel" data-id="${sh.id}" style="flex:1">취소</button>
+  </div>`;
 }
 
 function sheetDispatchPaste(id) {
@@ -1001,7 +1002,7 @@ function render() {
 
 // ── 이벤트 ────────────────────────────────────────────
 function openSheet(html) { state.sheet = html; render(); }
-function closeSheet() { state.sheet = null; render(); }
+function closeSheet() { state.sheet = null; state.docEditLines = false; render(); }
 
 app.addEventListener('click', (e) => {
   // 세그먼트 / 아이콘 선택 토글 (data-act 없는 버튼도 동작하도록 최상단에서 처리)
@@ -1135,29 +1136,31 @@ app.addEventListener('click', (e) => {
   }
   else if (act === 'add-item') { openSheet(sheetItemForm(null)); }
   else if (act === 'item') { openSheet(sheetItemForm(S.findItem(t.dataset.id))); }
-  else if (act === 'ship') { openSheet(sheetDoc(S.getShipments().find((s) => s.id === t.dataset.id))); }
+  else if (act === 'ship') { state.docEditLines = false; openSheet(sheetDoc(S.getShipments().find((s) => s.id === t.dataset.id))); }
   else if (act === 'edit-ship') { openSheet(sheetEditShip(S.getShipments().find((s) => s.id === t.dataset.id))); }
-  else if (act === 'ship-lines') {
+  else if (act === 'doc-edit-lines') {
     const sh = S.getShipments().find((s) => s.id === t.dataset.id);
-    slId = sh.id; slLines = S.shipLines(sh).map((l) => ({ ...l }));
-    openSheet(sheetShipLines(sh.id));
+    slId = sh.id; slLines = S.shipLines(sh).map((l) => ({ ...l })); state.docEditLines = true;
+    openSheet(sheetDoc(sh));
   }
   else if (act === 'sl-add') {
     readShipLinesDom();
     const it = S.getItems().find((x) => x.warehouse === shipWh()) || S.getItems()[0] || {};
     slLines.push({ name: it.name || '', category: it.category || '', spec: '', unit: it.unit || '', qty: '', unitPrice: it.unitPrice || 0 });
-    openSheet(sheetShipLines(slId));
+    openSheet(sheetDoc(S.getShipments().find((s) => s.id === slId)));
   }
-  else if (act === 'sl-del') { readShipLinesDom(); slLines.splice(Number(t.dataset.i), 1); openSheet(sheetShipLines(slId)); }
+  else if (act === 'sl-del') { readShipLinesDom(); slLines.splice(Number(t.dataset.i), 1); openSheet(sheetDoc(S.getShipments().find((s) => s.id === slId))); }
+  else if (act === 'sl-cancel') { state.docEditLines = false; openSheet(sheetDoc(S.getShipments().find((s) => s.id === slId))); }
   else if (act === 'sl-save') {
     readShipLinesDom();
     const lines = slLines.filter((l) => l.name && Number(l.qty) > 0);
     if (!lines.length) return alert('품목이 최소 1줄은 있어야 해요. 전부 빼려면 출고 자체를 삭제하세요.');
     const f = lines[0];
     S.updateShipment(slId, { lines, name: f.name, category: f.category || '', qty: f.qty, unit: f.unit || '' });
+    state.docEditLines = false;
     openSheet(sheetDoc(S.getShipments().find((s) => s.id === slId)));
   }
-  else if (act === 'ship-stage') { S.updateShipment(t.dataset.id, { status: t.dataset.v }); openSheet(sheetDoc(S.getShipments().find((s) => s.id === t.dataset.id))); }
+  else if (act === 'ship-stage') { state.docEditLines = false; S.updateShipment(t.dataset.id, { status: t.dataset.v }); openSheet(sheetDoc(S.getShipments().find((s) => s.id === t.dataset.id))); }
   else if (act === 'dispatch-paste') { openSheet(sheetDispatchPaste(t.dataset.id)); }
   else if (act === 'dp-apply') {
     const text = document.getElementById('dp-text').value;
