@@ -1098,7 +1098,8 @@ function sheetDoc(sh) {
   <p class="hint" style="text-align:center;margin-top:-8px">단계를 눌러 상태 변경</p>
   <div class="doc">
     <h3>${esc(sh.client || '거래처 미지정')}</h3>
-    <div class="docsub">출고일 ${esc(sh.date)} · ${esc(sh.warehouse)}${isCourier ? ' · 택배' : ''}</div>
+    <div class="docsub">출고일 ${esc(sh.date)}${isCourier ? ' · 택배' : ''}</div>
+    <div style="display:flex;align-items:center;gap:8px;margin:8px 0 12px"><span style="color:var(--muted);font-size:13px">출고 창고</span>${whTag(sh.warehouse)}</div>
     ${(state.docEditLines && slId === sh.id) ? shipLinesEditor(sh) : `
     <table>
       <tr><th>품목</th><th class="n">수량</th><th class="n">단가</th><th class="n">금액</th></tr>
