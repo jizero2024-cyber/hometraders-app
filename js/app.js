@@ -1601,7 +1601,11 @@ app.addEventListener('click', (e) => {
     S.updateShipment(t.dataset.id, { docDone: !sh.docDone });
     openSheet(sheetDoc(S.getShipments().find((s) => s.id === t.dataset.id)));
   }
-  else if (act === 'doc-done') { S.updateShipment(t.dataset.id, { docDone: true }); render(); }
+  else if (act === 'doc-done') {
+    const sh = S.getShipments().find((s) => s.id === t.dataset.id);
+    if (!confirm(`${sh && sh.client ? sh.client + ' ' : ''}명세서를 발행완료로 표시할까요?`)) return;
+    S.updateShipment(t.dataset.id, { docDone: true }); render();
+  }
   else if (act === 'kakao') { alert('카카오톡 명세서 발송은 2단계에서 연동됩니다.\n(스튜디오밭 카카오 콘솔 템플릿 사용)'); }
   else if (act === 'export') { downloadJSON(); }
   else if (act === 'logout') { S.signOut(); }
