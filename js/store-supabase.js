@@ -218,5 +218,12 @@ export async function bulkUpsert(tbl, rows) { if (rows && rows.length) await sb.
 export async function getSession() { const { data } = await sb.auth.getSession(); return data.session; }
 export async function currentUser() { const { data } = await sb.auth.getUser(); return data.user; }
 export function onAuthChange(cb) { sb.auth.onAuthStateChange((_e, session) => cb(session)); }
-export async function signIn(email, password) { const { error } = await sb.auth.signInWithPassword({ email, password }); if (error) throw error; }
+// 아이디 로그인: 순수 아이디(admin 등)는 내부 이메일(admin@hometraders.local)로 매핑.
+// 이미 이메일 형식(@ 포함)이면 그대로 사용.
+export const ID_DOMAIN = '@hometraders.local';
+export const idToEmail = (id) => (id.includes('@') ? id.trim() : id.trim().toLowerCase() + ID_DOMAIN);
+export async function signIn(id, password) {
+  const { error } = await sb.auth.signInWithPassword({ email: idToEmail(id), password });
+  if (error) throw error;
+}
 export async function signOut() { await sb.auth.signOut(); }

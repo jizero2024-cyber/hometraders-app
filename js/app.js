@@ -1165,8 +1165,12 @@ app.addEventListener('submit', (e) => {
   const form = e.target;
   if (form.id === 'login-form') {
     const errEl = document.getElementById('login-err'); if (errEl) errEl.textContent = '로그인 중…';
-    S.signIn(form.email.value.trim(), form.password.value).catch((err) => {
-      if (errEl) errEl.textContent = '로그인 실패 — 이메일/비밀번호를 확인하세요';
+    S.signIn(form.userid.value.trim(), form.password.value).catch((err) => {
+      const raw = (err && (err.message || err.error_description || '')).toLowerCase();
+      let msg = '로그인 실패 — 아이디/비밀번호를 확인하세요';
+      if (raw.includes('not confirmed')) msg = '로그인 실패 — 계정 이메일 인증이 필요해요 (관리자 확인)';
+      else if (raw.includes('invalid')) msg = '로그인 실패 — 아이디 또는 비밀번호가 틀렸어요';
+      if (errEl) errEl.textContent = msg;
       console.warn(err);
     });
     return;
@@ -1274,7 +1278,7 @@ function showLogin(msg) {
     <h1 style="font-size:22px;font-weight:800;margin:0">홈트레이더스</h1>
     <p style="color:var(--muted);font-size:13px;margin:4px 0 24px">재고 · 출고 관리 · 로그인</p>
     <form id="login-form" style="display:flex;flex-direction:column;gap:10px;text-align:left">
-      <input name="email" type="email" autocomplete="username" placeholder="이메일" style="padding:13px;border-radius:11px;background:var(--surface-2);border:0;color:var(--ink);font-size:16px">
+      <input name="userid" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="아이디" style="padding:13px;border-radius:11px;background:var(--surface-2);border:0;color:var(--ink);font-size:16px">
       <input name="password" type="password" autocomplete="current-password" placeholder="비밀번호" style="padding:13px;border-radius:11px;background:var(--surface-2);border:0;color:var(--ink);font-size:16px">
       <button class="btn" type="submit" style="margin-top:4px">로그인</button>
       <p id="login-err" style="color:#e05a52;font-size:13px;text-align:center;min-height:18px;margin:2px 0">${msg || ''}</p>
