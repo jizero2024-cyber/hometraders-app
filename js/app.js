@@ -218,8 +218,11 @@ function screenHome() {
   const needCheck = ships.filter((s) => !s.name || (s.note || '').includes('확인'));
   const docPending = ships.filter((s) => s.status === '출고완료' && !s.docDone);
   const lowItems = items.filter((it) => S.stockStatus(it) === 'out');   // 대시보드는 품절만 (부족은 제외)
-  const todayList = ships.filter((s) => s.date === today && !(s.status === '출고예정' && !s.dispatchVia && !s.driverName))
-    .sort((a, b) => ((a.time || '~').localeCompare(b.time || '~')));
+  // 출고예정(배차된 건)·배차완료는 날짜 무관 모두, 그 외는 오늘 건. 배차 안된 예정은 아래 '배차 요청 필요'에.
+  const todayList = ships.filter((s) => {
+    if (s.status === '출고예정' && !s.dispatchVia && !s.driverName) return false;
+    return s.status === '출고예정' || s.status === '배차완료' || s.date === today;
+  }).sort((a, b) => ((a.date + (a.time || '~')).localeCompare(b.date + (b.time || '~'))));
 
   const tiles = [
     ['견적대기', S.quotesPending(), 'quote'],
@@ -271,9 +274,9 @@ function screenHome() {
     ${needDispatch.length ? `<div class="rows">${needDispatch.map(boardRow).join('')}</div>`
       : `<div class="card" style="color:var(--muted);font-size:14px">배차 요청할 게 없어요.</div>`}
 
-    <div class="sec-title">오늘 출고 · 도착</div>
+    <div class="sec-title">출고 예정 · 오늘 도착</div>
     ${todayList.length ? `<div class="rows">${todayList.map(boardRow).join('')}</div>`
-      : `<div class="card" style="color:var(--muted);font-size:14px">오늘 예정된 출고·도착이 없어요.</div>`}
+      : `<div class="card" style="color:var(--muted);font-size:14px">예정된 출고·도착이 없어요.</div>`}
 
     <div class="sec-title">체크리스트</div>
     ${problems.length ? problems.join('') : `<div class="card" style="color:var(--muted);font-size:14px">오늘 챙길 게 없어요. 정상입니다.</div>`}
