@@ -48,6 +48,7 @@ const STAGES = ['출고예정', '배차완료', '출고완료'];
 const STAGE_SHORT = { 출고예정: '예정', 배차완료: '배차', 출고완료: '출고' };
 const STAGE_PILL = { 출고예정: 'plan', 배차완료: 'mid', 출고완료: 'done' };
 const DISPATCH = ['이음물류', '직접', '기타'];
+const COURIERS = ['경동택배', 'CJ대한통운', '로젠택배', '한진택배', '우체국택배', '대신택배'];
 const telHref = (p) => 'tel:' + String(p || '').replace(/[^0-9]/g, '');
 
 // 견적서 발행정보 (양식 고정값)
@@ -206,7 +207,10 @@ function screenHome() {
     <span class="bt">${esc(left)}</span>
     <div class="bmid"><b>${esc(s.client || '거래처 미지정')}</b>
       <div class="bsub">${esc(sm.itemLabel)} ${esc(sm.qtyLabel)} · ${whTag(s.warehouse)}</div></div>
-    <span class="pill ${pillCls}">${pillTxt}</span></button>`;
+    <span style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+      <span class="pill ${pillCls}">${pillTxt}</span>
+      ${s.status === '출고완료' ? `<span class="pill ${s.docDone ? 'done' : 'low'}" style="font-size:11px">${s.docDone ? '명세서 발행' : '명세서 미발행'}</span>` : ''}
+    </span></button>`;
   };
 
   const pendingQuotes = S.getQuotes().filter((q) => q.status === '견적대기').sort((a, b) => daysSince(b.date) - daysSince(a.date));
@@ -562,7 +566,7 @@ function rowShip(s) {
     ${swatchHTML(sm.swatchName)}
     <div class="body"><b>${esc(s.client || '거래처 미지정')}</b>
       <div class="meta">${whTag(s.warehouse)} ${esc(sm.itemLabel)} · ${esc(s.date)}</div></div>
-    <div class="right"><span class="q">${esc(sm.qtyLabel)}</span><span class="pill ${cls}">${STAGE_SHORT[s.status] || esc(s.status)}</span></div>
+    <div class="right" style="flex-wrap:wrap;justify-content:flex-end;gap:6px"><span class="q">${esc(sm.qtyLabel)}</span><span class="pill ${cls}">${STAGE_SHORT[s.status] || esc(s.status)}</span>${s.status === '출고완료' ? `<span class="pill ${s.docDone ? 'done' : 'low'}" style="font-size:11px">${s.docDone ? '명세서 발행' : '명세서 미발행'}</span>` : ''}</div>
   </button>`;
 }
 
@@ -1326,9 +1330,13 @@ app.addEventListener('submit', (e) => {
     const qty = Number(form.qty.value);
     if (!it) return alert('품목을 선택하세요.');
     if (!qty || qty <= 0) return alert('수량을 입력하세요.');
+    const unit = document.getElementById('f-unit').value || it.unit;
+    const cur = S.currentStock(it);
+    const reqBoxes = (unit === '낱개' && it.perBox) ? qty / it.perBox : qty;
+    if (reqBoxes > cur + 1e-9 && !confirm(`재고 부족 주의\n\n${it.name} (${it.warehouse})\n현재고 ${cur}${it.unit} · 요청 ${qty}${unit}\n\n재고보다 많습니다. 그래도 출고할까요?`)) return;
     const status = form.querySelector('#f-status .on').dataset.v;
     const saved = S.addShipment({ date: form.date.value, time: form.time.value, warehouse: it.warehouse, category: it.category,
-      name: it.name, qty, unit: document.getElementById('f-unit').value || it.unit, client: form.client.value.trim(), status,
+      name: it.name, qty, unit, client: form.client.value.trim(), status,
       dispatchVia: form.dispatchVia.value, driverName: form.driverName.value.trim(),
       driverPhone: form.driverPhone.value.trim(), vehicle: form.vehicle.value.trim(),
       freight: form.freight.value, payment: form.payment.value, note: form.note.value.trim() });
