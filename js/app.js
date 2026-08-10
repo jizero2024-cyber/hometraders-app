@@ -163,7 +163,7 @@ function screenHome() {
   const inTransit = ships.filter((s) => s.status === '배차완료').length;
   const needCheck = ships.filter((s) => !s.name || (s.note || '').includes('확인'));
   const docPending = ships.filter((s) => s.status === '출고완료' && !s.docDone);
-  const lowItems = items.filter((it) => S.stockStatus(it) !== 'ok');
+  const lowItems = items.filter((it) => S.stockStatus(it) === 'out');   // 대시보드는 품절만 (부족은 제외)
   const todayList = ships.filter((s) => s.date === today && !(s.status === '출고예정' && !s.dispatchVia && !s.driverName))
     .sort((a, b) => ((a.time || '~').localeCompare(b.time || '~')));
 
@@ -196,7 +196,7 @@ function screenHome() {
   const problems = [];
   if (pendingQuotes.length) problems.push(`<div class="psec"><span class="pttl">견적 미발송 (${pendingQuotes.length})</span>
     ${pendingQuotes.slice(0, 5).map((q) => `<button class="prow" data-act="quote-open" data-id="${q.id}"><span>${esc(q.client || '-')}${q.content ? ` · ${esc(q.content)}` : ''}</span><span class="pill ${daysSince(q.date) >= 2 ? 'out' : 'plan'}">${pendingLabel(q.date)}</span></button>`).join('')}</div>`);
-  if (lowItems.length) problems.push(`<div class="psec"><span class="pttl">재고 부족·품절 (${lowItems.length})</span>
+  if (lowItems.length) problems.push(`<div class="psec"><span class="pttl">품절 (${lowItems.length})</span>
     ${lowItems.slice(0, 5).map((it) => `<button class="prow" data-act="wh" data-w="${esc(it.warehouse)}"><span>${esc(it.name)} · ${esc(it.warehouse)}</span><span class="pill ${S.stockStatus(it)}">${STATUS_KO[S.stockStatus(it)]}</span></button>`).join('')}</div>`);
   if (needDispatch.length) problems.push(`<div class="psec"><span class="pttl">배차 미정 (${needDispatch.length})</span>
     ${needDispatch.slice(0, 5).map((s) => `<button class="prow" data-act="ship" data-id="${s.id}"><span>${esc(s.name)} · ${esc(s.client || '-')}</span><span class="pill plan">배차필요</span></button>`).join('')}</div>`);
