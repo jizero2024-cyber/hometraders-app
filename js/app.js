@@ -767,7 +767,7 @@ function sheetShipForm() {
       </div></div>
     <div class="field"><label>창고</label>
       <select name="warehouse" id="f-wh">${S.warehouseNames().map((w) => `<option ${p.warehouse === w ? 'selected' : ''}>${w}</option>`).join('')}</select></div>
-    <div class="field"><label>품목</label>
+    <div class="field"><label>품목 <button type="button" data-act="toggle-manual" style="float:right;font-size:12px;color:var(--muted);background:none;border:0;font-weight:600;text-decoration:underline;padding:0">직접 입력 ↔ 목록</button></label>
       <select name="itemId" id="f-item"></select>
       <input name="manualItem" id="f-manual" list="f-manual-list" placeholder="품목명 직접 입력" autocapitalize="none" autocomplete="off" style="display:none;width:100%;padding:12px 13px;border-radius:11px;background:var(--surface-2);color:var(--ink);border:0">
       <datalist id="f-manual-list"></datalist>
@@ -1520,6 +1520,18 @@ app.addEventListener('click', (e) => {
     state.calM = m; state.calY = y; render();
   }
   else if (act === 'new-ship') { shipPrefill = null; sfExtra = []; openSheet(sheetShipForm()); }
+  else if (act === 'toggle-manual') {
+    const man = document.getElementById('f-manual'); const sel = document.getElementById('f-item');
+    if (!man || !sel) return;
+    const showMan = man.style.display === 'none';
+    man.style.display = showMan ? 'block' : 'none'; sel.style.display = showMan ? 'none' : 'block';
+    if (showMan) {
+      const dl = document.getElementById('f-manual-list');
+      if (dl) dl.innerHTML = [...new Set(S.getItems().map((it) => it.name))].map((n) => `<option value="${esc(n)}"></option>`).join('');
+      const u = document.getElementById('f-unit'); if (u && !u.value) u.value = '박스';
+      const hint = document.getElementById('f-stock'); if (hint) hint.innerHTML = '<span style="color:var(--muted)">품목명 직접 입력 (재고 미차감)</span>';
+    } else { updateStockHint(); }
+  }
   else if (act === 'sf-add') { readSfExtra(); sfExtra.push({ name: '', qty: '', unit: '' }); renderSfExtra(); }
   else if (act === 'sf-del') { readSfExtra(); sfExtra.splice(Number(t.dataset.i), 1); renderSfExtra(); }
   else if (act === 'quick') { shipPrefill = null; openSheet(sheetQuick()); }
