@@ -1518,6 +1518,7 @@ async function boot() {
   catch (e) { app.innerHTML = `<div style="padding:48px 24px;text-align:center"><b>연결 오류</b><br><span style="color:#888;font-size:13px">${esc(e.message || String(e))}</span></div>`; }
 }
 S.subscribe(render);
+S.onError((m) => alert('저장에 실패했어요 — 잠시 후 다시 시도해주세요.\n\n원인: ' + m));
 S.onAuthChange(() => boot());
 boot();
 

@@ -15,6 +15,24 @@ let _id = 0;
 const nid = (p) => `${p}_${Date.now().toString(36)}_${(_id++).toString(36)}`;
 const num = (v) => Number(v) || 0;
 
+// ── 저장 래퍼 ─────────────────────────────────────────
+// 숫자 컬럼에 빈 문자열('') 등이 들어가 upsert가 거부되던 문제 방지 + 실패를 조용히 넘기지 않고 알림.
+const NUMFIELDS = {
+  items: ['initial', 'perBox', 'unitPrice'],
+  shipments: ['qty', 'freight', 'courierFee'],
+  inbounds: ['qty', 'perBox', 'unitPrice'],
+};
+const errListeners = new Set();
+export function onError(fn) { errListeners.add(fn); return () => errListeners.delete(fn); }
+function put(tbl, row) {
+  const clean = (r) => { const o = { ...r }; (NUMFIELDS[tbl] || []).forEach((k) => { if (o[k] !== undefined && o[k] !== null && o[k] !== '') o[k] = num(o[k]); else if (o[k] === '') o[k] = 0; }); return o; };
+  const payload = Array.isArray(row) ? row.map(clean) : clean(row);
+  return sb.from(tbl).upsert(payload).then(({ error }) => {
+    if (error) { console.error('[저장 실패]', tbl, error.message, payload); errListeners.forEach((fn) => fn(error.message)); }
+    return { error };
+  });
+}
+
 // ── 초기 로드 + 최초 시드 + 실시간 ─────────────────────
 // init()은 토큰 갱신(onAuthChange) 등으로 여러 번 불릴 수 있어 중복/동시 호출을 막는다.
 // 실패하면 promise를 비워 다음 재시도를 허용, 성공하면 캐시된 promise를 재사용.
@@ -38,9 +56,9 @@ async function _init() {
   warehouses = w.data || []; partners = p.data || []; items = i.data || [];
   inbounds = n.data || []; shipments = s.data || []; quotes = q.data || [];
 
-  if (!warehouses.length) { warehouses = seedWarehouses(); await sb.from('warehouses').upsert(warehouses); }
-  if (!items.length) { items = seedItems(); await sb.from('items').upsert(items); }
-  if (!partners.length) { partners = seedPartners(); await sb.from('partners').upsert(partners); }
+  if (!warehouses.length) { warehouses = seedWarehouses(); await put('warehouses', warehouses); }
+  if (!items.length) { items = seedItems(); await put('items', items); }
+  if (!partners.length) { partners = seedPartners(); await put('partners', partners); }
 
   setupRealtime();
   notify();
@@ -109,12 +127,12 @@ export function stockStatus(item) { const c = currentStock(item); return c <= 0 
 export function addItem(o) {
   const it = { id: nid('it'), warehouse: o.warehouse, category: o.category, name: (o.name || '').trim(),
     unit: o.unit, initial: num(o.initial), note: o.note || '', perBox: num(o.perBox), unitPrice: num(o.unitPrice), supplier: o.supplier || '', aliases: o.aliases || '' };
-  items.push(it); sb.from('items').upsert(it); notify();
+  items.push(it); put('items', it); notify();
 }
 export function updateItem(id, patch) {
   const it = findItem(id); if (!it) return;
   Object.assign(it, patch); if (patch.initial != null) it.initial = num(patch.initial);
-  sb.from('items').upsert(it); notify();
+  put('items', it); notify();
 }
 export function deleteItem(id) { items = items.filter((x) => x.id !== id); sb.from('items').delete().eq('id', id); notify(); }
 
@@ -132,12 +150,12 @@ export function addShipment(o) {
     loadPlace: o.loadPlace || '', loadAddr: o.loadAddr || '', unloadPlace: o.unloadPlace || '', unloadAddr: o.unloadAddr || '',
     method: o.method || '배차', courier: o.courier || '', trackingNo: o.trackingNo || '', courierFee: num(o.courierFee),
     recvName: o.recvName || '', recvPhone: o.recvPhone || '', recvAddr: o.recvAddr || '' };
-  shipments.push(sh); sb.from('shipments').upsert(sh); notify(); return sh;
+  shipments.push(sh); put('shipments', sh); notify(); return sh;
 }
 export function updateShipment(id, patch) {
   const sh = shipments.find((x) => x.id === id); if (!sh) return;
   Object.assign(sh, patch); if (patch.qty != null) sh.qty = num(patch.qty);
-  sb.from('shipments').upsert(sh); notify();
+  put('shipments', sh); notify();
 }
 export function deleteShipment(id) { shipments = shipments.filter((x) => x.id !== id); sb.from('shipments').delete().eq('id', id); notify(); }
 
@@ -146,9 +164,9 @@ export const getInbounds = () => inbounds.slice().sort((a, b) => (b.date + b.id)
 export function addInbound(o) {
   const rec = { id: nid('in'), date: o.date, warehouse: o.warehouse, category: o.category, name: o.name,
     qty: num(o.qty), unit: o.unit || '', perBox: num(o.perBox), unitPrice: num(o.unitPrice), vatSeparate: !!o.vatSeparate, supplier: o.supplier || '', note: o.note || '' };
-  inbounds.push(rec); sb.from('inbounds').upsert(rec);
+  inbounds.push(rec); put('inbounds', rec);
   const it = items.find((x) => x.warehouse === o.warehouse && x.category === o.category && x.name === o.name);
-  if (it) { if (rec.perBox) it.perBox = rec.perBox; if (rec.unitPrice) { it.unitPrice = rec.unitPrice; it.vatSeparate = rec.vatSeparate; } if (rec.supplier) it.supplier = rec.supplier; sb.from('items').upsert(it); }
+  if (it) { if (rec.perBox) it.perBox = rec.perBox; if (rec.unitPrice) { it.unitPrice = rec.unitPrice; it.vatSeparate = rec.vatSeparate; } if (rec.supplier) it.supplier = rec.supplier; put('items', it); }
   notify(); return rec;
 }
 export function deleteInbound(id) { inbounds = inbounds.filter((x) => x.id !== id); sb.from('inbounds').delete().eq('id', id); notify(); }
@@ -158,18 +176,18 @@ export const getWarehouses = () => warehouses.slice();
 export const warehouseNames = () => warehouses.map((w) => w.name);
 export function addWarehouse(name, icon) {
   const nm = (name || '').trim(); if (!nm || warehouses.some((w) => w.name === nm)) return false;
-  const w = { name: nm, icon: icon || 'warehouse', address: '', phone: '' }; warehouses.push(w); sb.from('warehouses').upsert(w); notify(); return true;
+  const w = { name: nm, icon: icon || 'warehouse', address: '', phone: '' }; warehouses.push(w); put('warehouses', w); notify(); return true;
 }
-export function setWarehouseIcon(name, icon) { const w = warehouses.find((x) => x.name === name); if (w) { w.icon = icon; sb.from('warehouses').upsert(w); notify(); } }
-export function setWarehouseInfo(name, patch) { const w = warehouses.find((x) => x.name === name); if (w) { Object.assign(w, patch); sb.from('warehouses').upsert(w); notify(); } }
+export function setWarehouseIcon(name, icon) { const w = warehouses.find((x) => x.name === name); if (w) { w.icon = icon; put('warehouses', w); notify(); } }
+export function setWarehouseInfo(name, patch) { const w = warehouses.find((x) => x.name === name); if (w) { Object.assign(w, patch); put('warehouses', w); notify(); } }
 export function renameWarehouse(oldName, newName) {
   const nm = (newName || '').trim(); if (!nm) return false;
   if (warehouses.some((w) => w.name === nm && w.name !== oldName)) return false;
   const w = warehouses.find((x) => x.name === oldName); if (!w) return false;
   sb.from('warehouses').delete().eq('name', oldName);
-  w.name = nm; sb.from('warehouses').upsert(w);
-  items.forEach((it) => { if (it.warehouse === oldName) { it.warehouse = nm; sb.from('items').upsert(it); } });
-  shipments.forEach((s) => { if (s.warehouse === oldName) { s.warehouse = nm; sb.from('shipments').upsert(s); } });
+  w.name = nm; put('warehouses', w);
+  items.forEach((it) => { if (it.warehouse === oldName) { it.warehouse = nm; put('items', it); } });
+  shipments.forEach((s) => { if (s.warehouse === oldName) { s.warehouse = nm; put('shipments', s); } });
   notify(); return true;
 }
 export function deleteWarehouse(name) {
@@ -188,14 +206,14 @@ export const getPartners = () => partners.slice();
 export const findPartner = (name) => partners.find((p) => p.name === name);
 export function addPartner(o) {
   const nm = (o.name || '').trim(); if (!nm || partners.some((p) => p.name === nm)) return false;
-  const p = { name: nm, address: o.address || '', phone: o.phone || '', note: o.note || '' }; partners.push(p); sb.from('partners').upsert(p); notify(); return true;
+  const p = { name: nm, address: o.address || '', phone: o.phone || '', note: o.note || '' }; partners.push(p); put('partners', p); notify(); return true;
 }
 export function updatePartner(origName, o) {
   const p = partners.find((x) => x.name === origName); if (!p) return false;
   const nm = (o.name || '').trim(); if (nm !== origName && partners.some((x) => x.name === nm)) return false;
   if (nm !== origName) sb.from('partners').delete().eq('name', origName);
   p.name = nm; p.address = o.address || ''; p.phone = o.phone || ''; p.note = o.note || '';
-  sb.from('partners').upsert(p); notify(); return true;
+  put('partners', p); notify(); return true;
 }
 export function deletePartner(name) { partners = partners.filter((p) => p.name !== name); sb.from('partners').delete().eq('name', name); notify(); }
 
@@ -204,15 +222,15 @@ export const getQuotes = () => quotes.slice().sort((a, b) => (b.date + b.id).loc
 export const quotesPending = () => quotes.filter((q) => q.status === '견적대기').length;
 export function addQuote(o) {
   const q = { id: nid('q'), date: o.date, client: o.client || '', phone: o.phone || '', content: o.content || '', status: o.status || '견적대기', note: o.note || '', calls: [], lines: [] };
-  quotes.push(q); sb.from('quotes').upsert(q); notify();
+  quotes.push(q); put('quotes', q); notify();
 }
-export function updateQuote(id, patch) { const q = quotes.find((x) => x.id === id); if (q) { Object.assign(q, patch); sb.from('quotes').upsert(q); notify(); } }
+export function updateQuote(id, patch) { const q = quotes.find((x) => x.id === id); if (q) { Object.assign(q, patch); put('quotes', q); notify(); } }
 export function deleteQuote(id) { quotes = quotes.filter((x) => x.id !== id); sb.from('quotes').delete().eq('id', id); notify(); }
 export function logQuoteCall(id) {
   const q = quotes.find((x) => x.id === id); if (!q) return;
   const d = new Date(); const p = (n) => String(n).padStart(2, '0');
   q.calls = q.calls || []; q.calls.push(`${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`);
-  sb.from('quotes').upsert(q); notify();
+  put('quotes', q); notify();
 }
 
 // ── 집계 ────────────────────────────────────────────
@@ -232,7 +250,7 @@ export function exportData() { return JSON.stringify({ items, shipments, warehou
 export async function resetAll() { /* 공유 DB에서는 비활성 (안전) */ }
 
 // 외부에서 로컬(localStorage) 데이터를 한번 올릴 때 사용
-export async function bulkUpsert(tbl, rows) { if (rows && rows.length) await sb.from(tbl).upsert(rows); await refetch(tbl); }
+export async function bulkUpsert(tbl, rows) { if (rows && rows.length) await put(tbl, rows); await refetch(tbl); }
 
 // ── 로그인/인증 ──────────────────────────────────────
 export async function getSession() { const { data } = await sb.auth.getSession(); return data.session; }
