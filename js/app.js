@@ -271,6 +271,7 @@ function screenHome() {
 
   return `
   <div class="screen">
+    <button class="quickbar" data-act="briefing" style="background:var(--accent);color:var(--accent-ink);margin-bottom:14px"><span class="ic" style="color:var(--accent-ink)">${I.doc}</span><span class="tx"><b>오늘 출고 공지</b> 만들기 · 복사</span><span class="go" style="color:var(--accent-ink)">›</span></button>
     <div class="sec-title">오늘 처리 현황</div>
     <div class="tiles">${tiles.map(tile).join('')}</div>
 
@@ -285,6 +286,35 @@ function screenHome() {
     <div class="sec-title">체크리스트</div>
     ${problems.length ? problems.join('') : `<div class="card" style="color:var(--muted);font-size:14px">오늘 챙길 게 없어요. 정상입니다.</div>`}
   </div>`;
+}
+
+// 아침 출고 공지 — 출고예정 건들을 거래처·창고·품목·재고·메모로 정리 (카톡 복붙용)
+function buildBriefing() {
+  const today = S.todayStr();
+  const ships = S.getShipments().filter((s) => s.status === '출고예정' || s.status === '배차완료')
+    .sort((a, b) => (a.date + a.id).localeCompare(b.date + a.id));
+  if (!ships.length) return `[출고 공지] ${mdDow(today)}\n\n예정된 출고가 없습니다.`;
+  const L = [`[출고 공지] ${mdDow(today)}`, ''];
+  ships.forEach((s, i) => {
+    const day = s.date !== today ? ` (${mdDow(s.date)})` : '';
+    L.push(`${i + 1}. ${s.client || '거래처 미지정'} · ${whShort(s.warehouse)}${day}`);
+    S.shipLines(s).forEach((l) => {
+      const it = S.getItems().find((x) => x.name === l.name && x.warehouse === s.warehouse);
+      const stock = it ? ` (재고 ${Math.floor(S.currentStock(it))}${it.unit})` : '';
+      L.push(`  · ${l.name} ${l.qty}${l.unit}${stock}`);
+    });
+    if ((s.note || '').trim()) L.push(`  ※ ${s.note.trim()}`);
+    L.push('');
+  });
+  return L.join('\n').trim();
+}
+function sheetBriefing() {
+  const txt = buildBriefing();
+  return `<div class="grab"></div><h2>${I.doc} 오늘 출고 공지</h2>
+  <p class="hint">출고예정 건을 정리했어요. 수정한 뒤 <b>복사</b>해서 대표님께 보내세요.<br>(※ 메모는 각 출고의 '비고'에 적으면 자동으로 들어와요)</p>
+  <textarea id="brief-text" rows="14" style="width:100%;padding:13px;border-radius:12px;background:var(--surface-2);color:var(--ink);border:0;font-size:14px;line-height:1.6;font-family:inherit">${esc(txt)}</textarea>
+  <button class="btn" type="button" data-act="briefing-copy" style="margin-top:10px">복사하기</button>
+  <button class="btn danger" type="button" data-act="close">닫기</button>`;
 }
 
 function rowStock(it) {
@@ -1346,6 +1376,11 @@ app.addEventListener('click', (e) => {
   else if (act === 'quote-filter') { state.quoteFilter = t.dataset.v; render(); }
   else if (act === 'add-quote') { quotePrefill = null; openSheet(sheetQuoteForm(null)); }
   else if (act === 'smart') { openSheet(sheetSmart()); }
+  else if (act === 'briefing') { openSheet(sheetBriefing()); }
+  else if (act === 'briefing-copy') {
+    const txt = document.getElementById('brief-text').value;
+    navigator.clipboard.writeText(txt).then(() => alert('복사됐어요. 대표님께 붙여넣어 보내세요.'), () => alert('복사 실패 — 길게 눌러 직접 복사해주세요.'));
+  }
   else if (act === 'toggle-disp') {
     const el = document.getElementById('f-disp-fields');
     if (el) { const show = el.style.display === 'none'; el.style.display = show ? 'block' : 'none';
