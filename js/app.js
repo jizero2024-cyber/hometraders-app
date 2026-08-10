@@ -282,6 +282,28 @@ function screenSilicone() {
   const rank = { out: 0, low: 1, ok: 2 };
   rows.sort((a, b) => rank[a.st] - rank[b.st] || b.total - a.total);
 
+  // 월별 실리콘 출고 내역 (어느 거래처에 몇 개)
+  const silNames = new Set(sil.map((it) => it.name));
+  const outs = [];
+  S.getShipments().forEach((s) => {
+    S.shipLines(s).forEach((l) => {
+      if (silNames.has(l.name) && Number(l.qty) > 0) outs.push({ id: s.id, date: s.date || '', month: (s.date || '').slice(0, 7), client: s.client || '거래처 미지정', name: l.name, qty: Number(l.qty), unit: l.unit || '', status: s.status });
+    });
+  });
+  outs.sort((a, b) => (b.date + b.name).localeCompare(a.date + a.name));
+  const months = [...new Set(outs.map((e) => e.month))].filter(Boolean).sort().reverse();
+  const monthBlock = (m) => {
+    const es = outs.filter((e) => e.month === m);
+    const total = es.reduce((s, e) => s + e.qty, 0);
+    return `<div class="sec-title" style="margin-top:16px">${esc(m.replace('-', '. '))} · 합계 ${total}</div>
+      <div class="rows">${es.map((e) => `<button class="ship" data-act="ship" data-id="${e.id}">
+        ${swatchHTML(e.name)}
+        <div class="body"><b>${esc(e.client)}</b><div class="meta">${esc(e.name)} · ${esc(e.date)}${e.status !== '출고완료' ? ` · <span style="color:var(--muted)">${esc(e.status)}</span>` : ''}</div></div>
+        <div class="right"><span class="q">${e.qty}${esc(e.unit)}</span></div>
+      </button>`).join('')}</div>`;
+  };
+  const outList = months.length ? `<div class="sec-title" style="margin-top:26px">월별 출고 내역</div>${months.map(monthBlock).join('')}` : '';
+
   return `<div class="screen">
     <div class="sec-title">색상 ${rows.length} · 창고 합산</div>
     <div class="rows">
@@ -293,6 +315,7 @@ function screenSilicone() {
         <span class="pill ${r.st}">${STATUS_KO[r.st]}</span>
       </button>`).join('')}
     </div>
+    ${outList}
   </div>`;
 }
 
