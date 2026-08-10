@@ -646,9 +646,11 @@ function screenSettings() {
 function sheetShipForm() {
   const p = shipPrefill || {};
   const curSt = p.status || '출고완료';
+  const hasDisp = !!(p.dispatchVia || p.driverName || p.driverPhone || p.vehicle || p.freight || p.payment);
   const banner = shipPrefill
     ? `<div class="parsed">${I.bolt}<span>인식됨${p.matched ? '' : ' · 품목을 못 찾았어요, 직접 선택하세요'}</span></div>` : '';
   return `<div class="grab"></div><h2>출고 등록</h2>${banner}
+  ${!shipPrefill ? `<button type="button" class="quickbar" data-act="smart" style="margin-bottom:14px"><span class="ic">${I.bolt}</span><span class="tx">문구 붙여넣어 <b>자동 입력</b> (카톡·문자)</span><span class="go">›</span></button>` : ''}
   <form id="ship-form">
     <div class="field"><label>상태 <span style="color:var(--faint);font-weight:400">요청만 왔으면 출고예정 · 바로 나갔으면 출고완료</span></label>
       <div class="seg" id="f-status">
@@ -676,20 +678,23 @@ function sheetShipForm() {
         ${['배차', '택배'].map((m) => `<button type="button" data-v="${m}" class="${(p.method || '배차') === m ? 'on' : ''}">${m}</button>`).join('')}
       </div></div>
     <div id="f-dispatch-block"${p.method === '택배' ? ' style="display:none"' : ''}>
-      <div class="field"><label>배차 정보 <span style="color:var(--faint);font-weight:400">(선택)</span></label>
-        <select name="dispatchVia">
-          <option value="">배차 방법…</option>
-          ${DISPATCH.map((d) => `<option ${p.dispatchVia === d ? 'selected' : ''}>${d}</option>`).join('')}
-        </select></div>
-      <div class="field"><div class="row2">
-        <div><label>기사님 이름</label><input name="driverName" placeholder="예: 주정택" value="${esc(p.driverName || '')}"></div>
-        <div><label>기사님 전화</label><input name="driverPhone" type="tel" inputmode="tel" placeholder="010-0000-0000" value="${esc(p.driverPhone || '')}"></div>
-      </div></div>
-      <div class="field"><label>차량</label><input name="vehicle" placeholder="예: 1톤카고 / 경기85사7749" value="${esc(p.vehicle || '')}"></div>
-      <div class="field"><div class="row2">
-        <div><label>운임 (원)</label><input name="freight" type="number" inputmode="numeric" value="${p.freight || ''}" placeholder="예: 80000"></div>
-        <div><label>결제</label><select name="payment"><option value="">-</option><option ${p.payment === '현불' ? 'selected' : ''}>현불</option><option ${p.payment === '착불' ? 'selected' : ''}>착불</option></select></div>
-      </div></div>
+      <button type="button" class="tgl" data-act="toggle-disp" id="f-disp-toggle">${hasDisp ? '− 배차 정보 접기' : '＋ 배차 정보 입력 (기사·차량·운임) · 선택'}</button>
+      <div id="f-disp-fields" style="display:${hasDisp ? 'block' : 'none'};margin-top:12px">
+        <div class="field"><label>배차 방법</label>
+          <select name="dispatchVia">
+            <option value="">배차 방법…</option>
+            ${DISPATCH.map((d) => `<option ${p.dispatchVia === d ? 'selected' : ''}>${d}</option>`).join('')}
+          </select></div>
+        <div class="field"><div class="row2">
+          <div><label>기사님 이름</label><input name="driverName" placeholder="예: 주정택" value="${esc(p.driverName || '')}"></div>
+          <div><label>기사님 전화</label><input name="driverPhone" type="tel" inputmode="tel" placeholder="010-0000-0000" value="${esc(p.driverPhone || '')}"></div>
+        </div></div>
+        <div class="field"><label>차량</label><input name="vehicle" placeholder="예: 1톤카고 / 경기85사7749" value="${esc(p.vehicle || '')}"></div>
+        <div class="field"><div class="row2">
+          <div><label>운임 (원)</label><input name="freight" type="number" inputmode="numeric" value="${p.freight || ''}" placeholder="예: 80000"></div>
+          <div><label>결제</label><select name="payment"><option value="">-</option><option ${p.payment === '현불' ? 'selected' : ''}>현불</option><option ${p.payment === '착불' ? 'selected' : ''}>착불</option></select></div>
+        </div></div>
+      </div>
     </div>
     <div id="f-courier-block"${p.method === '택배' ? '' : ' style="display:none"'}>
       <div class="field"><label>택배사</label>
@@ -1179,6 +1184,11 @@ app.addEventListener('click', (e) => {
   else if (act === 'quote-filter') { state.quoteFilter = t.dataset.v; render(); }
   else if (act === 'add-quote') { quotePrefill = null; openSheet(sheetQuoteForm(null)); }
   else if (act === 'smart') { openSheet(sheetSmart()); }
+  else if (act === 'toggle-disp') {
+    const el = document.getElementById('f-disp-fields');
+    if (el) { const show = el.style.display === 'none'; el.style.display = show ? 'block' : 'none';
+      t.textContent = show ? '− 배차 정보 접기' : '＋ 배차 정보 입력 (기사·차량·운임) · 선택'; }
+  }
   else if (act === 'sm-parse') {
     const txt = document.getElementById('sm-text').value;
     if (!txt.trim()) return alert('문구를 붙여넣으세요.');
