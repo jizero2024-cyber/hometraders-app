@@ -171,11 +171,13 @@ function swatchHTML(name) {
 }
 const STATUS_KO = { ok: '정상', low: '부족', out: '품절' };
 
-// 창고마다 다른 칩 스타일 (정렬 순서 기반 고정) — NS/천안 라벨 한눈에 구분
+// 창고별 칩 스타일 — 천안=검정, NS=회색 (그 외는 순서 기반)
 function whStyle(name) {
+  if (name && name.includes('천안')) return 'background:var(--accent);color:var(--accent-ink)';
+  if (name && (name.includes('NS') || name.includes('엔에스'))) return 'background:var(--surface-3);color:var(--ink)';
   const names = S.getWarehouses().map((w) => w.name).sort();
   const i = Math.max(0, names.indexOf(name));
-  const tints = [['var(--accent)', 'var(--accent-ink)'], ['var(--surface-3)', 'var(--ink)'], ['var(--accent-soft)', 'var(--ink)'], ['var(--out-bg)', 'var(--out-ink)']];
+  const tints = [['var(--accent-soft)', 'var(--ink)'], ['var(--out-bg)', 'var(--out-ink)'], ['var(--surface-2)', 'var(--ink)']];
   const [bg, fg] = tints[i % tints.length];
   return `background:${bg};color:${fg}`;
 }
@@ -323,15 +325,14 @@ function screenSilicone() {
     </div>
     <div class="sec-title">색상 ${rows.length} · ${wh ? esc(whShort(wh)) + ' 창고' : '창고 합산'}</div>
     <div class="rows">
-      ${rows.map((r) => `<button class="row" data-act="color" data-c="${esc(r.name)}">
+      ${rows.map((r) => { const ns = r.list.filter((it) => (it.note || '').trim()).map((it) => esc((silWhs.length > 1 ? whShort(it.warehouse) + ' ' : '') + it.note)); return `<button class="row" data-act="color" data-c="${esc(r.name)}">
         ${swatchHTML(r.name)}
-        <div class="nm"><b>${esc(r.name)}</b>
-          <div class="split">${r.list.map((it) => `<span class="wtag" style="${whStyle(it.warehouse)}">${esc(whShort(it.warehouse))} ${boxText(it)}</span>`).join('')}</div>
-          ${(() => { const ns = r.list.filter((it) => (it.note || '').trim()).map((it) => esc((silWhs.length > 1 ? whShort(it.warehouse) + ' ' : '') + it.note)); return ns.length ? `<div style="color:#e05a52;font-size:12px;font-weight:600;margin-top:3px">${ns.join(' · ')}</div>` : ''; })()}
-          </div>
+        <div class="nm" style="flex:0 1 auto;min-width:0"><b>${esc(r.name)}</b>
+          <div class="split">${r.list.map((it) => `<span class="wtag" style="${whStyle(it.warehouse)}">${esc(whShort(it.warehouse))} ${boxText(it)}</span>`).join('')}</div></div>
+        ${ns.length ? `<div style="flex:1;min-width:0;text-align:center;color:#e05a52;font-size:12px;font-weight:600;padding:0 8px;line-height:1.35">${ns.join(' · ')}</div>` : '<div style="flex:1"></div>'}
         <div class="qty"><b>${r.total}</b><span>${esc(r.unit)}</span></div>
         <span class="pill ${r.st}">${STATUS_KO[r.st]}</span>
-      </button>`).join('')}
+      </button>`; }).join('')}
     </div>
     ${outList}
   </div>`;
@@ -346,14 +347,15 @@ function sheetColor(name) {
   <div class="rows">
     ${list.map((it) => {
       const cur = S.currentStock(it);
-      return `<div class="row" style="box-shadow:none;background:var(--surface-2)">
-        <span class="whic sm">${whIcon((S.getWarehouses().find((w) => w.name === it.warehouse) || {}).icon || 'warehouse')}</span>
-        <div class="nm"><b>${esc(it.warehouse)}</b><span>${it.perBox ? `${it.perBox}개입 · ` : ''}${S.reservedQty(it) ? `예정 ${S.reservedQty(it)}` : '　'}</span>
-          ${(it.note || '').trim() ? `<span style="display:block;color:#e05a52;font-size:12px;font-weight:600;margin-top:2px">${esc(it.note)}</span>` : ''}</div>
-        <div class="qty"><b>${cur}</b><span>${esc(it.unit)}</span></div>
-        <button class="pill" data-act="note-edit" data-id="${it.id}" style="margin-right:6px">비고</button>
-        <button class="pill" data-act="stock-edit" data-id="${it.id}" style="margin-right:6px">수정</button>
-        <button class="pill done" data-act="color-ship" data-id="${it.id}">출고</button>
+      return `<div style="margin-bottom:12px">
+        <div class="row" style="box-shadow:none;background:var(--surface-2)">
+          <span class="whic sm">${whIcon((S.getWarehouses().find((w) => w.name === it.warehouse) || {}).icon || 'warehouse')}</span>
+          <div class="nm"><b>${esc(it.warehouse)}</b><span>${it.perBox ? `${it.perBox}개입 · ` : ''}${S.reservedQty(it) ? `예정 ${S.reservedQty(it)}` : '　'}</span></div>
+          <div class="qty"><b>${cur}</b><span>${esc(it.unit)}</span></div>
+          <button class="pill" data-act="stock-edit" data-id="${it.id}" style="margin-right:6px">수정</button>
+          <button class="pill done" data-act="color-ship" data-id="${it.id}">출고</button>
+        </div>
+        <input data-note-id="${it.id}" value="${esc(it.note || '')}" placeholder="비고 — 입고예정일 등 (리스트에 빨간색 표시)" autocapitalize="none" style="width:100%;margin-top:6px;padding:10px 12px;border-radius:9px;background:var(--surface);color:#e05a52;font-weight:600;font-size:13px;border:0">
       </div>`;
     }).join('')}
   </div>
@@ -1619,6 +1621,17 @@ async function boot() {
   try { await S.init(); booted = true; render(); }
   catch (e) { app.innerHTML = `<div style="padding:48px 24px;text-align:center"><b>연결 오류</b><br><span style="color:#888;font-size:13px">${esc(e.message || String(e))}</span></div>`; }
 }
+// 실리콘 상세 비고 입력칸 — 다른 곳 탭(blur)하면 자동 저장
+app.addEventListener('change', (e) => {
+  const el = e.target.closest('[data-note-id]');
+  if (!el) return;
+  const it = S.findItem(el.dataset.noteId);
+  if (!it) return;
+  const v = el.value.trim();
+  if ((it.note || '') === v) return;
+  S.updateItem(it.id, { note: v });
+  openSheet(sheetColor(it.name));
+});
 S.subscribe(render);
 S.onError((m) => alert('저장에 실패했어요 — 잠시 후 다시 시도해주세요.\n\n원인: ' + m));
 S.onAuthChange(() => boot());
