@@ -1245,7 +1245,8 @@ function render() {
   app.innerHTML = `
     <div class="appbar"><span class="logo">H</span><h1>${title}</h1><span class="sub">${sub}</span></div>
     ${body}
-    ${showFab ? `<button class="fab" data-act="new-ship">${I.plus} 출고 등록</button>` : ''}
+    ${showFab ? `<button class="fab fab2" data-act="smart">${I.bolt} 붙여넣기 인식</button>
+    <button class="fab" data-act="new-ship">${I.plus} 출고 등록</button>` : ''}
     <nav class="nav">
       ${[['home', '홈', I.home], ['quote', '견적', I.doc], ['silicone', '실리콘', I.drop], ['stock', '창고', WH_ICONS.warehouse], ['ship', '출고', I.truck], ['price', '단가', I.tag], ['settings', '설정', I.cog]]
         .map(([r, l, ic]) => `<button data-act="nav" data-r="${r}" class="${state.route === r ? 'on' : ''}">${ic}<span>${l}</span></button>`).join('')}

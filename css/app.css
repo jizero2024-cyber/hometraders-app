@@ -42,7 +42,7 @@ input,select,textarea{font-family:inherit;font-size:16px;border:0;}
 /* ── 스크롤 영역 ── */
 .screen{padding:16px 16px calc(var(--nav-h) + 24px + env(safe-area-inset-bottom));}
 /* FAB 있는 화면은 마지막 카드가 버튼에 가리지 않도록 아래 여백 확보 */
-#app:has(.fab) .screen{padding-bottom:calc(var(--nav-h) + 100px + env(safe-area-inset-bottom));}
+#app:has(.fab) .screen{padding-bottom:calc(var(--nav-h) + 160px + env(safe-area-inset-bottom));}
 .sec-title{font-size:12px;font-weight:700;letter-spacing:.04em;color:var(--muted);
   margin:22px 4px 10px;text-transform:uppercase;}
 .sec-title:first-child{margin-top:6px;}
@@ -199,6 +199,9 @@ a.tel{color:var(--ink);font-weight:800;text-decoration:none;background:var(--sur
   background:var(--accent);color:var(--accent-ink);border-radius:16px;height:52px;padding:0 20px;
   font-size:15px;font-weight:700;box-shadow:0 6px 18px rgba(0,0,0,.22);display:flex;align-items:center;gap:8px;}
 @media(max-width:520px){.fab{right:18px;}}
+/* 붙여넣기 인식 퀵 버튼 (출고 등록 위) */
+.fab.fab2{bottom:calc(var(--nav-h) + 18px + 64px + env(safe-area-inset-bottom));
+  background:var(--surface);color:var(--ink);box-shadow:0 4px 16px rgba(0,0,0,.16);}
 
 /* ── 빠른 출고 ── */
 .quickbar{width:100%;display:flex;align-items:center;gap:10px;margin-bottom:14px;
@@ -314,6 +317,7 @@ textarea{resize:vertical;line-height:1.5;}
 
   /* FAB — 콘텐츠 우하단(카드 기준) */
   .fab{right:max(32px, calc(50vw - 498px));bottom:32px;}
+  .fab.fab2{bottom:96px;}
 
   /* 시트 → 화면 가운데 모달 */
   .sheet-bg{align-items:center;}
