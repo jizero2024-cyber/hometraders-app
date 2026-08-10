@@ -259,8 +259,6 @@ function screenHome() {
     ${pendingQuotes.slice(0, 5).map((q) => `<button class="prow" data-act="quote-open" data-id="${q.id}"><span>${esc(q.client || '-')}${q.content ? ` · ${esc(q.content)}` : ''}</span><span class="pill ${daysSince(q.date) >= 2 ? 'out' : 'plan'}">${pendingLabel(q.date)}</span></button>`).join('')}</div>`);
   if (lowItems.length) problems.push(`<div class="psec"><span class="pttl">품절 (${lowItems.length})</span>
     ${lowItems.slice(0, 5).map((it) => `<button class="prow" data-act="wh" data-w="${esc(it.warehouse)}"><span>${esc(it.name)} · ${esc(it.warehouse)}</span><span class="pill ${S.stockStatus(it)}">${STATUS_KO[S.stockStatus(it)]}</span></button>`).join('')}</div>`);
-  if (needDispatch.length) problems.push(`<div class="psec"><span class="pttl">배차 미정 (${needDispatch.length})</span>
-    ${needDispatch.slice(0, 5).map((s) => `<button class="prow" data-act="ship" data-id="${s.id}"><span>${esc(s.name)} · ${esc(s.client || '-')}</span><span class="pill plan">배차필요</span></button>`).join('')}</div>`);
   if (docPending.length) problems.push(`<div class="psec"><span class="pttl">명세서 미발행 (${docPending.length})</span>
     ${docPending.slice(0, 8).map((s) => `<div class="prow" style="display:flex;align-items:center;gap:8px">
       <button data-act="ship" data-id="${s.id}" style="flex:1;min-width:0;text-align:left;background:none;border:0;color:inherit;padding:0;font:inherit;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.client || '-')} · ${esc(s.name || '')} ${s.qty}${esc(s.unit)}</button>
