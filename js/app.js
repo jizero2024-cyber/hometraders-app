@@ -77,6 +77,8 @@ const app = document.getElementById('app');
 let shipPrefill = null;
 let qLines = [];      // 견적 품목 작성 중 임시 배열
 let qEditId = null;
+let slLines = [];     // 출고 품목 줄 편집 중 임시 배열
+let slId = null;
 
 // 배차 안내 문구 → 기사·차량·운임·결제·경로 인식 (물류업체 회신 복붙용)
 function parseDispatch(t) {
@@ -894,8 +896,46 @@ function sheetDoc(sh) {
     <button class="btn ghost" type="button" data-act="dispatch-paste" data-id="${sh.id}" style="margin-top:8px">배차 확인 붙여넣기 (회신 받으면)</button>` : ''}
   ${sh.status === '배차완료' ? `<button class="btn ghost" type="button" data-act="dispatch-paste" data-id="${sh.id}">배차 정보 다시 붙여넣기</button>` : ''}
   ${sh.status === '출고완료' ? `<button class="btn ${sh.docDone ? 'ghost' : ''}" type="button" data-act="toggle-doc" data-id="${sh.id}">${sh.docDone ? '명세서 발행됨 · 해제' : '명세서 발행 완료로 표시'}</button>` : ''}
+  <button class="btn ghost" type="button" data-act="ship-lines" data-id="${sh.id}" style="margin-top:8px">품목 편집 (추가 · 삭제 · 수량)</button>
   <button class="btn ghost" type="button" data-act="edit-ship" data-id="${sh.id}" style="margin-top:8px">출고 수정 (품목·수량·거래처)</button>
   <button class="btn danger" type="button" data-act="del-ship" data-id="${sh.id}">삭제</button>`;
+}
+
+// 출고 품목 줄 편집 — 멀티라인 출고에서 줄 추가/삭제/수량변경 (예: 재고없는 품목 한 줄만 빼기)
+function shipWh() { const sh = S.getShipments().find((s) => s.id === slId); return sh ? sh.warehouse : ''; }
+function readShipLinesDom() {   // 재렌더 전 현재 입력값을 임시배열에 반영 (입력 유실 방지)
+  const wh = shipWh();
+  document.querySelectorAll('[data-sl]').forEach((el) => {
+    const i = Number(el.dataset.i); if (!slLines[i]) return;
+    if (el.dataset.sl === 'qty') slLines[i].qty = el.value;
+    else if (el.dataset.sl === 'name') {
+      slLines[i].name = el.value;
+      const it = S.getItems().find((x) => x.name === el.value && x.warehouse === wh);
+      if (it) { slLines[i].category = it.category; if (!slLines[i].unit) slLines[i].unit = it.unit; }
+    }
+  });
+}
+function sheetShipLines(id) {
+  const sh = S.getShipments().find((s) => s.id === id);
+  const whItems = S.getItems().filter((it) => it.warehouse === sh.warehouse);
+  const opts = (name) => {
+    let list = whItems.map((it) => it.name);
+    if (name && !list.includes(name)) list = [name, ...list];   // 창고에 없는 품목명(견적 자유입력 등)도 보존
+    return list.map((n) => `<option value="${esc(n)}" ${n === name ? 'selected' : ''}>${esc(n)}</option>`).join('');
+  };
+  return `<div class="grab"></div><h2>품목 편집</h2>
+  <p style="color:var(--muted);font-size:13px;margin:-4px 0 12px">${esc(sh.client || '거래처 미지정')} · ${esc(sh.date)} · ${esc(sh.warehouse)}</p>
+  <div class="rows">
+    ${slLines.map((l, i) => `<div class="row" style="box-shadow:none;background:var(--surface-2);gap:8px;align-items:center">
+      <select data-sl="name" data-i="${i}" style="flex:1;min-width:0;background:transparent;border:0;font-size:15px;color:var(--ink)">${opts(l.name)}</select>
+      <input data-sl="qty" data-i="${i}" type="number" min="0" inputmode="decimal" value="${l.qty}" style="width:66px;text-align:right">
+      <span style="color:var(--muted);font-size:13px;min-width:24px">${esc(l.unit || '')}</span>
+      <button class="pill" type="button" data-act="sl-del" data-i="${i}" style="min-width:34px">✕</button>
+    </div>`).join('')}
+  </div>
+  <button class="btn ghost" type="button" data-act="sl-add" style="margin-top:8px">+ 품목 추가</button>
+  <button class="btn" type="button" data-act="sl-save" data-id="${id}" style="margin-top:12px">저장</button>
+  <button class="btn danger" type="button" data-act="close">취소</button>`;
 }
 
 function sheetDispatchPaste(id) {
@@ -1097,6 +1137,26 @@ app.addEventListener('click', (e) => {
   else if (act === 'item') { openSheet(sheetItemForm(S.findItem(t.dataset.id))); }
   else if (act === 'ship') { openSheet(sheetDoc(S.getShipments().find((s) => s.id === t.dataset.id))); }
   else if (act === 'edit-ship') { openSheet(sheetEditShip(S.getShipments().find((s) => s.id === t.dataset.id))); }
+  else if (act === 'ship-lines') {
+    const sh = S.getShipments().find((s) => s.id === t.dataset.id);
+    slId = sh.id; slLines = S.shipLines(sh).map((l) => ({ ...l }));
+    openSheet(sheetShipLines(sh.id));
+  }
+  else if (act === 'sl-add') {
+    readShipLinesDom();
+    const it = S.getItems().find((x) => x.warehouse === shipWh()) || S.getItems()[0] || {};
+    slLines.push({ name: it.name || '', category: it.category || '', spec: '', unit: it.unit || '', qty: '', unitPrice: it.unitPrice || 0 });
+    openSheet(sheetShipLines(slId));
+  }
+  else if (act === 'sl-del') { readShipLinesDom(); slLines.splice(Number(t.dataset.i), 1); openSheet(sheetShipLines(slId)); }
+  else if (act === 'sl-save') {
+    readShipLinesDom();
+    const lines = slLines.filter((l) => l.name && Number(l.qty) > 0);
+    if (!lines.length) return alert('품목이 최소 1줄은 있어야 해요. 전부 빼려면 출고 자체를 삭제하세요.');
+    const f = lines[0];
+    S.updateShipment(slId, { lines, name: f.name, category: f.category || '', qty: f.qty, unit: f.unit || '' });
+    openSheet(sheetDoc(S.getShipments().find((s) => s.id === slId)));
+  }
   else if (act === 'ship-stage') { S.updateShipment(t.dataset.id, { status: t.dataset.v }); openSheet(sheetDoc(S.getShipments().find((s) => s.id === t.dataset.id))); }
   else if (act === 'dispatch-paste') { openSheet(sheetDispatchPaste(t.dataset.id)); }
   else if (act === 'dp-apply') {
