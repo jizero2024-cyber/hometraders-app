@@ -79,6 +79,8 @@ let qLines = [];      // 견적 품목 작성 중 임시 배열
 let qEditId = null;
 let slLines = [];     // 출고 품목 줄 편집 중 임시 배열
 let slId = null;
+let quotePrefill = null;    // 스마트 붙여넣기 → 견적 프리필
+let smartDispatchText = ''; // 스마트 붙여넣기 → 배차 원문(어느 출고에 붙일지 선택 대기)
 
 // 배차 안내 문구 → 기사·차량·운임·결제·경로 인식 (물류업체 회신 복붙용)
 function parseDispatch(t) {
@@ -120,7 +122,7 @@ function parseQuick(text) {
   if (item && !warehouse) warehouse = item.warehouse;
   if (item && !unit) unit = item.unit;
   const d = parseDispatch(t);
-  const status = /예정|내일|모레|다음|나중/.test(t) ? '출고예정' : (d.hasDispatch ? '배차완료' : '출고완료');
+  const status = /예정|내일|명일|모레|낼|다음|나중|가능할까|발주|주문/.test(t) ? '출고예정' : (d.hasDispatch ? '배차완료' : '출고완료');
   let rest = t;
   if (item) rest = rest.split(item.name).join(' ');
   if (qm) rest = rest.split(qm[0]).join(' ');
@@ -136,6 +138,21 @@ function parseQuick(text) {
     client: words[0] || '', status, note: d.note, matched: item ? item.name : null,
     dispatchVia: d.hasDispatch ? '이음물류' : '', driverName: d.driverName, driverPhone: d.driverPhone,
     vehicle: d.vehicle, freight: d.freight, payment: d.payment };
+}
+
+// 붙여넣은 문구의 성격 분류: 배차 안내 / 견적 요청 / (기본) 출고 요청
+function classifyPaste(t) {
+  const s = t || '';
+  if (/기사님|기사|\d+(?:\.\d+)?\s*톤|(?:[가-힣]{2})?\d{2,3}[가-힣]\d{4}|운임|현불|착불|배차|상차지|하차지/.test(s)) return '배차';
+  if (/견적|단가|얼마|가격|견적서|할인/.test(s)) return '견적';
+  return '출고';
+}
+// 견적 요청 문구 → 견적 폼 프리필
+function parseQuoteText(t) {
+  const s = (t || '').trim();
+  const client = (S.getPartners().find((p) => p.name && s.includes(p.name)) || {}).name || '';
+  const phone = (s.match(/01[016789][-\s.]?\d{3,4}[-\s.]?\d{4}/) || [''])[0].replace(/[\s.]/g, '-');
+  return { client, phone, content: s };
 }
 
 function esc(s) {
@@ -345,8 +362,8 @@ function screenShip() {
     <button data-act="shipview" data-v="cal" class="${state.shipView === 'cal' ? 'on' : ''}">달력</button>
     <button data-act="shipview" data-v="list" class="${state.shipView === 'list' ? 'on' : ''}">목록</button>
   </div>`;
-  const quick = `<button class="quickbar" data-act="quick"><span class="ic">${I.bolt}</span>
-    <span class="tx">대표님 톡 붙여넣어 <b>빠른 출고</b></span><span class="go">›</span></button>`;
+  const quick = `<button class="quickbar" data-act="smart"><span class="ic">${I.bolt}</span>
+    <span class="tx">문구 붙여넣어 <b>자동 인식</b> · 출고·견적·배차</span><span class="go">›</span></button>`;
   if (state.shipView === 'list') {
     const cnt = S.statusCounts();
     const f = state.shipFilter;
@@ -515,14 +532,16 @@ function sheetQuoteLines(id) {
 
 function sheetQuoteForm(id) {
   const q = id ? S.getQuotes().find((x) => x.id === id) : null;
+  const pf = (!q && quotePrefill) ? quotePrefill : {};
   const partners = S.getPartners();
   return `<div class="grab"></div><h2>${q ? '견적 요청 수정' : '견적 요청 추가'}</h2>
+  ${pf.content ? `<div class="parsed">${I.bolt}<span>견적 요청으로 인식됨</span></div>` : ''}
   <form id="quote-form" data-id="${q ? q.id : ''}">
     <div class="field"><label>거래처</label>
-      <input name="client" list="partner-list" value="${q ? esc(q.client) : ''}" placeholder="거래처명">
+      <input name="client" list="partner-list" value="${q ? esc(q.client) : esc(pf.client || '')}" placeholder="거래처명">
       <datalist id="partner-list">${partners.map((p) => `<option value="${esc(p.name)}"></option>`).join('')}</datalist></div>
-    <div class="field"><label>연락처</label><input name="phone" type="tel" value="${q ? esc(q.phone || '') : ''}" placeholder="비우면 거래처 연락처 자동"></div>
-    <div class="field"><label>요청 내용</label><textarea name="content" rows="2" placeholder="예: 베이지 200박스 견적 요청">${q ? esc(q.content || '') : ''}</textarea></div>
+    <div class="field"><label>연락처</label><input name="phone" type="tel" value="${q ? esc(q.phone || '') : esc(pf.phone || '')}" placeholder="비우면 거래처 연락처 자동"></div>
+    <div class="field"><label>요청 내용</label><textarea name="content" rows="2" placeholder="예: 베이지 200박스 견적 요청">${q ? esc(q.content || '') : esc(pf.content || '')}</textarea></div>
     <div class="field"><label>비고</label><input name="note" value="${q ? esc(q.note || '') : ''}" placeholder="선택"></div>
     <button class="btn" type="submit">저장</button>
     <button class="btn danger" type="button" data-act="close">취소</button>
@@ -706,6 +725,29 @@ function sheetQuick() {
   <p class="hint">대표님 카톡 문구를 그대로 붙여넣고 <b>인식하기</b>를 누르면 출고 폼이 자동으로 채워집니다.</p>
   <div class="field"><textarea id="q-text" rows="3" placeholder="예: 원익 베이지 50박스 소분해서"></textarea></div>
   <button class="btn" type="button" data-act="q-parse">인식하기</button>
+  <button class="btn danger" type="button" data-act="close">취소</button>`;
+}
+// 통합 스마트 붙여넣기 — 아무 문구나 넣으면 성격(출고·견적·배차) 판별 후 맞는 양식으로
+function sheetSmart() {
+  return `<div class="grab"></div><h2>${I.bolt} 붙여넣기 인식</h2>
+  <p class="hint">카톡·문자 문구를 그대로 붙여넣으면 <b>출고요청 · 견적 · 배차</b> 중 성격을 판별해 맞는 양식으로 보내드려요.</p>
+  <div class="field"><textarea id="sm-text" rows="4" placeholder="예) 다루끼 30단 명일 오전착으로 발주 가능할까요?"></textarea></div>
+  <button class="btn" type="button" data-act="sm-parse">인식하기</button>
+  <button class="btn danger" type="button" data-act="close">취소</button>`;
+}
+// 배차로 인식된 경우 — 어느 출고 건에 붙일지 선택
+function sheetSmartDispatch(txt) {
+  smartDispatchText = txt;
+  const cands = S.getShipments().filter((s) => s.status === '출고예정' || s.status === '배차완료').slice(0, 15);
+  return `<div class="grab"></div><h2>${I.bolt} 배차 안내로 인식됨</h2>
+  <p class="hint">어느 출고 건에 이 배차 정보를 붙일까요?</p>
+  <div class="rows">
+    ${cands.length ? cands.map((s) => { const sm = shipSummary(s); return `<button class="row" data-act="sm-dispatch-pick" data-id="${s.id}">
+      <div class="nm"><b>${esc(s.client || '거래처 미지정')}</b><span>${esc(s.date)} · ${esc(sm.itemLabel)} ${esc(sm.qtyLabel)}</span></div>
+      <span class="pill ${STAGE_PILL[s.status]}">${STAGE_SHORT[s.status]}</span></button>`; }).join('')
+    : '<div class="card" style="color:var(--muted);font-size:14px">붙일 출고예정 건이 없어요. 먼저 출고를 등록하세요.</div>'}
+  </div>
+  <button class="btn ghost" type="button" data-act="smart" style="margin-top:8px">← 다시 붙여넣기</button>
   <button class="btn danger" type="button" data-act="close">취소</button>`;
 }
 function updateStockHint() {
@@ -1049,7 +1091,25 @@ app.addEventListener('click', (e) => {
     else if (r === 'quote') { state.route = 'quote'; render(); }
   }
   else if (act === 'quote-filter') { state.quoteFilter = t.dataset.v; render(); }
-  else if (act === 'add-quote') { openSheet(sheetQuoteForm(null)); }
+  else if (act === 'add-quote') { quotePrefill = null; openSheet(sheetQuoteForm(null)); }
+  else if (act === 'smart') { openSheet(sheetSmart()); }
+  else if (act === 'sm-parse') {
+    const txt = document.getElementById('sm-text').value;
+    if (!txt.trim()) return alert('문구를 붙여넣으세요.');
+    const type = classifyPaste(txt);
+    if (type === '견적') { quotePrefill = parseQuoteText(txt); state.route = 'quote'; openSheet(sheetQuoteForm(null)); }
+    else if (type === '배차') { openSheet(sheetSmartDispatch(txt)); }
+    else { shipPrefill = parseQuick(txt); state.route = 'ship'; openSheet(sheetShipForm()); }
+  }
+  else if (act === 'sm-dispatch-pick') {
+    const sh = S.getShipments().find((s) => s.id === t.dataset.id);
+    const d = parseDispatch(smartDispatchText);
+    S.updateShipment(t.dataset.id, { status: '배차완료', dispatchVia: sh.dispatchVia || '이음물류',
+      driverName: d.driverName || sh.driverName, driverPhone: d.driverPhone || sh.driverPhone,
+      vehicle: d.vehicle || sh.vehicle, freight: d.freight || sh.freight, payment: d.payment || sh.payment,
+      note: [sh.note, d.note].filter(Boolean).join(' / ') });
+    openSheet(sheetDoc(S.getShipments().find((s) => s.id === t.dataset.id)));
+  }
   else if (act === 'quote-open') { openSheet(sheetQuote(t.dataset.id)); }
   else if (act === 'quote-edit') { openSheet(sheetQuoteForm(t.dataset.id)); }
   else if (act === 'del-quote') { if (confirm('이 견적요청을 삭제할까요?')) { S.deleteQuote(t.dataset.id); closeSheet(); } }
