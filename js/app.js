@@ -299,7 +299,7 @@ function screenSilicone() {
 function sheetColor(name) {
   const list = S.getItems().filter((it) => it.category === '실리콘' && it.name === name);
   const [hex, white] = swatchFor(name);
-  const recent = S.getShipments().filter((s) => s.category === '실리콘' && s.name === name).slice(0, 4);
+  const recent = S.getShipments().filter((s) => S.shipLines(s).some((l) => l.name === name)).slice(0, 6);
   return `<div class="grab"></div>
   <h2><span class="sw" style="background:${hex};color:${white ? '#fff' : '#000'};width:26px;height:26px">${esc(name.slice(0, 1))}</span> ${esc(name)}</h2>
   <div class="rows">
@@ -313,7 +313,16 @@ function sheetColor(name) {
       </div>`;
     }).join('')}
   </div>
-  ${recent.length ? `<div class="sec-title">이 색 최근 출고</div><div class="rows">${recent.map(rowShip).join('')}</div>` : ''}
+  ${recent.length ? `<div class="sec-title">이 색 최근 출고</div><div class="rows">${recent.map((s) => {
+      const ln = S.shipLines(s).find((l) => l.name === name) || {};
+      return `<button class="ship" data-act="ship" data-id="${s.id}">
+        <div class="body"><b>${esc(s.client || '거래처 미지정')}</b>
+          <div class="meta">${whTag(s.warehouse)} · ${esc(s.date)}</div></div>
+        <div class="right" style="flex-wrap:wrap;justify-content:flex-end;gap:6px">
+          <span class="q">${ln.qty || 0}${esc(ln.unit || '')}</span>
+          <span class="pill ${STAGE_PILL[s.status] || 'plan'}">${STAGE_SHORT[s.status] || esc(s.status)}</span></div>
+      </button>`;
+    }).join('')}</div>` : ''}
   <button class="btn ghost" type="button" data-act="close" style="margin-top:12px">닫기</button>`;
 }
 
@@ -1144,7 +1153,7 @@ function render() {
       ${[['home', '홈', I.home], ['quote', '견적', I.doc], ['silicone', '실리콘', I.drop], ['stock', '창고', WH_ICONS.warehouse], ['ship', '출고', I.truck], ['price', '단가', I.tag], ['settings', '설정', I.cog]]
         .map(([r, l, ic]) => `<button data-act="nav" data-r="${r}" class="${state.route === r ? 'on' : ''}">${ic}<span>${l}</span></button>`).join('')}
     </nav>
-    ${state.sheet ? `<div class="sheet-bg" data-act="backdrop"><div class="sheet">${state.sheet}</div></div>` : ''}
+    ${state.sheet ? `<div class="sheet-bg" data-act="backdrop"><div class="sheet"><button class="sheet-x" type="button" data-act="close" aria-label="닫기">✕</button>${state.sheet}</div></div>` : ''}
   `;
   if (state.sheet && document.getElementById('f-wh')) { fillItemSelect(); }
   if (state.sheet && document.getElementById('ib-wh')) { fillInboundItems(); }
