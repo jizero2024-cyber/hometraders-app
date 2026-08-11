@@ -301,6 +301,10 @@ a.tel{color:var(--ink);font-weight:800;text-decoration:none;background:var(--sur
   width:34px;height:34px;border-radius:50%;background:var(--surface-2);color:var(--muted);
   font-size:16px;line-height:1;display:grid;place-items:center;}
 .sheet-x:active{background:var(--surface-3);}
+.dochdr{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-right:44px;}
+.iconbtn{width:36px;height:36px;border-radius:50%;background:var(--surface-2);color:var(--ink);display:grid;place-items:center;border:0;flex:none;}
+.iconbtn:active{background:var(--surface-3);}
+.iconbtn svg{width:19px;height:19px;}
 .sheet h2{font-size:19px;font-weight:700;margin:0 0 16px;display:flex;align-items:center;gap:8px;}
 .sheet h2 svg{width:18px;height:18px;}
 .field{margin-bottom:14px;}

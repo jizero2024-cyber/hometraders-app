@@ -28,6 +28,7 @@ const I = {
   phone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h4l2 5-2.5 1.5a12 12 0 0 0 6 6L15 14l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 2 6a2 2 0 0 1 2-2z"/></svg>',
   tag: '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12V4h8l9 9-8 8z"/><circle cx="7.5" cy="7.5" r="1.4"/></svg>',
   invoice: '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-2-1.3-2 1.3-2-1.3-2 1.3-2-1.3L6 21z"/><path d="M9 8h6M9 12h6"/></svg>',
+  pen: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L18.5 9.5a2 2 0 0 0-3-3L5 17z"/><path d="M13.5 6.5l3 3"/></svg>',
 };
 const whShort = (n) => n.replace('창고', '').replace('로지스', '');
 
@@ -1328,7 +1329,9 @@ function sheetDoc(sh) {
   const hasDispatch = sh.dispatchVia || sh.driverName || sh.driverPhone || sh.vehicle || sh.freight || sh.payment;
   const hasAddr = sh.loadAddr || sh.unloadAddr || sh.loadPlace || sh.unloadPlace;
   const isCourier = sh.method === '택배';
-  return `<div class="grab"></div><h2>출고 상세</h2>
+  return `<div class="grab"></div>
+  <div class="dochdr"><h2 style="margin:0">출고 상세</h2>
+    <button class="iconbtn" type="button" data-act="edit-ship" data-id="${sh.id}" aria-label="출고 수정">${I.pen}</button></div>
   ${shipStepper(sh)}
   <p class="hint" style="text-align:center;margin-top:-8px">단계를 눌러 상태 변경</p>
   <div class="doc">
@@ -1384,7 +1387,6 @@ function sheetDoc(sh) {
   ${sh.status === '배차완료' && !isCourier ? `<button class="btn ghost" type="button" data-act="dispatch-paste" data-id="${sh.id}">배차 정보 다시 붙여넣기</button>` : ''}
   ${sh.status === '출고완료' ? `<button class="btn ${sh.docDone ? 'ghost' : ''}" type="button" data-act="toggle-doc" data-id="${sh.id}">${sh.docDone ? '명세서 발행됨 · 해제' : '명세서 발행 완료로 표시'}</button>` : ''}
   <button class="btn ghost" type="button" data-act="print-ship" data-id="${sh.id}" style="margin-top:8px">출력 / PDF (A4 전표)</button>
-  <button class="btn ghost" type="button" data-act="edit-ship" data-id="${sh.id}" style="margin-top:8px">출고 수정 (거래처 · 배차 · 상태)</button>
   <button class="btn danger" type="button" data-act="del-ship" data-id="${sh.id}">삭제</button>`;
 }
 
