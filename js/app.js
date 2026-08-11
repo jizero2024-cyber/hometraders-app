@@ -852,7 +852,7 @@ function screenSettings() {
 // ── 시트(모달) ────────────────────────────────────────
 function sheetShipForm() {
   const p = shipPrefill || {};
-  const curSt = p.status || '출고완료';
+  const curSt = p.status || '출고예정';
   const hasDisp = !!(p.dispatchVia || p.driverName || p.driverPhone || p.vehicle || p.freight || p.payment);
   const banner = shipPrefill
     ? `<div class="parsed">${I.bolt}<span>인식됨${p.matched ? '' : ' · 품목을 못 찾았어요, 직접 선택하세요'}</span></div>` : '';
@@ -879,8 +879,10 @@ function sheetShipForm() {
     <button class="btn ghost" type="button" data-act="sf-add" style="margin:-2px 0 14px;padding:11px;font-size:14px">+ 품목 추가</button>
     <datalist id="sf-items"></datalist>
     <div class="field"><label>거래처 (하차지)</label>
-      <input name="client" list="ship-partners" placeholder="거래처 검색·선택" value="${esc(p.client || '')}" autocomplete="off">
+      <input name="client" list="ship-partners" id="sf-client" placeholder="거래처 검색·선택 또는 직접 입력" value="${esc(p.client || '')}" autocomplete="off">
       <datalist id="ship-partners">${S.getPartners().map((pt) => `<option value="${esc(pt.name)}"></option>`).join('')}</datalist></div>
+    <div class="field"><label>하차지 주소 <span style="color:var(--faint);font-weight:400">직접 입력 · 검색 (선택)</span></label>
+      <div class="addr-row"><input name="unloadAddr" id="sf-unaddr" placeholder="하차지 주소" value="${esc(p.unloadAddr || '')}" autocomplete="off"><button type="button" data-act="db-search" data-target="sf-unaddr">주소검색</button></div></div>
     <div class="field"><div class="row2">
       <div><label>출고일</label><input name="date" type="date" value="${state.selDate || S.todayStr()}"></div>
       <div><label>시간</label><input name="time" type="time" value="${p.time || ''}"></div>
@@ -1683,7 +1685,7 @@ app.addEventListener('click', (e) => {
     }
   }
   else if (act === 'db-search') {
-    const target = t.dataset.t === 'from' ? 'db-from-addr' : 'db-to-addr';
+    const target = t.dataset.target || (t.dataset.t === 'from' ? 'db-from-addr' : 'db-to-addr');
     if (window.daum && window.daum.Postcode) {
       new window.daum.Postcode({ oncomplete: (data) => { const el = document.getElementById(target); if (el) el.value = data.roadAddress || data.jibunAddress || data.address; } }).open();
     } else { alert('주소 검색은 인터넷 연결이 필요해요. 주소는 직접 입력·수정도 됩니다.'); }
@@ -1885,6 +1887,7 @@ app.addEventListener('input', (e) => {
 app.addEventListener('change', (e) => {
   if (e.target.id === 'f-wh') fillItemSelect();
   if (e.target.id === 'f-item') updateStockHint();
+  if (e.target.id === 'sf-client') { const p = S.findPartner(e.target.value.trim()); const a = document.getElementById('sf-unaddr'); if (p && p.address && a && !a.value.trim()) a.value = p.address; }
   if (e.target.id === 'ib-wh') fillInboundItems();
   if (e.target.id === 'ib-item') updateInboundHint();
   if (e.target.id === 'db-from') { const p = getPlaces().find((x) => x.name === e.target.value); const a = document.getElementById('db-from-addr'), ph = document.getElementById('db-from-phone'); if (a) a.value = p ? p.address : ''; if (ph) ph.value = p ? p.phone : ''; }
@@ -1929,7 +1932,8 @@ app.addEventListener('submit', (e) => {
       freight: form.freight.value, payment: form.payment.value, note: form.note.value.trim(),
       method: form.querySelector('#f-method .on')?.dataset.v || '배차',
       courier: form.courier.value.trim(), trackingNo: form.trackingNo.value.trim(), courierFee: form.courierFee.value,
-      recvName: form.recvName.value.trim(), recvPhone: form.recvPhone.value.trim(), recvAddr: form.recvAddr.value.trim() };
+      recvName: form.recvName.value.trim(), recvPhone: form.recvPhone.value.trim(), recvAddr: form.recvAddr.value.trim(),
+      unloadPlace: form.client.value.trim(), unloadAddr: (form.unloadAddr ? form.unloadAddr.value.trim() : '') };
     // 첫 품목
     const lines = []; const stockRefs = [];
     if (manualMode) {
