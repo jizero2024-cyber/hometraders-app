@@ -342,7 +342,6 @@ function screenHome() {
 
   return `
   <div class="screen">
-    <button class="quickbar" data-act="briefing" style="background:var(--accent);color:var(--accent-ink);margin-bottom:16px"><span class="ic" style="color:var(--accent-ink)">${I.doc}</span><span class="tx"><b>오늘 출고 공지</b> 만들기 · 복사</span><span class="go" style="color:var(--accent-ink)">›</span></button>
     <div class="homtabs">${htabs.map(([k, l, n]) => `<button data-act="hometab" data-t="${k}" class="${htab === k ? 'on' : ''}">${l}${n ? `<b>${n}</b>` : ''}</button>`).join('')}</div>
     ${bodyHTML}
   </div>`;
