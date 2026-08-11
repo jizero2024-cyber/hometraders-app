@@ -42,17 +42,37 @@ export function init() {
   _initPromise = _init().catch((e) => { _initPromise = null; throw e; });
   return _initPromise;
 }
+// 기기 시계와 Supabase 서버 시간 차이(clock skew)로 나는 일시적 JWT 오류
+// ("JWT issued at future", "token used before issued" 등)는 세션 새로고침 + 짧은 대기 후
+// 재시도하면 대부분 사라짐. 사용자에겐 "연결 오류"를 바로 띄우지 않고 조용히 몇 번 재시도.
+const isAuthSkewError = (e) => {
+  const m = ((e && (e.message || e.msg || e.error_description)) || '').toLowerCase();
+  return m.includes('jwt') || m.includes('issued at') || m.includes('before issued')
+    || m.includes('token is expired') || m.includes('exp') && m.includes('claim');
+};
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
 async function _init() {
-  const [w, p, i, n, s, q] = await Promise.all([
-    sb.from('warehouses').select('*'),
-    sb.from('partners').select('*'),
-    sb.from('items').select('*'),
-    sb.from('inbounds').select('*'),
-    sb.from('shipments').select('*'),
-    sb.from('quotes').select('*'),
-  ]);
-  const err = [w, p, i, n, s, q].find((r) => r.error);
-  if (err && err.error) throw err.error;
+  let w, p, i, n, s, q;
+  for (let attempt = 0; ; attempt++) {
+    [w, p, i, n, s, q] = await Promise.all([
+      sb.from('warehouses').select('*'),
+      sb.from('partners').select('*'),
+      sb.from('items').select('*'),
+      sb.from('inbounds').select('*'),
+      sb.from('shipments').select('*'),
+      sb.from('quotes').select('*'),
+    ]);
+    const err = [w, p, i, n, s, q].find((r) => r.error);
+    if (!err || !err.error) break;
+    // 인증/시계 오차성 오류면 세션 새로고침 후 재시도(최대 3회), 그 외엔 즉시 실패
+    if (attempt < 3 && isAuthSkewError(err.error)) {
+      try { await sb.auth.refreshSession(); } catch (_) { /* 무시하고 재시도 */ }
+      await wait(600 * (attempt + 1));
+      continue;
+    }
+    throw err.error;
+  }
   warehouses = w.data || []; partners = p.data || []; items = i.data || [];
   inbounds = n.data || []; shipments = s.data || []; quotes = q.data || [];
 
