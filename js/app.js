@@ -1033,12 +1033,44 @@ function sheetQuick() {
   <button class="btn danger" type="button" data-act="close">취소</button>`;
 }
 // 통합 스마트 붙여넣기 — 아무 문구나 넣으면 성격(출고·견적·배차) 판별 후 맞는 양식으로
-function sheetSmart() {
-  return `<div class="grab"></div><h2>${I.bolt} 붙여넣기 인식</h2>
-  <p class="hint">카톡·문자 문구를 그대로 붙여넣으면 <b>출고요청 · 견적 · 배차</b> 중 성격을 판별해 맞는 양식으로 보내드려요.</p>
-  <div class="field"><textarea id="sm-text" rows="4" placeholder="예) 다루끼 30단 명일 오전착으로 발주 가능할까요?"></textarea></div>
-  <button class="btn" type="button" data-act="sm-parse">인식하기</button>
-  <button class="btn danger" type="button" data-act="close">취소</button>`;
+// 채팅 문구 포맷 — **굵게** / 줄바꿈
+function chatFmt(t) { return esc(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>'); }
+// 붙여넣기/채팅 문구를 규칙기반으로 해석 → 봇 답변(요약+실행버튼)
+function chatInterpret(txt) {
+  const type = classifyPaste(txt);
+  if (type === '견적') {
+    const q = parseQuoteText(txt);
+    return { role: 'bot', kind: 'quote', payload: q, actionLabel: '견적 폼 열기',
+      text: `견적 요청으로 봤어요.${q.client ? ` 거래처 **${q.client}**` : ''}${q.phone ? ` · ${q.phone}` : ''}\n견적 폼을 열어 이어서 작성할까요?` };
+  }
+  if (type === '배차') {
+    return { role: 'bot', kind: 'dispatch', payload: txt, actionLabel: '출고 건 고르기',
+      text: '배차 안내로 봤어요.\n어느 출고 건에 이 배차 정보를 붙일지 골라주세요.' };
+  }
+  const multi = parseMultiLines(txt);
+  if (multi.lines.length >= 2) {
+    return { role: 'bot', kind: 'multiship', payload: multi, actionLabel: '확인 · 등록',
+      text: `출고 ${multi.lines.length}품목으로 봤어요.\n${multi.lines.map((l) => `· ${l.name} ${l.qty}${l.unit || ''}`).join('\n')}${multi.client ? `\n거래처 **${multi.client}**` : ''}\n창고 확인 후 등록할게요.` };
+  }
+  const pq = parseQuick(txt);
+  const itemTxt = pq.matched ? `${pq.matched}${pq.qty ? ` ${pq.qty}${pq.unit || ''}` : ''}` : (pq.guess ? `${pq.guess}(신규 품목?)` : '품목 미인식');
+  const st = pq.status === '출고예정' ? '출고 예정' : pq.status === '배차완료' ? '배차 완료' : '출고';
+  return { role: 'bot', kind: 'ship', payload: pq, actionLabel: '출고 등록 폼',
+    text: `${st}(으)로 봤어요.${pq.client ? ` 거래처 **${pq.client}**` : ''} · ${itemTxt}\n등록 폼을 열까요?` };
+}
+function sheetChat() {
+  const log = state.chat || [];
+  const bubbles = log.length ? log.map((m, i) => m.role === 'user'
+    ? `<div class="cbub user">${chatFmt(m.text)}</div>`
+    : `<div class="cbub bot">${chatFmt(m.text)}${m.actionLabel ? `<button class="cbtn" type="button" data-act="chat-go" data-i="${i}">${esc(m.actionLabel)}</button>` : ''}</div>`).join('')
+    : `<div class="cbub bot">안녕하세요! 카톡·문자 문구를 그대로 붙여넣거나 채팅하듯 적어주세요.<br>출고·견적·배차를 알아서 인식해 드려요.<br><span style="color:var(--muted);font-size:13px">예) 원익 베이지 50박스 내일 오전착</span></div>`;
+  return `<div class="grab"></div><h2>${I.bolt} 스마트 입력 · 챗봇</h2>
+  <div class="chatlog" id="chat-log">${bubbles}</div>
+  <div class="chatbar">
+    <textarea id="chat-input" rows="1" placeholder="문구 붙여넣기 · 채팅하듯 입력" autocapitalize="off"></textarea>
+    <button class="csend" type="button" data-act="chat-send" aria-label="보내기">↑</button>
+  </div>
+  ${log.length ? `<button class="btn ghost" type="button" data-act="chat-clear" style="margin-top:8px">대화 지우기</button>` : ''}`;
 }
 // 배차로 인식된 경우 — 어느 출고 건에 붙일지 선택
 function sheetSmartDispatch(txt) {
@@ -1516,7 +1548,27 @@ app.addEventListener('click', (e) => {
   }
   else if (act === 'quote-filter') { state.quoteFilter = t.dataset.v; render(); }
   else if (act === 'add-quote') { quotePrefill = null; openSheet(sheetQuoteForm(null)); }
-  else if (act === 'smart') { openSheet(sheetSmart()); }
+  else if (act === 'smart') { openSheet(sheetChat()); }
+  else if (act === 'chat-send') {
+    const inp = document.getElementById('chat-input');
+    const txt = (inp ? inp.value : '').trim();
+    if (!txt) return;
+    state.chat = state.chat || [];
+    state.chat.push({ role: 'user', text: txt });
+    state.chat.push(chatInterpret(txt));
+    openSheet(sheetChat());
+    const log = document.getElementById('chat-log'); if (log) log.scrollTop = log.scrollHeight;
+    const ni = document.getElementById('chat-input'); if (ni) ni.focus();
+  }
+  else if (act === 'chat-clear') { state.chat = []; openSheet(sheetChat()); }
+  else if (act === 'chat-go') {
+    const m = (state.chat || [])[Number(t.dataset.i)];
+    if (!m) return;
+    if (m.kind === 'quote') { quotePrefill = m.payload; state.route = 'quote'; openSheet(sheetQuoteForm(null)); }
+    else if (m.kind === 'dispatch') { openSheet(sheetSmartDispatch(m.payload)); }
+    else if (m.kind === 'multiship') { state.route = 'ship'; openSheet(sheetSmartShip(m.payload)); }
+    else if (m.kind === 'ship') { shipPrefill = m.payload; sfExtra = []; state.route = 'ship'; openSheet(sheetShipForm()); }
+  }
   else if (act === 'briefing') { openSheet(sheetBriefing()); }
   else if (act === 'briefing-copy') {
     const ta = document.getElementById('brief-text');
@@ -1798,7 +1850,7 @@ app.addEventListener('click', (e) => {
   else if (act === 'mark-done') {
     const sh = S.getShipments().find((s) => s.id === t.dataset.id);
     if (!confirm(`${sh && sh.client ? sh.client + ' — ' : ''}출고 완료됐나요?\n(담당자 확인 · 재고에서 차감됩니다)`)) return;
-    S.updateShipment(t.dataset.id, { status: '출고완료' }); render();
+    S.updateShipment(t.dataset.id, { status: '출고완료', doneAt: S.todayStr() }); render();
   }
   else if (act === 'toggle-doc') {
     const sh = S.getShipments().find((s) => s.id === t.dataset.id);

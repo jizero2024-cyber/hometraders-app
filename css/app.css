@@ -103,6 +103,17 @@ input,select,textarea{font-family:inherit;font-size:16px;border:0;}
 .catrow .cc.zero{color:var(--faint);font-weight:600;}
 .backlink{background:none;border:0;color:var(--muted);font-size:14px;font-weight:700;padding:8px 2px;}
 .backlink:active{opacity:.5;}
+/* 스마트 입력 챗봇 */
+.chatlog{display:flex;flex-direction:column;gap:8px;max-height:52vh;overflow-y:auto;padding:6px 2px 4px;margin-bottom:10px;}
+.cbub{max-width:84%;padding:11px 13px;border-radius:16px;font-size:14.5px;line-height:1.5;word-break:break-word;}
+.cbub.user{align-self:flex-end;background:var(--accent);color:var(--accent-ink);border-bottom-right-radius:5px;}
+.cbub.bot{align-self:flex-start;background:var(--surface-2);color:var(--ink);border-bottom-left-radius:5px;}
+.cbub .cbtn{display:block;margin-top:10px;width:100%;padding:10px;border-radius:11px;background:var(--ink);color:var(--bg);border:0;font-size:14px;font-weight:700;}
+.cbub .cbtn:active{opacity:.7;}
+.chatbar{display:flex;align-items:flex-end;gap:8px;}
+.chatbar textarea{flex:1;resize:none;padding:12px 14px;border-radius:16px;background:var(--surface-2);color:var(--ink);border:0;font-size:15px;font-family:inherit;line-height:1.4;max-height:120px;}
+.csend{flex:none;width:44px;height:44px;border-radius:50%;background:var(--accent);color:var(--accent-ink);border:0;font-size:19px;font-weight:800;display:grid;place-items:center;}
+.csend:active{opacity:.7;}
 .callrow{display:flex;align-items:center;justify-content:center;gap:8px;height:44px;border-radius:12px;
   background:#e6f4ea;color:#137333;font-size:15px;font-weight:700;text-decoration:none;}
 .callrow svg{width:19px;height:19px;}
