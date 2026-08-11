@@ -306,11 +306,16 @@ a.tel{color:var(--ink);font-weight:800;text-decoration:none;background:var(--sur
 .iconbtn:active{background:var(--surface-3);}
 .iconbtn svg{width:19px;height:19px;}
 .issuer{flex:none;font-size:18px;font-weight:800;color:var(--ink);letter-spacing:-.02em;padding-left:10px;white-space:nowrap;}
-.alertbar{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;
-  padding:13px 15px;border-radius:12px;background:#fbeceb;color:#c0392b;font-weight:700;font-size:14px;border:0;margin-bottom:14px;}
+.alertbar{display:flex;align-items:center;gap:9px;width:100%;text-align:left;
+  padding:11px 14px;border-radius:11px;background:#fbeceb;color:#c0392b;font-weight:700;font-size:14px;border:0;margin-bottom:14px;}
 .alertbar b{font-weight:800;}
-.alertbar .go{font-size:18px;color:#c0392b;}
+.alertbar .ab-ic{position:relative;flex:none;width:20px;height:20px;display:grid;place-items:center;}
+.alertbar .ab-ic svg{width:19px;height:19px;}
+.alertbar .ab-ic .dot{position:absolute;top:0;right:0;width:7px;height:7px;border-radius:50%;background:#c0392b;box-shadow:0 0 0 2px #fbeceb;animation:abpulse 1.5s ease-in-out infinite;}
+.alertbar .ab-tx{flex:1;}
+.alertbar .go{flex:none;font-size:18px;color:#c0392b;}
 .alertbar:active{background:#f6dcd9;}
+@keyframes abpulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.35;transform:scale(1.3);}}
 .holdseg{display:flex;flex-wrap:wrap;gap:8px;}
 .holdseg button{padding:9px 13px;border-radius:10px;background:var(--surface-2);color:var(--ink);border:0;font-size:14px;font-weight:600;}
 .holdseg button:active{background:var(--surface-3);}
@@ -337,7 +342,7 @@ a.tel{color:var(--ink);font-weight:800;text-decoration:none;background:var(--sur
 .il-price{font-size:13px;color:var(--muted);margin-top:3px;white-space:nowrap;}
 .il-price.nop{color:#c0392b;font-weight:700;}
 .il-amt{font-size:14px;font-weight:800;color:var(--ink);margin-top:3px;white-space:nowrap;}
-@media (prefers-color-scheme:dark){.alertbar{background:#3a2020;color:#f0a89e;}.alertbar .go{color:#f0a89e;}}
+@media (prefers-color-scheme:dark){.alertbar{background:#3a2020;color:#f0a89e;}.alertbar .go{color:#f0a89e;}.alertbar .ab-ic .dot{background:#f0a89e;box-shadow:0 0 0 2px #3a2020;}}
 .sheet h2{font-size:19px;font-weight:700;margin:0 0 16px;display:flex;align-items:center;gap:8px;}
 .sheet h2 svg{width:18px;height:18px;}
 .field{margin-bottom:14px;}

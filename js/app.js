@@ -29,6 +29,7 @@ const I = {
   tag: '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12V4h8l9 9-8 8z"/><circle cx="7.5" cy="7.5" r="1.4"/></svg>',
   invoice: '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-2-1.3-2 1.3-2-1.3-2 1.3-2-1.3L6 21z"/><path d="M9 8h6M9 12h6"/></svg>',
   pen: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L18.5 9.5a2 2 0 0 0-3-3L5 17z"/><path d="M13.5 6.5l3 3"/></svg>',
+  bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.5 21a1.6 1.6 0 0 1-3 0"/></svg>',
 };
 const whShort = (n) => n.replace('창고', '').replace('로지스', '');
 
@@ -373,7 +374,7 @@ function screenHome() {
   const stuck = stuckItems();
   return `
   <div class="screen">
-    ${stuck.total ? `<button class="alertbar" data-act="checklist"><span>${I.bolt} 확인 필요 <b>${stuck.total}건</b> · 명세서·견적·단가</span><span class="go">›</span></button>` : ''}
+    ${stuck.total ? `<button class="alertbar" data-act="checklist"><span class="ab-ic">${I.bell}<i class="dot"></i></span><span class="ab-tx">확인 필요 <b>${stuck.total}건</b> · 명세서·견적·단가</span><span class="go">›</span></button>` : ''}
     <div class="homtabs">${htabs.map(([k, l, n]) => `<button data-act="hometab" data-t="${k}" class="${htab === k ? 'on' : ''}">${l}${n ? `<b>${n}</b>` : ''}</button>`).join('')}</div>
     ${bodyHTML}
   </div>`;
