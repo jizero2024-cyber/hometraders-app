@@ -1507,8 +1507,16 @@ app.addEventListener('click', (e) => {
         unloadPlace: to, unloadAddr: g('db-to-addr').value.trim(),
       });
     }
+    // 하차지 거래처+주소 자동 등록/갱신 → 다음 배차부터 자동으로 뜨고 채워짐
+    const toNm = (to || '').trim(); const toAddrNm = g('db-to-addr').value.trim();
+    let savedPartner = false;
+    if (toNm && toNm !== '홈트레이더스') {
+      const ex = S.findPartner(toNm);
+      if (!ex) { S.addPartner({ name: toNm, address: toAddrNm, phone: '' }); savedPartner = true; }
+      else if (toAddrNm && (ex.address || '') !== toAddrNm) { S.updatePartner(toNm, { name: toNm, address: toAddrNm, phone: ex.phone || '', note: ex.note || '' }); savedPartner = true; }
+    }
     navigator.clipboard.writeText(text).then(
-      () => alert('배차 양식 복사됨 · 주소는 출고 건에 저장됐어요.\n\n' + text),
+      () => alert(`배차 양식 복사됨 · 출고 건에 저장${savedPartner ? '\n하차지 거래처·주소도 등록했어요 (다음부터 자동)' : ''}\n\n` + text),
       () => alert(text));
   }
   else if (act === 'shipview') { state.shipView = t.dataset.v; render(); }
