@@ -87,6 +87,7 @@ input,select,textarea{font-family:inherit;font-size:16px;border:0;}
 .brd .broute .arr{color:var(--muted);font-weight:600;margin:0 3px;}
 /* 날짜별 그룹(배차 요청) */
 .dgrp{margin-bottom:2px;}
+.dgrp + .dgrp{border-top:1px solid var(--surface-3);margin-top:8px;}
 .dghd{display:flex;align-items:baseline;gap:8px;font-size:13px;font-weight:800;color:var(--muted);padding:16px 2px 4px;}
 .dghd .rel{font-size:12px;font-weight:700;color:var(--muted);}
 .dghd .td-big{font-size:21px;font-weight:800;color:var(--ink);letter-spacing:-.02em;}
