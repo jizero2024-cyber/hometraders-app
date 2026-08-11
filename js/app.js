@@ -87,6 +87,8 @@ function region(addr, place) {
   return (place || '').trim();
 }
 const DISPATCH = ['이음물류', '직접', '기타'];
+// 배차 업체 자동완성 목록 = 기본 + 지금까지 실제 쓴 값
+const dispatchList = () => [...new Set([...DISPATCH, ...S.getShipments().map((s) => s.dispatchVia).filter(Boolean)])];
 const COURIERS = ['경동택배', 'CJ대한통운', '로젠택배', '한진택배', '우체국택배', '대신택배'];
 const telHref = (p) => 'tel:' + String(p || '').replace(/[^0-9]/g, '');
 
@@ -987,11 +989,9 @@ function sheetShipForm() {
     <div id="f-dispatch-block"${p.method === '택배' ? ' style="display:none"' : ''}>
       <button type="button" class="tgl" data-act="toggle-disp" id="f-disp-toggle">${hasDisp ? '− 배차 정보 접기' : '＋ 배차 정보 입력 (기사·차량·운임) · 선택'}</button>
       <div id="f-disp-fields" style="display:${hasDisp ? 'block' : 'none'};margin-top:12px">
-        <div class="field"><label>배차 방법</label>
-          <select name="dispatchVia">
-            <option value="">배차 방법…</option>
-            ${DISPATCH.map((d) => `<option ${p.dispatchVia === d ? 'selected' : ''}>${d}</option>`).join('')}
-          </select></div>
+        <div class="field"><label>배차 방법 (업체)</label>
+          <input name="dispatchVia" list="dispatch-list" value="${esc(p.dispatchVia || '')}" placeholder="예: 이음물류 · 직접 · 다른 업체" autocomplete="off" style="width:100%;padding:12px 13px;border-radius:11px;background:var(--surface-2);color:var(--ink);border:0">
+          <datalist id="dispatch-list">${dispatchList().map((d) => `<option value="${esc(d)}"></option>`).join('')}</datalist></div>
         <div class="field"><div class="row2">
           <div><label>기사님 이름</label><input name="driverName" placeholder="예: 주정택" value="${esc(p.driverName || '')}"></div>
           <div><label>기사님 전화</label><input name="driverPhone" type="tel" inputmode="tel" placeholder="010-0000-0000" value="${esc(p.driverPhone || '')}"></div>
@@ -1556,9 +1556,9 @@ function sheetEditShip(sh) {
         ${['배차', '택배'].map((m) => `<button type="button" data-v="${m}" class="${(sh.method || '배차') === m ? 'on' : ''}">${m}</button>`).join('')}
       </div></div>
     <div id="e-dispatch-block"${sh.method === '택배' ? ' style="display:none"' : ''}>
-      <div class="field"><label>배차 방법</label>
-        <select name="dispatchVia"><option value="">배차 방법…</option>
-          ${DISPATCH.map((d) => `<option ${sh.dispatchVia === d ? 'selected' : ''}>${d}</option>`).join('')}</select></div>
+      <div class="field"><label>배차 방법 (업체)</label>
+        <input name="dispatchVia" list="dispatch-list" value="${esc(sh.dispatchVia || '')}" placeholder="예: 이음물류 · 직접 · 다른 업체" autocomplete="off" style="width:100%;padding:12px 13px;border-radius:11px;background:var(--surface-2);color:var(--ink);border:0">
+        <datalist id="dispatch-list">${dispatchList().map((d) => `<option value="${esc(d)}"></option>`).join('')}</datalist></div>
       <div class="field"><div class="row2">
         <div><label>기사님 이름</label><input name="driverName" value="${esc(sh.driverName || '')}" placeholder="예: 주정택"></div>
         <div><label>기사님 전화</label><input name="driverPhone" type="tel" value="${esc(sh.driverPhone || '')}" placeholder="010-0000-0000"></div>
