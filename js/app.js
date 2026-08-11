@@ -270,30 +270,23 @@ function screenHome() {
     ${pendingQuotes.slice(0, 5).map((q) => `<button class="prow" data-act="quote-open" data-id="${q.id}"><span>${esc(q.client || '-')}${q.content ? ` · ${esc(q.content)}` : ''}</span><span class="pill ${daysSince(q.date) >= 2 ? 'out' : 'plan'}">${pendingLabel(q.date)}</span></button>`).join('')}</div>`);
   if (lowItems.length) problems.push(`<div class="psec"><span class="pttl">품절 (${lowItems.length})</span>
     ${lowItems.slice(0, 5).map((it) => `<button class="prow" data-act="wh" data-w="${esc(it.warehouse)}"><span>${esc(it.name)} · ${esc(it.warehouse)}</span><span class="pill ${S.stockStatus(it)}">${STATUS_KO[S.stockStatus(it)]}</span></button>`).join('')}</div>`);
-  if (docPending.length) problems.push(`<div class="psec"><span class="pttl">명세서 미발행 (${docPending.length})</span>
-    ${docPending.slice(0, 8).map((s) => `<div class="prow" style="display:flex;align-items:center;gap:8px">
-      <button data-act="ship" data-id="${s.id}" style="flex:1;min-width:0;text-align:left;background:none;border:0;color:inherit;padding:0;font:inherit;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.client || '-')} · ${esc(s.name || '')} ${s.qty}${esc(s.unit)}</button>
-      <button class="pill done" data-act="doc-done" data-id="${s.id}" style="flex:none">발행완료</button>
-    </div>`).join('')}</div>`);
   if (needCheck.length) problems.push(`<div class="psec"><span class="pttl">확인 필요 (${needCheck.length})</span>
     ${needCheck.slice(0, 5).map((s) => `<button class="prow" data-act="ship" data-id="${s.id}"><span>${esc(s.client || '-')} · ${s.name ? esc(s.note || '확인 필요') : '품목 미지정'}</span><span class="pill chk">확인</span></button>`).join('')}</div>`);
 
+  const ready = ships.filter((s) => s.status === '배차완료').sort((a, b) => ((a.date + (a.time || '~')).localeCompare(b.date + (b.time || '~'))));
+  const done = ships.filter((s) => s.status === '출고완료' && s.date === today).sort((a, b) => (a.time || '~').localeCompare(b.time || '~'));
+  const htab = state.homeTab || 'need';
+  const tabList = htab === 'need' ? needDispatch : htab === 'ready' ? ready : done;
+  const htabs = [['need', '배차 요청', needDispatch.length], ['ready', '출고 예정', ready.length], ['done', '오늘 출고', done.length]];
+  const emptyMsg = { need: '배차 요청할 게 없어요.', ready: '진행 중인 출고가 없어요.', done: '오늘 출고 완료가 없어요.' }[htab];
+
   return `
   <div class="screen">
-    <button class="quickbar" data-act="briefing" style="background:var(--accent);color:var(--accent-ink);margin-bottom:14px"><span class="ic" style="color:var(--accent-ink)">${I.doc}</span><span class="tx"><b>오늘 출고 공지</b> 만들기 · 복사</span><span class="go" style="color:var(--accent-ink)">›</span></button>
-    <div class="sec-title">오늘 처리 현황</div>
-    <div class="tiles">${tiles.map(tile).join('')}</div>
-
-    <div class="sec-title">배차 요청 필요</div>
-    ${needDispatch.length ? `<div class="rows">${needDispatch.map(boardRow).join('')}</div>`
-      : `<div class="card" style="color:var(--muted);font-size:14px">배차 요청할 게 없어요.</div>`}
-
-    <div class="sec-title">배차 완료 · 오늘 출고</div>
-    ${todayList.length ? `<div class="rows">${todayList.map(boardRow).join('')}</div>`
-      : `<div class="card" style="color:var(--muted);font-size:14px">배차완료·오늘 출고가 없어요.</div>`}
-
-    <div class="sec-title">체크리스트</div>
-    ${problems.length ? problems.join('') : `<div class="card" style="color:var(--muted);font-size:14px">오늘 챙길 게 없어요. 정상입니다.</div>`}
+    <button class="quickbar" data-act="briefing" style="background:var(--accent);color:var(--accent-ink);margin-bottom:16px"><span class="ic" style="color:var(--accent-ink)">${I.doc}</span><span class="tx"><b>오늘 출고 공지</b> 만들기 · 복사</span><span class="go" style="color:var(--accent-ink)">›</span></button>
+    <div class="homtabs">${htabs.map(([k, l, n]) => `<button data-act="hometab" data-t="${k}" class="${htab === k ? 'on' : ''}">${l}${n ? `<b>${n}</b>` : ''}</button>`).join('')}</div>
+    ${tabList.length ? `<div class="rows">${tabList.map(boardRow).join('')}</div>`
+      : `<div class="empty"><div class="ico">${I.truck}</div>${emptyMsg}</div>`}
+    ${problems.length ? `<div class="sec-title">체크리스트</div>${problems.join('')}` : ''}
   </div>`;
 }
 
@@ -703,6 +696,23 @@ function rowShip(s) {
 
 // 단가표 마스터 — 품목별 최근 단가·공급처 (탭하면 단가 수정). 업데이트 시점·엑셀은 다음 단계.
 function screenPrice() {
+  const ptab = state.priceTab || 'price';
+  const docPending = S.getShipments().filter((s) => s.status === '출고완료' && !s.docDone)
+    .sort((a, b) => (b.date + b.id).localeCompare(a.date + a.id));
+  const tabs = `<div class="homtabs">
+    <button data-act="pricetab" data-t="price" class="${ptab === 'price' ? 'on' : ''}">단가표</button>
+    <button data-act="pricetab" data-t="doc" class="${ptab === 'doc' ? 'on' : ''}">명세서 미발행${docPending.length ? `<b>${docPending.length}</b>` : ''}</button>
+  </div>`;
+  if (ptab === 'doc') {
+    return `<div class="screen">${tabs}
+      ${docPending.length ? `<div class="rows">${docPending.map((s) => `<div class="ship">
+        <button class="ship-open" data-act="ship" data-id="${s.id}"><div class="body"><b>${esc(s.client || '거래처 미지정')}</b>
+          <div class="meta">${esc(shipSummary(s).itemLabel)} ${esc(shipSummary(s).qtyLabel)} · ${esc(s.date)}</div></div></button>
+        <button class="pill done" data-act="doc-done" data-id="${s.id}" style="flex:none">발행완료</button>
+      </div>`).join('')}</div>`
+        : `<div class="empty"><div class="ico">${I.doc}</div>미발행 명세서가 없어요</div>`}
+    </div>`;
+  }
   const items = S.getItems().slice();
   const byCat = {};
   items.forEach((it) => { (byCat[it.category || '기타'] = byCat[it.category || '기타'] || []).push(it); });
@@ -718,8 +728,8 @@ function screenPrice() {
     </div>
   </button>`;
   const noPrice = items.filter((it) => !(Number(it.unitPrice) > 0)).length;
-  return `<div class="screen">
-    <div class="quickbar" style="cursor:default"><span class="tx">품목 <b>${items.length}</b>${noPrice ? ` · 단가 미입력 <b>${noPrice}</b>` : ''}</span></div>
+  return `<div class="screen">${tabs}
+    <div class="quickbar" style="cursor:default;margin-top:4px"><span class="tx">품목 <b>${items.length}</b>${noPrice ? ` · 단가 미입력 <b>${noPrice}</b>` : ''}</span></div>
     ${cats.map((c) => `<div class="sec-title">${esc(c)} ${byCat[c].length}</div><div class="rows">${byCat[c].map(priceRow).join('')}</div>`).join('')}
     <p class="hint" style="margin-top:16px">품목을 누르면 단가를 수정할 수 있어요. (단가 변경 이력·업데이트 시점·엑셀 추출은 다음 단계에 추가)</p>
   </div>`;
@@ -1594,6 +1604,8 @@ app.addEventListener('click', (e) => {
   else if (act === 'add-inbound') { openSheet(sheetInboundForm()); }
   else if (act === 'color') { openSheet(sheetColor(t.dataset.c)); }
   else if (act === 'sil-wh') { state.silWH = t.dataset.w || null; render(); }
+  else if (act === 'hometab') { state.homeTab = t.dataset.t; render(); }
+  else if (act === 'pricetab') { state.priceTab = t.dataset.t; render(); }
   else if (act === 'color-ship') {
     const it = S.findItem(t.dataset.id);
     shipPrefill = { warehouse: it.warehouse, itemId: it.id, qty: '', unit: it.unit, client: '', status: '출고완료', note: '', matched: it.name };
