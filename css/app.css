@@ -80,8 +80,13 @@ input,select,textarea{font-family:inherit;font-size:16px;border:0;}
 .tile .tv{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;}
 .tile.soft{opacity:.55;}
 .tile.soft .tv{font-size:20px;color:var(--muted);}
-.brd{display:flex;align-items:center;gap:12px;background:transparent;border-radius:0;
+.brd{display:flex;flex-direction:column;gap:11px;background:transparent;border-radius:0;
   padding:15px 2px;width:100%;text-align:left;color:inherit;box-shadow:none;border-bottom:1px solid var(--surface-2);}
+.brd-top{display:flex;align-items:center;gap:12px;}
+.callrow{display:flex;align-items:center;justify-content:center;gap:8px;height:44px;border-radius:12px;
+  background:#e6f4ea;color:#137333;font-size:15px;font-weight:700;text-decoration:none;}
+.callrow svg{width:19px;height:19px;}
+@media (prefers-color-scheme:dark){.callrow{background:#1f3a26;color:#7fe0a1;}}
 .rows > .brd:last-child{border-bottom:0;}
 .brd:active{background:var(--surface-2);}
 .brd .bmid b{font-size:15px;}

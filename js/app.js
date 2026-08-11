@@ -251,18 +251,20 @@ function screenHome() {
     const pillCls = needsDisp ? 'low' : (isPlan ? 'plan' : STAGE_PILL[s.status]);
     const pillTxt = needsDisp ? '배차필요' : (isPlan ? '예정' : STAGE_SHORT[s.status]);
     const sm = shipSummary(s);
-    const call = s.driverPhone ? `<a class="callbtn" href="${telHref(s.driverPhone)}" aria-label="기사님 전화">${I.phone}</a>` : '';
+    const call = s.driverPhone ? `<a class="callrow" href="${telHref(s.driverPhone)}">${I.phone}<span>기사님 전화걸기${s.driverName ? ' · ' + esc(s.driverName) : ''}</span></a>` : '';
     const markDone = s.status === '배차완료' ? `<button class="pill done" data-act="mark-done" data-id="${s.id}" style="flex:none">출고완료</button>` : '';
     const docBtn = (s.status === '출고완료' && !s.docDone) ? `<button class="pill low" data-act="doc-done" data-id="${s.id}" style="flex:none">발행완료</button>` : '';
     const rightPill = isPlan ? `<span class="pill ${pillCls}">${pillTxt}</span>`
       : (s.status === '출고완료' && s.docDone) ? `<span class="pill done" style="font-size:11px">명세서 발행</span>` : '';
     return `<div class="brd">
-    <button class="brd-open" data-act="ship" data-id="${s.id}">
-      <span class="bt">${esc(left)}</span>
-      <div class="bmid"><b>${esc(s.client || '거래처 미지정')}</b>
-        <div class="bsub">${esc(sm.itemLabel)} ${esc(sm.qtyLabel)} · ${whTag(s.warehouse)}</div></div>
-    </button>
-    ${rightPill ? `<span style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">${rightPill}</span>` : ''}${markDone}${docBtn}${call}</div>`;
+    <div class="brd-top">
+      <button class="brd-open" data-act="ship" data-id="${s.id}">
+        <span class="bt">${esc(left)}</span>
+        <div class="bmid"><b>${esc(s.client || '거래처 미지정')}</b>
+          <div class="bsub">${esc(sm.itemLabel)} ${esc(sm.qtyLabel)} · ${whTag(s.warehouse)}</div></div>
+      </button>
+      ${rightPill ? `<span style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">${rightPill}</span>` : ''}${markDone}${docBtn}
+    </div>${call}</div>`;
   };
 
   const pendingQuotes = S.getQuotes().filter((q) => q.status === '견적대기').sort((a, b) => daysSince(b.date) - daysSince(a.date));
