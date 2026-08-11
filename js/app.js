@@ -251,14 +251,17 @@ function screenHome() {
     const pillCls = needsDisp ? 'low' : (isPlan ? 'plan' : STAGE_PILL[s.status]);
     const pillTxt = needsDisp ? '배차필요' : (isPlan ? '예정' : STAGE_SHORT[s.status]);
     const sm = shipSummary(s);
-    return `<button class="brd" data-act="ship" data-id="${s.id}">
-    <span class="bt">${esc(left)}</span>
-    <div class="bmid"><b>${esc(s.client || '거래처 미지정')}</b>
-      <div class="bsub">${esc(sm.itemLabel)} ${esc(sm.qtyLabel)} · ${whTag(s.warehouse)}</div></div>
+    const call = s.driverPhone ? `<a class="callbtn" href="${telHref(s.driverPhone)}" aria-label="기사님 전화">${I.phone}</a>` : '';
+    return `<div class="brd">
+    <button class="brd-open" data-act="ship" data-id="${s.id}">
+      <span class="bt">${esc(left)}</span>
+      <div class="bmid"><b>${esc(s.client || '거래처 미지정')}</b>
+        <div class="bsub">${esc(sm.itemLabel)} ${esc(sm.qtyLabel)} · ${whTag(s.warehouse)}</div></div>
+    </button>
     <span style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
       <span class="pill ${pillCls}">${pillTxt}</span>
       ${s.status === '출고완료' ? `<span class="pill ${s.docDone ? 'done' : 'low'}" style="font-size:11px">${s.docDone ? '명세서 발행' : '명세서 미발행'}</span>` : ''}
-    </span></button>`;
+    </span>${call}</div>`;
   };
 
   const pendingQuotes = S.getQuotes().filter((q) => q.status === '견적대기').sort((a, b) => daysSince(b.date) - daysSince(a.date));
@@ -686,12 +689,16 @@ function shipSummary(s) {
 function rowShip(s) {
   const cls = STAGE_PILL[s.status] || 'plan';
   const sm = shipSummary(s);
-  return `<button class="ship" data-act="ship" data-id="${s.id}">
-    ${swatchHTML(sm.swatchName)}
-    <div class="body"><b>${esc(s.client || '거래처 미지정')}</b>
-      <div class="meta">${whTag(s.warehouse)} ${esc(sm.itemLabel)} · ${esc(s.date)}</div></div>
+  const call = s.driverPhone ? `<a class="callbtn" href="${telHref(s.driverPhone)}" aria-label="기사님 전화">${I.phone}</a>` : '';
+  return `<div class="ship">
+    <button class="ship-open" data-act="ship" data-id="${s.id}">
+      ${swatchHTML(sm.swatchName)}
+      <div class="body"><b>${esc(s.client || '거래처 미지정')}</b>
+        <div class="meta">${whTag(s.warehouse)} ${esc(sm.itemLabel)} · ${esc(s.date)}</div></div>
+    </button>
     <div class="right" style="flex-wrap:wrap;justify-content:flex-end;gap:6px"><span class="q">${esc(sm.qtyLabel)}</span><span class="pill ${cls}">${STAGE_SHORT[s.status] || esc(s.status)}</span>${s.status === '출고완료' ? `<span class="pill ${s.docDone ? 'done' : 'low'}" style="font-size:11px">${s.docDone ? '명세서 발행' : '명세서 미발행'}</span>` : ''}</div>
-  </button>`;
+    ${call}
+  </div>`;
 }
 
 // 단가표 마스터 — 품목별 최근 단가·공급처 (탭하면 단가 수정). 업데이트 시점·엑셀은 다음 단계.

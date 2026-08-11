@@ -337,3 +337,11 @@ textarea{resize:vertical;line-height:1.5;}
     padding:22px 26px 26px;animation:pop .18s ease;}
   .grab{display:none;}
 }
+
+/* 리스트 행 안의 열기 버튼 + 기사 전화 걸기 버튼 */
+.ship-open,.brd-open{flex:1;min-width:0;display:flex;align-items:center;gap:13px;background:none;border:0;text-align:left;color:inherit;padding:0;font:inherit;}
+.brd-open{gap:12px;}
+.ship-open:active,.brd-open:active{opacity:.55;}
+.callbtn{flex:none;width:42px;height:42px;border-radius:50%;background:#e6f4ea;color:#137333;display:grid;place-items:center;margin-left:8px;}
+.callbtn svg{width:20px;height:20px;}
+@media (prefers-color-scheme:dark){.callbtn{background:#1f3a26;color:#7fe0a1;}}
