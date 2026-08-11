@@ -297,22 +297,30 @@ function screenHome() {
   const htab = state.homeTab || 'need';
   const htabs = [['need', '배차 요청', needDispatch.length], ['ready', '오늘 출고', ready.length], ['done', '출고 완료', done.length], ['quote', '견적요청', pendingQuotes.length]];
 
-  // 배차 요청: 오늘~일주일 후까지 날짜별 그룹(오늘 강조). 그 외 날짜/미정도 아래에.
+  // 날짜별 그룹 렌더 (배차 요청·출고 완료 공용). desc=최신 먼저, relFn=날짜배지 문구.
   const addDays = (ds, n) => { const [y, m, d] = ds.split('-').map(Number); const t = new Date(y, m - 1, d + n); return dstr(t.getFullYear(), t.getMonth() + 1, t.getDate()); };
-  const needGroupsHTML = () => {
-    const wk = addDays(today, 7);
-    const dated = needDispatch.filter((s) => s.date && s.date <= wk).sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')));
-    const noDate = needDispatch.filter((s) => !s.date);
-    if (!dated.length && !noDate.length) return `<div class="empty"><div class="ico">${I.truck}</div>배차 요청할 게 없어요.</div>`;
+  const dgroupHTML = (list, dateOf, desc, relFn) => {
+    const withD = list.filter((s) => dateOf(s));
+    const noD = list.filter((s) => !dateOf(s));
+    if (!withD.length && !noD.length) return '';
     const byDate = {};
-    dated.forEach((s) => (byDate[s.date] = byDate[s.date] || []).push(s));
-    const relTxt = (d) => { const n = daysSince(d); return n === 0 ? '오늘' : n === -1 ? '내일' : n < 0 ? '' : `${n}일 지연`; };
-    let html = Object.keys(byDate).sort().map((d) => `<div class="dgrp${d === today ? ' today' : ''}">
-      <div class="dghd">${mdDow(d)}${relTxt(d) ? ` <span class="rel">${relTxt(d)}</span>` : ''}</div>
+    withD.forEach((s) => { const k = dateOf(s); (byDate[k] = byDate[k] || []).push(s); });
+    const keys = Object.keys(byDate).sort(); if (desc) keys.reverse();
+    let html = keys.map((d) => `<div class="dgrp${d === today ? ' today' : ''}">
+      <div class="dghd">${mdDow(d)}${relFn(d) ? ` <span class="rel">${relFn(d)}</span>` : ''}</div>
       <div class="rows">${byDate[d].map(boardRow).join('')}</div></div>`).join('');
-    if (noDate.length) html += `<div class="dgrp"><div class="dghd">날짜 미정</div><div class="rows">${noDate.map(boardRow).join('')}</div></div>`;
+    if (noD.length) html += `<div class="dgrp"><div class="dghd">날짜 미정</div><div class="rows">${noD.map(boardRow).join('')}</div></div>`;
     return html;
   };
+  const needRel = (d) => { const n = daysSince(d); return n === 0 ? '오늘' : n === -1 ? '내일' : n < 0 ? '' : `${n}일 지연`; };
+  const doneRel = (d) => { const n = daysSince(d); return n === 0 ? '오늘' : n === 1 ? '어제' : n < 0 ? '' : `${n}일 전`; };
+  const needGroupsHTML = () => {
+    const wk = addDays(today, 7);
+    const list = needDispatch.filter((s) => !s.date || s.date <= wk);
+    return dgroupHTML(list, (s) => s.date, false, needRel) || `<div class="empty"><div class="ico">${I.truck}</div>배차 요청할 게 없어요.</div>`;
+  };
+  // 출고 완료: 완료 누른 날짜(doneAt) 기준으로 날짜별 분리(최신 먼저). doneAt 없으면 출고일로 대체.
+  const doneGroupsHTML = () => dgroupHTML(done, (s) => s.doneAt || s.date, true, doneRel) || `<div class="empty"><div class="ico">${I.truck}</div>출고 완료된 게 없어요.</div>`;
 
   const quoteRow = (q) => `<div class="brd"><div class="brd-top">
     <button class="brd-open" data-act="quote-open" data-id="${q.id}">
@@ -325,7 +333,8 @@ function screenHome() {
 
   const bodyHTML = htab === 'need' ? needGroupsHTML()
     : htab === 'quote' ? (pendingQuotes.length ? `<div class="rows">${pendingQuotes.map(quoteRow).join('')}</div>` : `<div class="empty"><div class="ico">${I.doc}</div>받은 견적요청이 없어요.</div>`)
-    : (() => { const tl = htab === 'ready' ? ready : done; return tl.length ? `<div class="rows">${tl.map(boardRow).join('')}</div>` : `<div class="empty"><div class="ico">${I.truck}</div>${htab === 'ready' ? '오늘 출고 건이 없어요.' : '출고 완료된 게 없어요.'}</div>`; })();
+    : htab === 'ready' ? (ready.length ? `<div class="rows">${ready.map(boardRow).join('')}</div>` : `<div class="empty"><div class="ico">${I.truck}</div>오늘 출고 건이 없어요.</div>`)
+    : doneGroupsHTML();
 
   return `
   <div class="screen">
