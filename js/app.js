@@ -256,11 +256,22 @@ function screenHome() {
     const docBtn = (s.status === '출고완료' && !s.docDone) ? `<button class="pill low" data-act="doc-done" data-id="${s.id}" style="flex:none">발행완료</button>` : '';
     const rightPill = isPlan ? `<span class="pill ${pillCls}">${pillTxt}</span>`
       : (s.status === '출고완료' && s.docDone) ? `<span class="pill done" style="font-size:11px">명세서 발행</span>` : '';
+    // 주소에서 시/군(구) 지역만 뽑기 — "충남 천안시 서북구.." → "천안시", 없으면 지점명
+    const region = (addr, place) => {
+      const a = (addr || '').trim();
+      const m = a.match(/([가-힣]{2,}(?:시|군))/) || a.match(/([가-힣]{2,}구)/);
+      if (m) return m[1];
+      if (a) return a.split(/\s+/)[0];
+      return (place || '').trim();
+    };
+    const fr = region(s.loadAddr, s.loadPlace), to = region(s.unloadAddr, s.unloadPlace);
+    const route = (s.status === '출고완료' && (fr || to)) ? `${esc(fr || '-')} <span class="arr">→</span> ${esc(to || '-')}` : '';
     return `<div class="brd">
     <div class="brd-top">
       <button class="brd-open" data-act="ship" data-id="${s.id}">
         <span class="bt">${esc(left)}</span>
         <div class="bmid"><b>${esc(s.client || '거래처 미지정')}</b>
+          ${route ? `<div class="broute">${route}</div>` : ''}
           <div class="bsub">${esc(sm.itemLabel)} ${esc(sm.qtyLabel)} · ${whTag(s.warehouse)}</div></div>
       </button>
       ${rightPill ? `<span style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">${rightPill}</span>` : ''}${markDone}${docBtn}
@@ -281,8 +292,8 @@ function screenHome() {
   const done = ships.filter((s) => s.status === '출고완료' && s.docDone).sort((a, b) => ((b.date + (b.time || '')).localeCompare(a.date + (a.time || ''))));
   const htab = state.homeTab || 'need';
   const tabList = htab === 'need' ? needDispatch : htab === 'ready' ? ready : htab === 'doc' ? doc : done;
-  const htabs = [['need', '배차 요청', needDispatch.length], ['ready', '출고 예정', ready.length], ['done', '출고 완료', done.length], ['doc', '명세서 미발행', doc.length]];
-  const emptyMsg = { need: '배차 요청할 게 없어요.', ready: '진행 중인 출고가 없어요.', done: '출고 완료(명세서까지)된 게 없어요.', doc: '명세서 미발행 건이 없어요.' }[htab];
+  const htabs = [['need', '배차 요청', needDispatch.length], ['ready', '오늘 출고', ready.length], ['done', '출고 완료', done.length], ['doc', '명세서 미발행', doc.length]];
+  const emptyMsg = { need: '배차 요청할 게 없어요.', ready: '오늘 출고 건이 없어요.', done: '출고 완료(명세서까지)된 게 없어요.', doc: '명세서 미발행 건이 없어요.' }[htab];
 
   return `
   <div class="screen">

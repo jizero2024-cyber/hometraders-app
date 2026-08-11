@@ -83,6 +83,8 @@ input,select,textarea{font-family:inherit;font-size:16px;border:0;}
 .brd{display:flex;flex-direction:column;gap:11px;background:transparent;border-radius:0;
   padding:15px 2px;width:100%;text-align:left;color:inherit;box-shadow:none;border-bottom:1px solid var(--surface-2);}
 .brd-top{display:flex;align-items:center;gap:12px;}
+.brd .broute{font-size:15px;font-weight:800;color:var(--ink);margin-top:3px;letter-spacing:-.2px;}
+.brd .broute .arr{color:var(--muted);font-weight:600;margin:0 3px;}
 .callrow{display:flex;align-items:center;justify-content:center;gap:8px;height:44px;border-radius:12px;
   background:#e6f4ea;color:#137333;font-size:15px;font-weight:700;text-decoration:none;}
 .callrow svg{width:19px;height:19px;}
