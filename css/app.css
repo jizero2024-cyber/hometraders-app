@@ -85,6 +85,24 @@ input,select,textarea{font-family:inherit;font-size:16px;border:0;}
 .brd-top{display:flex;align-items:center;gap:12px;}
 .brd .broute{font-size:15px;font-weight:800;color:var(--ink);margin-top:3px;letter-spacing:-.2px;}
 .brd .broute .arr{color:var(--muted);font-weight:600;margin:0 3px;}
+/* 날짜별 그룹(배차 요청) */
+.dgrp{margin-bottom:2px;}
+.dghd{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:800;color:var(--muted);padding:14px 2px 4px;}
+.dghd .rel{font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px;background:var(--surface-2);color:var(--muted);}
+.dgrp.today{background:var(--accent-soft);border-radius:14px;padding:2px 12px 8px;margin:4px -10px 12px;}
+.dgrp.today .dghd{color:var(--ink);}
+.dgrp.today .dghd .rel{background:var(--ink);color:var(--bg);}
+/* 출고 메뉴 카테고리 리스트 */
+.catlist{display:flex;flex-direction:column;margin-top:4px;}
+.catrow{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;
+  padding:18px 4px;background:none;border:0;border-bottom:1px solid var(--surface-2);color:inherit;text-align:left;}
+.catrow:last-child{border-bottom:0;}
+.catrow:active{background:var(--surface-2);}
+.catrow .cl{font-size:16px;font-weight:700;color:var(--ink);}
+.catrow .cc{font-size:16px;font-weight:800;color:var(--ink);min-width:26px;text-align:right;font-variant-numeric:tabular-nums;}
+.catrow .cc.zero{color:var(--faint);font-weight:600;}
+.backlink{background:none;border:0;color:var(--muted);font-size:14px;font-weight:700;padding:8px 2px;}
+.backlink:active{opacity:.5;}
 .callrow{display:flex;align-items:center;justify-content:center;gap:8px;height:44px;border-radius:12px;
   background:#e6f4ea;color:#137333;font-size:15px;font-weight:700;text-decoration:none;}
 .callrow svg{width:19px;height:19px;}

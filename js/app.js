@@ -280,27 +280,52 @@ function screenHome() {
 
   const pendingQuotes = S.getQuotes().filter((q) => q.status === '견적대기').sort((a, b) => daysSince(b.date) - daysSince(a.date));
   const problems = [];
-  if (pendingQuotes.length) problems.push(`<div class="psec"><span class="pttl">견적 미발송 (${pendingQuotes.length})</span>
-    ${pendingQuotes.slice(0, 5).map((q) => `<button class="prow" data-act="quote-open" data-id="${q.id}"><span>${esc(q.client || '-')}${q.content ? ` · ${esc(q.content)}` : ''}</span><span class="pill ${daysSince(q.date) >= 2 ? 'out' : 'plan'}">${pendingLabel(q.date)}</span></button>`).join('')}</div>`);
+  // 견적 미발송은 상단 '견적요청' 탭으로 이동(중복 제거)
   if (lowItems.length) problems.push(`<div class="psec"><span class="pttl">품절 (${lowItems.length})</span>
     ${lowItems.slice(0, 5).map((it) => `<button class="prow" data-act="wh" data-w="${esc(it.warehouse)}"><span>${esc(it.name)} · ${esc(it.warehouse)}</span><span class="pill ${S.stockStatus(it)}">${STATUS_KO[S.stockStatus(it)]}</span></button>`).join('')}</div>`);
   if (needCheck.length) problems.push(`<div class="psec"><span class="pttl">확인 필요 (${needCheck.length})</span>
     ${needCheck.slice(0, 5).map((s) => `<button class="prow" data-act="ship" data-id="${s.id}"><span>${esc(s.client || '-')} · ${s.name ? esc(s.note || '확인 필요') : '품목 미지정'}</span><span class="pill chk">확인</span></button>`).join('')}</div>`);
 
   const ready = ships.filter((s) => s.status === '배차완료').sort((a, b) => ((b.date + (b.time || '')).localeCompare(a.date + (a.time || ''))));
-  const doc = ships.filter((s) => s.status === '출고완료' && !s.docDone).sort((a, b) => ((b.date + (b.time || '')).localeCompare(a.date + (a.time || ''))));
-  const done = ships.filter((s) => s.status === '출고완료' && s.docDone).sort((a, b) => ((b.date + (b.time || '')).localeCompare(a.date + (a.time || ''))));
+  const done = ships.filter((s) => s.status === '출고완료').sort((a, b) => ((b.date + (b.time || '')).localeCompare(a.date + (a.time || ''))));
   const htab = state.homeTab || 'need';
-  const tabList = htab === 'need' ? needDispatch : htab === 'ready' ? ready : htab === 'doc' ? doc : done;
-  const htabs = [['need', '배차 요청', needDispatch.length], ['ready', '오늘 출고', ready.length], ['done', '출고 완료', done.length], ['doc', '명세서 미발행', doc.length]];
-  const emptyMsg = { need: '배차 요청할 게 없어요.', ready: '오늘 출고 건이 없어요.', done: '출고 완료(명세서까지)된 게 없어요.', doc: '명세서 미발행 건이 없어요.' }[htab];
+  const htabs = [['need', '배차 요청', needDispatch.length], ['ready', '오늘 출고', ready.length], ['done', '출고 완료', done.length], ['quote', '견적요청', pendingQuotes.length]];
+
+  // 배차 요청: 오늘~일주일 후까지 날짜별 그룹(오늘 강조). 그 외 날짜/미정도 아래에.
+  const addDays = (ds, n) => { const [y, m, d] = ds.split('-').map(Number); const t = new Date(y, m - 1, d + n); return dstr(t.getFullYear(), t.getMonth() + 1, t.getDate()); };
+  const needGroupsHTML = () => {
+    const wk = addDays(today, 7);
+    const dated = needDispatch.filter((s) => s.date && s.date <= wk).sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')));
+    const noDate = needDispatch.filter((s) => !s.date);
+    if (!dated.length && !noDate.length) return `<div class="empty"><div class="ico">${I.truck}</div>배차 요청할 게 없어요.</div>`;
+    const byDate = {};
+    dated.forEach((s) => (byDate[s.date] = byDate[s.date] || []).push(s));
+    const relTxt = (d) => { const n = daysSince(d); return n === 0 ? '오늘' : n === -1 ? '내일' : n < 0 ? '' : `${n}일 지연`; };
+    let html = Object.keys(byDate).sort().map((d) => `<div class="dgrp${d === today ? ' today' : ''}">
+      <div class="dghd">${mdDow(d)}${relTxt(d) ? ` <span class="rel">${relTxt(d)}</span>` : ''}</div>
+      <div class="rows">${byDate[d].map(boardRow).join('')}</div></div>`).join('');
+    if (noDate.length) html += `<div class="dgrp"><div class="dghd">날짜 미정</div><div class="rows">${noDate.map(boardRow).join('')}</div></div>`;
+    return html;
+  };
+
+  const quoteRow = (q) => `<div class="brd"><div class="brd-top">
+    <button class="brd-open" data-act="quote-open" data-id="${q.id}">
+      <span class="bt">${mdDow(q.date)}</span>
+      <div class="bmid"><b>${esc(q.client || '거래처 미지정')}</b>
+        <div class="bsub">${esc(q.content || '견적 요청')}${q.phone ? ` · ${esc(q.phone)}` : ''}</div></div>
+    </button>
+    <span class="pill ${daysSince(q.date) >= 2 ? 'out' : 'plan'}" style="flex:none">${pendingLabel(q.date)}</span>
+  </div></div>`;
+
+  const bodyHTML = htab === 'need' ? needGroupsHTML()
+    : htab === 'quote' ? (pendingQuotes.length ? `<div class="rows">${pendingQuotes.map(quoteRow).join('')}</div>` : `<div class="empty"><div class="ico">${I.doc}</div>받은 견적요청이 없어요.</div>`)
+    : (() => { const tl = htab === 'ready' ? ready : done; return tl.length ? `<div class="rows">${tl.map(boardRow).join('')}</div>` : `<div class="empty"><div class="ico">${I.truck}</div>${htab === 'ready' ? '오늘 출고 건이 없어요.' : '출고 완료된 게 없어요.'}</div>`; })();
 
   return `
   <div class="screen">
     <button class="quickbar" data-act="briefing" style="background:var(--accent);color:var(--accent-ink);margin-bottom:16px"><span class="ic" style="color:var(--accent-ink)">${I.doc}</span><span class="tx"><b>오늘 출고 공지</b> 만들기 · 복사</span><span class="go" style="color:var(--accent-ink)">›</span></button>
     <div class="homtabs">${htabs.map(([k, l, n]) => `<button data-act="hometab" data-t="${k}" class="${htab === k ? 'on' : ''}">${l}${n ? `<b>${n}</b>` : ''}</button>`).join('')}</div>
-    ${tabList.length ? `<div class="rows">${tabList.map(boardRow).join('')}</div>`
-      : `<div class="empty"><div class="ico">${I.truck}</div>${emptyMsg}</div>`}
+    ${bodyHTML}
     ${problems.length ? `<div class="sec-title">체크리스트</div>${problems.join('')}` : ''}
   </div>`;
 }
@@ -504,15 +529,29 @@ function screenShip() {
   const quick = `<button class="quickbar" data-act="smart"><span class="ic">${I.bolt}</span>
     <span class="tx">문구 붙여넣어 <b>자동 인식</b> · 출고·견적·배차</span><span class="go">›</span></button>`;
   if (state.shipView === 'list') {
-    const cnt = S.statusCounts();
-    const f = state.shipFilter;
-    const filt = `<div class="filtabs">${[['전체', cnt.전체], ...STAGES.map((s) => [s, cnt[s]])]
-      .map(([k, c]) => `<button data-act="shipfilter" data-v="${k}" class="${f === k ? 'on' : ''}">${STAGE_SHORT[k] || k}<b>${c}</b></button>`).join('')}</div>`;
-    let list = S.getShipments();
-    if (f !== '전체') list = list.filter((s) => s.status === f);
-    return `<div class="screen">${seg}${quick}${filt}${list.length
-      ? `<div class="rows">${list.map(rowShip).join('')}</div>`
-      : `<div class="empty"><div class="ico">${I.truck}</div>${f === '전체' ? '아직 출고가 없어요' : `'${STAGE_SHORT[f] || f}' 상태가 없어요`}</div>`}</div>`;
+    const ships = S.getShipments();
+    const CATS = [
+      ['배차 요청', (s) => s.status === '출고예정'],
+      ['출고 예정', (s) => s.status === '배차완료'],
+      ['출고 완료', (s) => s.status === '출고완료'],
+      ['명세서 미발행', (s) => s.status === '출고완료' && !s.docDone],
+      ['명세서 발행', (s) => s.status === '출고완료' && s.docDone],
+    ];
+    const cat = state.shipCat;
+    if (!cat) {
+      const menu = `<div class="catlist">${CATS.map(([label, fn]) => {
+        const n = ships.filter(fn).length;
+        return `<button class="catrow" data-act="shipcat" data-c="${label}"><span class="cl">${label}</span><span class="cc ${n ? '' : 'zero'}">${n}</span></button>`;
+      }).join('')}</div>`;
+      return `<div class="screen">${seg}${quick}${menu}</div>`;
+    }
+    const def = CATS.find(([label]) => label === cat);
+    const list = def ? ships.filter(def[1]) : [];
+    return `<div class="screen">${seg}${quick}
+      <button class="backlink" data-act="shipcat" data-c="">‹ 출고 메뉴</button>
+      <div class="sec-title" style="margin-top:2px">${esc(cat)} <span style="color:var(--muted);font-weight:600">${list.length}</span></div>
+      ${list.length ? `<div class="rows">${list.map(rowShip).join('')}</div>`
+        : `<div class="empty"><div class="ico">${I.truck}</div>'${esc(cat)}' 건이 없어요</div>`}</div>`;
   }
   return `<div class="screen">${seg}${quick}${calendarHTML()}${dayDetailHTML()}</div>`;
 }
@@ -1454,7 +1493,7 @@ app.addEventListener('click', (e) => {
   if (!t) return;
   const act = t.dataset.act;
 
-  if (act === 'nav') { state.route = t.dataset.r; state.sheet = null; if (t.dataset.r === 'stock') state.stockWH = null; render(); }
+  if (act === 'nav') { state.route = t.dataset.r; state.sheet = null; if (t.dataset.r === 'stock') state.stockWH = null; if (t.dataset.r === 'ship') state.shipCat = null; render(); }
   else if (act === 'wh') { state.route = 'stock'; state.stockWH = t.dataset.w; render(); }
   else if (act === 'tilego') {
     const [r, f] = t.dataset.v.split(':');
@@ -1635,8 +1674,9 @@ app.addEventListener('click', (e) => {
       () => alert(`배차 양식 복사됨 · 출고 건에 저장${savedPartner ? '\n하차지 거래처·주소도 등록했어요 (다음부터 자동)' : ''}\n\n` + text),
       () => alert(text));
   }
-  else if (act === 'shipview') { state.shipView = t.dataset.v; render(); }
+  else if (act === 'shipview') { state.shipView = t.dataset.v; state.shipCat = null; render(); }
   else if (act === 'shipfilter') { state.shipFilter = t.dataset.v; render(); }
+  else if (act === 'shipcat') { state.shipCat = t.dataset.c || null; render(); }
   else if (act === 'selday') { state.selDate = t.dataset.d; render(); }
   else if (act === 'calnav') {
     let m = state.calM + Number(t.dataset.v), y = state.calY;
