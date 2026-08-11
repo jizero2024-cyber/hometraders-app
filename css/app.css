@@ -306,6 +306,12 @@ a.tel{color:var(--ink);font-weight:800;text-decoration:none;background:var(--sur
 .iconbtn:active{background:var(--surface-3);}
 .iconbtn svg{width:19px;height:19px;}
 .issuer{flex:none;font-size:18px;font-weight:800;color:var(--ink);letter-spacing:-.02em;padding-left:10px;white-space:nowrap;}
+.alertbar{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;
+  padding:13px 15px;border-radius:12px;background:#fbeceb;color:#c0392b;font-weight:700;font-size:14px;border:0;margin-bottom:14px;}
+.alertbar b{font-weight:800;}
+.alertbar .go{font-size:18px;color:#c0392b;}
+.alertbar:active{background:#f6dcd9;}
+@media (prefers-color-scheme:dark){.alertbar{background:#3a2020;color:#f0a89e;}.alertbar .go{color:#f0a89e;}}
 .sheet h2{font-size:19px;font-weight:700;margin:0 0 16px;display:flex;align-items:center;gap:8px;}
 .sheet h2 svg{width:18px;height:18px;}
 .field{margin-bottom:14px;}

@@ -367,11 +367,43 @@ function screenHome() {
     : htab === 'ready' ? (ready.length ? `<div class="rows">${ready.map(boardRow).join('')}</div>` : `<div class="empty"><div class="ico">${I.truck}</div>오늘 출고 건이 없어요.</div>`)
     : doneGroupsHTML();
 
+  const stuck = stuckItems();
   return `
   <div class="screen">
+    ${stuck.total ? `<button class="alertbar" data-act="checklist"><span>${I.bolt} 확인 필요 <b>${stuck.total}건</b> · 명세서·견적·단가</span><span class="go">›</span></button>` : ''}
     <div class="homtabs">${htabs.map(([k, l, n]) => `<button data-act="hometab" data-t="${k}" class="${htab === k ? 'on' : ''}">${l}${n ? `<b>${n}</b>` : ''}</button>`).join('')}</div>
     ${bodyHTML}
   </div>`;
+}
+
+// 몰라서·정보부족으로 막혀 있는 건 모으기 (안전망)
+function stuckItems() {
+  const docs = S.getShipments().filter((s) => s.status === '출고완료' && !s.docDone && daysSince(s.doneAt || s.date) >= 1);
+  const quotes = S.getQuotes().filter((q) => q.status === '견적대기' && daysSince(q.date) >= 1);
+  const prices = S.getItems().filter(needPrice);
+  const holds = [
+    ...S.getShipments().filter((s) => s.holdReason).map((s) => ({ kind: 'ship', o: s })),
+    ...S.getQuotes().filter((q) => q.holdReason).map((q) => ({ kind: 'quote', o: q })),
+  ];
+  return { docs, quotes, prices, holds, total: docs.length + quotes.length + prices.length + holds.length };
+}
+function sheetCheckList() {
+  const s = stuckItems();
+  const sec = (title, rowsHTML) => rowsHTML ? `<div class="psec"><span class="pttl">${title}</span>${rowsHTML}</div>` : '';
+  const holdRow = (h) => h.kind === 'ship'
+    ? `<button class="prow" data-act="ship" data-id="${h.o.id}"><span>${esc(h.o.client || '-')} · ${esc(shipSummary(h.o).itemLabel)}</span><span class="pill out">보류 · ${esc(h.o.holdReason)}</span></button>`
+    : `<button class="prow" data-act="quote-open" data-id="${h.o.id}"><span>${esc(h.o.client || '-')}${h.o.content ? ` · ${esc(h.o.content)}` : ''}</span><span class="pill out">보류 · ${esc(h.o.holdReason)}</span></button>`;
+  const docRow = (sh) => `<button class="prow" data-act="ship" data-id="${sh.id}"><span>${esc(sh.client || '-')} · ${esc(shipSummary(sh).itemLabel)}</span><span class="pill low">${daysSince(sh.doneAt || sh.date)}일째 미발행</span></button>`;
+  const qRow = (q) => `<button class="prow" data-act="quote-open" data-id="${q.id}"><span>${esc(q.client || '-')}${q.content ? ` · ${esc(q.content)}` : ''}</span><span class="pill low">견적 ${daysSince(q.date)}일째</span></button>`;
+  const pRow = (it) => `<button class="prow" data-act="item" data-id="${it.id}"><span>${esc(it.name)} · ${esc(whShort(it.warehouse))}</span><span class="pill low">단가 확인 필요</span></button>`;
+  const body = sec('보류', s.holds.map(holdRow).join(''))
+    + sec('명세서 미발행 (하루 이상)', s.docs.map(docRow).join(''))
+    + sec('견적 미회신', s.quotes.map(qRow).join(''))
+    + sec('단가 확인 필요', s.prices.map(pRow).join(''));
+  return `<div class="grab"></div><h2>${I.bolt} 확인 필요</h2>
+  <p class="hint">몰라서·정보 부족으로 막혀 있는 건들이에요. 눌러서 처리하세요.</p>
+  ${body || `<div class="empty"><div class="ico">${I.check}</div>막혀 있는 건이 없어요 👍</div>`}
+  <button class="btn danger" type="button" data-act="close" style="margin-top:10px">닫기</button>`;
 }
 
 // 아침 출고 공지 — 출고예정 건들을 거래처·창고·품목·재고·메모로 정리 (카톡 복붙용)
@@ -1839,6 +1871,7 @@ app.addEventListener('click', (e) => {
   else if (act === 'hometab') { state.homeTab = t.dataset.t; render(); }
   else if (act === 'quotetab') { state.quoteTab = t.dataset.t; render(); }
   else if (act === 'invoicetab') { state.invoiceTab = t.dataset.t; render(); }
+  else if (act === 'checklist') { openSheet(sheetCheckList()); }
   else if (act === 'price-need') { state.priceNeed = t.dataset.v === '1'; render(); }
   else if (act === 'price-check-copy') { openSheet(sheetPriceCheck()); }
   else if (act === 'color-ship') {
