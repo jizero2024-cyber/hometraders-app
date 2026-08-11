@@ -688,9 +688,9 @@ function screenInvoice() {
   </div>`;
   const row = (s) => `<div class="ship">
     <button class="ship-open" data-act="ship" data-id="${s.id}"><div class="body"><b>${esc(s.client || '거래처 미지정')}</b>
-      <div class="meta">${esc(shipSummary(s).itemLabel)} ${esc(shipSummary(s).qtyLabel)} · ${esc(s.date)}${s.docBy ? ` · <b>${esc(s.docBy)}</b>` : ''}</div></div></button>
+      <div class="meta">${esc(shipSummary(s).itemLabel)} ${esc(shipSummary(s).qtyLabel)} · ${esc(s.date)}</div></div></button>
     ${s.docDone
-      ? `<span class="pill done" style="flex:none;font-size:11px">발행 · ${esc(s.docBy || '완료')}</span>`
+      ? (s.docBy ? `<span class="issuer">${esc(s.docBy)}</span>` : '')
       : `<button class="pill done" data-act="doc-done" data-id="${s.id}" style="flex:none">발행완료</button>`}
   </div>`;
   const list = itab === 'pending' ? pending : issued;
