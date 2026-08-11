@@ -290,9 +290,8 @@ function screenHome() {
     const sm = shipSummary(s);
     const call = (!isPlan && s.driverPhone) ? `<a class="callrow" href="${telHref(s.driverPhone)}">${I.phone}<span>기사님 전화걸기${s.driverName ? ' · ' + esc(s.driverName) : ''}</span></a>` : '';
     const markDone = s.status === '배차완료' ? `<button class="pill done" data-act="mark-done" data-id="${s.id}" style="flex:none">출고완료</button>` : '';
-    const docBtn = (s.status === '출고완료' && !s.docDone) ? `<button class="pill low" data-act="doc-done" data-id="${s.id}" style="flex:none">발행완료</button>` : '';
-    const rightPill = isPlan ? `<span class="pill ${pillCls}">${pillTxt}</span>`
-      : (s.status === '출고완료' && s.docDone) ? `<span class="pill done" style="font-size:11px">명세서 발행${s.docBy ? ' · ' + esc(s.docBy) : ''}</span>` : '';
+    // 명세서 발행 상태는 별도 '명세서' 메뉴에서 관리 → 홈 보드에선 라벨 제거
+    const rightPill = isPlan ? `<span class="pill ${pillCls}">${pillTxt}</span>` : '';
     // 주소가 비면 창고·거래처 마스터 주소로 지역 추정
     const whAddr = (S.getWarehouses().find((w) => w.name === s.warehouse) || {}).address || '';
     const clAddr = (S.findPartner(s.client) || {}).address || '';
@@ -307,7 +306,7 @@ function screenHome() {
           ${route ? `<div class="broute">${route}</div>` : ''}
           <div class="bsub">${esc(sm.itemLabel)} ${esc(sm.qtyLabel)} · ${whTag(s.warehouse)}</div></div>
       </button>
-      ${rightPill ? `<span style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">${rightPill}</span>` : ''}${markDone}${docBtn}
+      ${rightPill ? `<span style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">${rightPill}</span>` : ''}${markDone}
     </div>${call}</div>`;
   };
 
