@@ -87,6 +87,7 @@ function region(addr, place) {
   return (place || '').trim();
 }
 const DISPATCH = ['이음물류', '직접', '기타'];
+const HOLD_REASONS = ['단가 미확인', '매입처 미확인', '거래처 회신 대기', '기타'];
 // 배차 업체 자동완성 목록 = 기본 + 지금까지 실제 쓴 값
 const dispatchList = () => [...new Set([...DISPATCH, ...S.getShipments().map((s) => s.dispatchVia).filter(Boolean)])];
 const COURIERS = ['경동택배', 'CJ대한통운', '로젠택배', '한진택배', '우체국택배', '대신택배'];
@@ -787,6 +788,11 @@ function sheetQuote(id) {
     <button type="button" data-act="quote-status" data-id="${q.id}" data-v="견적대기" class="${done ? '' : 'on'}">견적대기</button>
     <button type="button" data-act="quote-status" data-id="${q.id}" data-v="견적완료" class="${done ? 'on' : ''}">견적완료</button>
   </div>
+  <div class="sec-title">보류 ${q.holdReason ? '' : '<span style="color:var(--faint);font-weight:400;font-size:13px">몰라서 막혔을 때</span>'}</div>
+  ${q.holdReason
+    ? `<div class="kv" style="margin-bottom:8px"><span>사유</span><span class="pill out">${esc(q.holdReason)}</span></div>
+       <button class="btn ghost" type="button" data-act="unhold" data-id="${q.id}" data-kind="quote">보류 해제</button>`
+    : `<div class="holdseg">${HOLD_REASONS.map((r) => `<button type="button" data-act="hold" data-id="${q.id}" data-kind="quote" data-r="${esc(r)}">${esc(r)}</button>`).join('')}</div>`}
   <button class="btn ghost" type="button" data-act="quote-edit" data-id="${q.id}" style="margin-top:12px">내용 수정</button>
   <button class="btn danger" type="button" data-act="del-quote" data-id="${q.id}">이 견적요청 삭제</button>`;
 }
@@ -1437,7 +1443,21 @@ function sheetDoc(sh) {
     })()}
     <div class="kv" style="margin-top:10px"><span>명세서</span><span class="pill ${sh.docDone ? 'done' : 'low'}">${sh.docDone ? `발행완료${sh.docBy ? ' · ' + esc(sh.docBy) : ''}` : '미발행'}</span></div>
   </div>
-  ${sh.status === '출고예정' && !isCourier ? `<button class="btn" type="button" data-act="copy-dispatch" data-id="${sh.id}">배차 요청 양식 만들기</button>
+  ${(() => {
+    const cliPhone = (S.findPartner(sh.client) || {}).phone || '';
+    const calls = sh.calls || [];
+    return `<div class="sec-title">거래처 연락 <span style="color:var(--faint);font-weight:400;font-size:13px">영업 대신 전화</span></div>
+    ${cliPhone
+      ? `<a class="btn" href="${telHref(cliPhone)}" data-act="ship-call" data-id="${sh.id}">${I.phone} 거래처 전화걸기 · ${esc(cliPhone)}</a>`
+      : `<button class="btn ghost" type="button" data-act="ship-addphone" data-id="${sh.id}">거래처 전화번호 등록</button>`}
+    ${calls.length ? `<div class="card" style="padding:4px 14px;margin-top:8px">${calls.slice().reverse().map((c) => `<div class="kv"><span>${esc(c)} 통화</span><b>✓</b></div>`).join('')}</div>` : ''}`;
+  })()}
+  <div class="sec-title">보류 ${sh.holdReason ? '' : '<span style="color:var(--faint);font-weight:400;font-size:13px">몰라서 막혔을 때</span>'}</div>
+  ${sh.holdReason
+    ? `<div class="kv" style="margin-bottom:8px"><span>사유</span><span class="pill out">${esc(sh.holdReason)}</span></div>
+       <button class="btn ghost" type="button" data-act="unhold" data-id="${sh.id}" data-kind="ship">보류 해제</button>`
+    : `<div class="holdseg">${HOLD_REASONS.map((r) => `<button type="button" data-act="hold" data-id="${sh.id}" data-kind="ship" data-r="${esc(r)}">${esc(r)}</button>`).join('')}</div>`}
+  ${sh.status === '출고예정' && !isCourier ? `<button class="btn" type="button" data-act="copy-dispatch" data-id="${sh.id}" style="margin-top:14px">배차 요청 양식 만들기</button>
     <button class="btn ghost" type="button" data-act="dispatch-paste" data-id="${sh.id}" style="margin-top:8px">배차 완료</button>` : ''}
   ${sh.status === '배차완료' && !isCourier ? `<button class="btn ghost" type="button" data-act="dispatch-paste" data-id="${sh.id}">배차 정보 다시 붙여넣기</button>` : ''}
   ${sh.status === '출고완료' ? `<button class="btn ${sh.docDone ? 'ghost' : ''}" type="button" data-act="toggle-doc" data-id="${sh.id}">${sh.docDone ? '명세서 발행됨 · 해제' : '명세서 발행 완료로 표시'}</button>` : ''}
@@ -1729,6 +1749,26 @@ app.addEventListener('click', (e) => {
   else if (act === 'quote-call') {
     S.logQuoteCall(t.dataset.id);
     if (state.sheet) openSheet(sheetQuote(t.dataset.id)); else render();
+  }
+  else if (act === 'ship-call') { S.logShipCall(t.dataset.id, myName()); openSheet(sheetDoc(S.getShipments().find((s) => s.id === t.dataset.id))); }
+  else if (act === 'ship-addphone') {
+    const sh = S.getShipments().find((s) => s.id === t.dataset.id); if (!sh) return;
+    const partner = S.findPartner(sh.client);
+    const ph = (prompt(`${sh.client || '거래처'} 전화번호를 입력하세요`, (partner && partner.phone) || '') || '').trim();
+    if (!ph) return;
+    if (partner) S.updatePartner(sh.client, { name: partner.name, address: partner.address, phone: ph, note: partner.note });
+    else if (sh.client) S.addPartner({ name: sh.client, phone: ph });
+    openSheet(sheetDoc(S.getShipments().find((s) => s.id === t.dataset.id)));
+  }
+  else if (act === 'hold') {
+    let r = t.dataset.r;
+    if (r === '기타') { r = (prompt('보류 사유를 적어주세요', '') || '').trim(); if (!r) return; }
+    if (t.dataset.kind === 'quote') { S.updateQuote(t.dataset.id, { holdReason: r }); openSheet(sheetQuote(t.dataset.id)); }
+    else { S.updateShipment(t.dataset.id, { holdReason: r }); openSheet(sheetDoc(S.getShipments().find((s) => s.id === t.dataset.id))); }
+  }
+  else if (act === 'unhold') {
+    if (t.dataset.kind === 'quote') { S.updateQuote(t.dataset.id, { holdReason: '' }); openSheet(sheetQuote(t.dataset.id)); }
+    else { S.updateShipment(t.dataset.id, { holdReason: '' }); openSheet(sheetDoc(S.getShipments().find((s) => s.id === t.dataset.id))); }
   }
   else if (act === 'quote-status') { S.updateQuote(t.dataset.id, { status: t.dataset.v }); openSheet(sheetQuote(t.dataset.id)); }
   else if (act === 'quote-lines') {

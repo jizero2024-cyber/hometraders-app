@@ -311,6 +311,9 @@ a.tel{color:var(--ink);font-weight:800;text-decoration:none;background:var(--sur
 .alertbar b{font-weight:800;}
 .alertbar .go{font-size:18px;color:#c0392b;}
 .alertbar:active{background:#f6dcd9;}
+.holdseg{display:flex;flex-wrap:wrap;gap:8px;}
+.holdseg button{padding:9px 13px;border-radius:10px;background:var(--surface-2);color:var(--ink);border:0;font-size:14px;font-weight:600;}
+.holdseg button:active{background:var(--surface-3);}
 @media (prefers-color-scheme:dark){.alertbar{background:#3a2020;color:#f0a89e;}.alertbar .go{color:#f0a89e;}}
 .sheet h2{font-size:19px;font-weight:700;margin:0 0 16px;display:flex;align-items:center;gap:8px;}
 .sheet h2 svg{width:18px;height:18px;}

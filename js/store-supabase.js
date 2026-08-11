@@ -258,6 +258,13 @@ export function logQuoteCall(id) {
   q.calls = q.calls || []; q.calls.push(`${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`);
   put('quotes', q); notify();
 }
+// 출고 건 거래처 통화 기록 — 누가(who) 언제 눌렀는지
+export function logShipCall(id, who) {
+  const sh = shipments.find((x) => x.id === id); if (!sh) return;
+  const d = new Date(); const p = (n) => String(n).padStart(2, '0');
+  sh.calls = [...(sh.calls || []), `${who || '담당자'} · ${p(d.getMonth() + 1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`];
+  put('shipments', sh); notify();
+}
 
 // ── 집계 ────────────────────────────────────────────
 export function todayStr() { const d = new Date(); const p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; }
