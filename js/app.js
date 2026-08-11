@@ -49,6 +49,10 @@ let state = { route: 'home', stockWH: null, sheet: null,
 const STAGES = ['출고예정', '배차완료', '출고완료'];
 const STAGE_SHORT = { 출고예정: '예정', 배차완료: '배차', 출고완료: '출고' };
 const STAGE_PILL = { 출고예정: 'plan', 배차완료: 'mid', 출고완료: 'done' };
+// 계정(아이디) → 소유자 이름. 계정 늘면 여기 추가.
+const ACCOUNT_NAMES = { admin: '김유화' };
+let myAccount = '';
+const myName = () => ACCOUNT_NAMES[myAccount] || myAccount || '담당자';
 const DISPATCH = ['이음물류', '직접', '기타'];
 const COURIERS = ['경동택배', 'CJ대한통운', '로젠택배', '한진택배', '우체국택배', '대신택배'];
 const telHref = (p) => 'tel:' + String(p || '').replace(/[^0-9]/g, '');
@@ -255,7 +259,7 @@ function screenHome() {
     const markDone = s.status === '배차완료' ? `<button class="pill done" data-act="mark-done" data-id="${s.id}" style="flex:none">출고완료</button>` : '';
     const docBtn = (s.status === '출고완료' && !s.docDone) ? `<button class="pill low" data-act="doc-done" data-id="${s.id}" style="flex:none">발행완료</button>` : '';
     const rightPill = isPlan ? `<span class="pill ${pillCls}">${pillTxt}</span>`
-      : (s.status === '출고완료' && s.docDone) ? `<span class="pill done" style="font-size:11px">명세서 발행</span>` : '';
+      : (s.status === '출고완료' && s.docDone) ? `<span class="pill done" style="font-size:11px">명세서 발행${s.docBy ? ' · ' + esc(s.docBy) : ''}</span>` : '';
     // 주소에서 도 + 시/군(구) 뽑기 — "충청남도 천안시 서북구.." → "충남 천안시", 없으면 지점명
     const PROV = { 서울특별시: '서울', 부산광역시: '부산', 인천광역시: '인천', 대구광역시: '대구', 대전광역시: '대전', 광주광역시: '광주', 울산광역시: '울산', 세종특별자치시: '세종', 경기도: '경기', 강원도: '강원', 강원특별자치도: '강원', 충청북도: '충북', 충청남도: '충남', 전라북도: '전북', 전북특별자치도: '전북', 전라남도: '전남', 경상북도: '경북', 경상남도: '경남', 제주특별자치도: '제주', 제주도: '제주' };
     const region = (addr, place) => {
@@ -757,7 +761,7 @@ function rowShip(s) {
       <div class="body"><b>${esc(s.client || '거래처 미지정')}</b>
         <div class="meta">${whTag(s.warehouse)} ${esc(sm.itemLabel)} · ${esc(s.date)}</div></div>
     </button>
-    <div class="right" style="flex-wrap:wrap;justify-content:flex-end;gap:6px"><span class="q">${esc(sm.qtyLabel)}</span><span class="pill ${cls}">${STAGE_SHORT[s.status] || esc(s.status)}</span>${s.status === '출고완료' ? `<span class="pill ${s.docDone ? 'done' : 'low'}" style="font-size:11px">${s.docDone ? '명세서 발행' : '명세서 미발행'}</span>` : ''}</div>
+    <div class="right" style="flex-wrap:wrap;justify-content:flex-end;gap:6px"><span class="q">${esc(sm.qtyLabel)}</span><span class="pill ${cls}">${STAGE_SHORT[s.status] || esc(s.status)}</span>${s.status === '출고완료' ? `<span class="pill ${s.docDone ? 'done' : 'low'}" style="font-size:11px">${s.docDone ? `명세서 발행${s.docBy ? ' · ' + esc(s.docBy) : ''}` : '명세서 미발행'}</span>` : ''}</div>
     ${call}
   </div>`;
 }
@@ -1335,7 +1339,7 @@ function sheetDoc(sh) {
         <div class="kv" style="border-top:1px solid var(--surface-3);padding-top:8px;margin-top:4px"><span>합계</span><b>${(supply + vat).toLocaleString()}원</b></div>
       </div>`;
     })()}
-    <div class="kv" style="margin-top:10px"><span>명세서</span><span class="pill ${sh.docDone ? 'done' : 'low'}">${sh.docDone ? '발행완료' : '미발행'}</span></div>
+    <div class="kv" style="margin-top:10px"><span>명세서</span><span class="pill ${sh.docDone ? 'done' : 'low'}">${sh.docDone ? `발행완료${sh.docBy ? ' · ' + esc(sh.docBy) : ''}` : '미발행'}</span></div>
   </div>
   ${sh.status === '출고예정' && !isCourier ? `<button class="btn" type="button" data-act="copy-dispatch" data-id="${sh.id}">배차 요청 양식 만들기</button>
     <button class="btn ghost" type="button" data-act="dispatch-paste" data-id="${sh.id}" style="margin-top:8px">배차 확인 붙여넣기 (회신 받으면)</button>` : ''}
@@ -1854,13 +1858,14 @@ app.addEventListener('click', (e) => {
   }
   else if (act === 'toggle-doc') {
     const sh = S.getShipments().find((s) => s.id === t.dataset.id);
-    S.updateShipment(t.dataset.id, { docDone: !sh.docDone });
+    const on = !sh.docDone;
+    S.updateShipment(t.dataset.id, { docDone: on, docBy: on ? myName() : '' });
     openSheet(sheetDoc(S.getShipments().find((s) => s.id === t.dataset.id)));
   }
   else if (act === 'doc-done') {
     const sh = S.getShipments().find((s) => s.id === t.dataset.id);
     if (!confirm(`${sh && sh.client ? sh.client + ' ' : ''}명세서를 발행완료로 표시할까요?`)) return;
-    S.updateShipment(t.dataset.id, { docDone: true }); render();
+    S.updateShipment(t.dataset.id, { docDone: true, docBy: myName() }); render();
   }
   else if (act === 'kakao') { alert('카카오톡 명세서 발송은 2단계에서 연동됩니다.\n(스튜디오밭 카카오 콘솔 템플릿 사용)'); }
   else if (act === 'export') { downloadJSON(); }
@@ -2057,6 +2062,7 @@ let booted = false;
 async function boot() {
   const session = await S.getSession();
   if (!session) { booted = false; showLogin(); return; }
+  myAccount = ((session.user && session.user.email) || '').split('@')[0];
   if (booted) { render(); return; }
   app.innerHTML = '<div style="padding:64px 24px;text-align:center;color:#888;font-size:15px">불러오는 중…</div>';
   try { await S.init(); booted = true; render(); }
