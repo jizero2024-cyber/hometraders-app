@@ -316,6 +316,8 @@ a.tel{color:var(--ink);font-weight:800;text-decoration:none;background:var(--sur
 .alertbar .go{flex:none;font-size:18px;color:#c0392b;}
 .alertbar:active{background:#f6dcd9;}
 @keyframes abpulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.35;transform:scale(1.3);}}
+.outfilter{display:flex;gap:8px;margin:6px 0 4px;}
+.minisel{flex:1;min-width:0;padding:10px 12px;border-radius:10px;background:var(--surface-2);color:var(--ink);border:0;font-size:14px;font-weight:600;}
 .holdseg{display:flex;flex-wrap:wrap;gap:8px;}
 .holdseg button{padding:9px 13px;border-radius:10px;background:var(--surface-2);color:var(--ink);border:0;font-size:14px;font-weight:600;}
 .holdseg button:active{background:var(--surface-3);}

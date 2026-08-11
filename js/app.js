@@ -491,9 +491,15 @@ function screenSilicone() {
     });
   });
   outs.sort((a, b) => (b.date + b.name).localeCompare(a.date + a.name));
-  const months = [...new Set(outs.map((e) => e.month))].filter(Boolean).sort().reverse();
+  // 색상·거래처 필터
+  const colorOpts = [...new Set(outs.map((e) => e.name))].sort();
+  const clientOpts = [...new Set(outs.map((e) => e.client))].sort();
+  const fColor = state.silOutColor || '', fClient = state.silOutClient || '';
+  const fOuts = outs.filter((e) => (!fColor || e.name === fColor) && (!fClient || e.client === fClient));
+  const fMonths = [...new Set(fOuts.map((e) => e.month))].filter(Boolean).sort().reverse();
+  const fTotal = fOuts.reduce((s, e) => s + e.qty, 0);
   const monthBlock = (m) => {
-    const es = outs.filter((e) => e.month === m);
+    const es = fOuts.filter((e) => e.month === m);
     const total = es.reduce((s, e) => s + e.qty, 0);
     return `<div class="sec-title" style="margin-top:16px">${esc(m.replace('-', '. '))} · 합계 ${total}</div>
       <div class="rows">${es.map((e) => `<button class="ship" data-act="ship" data-id="${e.id}">
@@ -502,7 +508,12 @@ function screenSilicone() {
         <div class="right"><span class="q">${e.qty}${esc(e.unit)}</span></div>
       </button>`).join('')}</div>`;
   };
-  const outList = months.length ? `<div class="sec-title" style="margin-top:26px">월별 출고 내역</div>${months.map(monthBlock).join('')}` : '';
+  const filterBar = `<div class="outfilter">
+    <select id="silout-color" class="minisel"><option value="">색상 전체</option>${colorOpts.map((c) => `<option ${c === fColor ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select>
+    <select id="silout-client" class="minisel"><option value="">거래처 전체</option>${clientOpts.map((c) => `<option value="${esc(c)}" ${c === fClient ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select>
+  </div>`;
+  const outList = outs.length ? `<div class="sec-title" style="margin-top:26px">월별 출고 내역${(fColor || fClient) ? ` · 합계 <b>${fTotal}</b>` : ''}</div>${filterBar}
+    ${fMonths.length ? fMonths.map(monthBlock).join('') : '<div class="empty" style="padding:22px">해당 내역이 없어요</div>'}` : '';
 
   return `<div class="screen">
     <div class="tabs" style="margin-bottom:12px">
@@ -2098,6 +2109,8 @@ app.addEventListener('input', (e) => {
 app.addEventListener('change', (e) => {
   if (e.target.id === 'f-wh') fillItemSelect();
   if (e.target.id === 'f-item') updateStockHint();
+  if (e.target.id === 'silout-color') { state.silOutColor = e.target.value; render(); }
+  if (e.target.id === 'silout-client') { state.silOutClient = e.target.value; render(); }
   if (e.target.id === 'sf-client') { const p = S.findPartner(e.target.value.trim()); const a = document.getElementById('sf-unaddr'); if (p && p.address && a && !a.value.trim()) a.value = p.address; }
   if (e.target.id === 'ib-wh') fillInboundItems();
   if (e.target.id === 'ib-item') updateInboundHint();
