@@ -347,8 +347,9 @@ textarea{resize:vertical;line-height:1.5;}
 @media (prefers-color-scheme:dark){.callbtn{background:#1f3a26;color:#7fe0a1;}}
 
 /* 홈/단가 탭 (진행중·완료 스타일 — 언더라인) */
-.homtabs{display:flex;gap:22px;border-bottom:1px solid var(--surface-2);margin:2px 2px 4px;}
-.homtabs button{background:none;border:0;padding:11px 0;font-size:17px;font-weight:700;color:var(--faint);display:flex;align-items:center;gap:5px;margin-bottom:-1px;}
+.homtabs{display:flex;gap:17px;border-bottom:1px solid var(--surface-2);margin:2px 2px 4px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+.homtabs::-webkit-scrollbar{display:none;}
+.homtabs button{flex:none;white-space:nowrap;background:none;border:0;padding:11px 0;font-size:16px;font-weight:700;color:var(--faint);display:flex;align-items:center;gap:5px;margin-bottom:-1px;}
 .homtabs button b{font-size:13px;font-weight:800;}
 .homtabs button.on{color:var(--ink);box-shadow:inset 0 -2.5px 0 var(--ink);}
 

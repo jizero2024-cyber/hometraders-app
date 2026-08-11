@@ -253,16 +253,16 @@ function screenHome() {
     const sm = shipSummary(s);
     const call = s.driverPhone ? `<a class="callbtn" href="${telHref(s.driverPhone)}" aria-label="기사님 전화">${I.phone}</a>` : '';
     const markDone = s.status === '배차완료' ? `<button class="pill done" data-act="mark-done" data-id="${s.id}" style="flex:none">출고완료</button>` : '';
+    const docBtn = (s.status === '출고완료' && !s.docDone) ? `<button class="pill low" data-act="doc-done" data-id="${s.id}" style="flex:none">발행완료</button>` : '';
+    const rightPill = isPlan ? `<span class="pill ${pillCls}">${pillTxt}</span>`
+      : (s.status === '출고완료' && s.docDone) ? `<span class="pill done" style="font-size:11px">명세서 발행</span>` : '';
     return `<div class="brd">
     <button class="brd-open" data-act="ship" data-id="${s.id}">
       <span class="bt">${esc(left)}</span>
       <div class="bmid"><b>${esc(s.client || '거래처 미지정')}</b>
         <div class="bsub">${esc(sm.itemLabel)} ${esc(sm.qtyLabel)} · ${whTag(s.warehouse)}</div></div>
     </button>
-    <span style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
-      <span class="pill ${pillCls}">${pillTxt}</span>
-      ${s.status === '출고완료' ? `<span class="pill ${s.docDone ? 'done' : 'low'}" style="font-size:11px">${s.docDone ? '명세서 발행' : '명세서 미발행'}</span>` : ''}
-    </span>${markDone}${call}</div>`;
+    ${rightPill ? `<span style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">${rightPill}</span>` : ''}${markDone}${docBtn}${call}</div>`;
   };
 
   const pendingQuotes = S.getQuotes().filter((q) => q.status === '견적대기').sort((a, b) => daysSince(b.date) - daysSince(a.date));
@@ -275,11 +275,12 @@ function screenHome() {
     ${needCheck.slice(0, 5).map((s) => `<button class="prow" data-act="ship" data-id="${s.id}"><span>${esc(s.client || '-')} · ${s.name ? esc(s.note || '확인 필요') : '품목 미지정'}</span><span class="pill chk">확인</span></button>`).join('')}</div>`);
 
   const ready = ships.filter((s) => s.status === '배차완료').sort((a, b) => ((b.date + (b.time || '')).localeCompare(a.date + (a.time || ''))));
-  const done = ships.filter((s) => s.status === '출고완료' && s.date === today).sort((a, b) => (b.time || '').localeCompare(a.time || ''));
+  const doc = ships.filter((s) => s.status === '출고완료' && !s.docDone).sort((a, b) => ((b.date + (b.time || '')).localeCompare(a.date + (a.time || ''))));
+  const done = ships.filter((s) => s.status === '출고완료' && s.docDone).sort((a, b) => ((b.date + (b.time || '')).localeCompare(a.date + (a.time || ''))));
   const htab = state.homeTab || 'need';
-  const tabList = htab === 'need' ? needDispatch : htab === 'ready' ? ready : done;
-  const htabs = [['need', '배차 요청', needDispatch.length], ['ready', '출고 예정', ready.length], ['done', '출고 완료', done.length]];
-  const emptyMsg = { need: '배차 요청할 게 없어요.', ready: '진행 중인 출고가 없어요.', done: '오늘 출고 완료가 없어요.' }[htab];
+  const tabList = htab === 'need' ? needDispatch : htab === 'ready' ? ready : htab === 'doc' ? doc : done;
+  const htabs = [['need', '배차 요청', needDispatch.length], ['ready', '출고 예정', ready.length], ['done', '출고 완료', done.length], ['doc', '명세서 미발행', doc.length]];
+  const emptyMsg = { need: '배차 요청할 게 없어요.', ready: '진행 중인 출고가 없어요.', done: '출고 완료(명세서까지)된 게 없어요.', doc: '명세서 미발행 건이 없어요.' }[htab];
 
   return `
   <div class="screen">
