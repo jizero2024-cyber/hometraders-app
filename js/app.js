@@ -1090,19 +1090,25 @@ function sheetDispatchBuilder(shipId) {
   const places = getPlaces();
   const opts = (sel) => places.map((p) => `<option ${sel === p.name ? 'selected' : ''}>${esc(p.name)}</option>`).join('');
   const pay = sh ? sh.payment : '';
-  const goods = sh && sh.name ? `${sh.category === '실리콘' ? '실리콘 ' : ''}${sh.name}` : '목재';
+  const goods = sh ? S.shipLines(sh).map((l) => `${l.name} ${l.qty}${l.unit}`).join(', ') : '';
   const fromName = sh && sh.warehouse;
   const toName = sh && sh.client;
-  const fromAddr = (places.find((p) => p.name === fromName) || {}).address || '';
-  const toAddr = (places.find((p) => p.name === toName) || {}).address || '';
+  const fromP = places.find((p) => p.name === fromName) || {};
+  const toP = places.find((p) => p.name === toName) || {};
+  const fromAddr = fromP.address || '';
+  const toAddr = toP.address || '';
+  const fromPhone = fromP.phone || '';
+  const toPhone = toP.phone || '';
   return `<div class="grab"></div><h2>배차 요청 양식</h2>
   <p class="hint" style="margin-top:-4px"><b style="color:#e05a52">빨간 칸</b>만 채우면 돼요 (나머지는 출고에서 자동 입력)</p>
   <div class="field"><label>상차지</label><select id="db-from">${opts(fromName)}</select>
-    <div class="addr-row"><input id="db-from-addr" placeholder="상차지 주소 (확인·수정)" value="${esc(fromAddr)}"><button type="button" data-act="db-search" data-t="from">주소검색</button></div></div>
+    <div class="addr-row"><input id="db-from-addr" placeholder="상차지 주소 (확인·수정)" value="${esc(fromAddr)}"><button type="button" data-act="db-search" data-t="from">주소검색</button></div>
+    <input id="db-from-phone" placeholder="상차지 연락처 (직접 입력·자동저장)" value="${esc(fromPhone)}" type="tel" inputmode="tel" style="width:100%;margin-top:8px;padding:12px 13px;border-radius:11px;background:var(--surface-2);color:var(--ink);border:0"></div>
   <div class="field"><label>하차지 <span style="color:var(--faint);font-weight:400">선택 또는 직접 입력</span></label>
     <input id="db-to" list="db-places" value="${esc(toName || '')}" placeholder="하차지 (거래처 선택 또는 직접 입력)" autocomplete="off" style="width:100%;padding:12px 13px;border-radius:11px;background:var(--surface-2);color:var(--ink);border:0">
     <datalist id="db-places">${places.map((p) => `<option value="${esc(p.name)}"></option>`).join('')}</datalist>
-    <div class="addr-row"><input id="db-to-addr" placeholder="하차지 주소 (확인·수정)" value="${esc(toAddr)}"><button type="button" data-act="db-search" data-t="to">주소검색</button></div></div>
+    <div class="addr-row"><input id="db-to-addr" placeholder="하차지 주소 (확인·수정)" value="${esc(toAddr)}"><button type="button" data-act="db-search" data-t="to">주소검색</button></div>
+    <input id="db-to-phone" placeholder="하차지 연락처 (직접 입력·자동저장)" value="${esc(toPhone)}" type="tel" inputmode="tel" style="width:100%;margin-top:8px;padding:12px 13px;border-radius:11px;background:var(--surface-2);color:var(--ink);border:0"></div>
   <div class="field"><label>하차지 거래처명 <span style="color:var(--faint);font-weight:400">물류업체에 보낼 때</span></label>
     <div class="seg" id="db-cust">
       <button type="button" data-v="real" class="on">실제 이름</button>
@@ -1488,11 +1494,17 @@ app.addEventListener('click', (e) => {
     const g = (id) => document.getElementById(id);
     const from = g('db-from').value, to = g('db-to').value;
     const hide = document.querySelector('#db-cust .on').dataset.v === 'hide';
-    const addrFrom = g('db-from-addr').value.trim() || '(주소 미등록)';
-    const addrTo = g('db-to-addr').value.trim() || '(주소 미등록)';
+    const addrFromRaw = g('db-from-addr').value.trim(); const addrToRaw = g('db-to-addr').value.trim();
+    const fromPhoneV = (g('db-from-phone') ? g('db-from-phone').value.trim() : ''); const toPhoneV = (g('db-to-phone') ? g('db-to-phone').value.trim() : '');
+    const addrFrom = addrFromRaw || '(주소 미등록)';
+    const addrTo = addrToRaw || '(주소 미등록)';
     const weight = g('db-max').classList.contains('on') ? '최대' : g('db-weight').value.trim();
     const payOn = document.querySelector('#db-pay .on');
-    const L = ['[배차 요청]', '', `상차지: ${from}`, `　${addrFrom}`, '', `하차지: ${hide ? '홈트레이더스' : to}`, `　${addrTo}`, ''];
+    const L = ['[배차 요청]', '', `상차지: ${from}`, `　${addrFrom}`];
+    if (fromPhoneV) L.push(`　연락처 ${fromPhoneV}`);
+    L.push('', `하차지: ${hide ? '홈트레이더스' : to}`, `　${addrTo}`);
+    if (toPhoneV && !hide) L.push(`　연락처 ${toPhoneV}`);
+    L.push('');
     if (g('db-goods').value.trim()) L.push(`물품: ${g('db-goods').value.trim()}`);
     if (weight) L.push(`중량: ${weight}`);
     if (g('db-vehicle').value.trim()) L.push(`차량: ${g('db-vehicle').value.trim()}`);
@@ -1507,13 +1519,23 @@ app.addEventListener('click', (e) => {
         unloadPlace: to, unloadAddr: g('db-to-addr').value.trim(),
       });
     }
-    // 하차지 거래처+주소 자동 등록/갱신 → 다음 배차부터 자동으로 뜨고 채워짐
-    const toNm = (to || '').trim(); const toAddrNm = g('db-to-addr').value.trim();
+    // 하차지 거래처+주소+연락처 자동 등록/갱신 → 다음 배차부터 자동으로 뜨고 채워짐
+    const toNm = (to || '').trim();
     let savedPartner = false;
     if (toNm && toNm !== '홈트레이더스') {
       const ex = S.findPartner(toNm);
-      if (!ex) { S.addPartner({ name: toNm, address: toAddrNm, phone: '' }); savedPartner = true; }
-      else if (toAddrNm && (ex.address || '') !== toAddrNm) { S.updatePartner(toNm, { name: toNm, address: toAddrNm, phone: ex.phone || '', note: ex.note || '' }); savedPartner = true; }
+      if (!ex) { S.addPartner({ name: toNm, address: addrToRaw, phone: toPhoneV }); savedPartner = true; }
+      else if ((addrToRaw && (ex.address || '') !== addrToRaw) || (toPhoneV && (ex.phone || '') !== toPhoneV)) {
+        S.updatePartner(toNm, { name: toNm, address: addrToRaw || ex.address || '', phone: toPhoneV || ex.phone || '', note: ex.note || '' }); savedPartner = true;
+      }
+    }
+    // 상차지(창고) 주소·연락처도 저장
+    const fromWh = S.getWarehouses().find((w) => w.name === from);
+    if (fromWh) {
+      const patch = {};
+      if (addrFromRaw && (fromWh.address || '') !== addrFromRaw) patch.address = addrFromRaw;
+      if (fromPhoneV && (fromWh.phone || '') !== fromPhoneV) patch.phone = fromPhoneV;
+      if (Object.keys(patch).length) S.setWarehouseInfo(from, patch);
     }
     navigator.clipboard.writeText(text).then(
       () => alert(`배차 양식 복사됨 · 출고 건에 저장${savedPartner ? '\n하차지 거래처·주소도 등록했어요 (다음부터 자동)' : ''}\n\n` + text),
@@ -1650,8 +1672,8 @@ app.addEventListener('change', (e) => {
   if (e.target.id === 'f-item') updateStockHint();
   if (e.target.id === 'ib-wh') fillInboundItems();
   if (e.target.id === 'ib-item') updateInboundHint();
-  if (e.target.id === 'db-from') { const p = getPlaces().find((x) => x.name === e.target.value); const el = document.getElementById('db-from-addr'); if (el) el.value = p ? p.address : ''; }
-  if (e.target.id === 'db-to') { const p = getPlaces().find((x) => x.name === e.target.value); const el = document.getElementById('db-to-addr'); if (el) el.value = p ? p.address : ''; }
+  if (e.target.id === 'db-from') { const p = getPlaces().find((x) => x.name === e.target.value); const a = document.getElementById('db-from-addr'), ph = document.getElementById('db-from-phone'); if (a) a.value = p ? p.address : ''; if (ph) ph.value = p ? p.phone : ''; }
+  if (e.target.id === 'db-to') { const p = getPlaces().find((x) => x.name === e.target.value); const a = document.getElementById('db-to-addr'), ph = document.getElementById('db-to-phone'); if (a && p) a.value = p.address; if (ph && p) ph.value = p.phone; }
   if (e.target.classList && e.target.classList.contains('ql-item')) {
     const i = Number(e.target.dataset.i);
     if (qLines[i]) {
