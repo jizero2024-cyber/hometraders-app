@@ -820,9 +820,14 @@ function rowShip(s) {
   </div>`;
 }
 
+// 단가 확인 필요 = 단가 없음(구매단가 몰라 판가 못 정함)
+const needPrice = (it) => !(Number(it.unitPrice) > 0);
 // 단가표 마스터 본문 — 품목별 최근 단가·공급처 (탭하면 단가 수정). 견적 메뉴의 '단가표' 탭에서 렌더.
 function priceBody() {
-  const items = S.getItems().slice();
+  const allItems = S.getItems().slice();
+  const need = allItems.filter(needPrice);
+  const onlyNeed = !!state.priceNeed;
+  const items = onlyNeed ? need : allItems;
   const byCat = {};
   items.forEach((it) => { (byCat[it.category || '기타'] = byCat[it.category || '기타'] || []).push(it); });
   Object.values(byCat).forEach((list) => list.sort((a, b) => (a.name || '').localeCompare(b.name || '')));
@@ -830,17 +835,36 @@ function priceBody() {
   const priceRow = (it) => `<button class="ship" data-act="item" data-id="${it.id}">
     ${swatchHTML(it.name)}
     <div class="body"><b>${esc(it.name)}</b>
-      <div class="meta">${whTag(it.warehouse)} ${esc(it.unit || '')}${it.perBox ? ` · ${it.perBox}개입` : ''}${it.supplier ? ` · ${esc(it.supplier)}` : ''}</div></div>
+      <div class="meta">${whTag(it.warehouse)} ${esc(it.unit || '')}${it.perBox ? ` · ${it.perBox}개입` : ''}${it.supplier ? ` · ${esc(it.supplier)}` : ' · 매입처 미정'}</div></div>
     <div class="right" style="flex-wrap:wrap;justify-content:flex-end;gap:6px">
-      <span class="q">${Number(it.unitPrice) > 0 ? Number(it.unitPrice).toLocaleString() + '원' : '단가 없음'}</span>
+      ${needPrice(it) ? '<span class="pill low">단가 확인 필요</span>' : `<span class="q">${Number(it.unitPrice).toLocaleString()}원</span>`}
       ${it.vatSeparate ? '<span class="pill low" style="font-size:11px">부가세 별도</span>' : ''}
     </div>
   </button>`;
-  const noPrice = items.filter((it) => !(Number(it.unitPrice) > 0)).length;
   return `
-    <div class="quickbar" style="cursor:default;margin-top:4px"><span class="tx">품목 <b>${items.length}</b>${noPrice ? ` · 단가 미입력 <b>${noPrice}</b>` : ''}</span></div>
-    ${cats.map((c) => `<div class="sec-title">${esc(c)} ${byCat[c].length}</div><div class="rows">${byCat[c].map(priceRow).join('')}</div>`).join('')}
-    <p class="hint" style="margin-top:16px">품목을 누르면 단가를 수정할 수 있어요. (단가 변경 이력·업데이트 시점·엑셀 추출은 다음 단계에 추가)</p>`;
+    <div class="filtabs">
+      <button data-act="price-need" data-v="0" class="${!onlyNeed ? 'on' : ''}">전체<b>${allItems.length}</b></button>
+      <button data-act="price-need" data-v="1" class="${onlyNeed ? 'on' : ''}">단가 확인 필요<b>${need.length}</b></button>
+    </div>
+    ${need.length ? `<button class="btn" data-act="price-check-copy" style="margin-bottom:12px">대표님께 단가 확인 요청 (${need.length}) · 복사</button>` : ''}
+    ${cats.length ? cats.map((c) => `<div class="sec-title">${esc(c)} ${byCat[c].length}</div><div class="rows">${byCat[c].map(priceRow).join('')}</div>`).join('')
+      : `<div class="empty"><div class="ico">${I.tag}</div>단가 확인 필요한 품목이 없어요</div>`}
+    <p class="hint" style="margin-top:16px">품목을 누르면 매입처·단가를 수정할 수 있어요. (단가 변경 이력·업데이트 시점·엑셀 추출은 다음 단계에 추가)</p>`;
+}
+// 대표님께 보낼 단가 확인 요청 문구
+function buildPriceCheck() {
+  const need = S.getItems().filter(needPrice);
+  if (!need.length) return '단가 확인 필요한 품목이 없습니다.';
+  const L = ['[단가 확인 요청]', '아래 품목 매입처·구매단가 확인 부탁드립니다.', ''];
+  need.forEach((it, i) => L.push(`${i + 1}. ${esc(it.name)} (${whShort(it.warehouse)})${it.supplier ? ` · 매입처 ${it.supplier}` : ' · 매입처 미정'}`));
+  return L.join('\n');
+}
+function sheetPriceCheck() {
+  return `<div class="grab"></div><h2>${I.tag} 단가 확인 요청</h2>
+  <p class="hint">대표님께 보낼 문구예요. 수정 후 복사해서 카톡으로 보내세요.</p>
+  <div class="field"><textarea id="brief-text" rows="10">${buildPriceCheck()}</textarea></div>
+  <button class="btn" type="button" data-act="briefing-copy">복사하기</button>
+  <button class="btn danger" type="button" data-act="close">닫기</button>`;
 }
 
 function screenSettings() {
@@ -1815,6 +1839,8 @@ app.addEventListener('click', (e) => {
   else if (act === 'hometab') { state.homeTab = t.dataset.t; render(); }
   else if (act === 'quotetab') { state.quoteTab = t.dataset.t; render(); }
   else if (act === 'invoicetab') { state.invoiceTab = t.dataset.t; render(); }
+  else if (act === 'price-need') { state.priceNeed = t.dataset.v === '1'; render(); }
+  else if (act === 'price-check-copy') { openSheet(sheetPriceCheck()); }
   else if (act === 'color-ship') {
     const it = S.findItem(t.dataset.id);
     shipPrefill = { warehouse: it.warehouse, itemId: it.id, qty: '', unit: it.unit, client: '', status: '출고완료', note: '', matched: it.name };
