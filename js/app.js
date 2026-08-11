@@ -291,7 +291,11 @@ function screenHome() {
     const docBtn = (s.status === '출고완료' && !s.docDone) ? `<button class="pill low" data-act="doc-done" data-id="${s.id}" style="flex:none">발행완료</button>` : '';
     const rightPill = isPlan ? `<span class="pill ${pillCls}">${pillTxt}</span>`
       : (s.status === '출고완료' && s.docDone) ? `<span class="pill done" style="font-size:11px">명세서 발행${s.docBy ? ' · ' + esc(s.docBy) : ''}</span>` : '';
-    const fr = region(s.loadAddr, s.loadPlace), to = region(s.unloadAddr, s.unloadPlace);
+    // 주소가 비면 창고·거래처 마스터 주소로 지역 추정
+    const whAddr = (S.getWarehouses().find((w) => w.name === s.warehouse) || {}).address || '';
+    const clAddr = (S.findPartner(s.client) || {}).address || '';
+    const fr = region(s.loadAddr || whAddr, s.loadPlace || s.warehouse);
+    const to = region(s.unloadAddr || clAddr, s.unloadPlace || s.client);
     const route = (s.status === '출고완료' && (fr || to)) ? `${esc(fr || '-')} <span class="arr">→</span> ${esc(to || '-')}` : '';
     return `<div class="brd">
     <div class="brd-top">
@@ -327,9 +331,14 @@ function screenHome() {
     const byDate = {};
     withD.forEach((s) => { const k = dateOf(s); (byDate[k] = byDate[k] || []).push(s); });
     const keys = Object.keys(byDate).sort(); if (desc) keys.reverse();
-    let html = keys.map((d) => `<div class="dgrp${d === today ? ' today' : ''}">
-      <div class="dghd">${mdDow(d)}${relFn(d) ? ` <span class="rel">${relFn(d)}</span>` : ''}</div>
-      <div class="rows">${byDate[d].map(boardRow).join('')}</div></div>`).join('');
+    let html = keys.map((d) => {
+      const hd = d === today
+        ? `<b class="td-big">오늘</b> <span class="td-date">${mdDow(d)}</span>`
+        : `${mdDow(d)}${relFn(d) ? ` <span class="rel">${relFn(d)}</span>` : ''}`;
+      return `<div class="dgrp${d === today ? ' today' : ''}">
+      <div class="dghd">${hd}</div>
+      <div class="rows">${byDate[d].map(boardRow).join('')}</div></div>`;
+    }).join('');
     if (noD.length) html += `<div class="dgrp"><div class="dghd">날짜 미정</div><div class="rows">${noD.map(boardRow).join('')}</div></div>`;
     return html;
   };
