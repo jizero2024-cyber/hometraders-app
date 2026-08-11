@@ -42,7 +42,7 @@ input,select,textarea{font-family:inherit;font-size:16px;border:0;}
 /* ── 스크롤 영역 ── */
 .screen{padding:16px 16px calc(var(--nav-h) + 24px + env(safe-area-inset-bottom));}
 /* FAB 있는 화면은 마지막 카드가 버튼에 가리지 않도록 아래 여백 확보 */
-#app:has(.fab) .screen{padding-bottom:calc(var(--nav-h) + 160px + env(safe-area-inset-bottom));}
+#app:has(.fab-wrap) .screen{padding-bottom:calc(var(--nav-h) + 120px + env(safe-area-inset-bottom));}
 .sec-title{font-size:12px;font-weight:700;letter-spacing:.04em;color:var(--muted);
   margin:22px 4px 10px;text-transform:uppercase;}
 .sec-title:first-child{margin-top:6px;}
@@ -194,14 +194,20 @@ a.tel{color:var(--ink);font-weight:800;text-decoration:none;background:var(--sur
 .nav button.on{color:var(--ink);}
 
 /* ── FAB ── */
-.fab{position:fixed;z-index:29;right:calc(50% - var(--max)/2 + 18px);
+/* 스피드다이얼 퀵 FAB */
+.fab-wrap{position:fixed;z-index:29;right:calc(50% - var(--max)/2 + 18px);
   bottom:calc(var(--nav-h) + 18px + env(safe-area-inset-bottom));
-  background:var(--accent);color:var(--accent-ink);border-radius:16px;height:52px;padding:0 20px;
-  font-size:15px;font-weight:700;box-shadow:0 6px 18px rgba(0,0,0,.22);display:flex;align-items:center;gap:8px;}
-@media(max-width:520px){.fab{right:18px;}}
-/* 붙여넣기 인식 퀵 버튼 (출고 등록 위) */
-.fab.fab2{bottom:calc(var(--nav-h) + 18px + 64px + env(safe-area-inset-bottom));
-  background:var(--surface);color:var(--ink);box-shadow:0 4px 16px rgba(0,0,0,.16);}
+  display:flex;flex-direction:column;align-items:flex-end;gap:10px;}
+@media(max-width:520px){.fab-wrap{right:18px;}}
+.fab-main{width:56px;height:56px;border-radius:50%;background:var(--accent);color:var(--accent-ink);
+  display:grid;place-items:center;box-shadow:0 6px 18px rgba(0,0,0,.24);transition:transform .18s ease;}
+.fab-main svg{width:26px;height:26px;}
+.fab-main.open{transform:rotate(45deg);}
+.fab-item{display:flex;align-items:center;gap:9px;background:var(--surface);color:var(--ink);
+  border-radius:14px;height:48px;padding:0 16px 0 14px;font-size:14px;font-weight:700;
+  box-shadow:0 4px 16px rgba(0,0,0,.18);animation:fabup .16s ease;}
+.fab-item svg{width:19px;height:19px;flex:none;}
+@keyframes fabup{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
 
 /* ── 빠른 출고 ── */
 .quickbar{width:100%;display:flex;align-items:center;gap:10px;margin-bottom:14px;
@@ -305,7 +311,7 @@ textarea{resize:vertical;line-height:1.5;}
     display:grid;grid-template-columns:212px 1fr;grid-template-rows:auto 1fr;}
   .appbar{grid-column:2;grid-row:1;}
   .screen{grid-column:2;grid-row:2;padding:26px 30px 44px;}
-  #app:has(.fab) .screen{padding-bottom:44px;}
+  #app:has(.fab-wrap) .screen{padding-bottom:44px;}
 
   /* 좌측 세로 사이드바 네비 */
   .nav{grid-column:1;grid-row:1 / 3;position:static;height:auto;width:auto;max-width:none;margin:0;
@@ -317,8 +323,7 @@ textarea{resize:vertical;line-height:1.5;}
   .nav button.on{background:var(--surface-2);color:var(--ink);}
 
   /* FAB — 콘텐츠 우하단(카드 기준) */
-  .fab{right:max(32px, calc(50vw - 498px));bottom:32px;}
-  .fab.fab2{bottom:96px;}
+  .fab-wrap{right:max(32px, calc(50vw - 498px));bottom:32px;}
 
   /* 시트 → 화면 가운데 모달 */
   .sheet-bg{align-items:center;}

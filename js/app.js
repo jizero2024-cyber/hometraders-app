@@ -1342,8 +1342,13 @@ function render() {
   app.innerHTML = `
     <div class="appbar"><span class="logo">H</span><h1>${title}</h1><span class="sub">${sub}</span></div>
     ${body}
-    ${showFab ? `<button class="fab fab2" data-act="smart">${I.bolt} 붙여넣기 인식</button>
-    <button class="fab" data-act="new-ship">${I.plus} 출고 등록</button>` : ''}
+    ${showFab ? `<div class="fab-wrap">
+      ${state.fabOpen ? `
+        <button class="fab-item" data-act="briefing">${I.doc}<span>오늘 출고 공지</span></button>
+        <button class="fab-item" data-act="smart">${I.bolt}<span>붙여넣기 인식</span></button>
+        <button class="fab-item" data-act="new-ship">${I.plus}<span>출고 등록</span></button>` : ''}
+      <button class="fab-main ${state.fabOpen ? 'open' : ''}" data-act="fab-toggle">${I.plus}</button>
+    </div>` : ''}
     <nav class="nav">
       ${[['home', '홈', I.home], ['quote', '견적', I.doc], ['silicone', '실리콘', I.drop], ['stock', '창고', WH_ICONS.warehouse], ['ship', '출고', I.truck], ['price', '단가', I.tag], ['settings', '설정', I.cog]]
         .map(([r, l, ic]) => `<button data-act="nav" data-r="${r}" class="${state.route === r ? 'on' : ''}">${ic}<span>${l}</span></button>`).join('')}
@@ -1355,7 +1360,7 @@ function render() {
 }
 
 // ── 이벤트 ────────────────────────────────────────────
-function openSheet(html) { state.sheet = html; render(); }
+function openSheet(html) { state.sheet = html; state.fabOpen = false; render(); }
 function closeSheet() { state.sheet = null; state.docEditLines = false; render(); }
 
 app.addEventListener('click', (e) => {
@@ -1559,6 +1564,7 @@ app.addEventListener('click', (e) => {
     if (m < 1) { m = 12; y--; } if (m > 12) { m = 1; y++; }
     state.calM = m; state.calY = y; render();
   }
+  else if (act === 'fab-toggle') { state.fabOpen = !state.fabOpen; render(); }
   else if (act === 'new-ship') { shipPrefill = null; sfExtra = []; openSheet(sheetShipForm()); }
   else if (act === 'toggle-manual') {
     const man = document.getElementById('f-manual'); const sel = document.getElementById('f-item');
