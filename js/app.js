@@ -1380,7 +1380,7 @@ function sheetDoc(sh) {
     <div class="kv" style="margin-top:10px"><span>명세서</span><span class="pill ${sh.docDone ? 'done' : 'low'}">${sh.docDone ? `발행완료${sh.docBy ? ' · ' + esc(sh.docBy) : ''}` : '미발행'}</span></div>
   </div>
   ${sh.status === '출고예정' && !isCourier ? `<button class="btn" type="button" data-act="copy-dispatch" data-id="${sh.id}">배차 요청 양식 만들기</button>
-    <button class="btn ghost" type="button" data-act="dispatch-paste" data-id="${sh.id}" style="margin-top:8px">배차 확인 붙여넣기 (회신 받으면)</button>` : ''}
+    <button class="btn ghost" type="button" data-act="dispatch-paste" data-id="${sh.id}" style="margin-top:8px">배차 완료</button>` : ''}
   ${sh.status === '배차완료' && !isCourier ? `<button class="btn ghost" type="button" data-act="dispatch-paste" data-id="${sh.id}">배차 정보 다시 붙여넣기</button>` : ''}
   ${sh.status === '출고완료' ? `<button class="btn ${sh.docDone ? 'ghost' : ''}" type="button" data-act="toggle-doc" data-id="${sh.id}">${sh.docDone ? '명세서 발행됨 · 해제' : '명세서 발행 완료로 표시'}</button>` : ''}
   <button class="btn ghost" type="button" data-act="print-ship" data-id="${sh.id}" style="margin-top:8px">출력 / PDF (A4 전표)</button>
@@ -1470,7 +1470,7 @@ function shipLinesEditor(sh) {
 }
 
 function sheetDispatchPaste(id) {
-  return `<div class="grab"></div><h2>${I.bolt} 배차 확인 붙여넣기</h2>
+  return `<div class="grab"></div><h2>${I.bolt} 배차 완료</h2>
   <p class="hint">물류업체가 보낸 배차 안내 문구를 붙여넣으면 <b>기사·차량·운임·결제·경로</b>가 자동 입력되고 <b>배차완료</b>로 바뀝니다.</p>
   <div class="field"><textarea id="dp-text" rows="5" placeholder="예)&#10;배차안내드립니다&#10;경광주곤지암-아산송악면 혼적 운임 8만원/현불&#10;1톤카고 경기85사7749&#10;김익태님 010-6416-6758"></textarea></div>
   <button class="btn" type="button" data-act="dp-apply" data-id="${id}">인식해서 배차완료</button>
@@ -1863,7 +1863,19 @@ app.addEventListener('click', (e) => {
     state.docEditLines = false;
     openSheet(sheetDoc(S.getShipments().find((s) => s.id === slId)));
   }
-  else if (act === 'ship-stage') { state.docEditLines = false; S.updateShipment(t.dataset.id, { status: t.dataset.v }); openSheet(sheetDoc(S.getShipments().find((s) => s.id === t.dataset.id))); }
+  else if (act === 'ship-stage') {
+    state.docEditLines = false;
+    const id = t.dataset.id, target = t.dataset.v;
+    const sh = S.getShipments().find((s) => s.id === id);
+    const hasDisp = sh && (sh.driverName || sh.driverPhone || sh.vehicle || sh.dispatchVia || Number(sh.freight) > 0 || sh.payment);
+    if (target === '출고예정' && hasDisp) {
+      if (!confirm('배차 요청 상태로 되돌립니다.\n등록된 배차 정보(기사·차량·운임·결제)를 지울까요?')) return;
+      S.updateShipment(id, { status: '출고예정', dispatchVia: '', driverName: '', driverPhone: '', vehicle: '', freight: 0, payment: '' });
+    } else {
+      S.updateShipment(id, { status: target });
+    }
+    openSheet(sheetDoc(S.getShipments().find((s) => s.id === id)));
+  }
   else if (act === 'dispatch-paste') { openSheet(sheetDispatchPaste(t.dataset.id)); }
   else if (act === 'dp-apply') {
     const text = document.getElementById('dp-text').value;
