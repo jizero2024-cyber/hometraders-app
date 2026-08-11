@@ -107,7 +107,17 @@ function parseDispatch(t) {
   if (/혼적/.test(t)) noteParts.push('혼적'); else if (/독차/.test(t)) noteParts.push('독차');
   if (/소분/.test(t)) noteParts.push('소분');
   if (/당착|바로|당일/.test(t)) noteParts.push('당착');
-  return { driverName, driverPhone, vehicle, freight, payment, note: noteParts.join(' '),
+  // 시간(몇시) 추출 — "오전 7시", "오후 3시 30분", "07:00"
+  let time = '';
+  const tm = t.match(/(오전|오후|새벽|아침|저녁|밤)?\s*(\d{1,2})\s*시\s*(\d{1,2})?\s*분?/);
+  if (tm) {
+    let h = Number(tm[2]); const min = tm[3] ? Number(tm[3]) : 0; const mer = tm[1];
+    if ((mer === '오후' || mer === '저녁' || mer === '밤') && h < 12) h += 12;
+    if ((mer === '오전' || mer === '새벽' || mer === '아침') && h === 12) h = 0;
+    if (h >= 0 && h <= 23 && min <= 59) time = `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+  }
+  if (!time) { const cm = t.match(/\b(\d{1,2}):(\d{2})\b/); if (cm) time = `${cm[1].padStart(2, '0')}:${cm[2]}`; }
+  return { driverName, driverPhone, vehicle, freight, payment, time, note: noteParts.join(' '),
     hasDispatch: !!(driverPhone || vehicle || freight), pm, typeM, plateM, routeM };
 }
 
@@ -1628,7 +1638,7 @@ app.addEventListener('click', (e) => {
       status: '배차완료', dispatchVia: '이음물류',
       driverName: d.driverName || sh.driverName, driverPhone: d.driverPhone || sh.driverPhone,
       vehicle: d.vehicle || sh.vehicle, freight: d.freight || sh.freight, payment: d.payment || sh.payment,
-      note: [sh.note, d.note].filter(Boolean).join(' / '),
+      time: d.time || sh.time || '', note: [sh.note, d.note].filter(Boolean).join(' / '),
     });
     openSheet(sheetDoc(S.getShipments().find((s) => s.id === t.dataset.id)));
   }
