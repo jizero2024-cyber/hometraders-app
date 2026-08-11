@@ -288,7 +288,7 @@ function screenHome() {
     const pillCls = needsDisp ? 'low' : (isPlan ? 'plan' : STAGE_PILL[s.status]);
     const pillTxt = needsDisp ? '배차필요' : (isPlan ? '예정' : STAGE_SHORT[s.status]);
     const sm = shipSummary(s);
-    const call = s.driverPhone ? `<a class="callrow" href="${telHref(s.driverPhone)}">${I.phone}<span>기사님 전화걸기${s.driverName ? ' · ' + esc(s.driverName) : ''}</span></a>` : '';
+    const call = (!isPlan && s.driverPhone) ? `<a class="callrow" href="${telHref(s.driverPhone)}">${I.phone}<span>기사님 전화걸기${s.driverName ? ' · ' + esc(s.driverName) : ''}</span></a>` : '';
     const markDone = s.status === '배차완료' ? `<button class="pill done" data-act="mark-done" data-id="${s.id}" style="flex:none">출고완료</button>` : '';
     const docBtn = (s.status === '출고완료' && !s.docDone) ? `<button class="pill low" data-act="doc-done" data-id="${s.id}" style="flex:none">발행완료</button>` : '';
     const rightPill = isPlan ? `<span class="pill ${pillCls}">${pillTxt}</span>`
@@ -809,7 +809,7 @@ function shipSummary(s) {
 function rowShip(s) {
   const cls = STAGE_PILL[s.status] || 'plan';
   const sm = shipSummary(s);
-  const call = s.driverPhone ? `<a class="callbtn" href="${telHref(s.driverPhone)}" aria-label="기사님 전화">${I.phone}</a>` : '';
+  const call = (s.status !== '출고예정' && s.driverPhone) ? `<a class="callbtn" href="${telHref(s.driverPhone)}" aria-label="기사님 전화">${I.phone}</a>` : '';
   return `<div class="ship">
     <button class="ship-open" data-act="ship" data-id="${s.id}">
       ${swatchHTML(sm.swatchName)}
