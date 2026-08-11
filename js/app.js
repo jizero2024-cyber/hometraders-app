@@ -1197,7 +1197,7 @@ function sheetDoc(sh) {
       <tr><th style="width:40%">품목</th><th class="n" style="width:19%">수량</th><th class="n" style="width:20%">단가</th><th class="n" style="width:21%">금액</th></tr>
       ${S.shipLines(sh).map((l) => { const amt = (Number(l.qty) || 0) * (Number(l.unitPrice) || 0); const lwh = l.warehouse || sh.warehouse; return `<tr>
         <td><div style="font-weight:600">${esc(l.name || '(미지정)')}</div><div style="margin-top:3px">${whTag(lwh)}${l.spec ? ` <span style="color:var(--muted);font-size:12px">${esc(l.spec)}</span>` : ''}</div></td>
-        <td class="n">${l.qty} ${esc(l.unit)}</td>
+        <td class="n">${l.qty} ${esc(l.unit)}${(() => { const it = S.getItems().find((x) => x.name === l.name && x.warehouse === (l.warehouse || sh.warehouse)); return (it && Number(it.perBox) > 0 && (l.unit === '박스' || l.unit === 'plt' || l.unit === '파렛트')) ? `<br><span style="color:var(--muted);font-size:11px">${(Number(l.qty) * Number(it.perBox)).toLocaleString()}개</span>` : ''; })()}</td>
         <td class="n">${Number(l.unitPrice) > 0 ? Number(l.unitPrice).toLocaleString() : '-'}</td>
         <td class="n">${amt > 0 ? amt.toLocaleString() : '-'}</td>
       </tr>`; }).join('')}
