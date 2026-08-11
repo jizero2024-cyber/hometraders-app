@@ -256,12 +256,18 @@ function screenHome() {
     const docBtn = (s.status === '출고완료' && !s.docDone) ? `<button class="pill low" data-act="doc-done" data-id="${s.id}" style="flex:none">발행완료</button>` : '';
     const rightPill = isPlan ? `<span class="pill ${pillCls}">${pillTxt}</span>`
       : (s.status === '출고완료' && s.docDone) ? `<span class="pill done" style="font-size:11px">명세서 발행</span>` : '';
-    // 주소에서 시/군(구) 지역만 뽑기 — "충남 천안시 서북구.." → "천안시", 없으면 지점명
+    // 주소에서 도 + 시/군(구) 뽑기 — "충청남도 천안시 서북구.." → "충남 천안시", 없으면 지점명
+    const PROV = { 서울특별시: '서울', 부산광역시: '부산', 인천광역시: '인천', 대구광역시: '대구', 대전광역시: '대전', 광주광역시: '광주', 울산광역시: '울산', 세종특별자치시: '세종', 경기도: '경기', 강원도: '강원', 강원특별자치도: '강원', 충청북도: '충북', 충청남도: '충남', 전라북도: '전북', 전북특별자치도: '전북', 전라남도: '전남', 경상북도: '경북', 경상남도: '경남', 제주특별자치도: '제주', 제주도: '제주' };
     const region = (addr, place) => {
       const a = (addr || '').trim();
-      const m = a.match(/([가-힣]{2,}(?:시|군))/) || a.match(/([가-힣]{2,}구)/);
-      if (m) return m[1];
-      if (a) return a.split(/\s+/)[0];
+      if (a) {
+        const first = a.split(/\s+/)[0] || '';
+        const prov = PROV[first] || first;
+        const cm = a.match(/([가-힣]{2,}(?:시|군))/) || a.match(/([가-힣]{2,}구)/);
+        const city = cm ? cm[1] : '';
+        if (city && prov && prov !== city) return `${prov} ${city}`;
+        return city || prov;
+      }
       return (place || '').trim();
     };
     const fr = region(s.loadAddr, s.loadPlace), to = region(s.unloadAddr, s.unloadPlace);
