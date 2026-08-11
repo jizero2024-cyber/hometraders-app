@@ -27,6 +27,7 @@ const I = {
   doc: '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M9 12h6M9 16h5"/></svg>',
   phone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h4l2 5-2.5 1.5a12 12 0 0 0 6 6L15 14l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 2 6a2 2 0 0 1 2-2z"/></svg>',
   tag: '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12V4h8l9 9-8 8z"/><circle cx="7.5" cy="7.5" r="1.4"/></svg>',
+  invoice: '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-2-1.3-2 1.3-2-1.3-2 1.3-2-1.3L6 21z"/><path d="M9 8h6M9 12h6"/></svg>',
 };
 const whShort = (n) => n.replace('창고', '').replace('로지스', '');
 
@@ -577,8 +578,6 @@ function screenShip() {
       ['배차 요청', (s) => s.status === '출고예정'],
       ['출고 예정', (s) => s.status === '배차완료'],
       ['출고 완료', (s) => s.status === '출고완료'],
-      ['명세서 미발행', (s) => s.status === '출고완료' && !s.docDone],
-      ['명세서 발행', (s) => s.status === '출고완료' && s.docDone],
     ];
     const cat = state.shipCat;
     if (!cat) {
@@ -656,17 +655,47 @@ const DOW_S = ['일', '월', '화', '수', '목', '금', '토'];
 function mdDow(ds) { if (!ds) return ''; const [y, m, d] = ds.split('-').map(Number); return `${m}/${d}(${DOW_S[new Date(y, m - 1, d).getDay()]})`; }
 
 function screenQuote() {
+  const qtab = state.quoteTab || 'quote';
+  const tabs = `<div class="homtabs">
+    <button data-act="quotetab" data-t="quote" class="${qtab === 'quote' ? 'on' : ''}">견적</button>
+    <button data-act="quotetab" data-t="price" class="${qtab === 'price' ? 'on' : ''}">단가표</button>
+  </div>`;
+  if (qtab === 'price') return `<div class="screen">${tabs}${priceBody()}</div>`;
   const all = S.getQuotes();
   const f = state.quoteFilter || '전체';
   const cnt = { 전체: all.length, 견적대기: all.filter((q) => q.status === '견적대기').length, 견적완료: all.filter((q) => q.status === '견적완료').length };
   const filt = `<div class="filtabs">${[['전체', cnt.전체], ['견적대기', cnt.견적대기], ['견적완료', cnt.견적완료]]
     .map(([k, c]) => `<button data-act="quote-filter" data-v="${k}" class="${f === k ? 'on' : ''}">${k.replace('견적', '')}<b>${c}</b></button>`).join('')}</div>`;
   const list = f === '전체' ? all : all.filter((q) => q.status === f);
-  return `<div class="screen">
+  return `<div class="screen">${tabs}
     ${filt}
     <button class="btn" data-act="add-quote" style="margin-bottom:12px">＋ 견적 요청 추가</button>
     ${list.length ? `<div class="rows">${list.map(quoteRow).join('')}</div>`
       : `<div class="empty"><div class="ico">${I.doc}</div>${f === '전체' ? '견적 요청이 없어요' : `'${f.replace('견적', '')}' 건이 없어요`}</div>`}
+  </div>`;
+}
+
+// 명세서 메뉴 — 미발행 / 발행 탭
+function screenInvoice() {
+  const itab = state.invoiceTab || 'pending';
+  const ships = S.getShipments().filter((s) => s.status === '출고완료');
+  const pending = ships.filter((s) => !s.docDone).sort((a, b) => (b.date + b.id).localeCompare(a.date + a.id));
+  const issued = ships.filter((s) => s.docDone).sort((a, b) => (b.date + b.id).localeCompare(a.date + a.id));
+  const tabs = `<div class="homtabs">
+    <button data-act="invoicetab" data-t="pending" class="${itab === 'pending' ? 'on' : ''}">미발행${pending.length ? `<b>${pending.length}</b>` : ''}</button>
+    <button data-act="invoicetab" data-t="issued" class="${itab === 'issued' ? 'on' : ''}">발행 완료${issued.length ? `<b>${issued.length}</b>` : ''}</button>
+  </div>`;
+  const row = (s) => `<div class="ship">
+    <button class="ship-open" data-act="ship" data-id="${s.id}"><div class="body"><b>${esc(s.client || '거래처 미지정')}</b>
+      <div class="meta">${esc(shipSummary(s).itemLabel)} ${esc(shipSummary(s).qtyLabel)} · ${esc(s.date)}${s.docBy ? ` · <b>${esc(s.docBy)}</b>` : ''}</div></div></button>
+    ${s.docDone
+      ? `<span class="pill done" style="flex:none;font-size:11px">발행 · ${esc(s.docBy || '완료')}</span>`
+      : `<button class="pill done" data-act="doc-done" data-id="${s.id}" style="flex:none">발행완료</button>`}
+  </div>`;
+  const list = itab === 'pending' ? pending : issued;
+  return `<div class="screen">${tabs}
+    ${list.length ? `<div class="rows">${list.map(row).join('')}</div>`
+      : `<div class="empty"><div class="ico">${I.invoice}</div>${itab === 'pending' ? '미발행 명세서가 없어요' : '발행 완료된 명세서가 없어요'}</div>`}
   </div>`;
 }
 
@@ -791,25 +820,8 @@ function rowShip(s) {
   </div>`;
 }
 
-// 단가표 마스터 — 품목별 최근 단가·공급처 (탭하면 단가 수정). 업데이트 시점·엑셀은 다음 단계.
-function screenPrice() {
-  const ptab = state.priceTab || 'price';
-  const docPending = S.getShipments().filter((s) => s.status === '출고완료' && !s.docDone)
-    .sort((a, b) => (b.date + b.id).localeCompare(a.date + a.id));
-  const tabs = `<div class="homtabs">
-    <button data-act="pricetab" data-t="price" class="${ptab === 'price' ? 'on' : ''}">단가표</button>
-    <button data-act="pricetab" data-t="doc" class="${ptab === 'doc' ? 'on' : ''}">명세서 미발행${docPending.length ? `<b>${docPending.length}</b>` : ''}</button>
-  </div>`;
-  if (ptab === 'doc') {
-    return `<div class="screen">${tabs}
-      ${docPending.length ? `<div class="rows">${docPending.map((s) => `<div class="ship">
-        <button class="ship-open" data-act="ship" data-id="${s.id}"><div class="body"><b>${esc(s.client || '거래처 미지정')}</b>
-          <div class="meta">${esc(shipSummary(s).itemLabel)} ${esc(shipSummary(s).qtyLabel)} · ${esc(s.date)}</div></div></button>
-        <button class="pill done" data-act="doc-done" data-id="${s.id}" style="flex:none">발행완료</button>
-      </div>`).join('')}</div>`
-        : `<div class="empty"><div class="ico">${I.doc}</div>미발행 명세서가 없어요</div>`}
-    </div>`;
-  }
+// 단가표 마스터 본문 — 품목별 최근 단가·공급처 (탭하면 단가 수정). 견적 메뉴의 '단가표' 탭에서 렌더.
+function priceBody() {
   const items = S.getItems().slice();
   const byCat = {};
   items.forEach((it) => { (byCat[it.category || '기타'] = byCat[it.category || '기타'] || []).push(it); });
@@ -825,11 +837,10 @@ function screenPrice() {
     </div>
   </button>`;
   const noPrice = items.filter((it) => !(Number(it.unitPrice) > 0)).length;
-  return `<div class="screen">${tabs}
+  return `
     <div class="quickbar" style="cursor:default;margin-top:4px"><span class="tx">품목 <b>${items.length}</b>${noPrice ? ` · 단가 미입력 <b>${noPrice}</b>` : ''}</span></div>
     ${cats.map((c) => `<div class="sec-title">${esc(c)} ${byCat[c].length}</div><div class="rows">${byCat[c].map(priceRow).join('')}</div>`).join('')}
-    <p class="hint" style="margin-top:16px">품목을 누르면 단가를 수정할 수 있어요. (단가 변경 이력·업데이트 시점·엑셀 추출은 다음 단계에 추가)</p>
-  </div>`;
+    <p class="hint" style="margin-top:16px">품목을 누르면 단가를 수정할 수 있어요. (단가 변경 이력·업데이트 시점·엑셀 추출은 다음 단계에 추가)</p>`;
 }
 
 function screenSettings() {
@@ -1520,11 +1531,11 @@ function sheetEditShip(sh) {
 }
 
 // ── 렌더 ──────────────────────────────────────────────
-const TITLES = { home: ['홈트레이더스', '재고 · 출고 관리'], quote: ['견적', '견적 요청 관리'], silicone: ['실리콘', '색상별 재고'], stock: ['창고', '창고별 재고'], ship: ['출고', '등록하면 재고 자동 차감'], price: ['단가표', '품목별 단가 마스터'], settings: ['설정', '품목 · 데이터'] };
+const TITLES = { home: ['홈트레이더스', '재고 · 출고 관리'], quote: ['견적', '견적 · 단가표'], silicone: ['실리콘', '색상별 재고'], stock: ['창고', '창고별 재고'], ship: ['출고', '등록하면 재고 자동 차감'], invoice: ['명세서', '거래명세서 발행 관리'], settings: ['설정', '품목 · 데이터'] };
 
 function render() {
   const [title, sub] = TITLES[state.route];
-  const body = { home: screenHome, quote: screenQuote, silicone: screenSilicone, stock: screenStock, ship: screenShip, price: screenPrice, settings: screenSettings }[state.route]();
+  const body = { home: screenHome, quote: screenQuote, silicone: screenSilicone, stock: screenStock, ship: screenShip, invoice: screenInvoice, settings: screenSettings }[state.route]();
   const showFab = state.route === 'ship' || state.route === 'home';
   app.innerHTML = `
     <div class="appbar"><span class="logo">H</span><h1>${title}</h1><span class="sub">${sub}</span></div>
@@ -1537,7 +1548,7 @@ function render() {
       <button class="fab-main ${state.fabOpen ? 'open' : ''}" data-act="fab-toggle">${I.plus}</button>
     </div>` : ''}
     <nav class="nav">
-      ${[['home', '홈', I.home], ['quote', '견적', I.doc], ['silicone', '실리콘', I.drop], ['stock', '창고', WH_ICONS.warehouse], ['ship', '출고', I.truck], ['price', '단가', I.tag], ['settings', '설정', I.cog]]
+      ${[['home', '홈', I.home], ['quote', '견적', I.doc], ['silicone', '실리콘', I.drop], ['stock', '창고', WH_ICONS.warehouse], ['ship', '출고', I.truck], ['invoice', '명세서', I.invoice], ['settings', '설정', I.cog]]
         .map(([r, l, ic]) => `<button data-act="nav" data-r="${r}" class="${state.route === r ? 'on' : ''}">${ic}<span>${l}</span></button>`).join('')}
     </nav>
     ${state.sheet ? `<div class="sheet-bg" data-act="backdrop"><div class="sheet"><button class="sheet-x" type="button" data-act="close" aria-label="닫기">✕</button>${state.sheet}</div></div>` : ''}
@@ -1801,7 +1812,8 @@ app.addEventListener('click', (e) => {
   else if (act === 'color') { openSheet(sheetColor(t.dataset.c)); }
   else if (act === 'sil-wh') { state.silWH = t.dataset.w || null; render(); }
   else if (act === 'hometab') { state.homeTab = t.dataset.t; render(); }
-  else if (act === 'pricetab') { state.priceTab = t.dataset.t; render(); }
+  else if (act === 'quotetab') { state.quoteTab = t.dataset.t; render(); }
+  else if (act === 'invoicetab') { state.invoiceTab = t.dataset.t; render(); }
   else if (act === 'color-ship') {
     const it = S.findItem(t.dataset.id);
     shipPrefill = { warehouse: it.warehouse, itemId: it.id, qty: '', unit: it.unit, client: '', status: '출고완료', note: '', matched: it.name };
