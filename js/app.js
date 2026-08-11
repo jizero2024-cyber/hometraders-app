@@ -1292,10 +1292,13 @@ function sheetEditShip(sh) {
         ${STAGES.map((s) => `<button type="button" data-v="${s}" class="${sh.status === s ? 'on' : ''}">${STAGE_SHORT[s]}</button>`).join('')}
       </div></div>
     <div class="field"><div class="row2">
-      <div><label>수량</label><input name="qty" type="number" min="0" value="${sh.qty}"></div>
       <div><label>출고일</label><input name="date" type="date" value="${esc(sh.date)}"></div>
+      <div><label>시간 <span style="color:var(--faint);font-weight:400">착/상차</span></label><input name="time" type="time" value="${esc(sh.time || '')}"></div>
     </div></div>
-    <div class="field"><label>거래처</label><input name="client" value="${esc(sh.client)}"></div>
+    <div class="field"><div class="row2">
+      <div><label>수량</label><input name="qty" type="number" min="0" value="${sh.qty}"></div>
+      <div><label>거래처</label><input name="client" value="${esc(sh.client)}"></div>
+    </div></div>
     <div class="field"><label>출고 방식</label>
       <div class="seg" id="e-method">
         ${['배차', '택배'].map((m) => `<button type="button" data-v="${m}" class="${(sh.method || '배차') === m ? 'on' : ''}">${m}</button>`).join('')}
@@ -1823,7 +1826,7 @@ app.addEventListener('submit', (e) => {
       ...(pick ? { warehouse: pick.warehouse, category: pick.category, name: pick.name } : {}),
       qty: form.qty.value,
       status: form.querySelector('#e-status .on').dataset.v,
-      client: form.client.value.trim(), date: form.date.value,
+      client: form.client.value.trim(), date: form.date.value, time: form.time.value,
       dispatchVia: form.dispatchVia.value, driverName: form.driverName.value.trim(),
       driverPhone: form.driverPhone.value.trim(), vehicle: form.vehicle.value.trim(),
       freight: form.freight.value, payment: form.payment.value, note: form.note.value.trim(),
