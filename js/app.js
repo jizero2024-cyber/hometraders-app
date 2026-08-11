@@ -252,6 +252,7 @@ function screenHome() {
     const pillTxt = needsDisp ? '배차필요' : (isPlan ? '예정' : STAGE_SHORT[s.status]);
     const sm = shipSummary(s);
     const call = s.driverPhone ? `<a class="callbtn" href="${telHref(s.driverPhone)}" aria-label="기사님 전화">${I.phone}</a>` : '';
+    const markDone = s.status === '배차완료' ? `<button class="pill done" data-act="mark-done" data-id="${s.id}" style="flex:none">출고완료</button>` : '';
     return `<div class="brd">
     <button class="brd-open" data-act="ship" data-id="${s.id}">
       <span class="bt">${esc(left)}</span>
@@ -261,7 +262,7 @@ function screenHome() {
     <span style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
       <span class="pill ${pillCls}">${pillTxt}</span>
       ${s.status === '출고완료' ? `<span class="pill ${s.docDone ? 'done' : 'low'}" style="font-size:11px">${s.docDone ? '명세서 발행' : '명세서 미발행'}</span>` : ''}
-    </span>${call}</div>`;
+    </span>${markDone}${call}</div>`;
   };
 
   const pendingQuotes = S.getQuotes().filter((q) => q.status === '견적대기').sort((a, b) => daysSince(b.date) - daysSince(a.date));
@@ -277,7 +278,7 @@ function screenHome() {
   const done = ships.filter((s) => s.status === '출고완료' && s.date === today).sort((a, b) => (b.time || '').localeCompare(a.time || ''));
   const htab = state.homeTab || 'need';
   const tabList = htab === 'need' ? needDispatch : htab === 'ready' ? ready : done;
-  const htabs = [['need', '배차 요청', needDispatch.length], ['ready', '출고 예정', ready.length], ['done', '오늘 출고', done.length]];
+  const htabs = [['need', '배차 요청', needDispatch.length], ['ready', '출고 예정', ready.length], ['done', '출고 완료', done.length]];
   const emptyMsg = { need: '배차 요청할 게 없어요.', ready: '진행 중인 출고가 없어요.', done: '오늘 출고 완료가 없어요.' }[htab];
 
   return `
@@ -1726,6 +1727,11 @@ app.addEventListener('click', (e) => {
   else if (act === 'print-ship') { state.printHide = false; openSheet(sheetPrint(t.dataset.id)); }
   else if (act === 'print-hide') { state.printHide = !state.printHide; openSheet(sheetPrint(t.dataset.id)); }
   else if (act === 'print-now') { window.print(); }
+  else if (act === 'mark-done') {
+    const sh = S.getShipments().find((s) => s.id === t.dataset.id);
+    if (!confirm(`${sh && sh.client ? sh.client + ' — ' : ''}출고 완료됐나요?\n(담당자 확인 · 재고에서 차감됩니다)`)) return;
+    S.updateShipment(t.dataset.id, { status: '출고완료' }); render();
+  }
   else if (act === 'toggle-doc') {
     const sh = S.getShipments().find((s) => s.id === t.dataset.id);
     S.updateShipment(t.dataset.id, { docDone: !sh.docDone });
