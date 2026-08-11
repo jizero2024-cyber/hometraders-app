@@ -314,6 +314,29 @@ a.tel{color:var(--ink);font-weight:800;text-decoration:none;background:var(--sur
 .holdseg{display:flex;flex-wrap:wrap;gap:8px;}
 .holdseg button{padding:9px 13px;border-radius:10px;background:var(--surface-2);color:var(--ink);border:0;font-size:14px;font-weight:600;}
 .holdseg button:active{background:var(--surface-3);}
+.pfill-blk{margin-bottom:16px;}
+.pfill-hd{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:6px 2px 8px;border-bottom:1px solid var(--surface-2);margin-bottom:4px;}
+.pfill-hd b{font-size:15px;font-weight:700;}
+.pfill-hd span{font-size:12px;color:var(--muted);white-space:nowrap;}
+.pfill-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 2px;}
+.pfill-nm{font-size:14.5px;font-weight:600;min-width:0;}
+.pfill-nm .q2{color:var(--muted);font-weight:500;font-size:13px;margin-left:6px;}
+.pfill-in{width:118px;flex:none;padding:11px 12px;border-radius:10px;background:#fbeceb;border:1px solid #e0a19b;color:var(--ink);font-size:15px;font-weight:700;text-align:right;}
+.pfill-in:focus{background:var(--surface);outline:2px solid var(--ink);border-color:var(--ink);}
+@media (prefers-color-scheme:dark){.pfill-in{background:#3a2020;border-color:#7a3b34;}}
+/* 출고 상세 품목 라인 */
+.ilines{display:flex;flex-direction:column;}
+.iline{display:flex;justify-content:space-between;gap:14px;padding:12px 0;border-bottom:1px solid var(--surface-2);}
+.iline:last-child{border-bottom:0;}
+.il-l{min-width:0;}
+.il-nm{font-size:15.5px;font-weight:700;color:var(--ink);line-height:1.3;}
+.il-sub{margin-top:5px;display:flex;align-items:center;flex-wrap:wrap;gap:6px;font-size:12px;color:var(--muted);}
+.il-r{text-align:right;flex:none;}
+.il-qty{font-size:15px;font-weight:800;color:var(--ink);white-space:nowrap;}
+.il-qty .il-pcs{font-size:12px;font-weight:600;color:var(--muted);}
+.il-price{font-size:13px;color:var(--muted);margin-top:3px;white-space:nowrap;}
+.il-price.nop{color:#c0392b;font-weight:700;}
+.il-amt{font-size:14px;font-weight:800;color:var(--ink);margin-top:3px;white-space:nowrap;}
 @media (prefers-color-scheme:dark){.alertbar{background:#3a2020;color:#f0a89e;}.alertbar .go{color:#f0a89e;}}
 .sheet h2{font-size:19px;font-weight:700;margin:0 0 16px;display:flex;align-items:center;gap:8px;}
 .sheet h2 svg{width:18px;height:18px;}

@@ -886,7 +886,8 @@ function priceBody() {
       <button data-act="price-need" data-v="0" class="${!onlyNeed ? 'on' : ''}">전체<b>${allItems.length}</b></button>
       <button data-act="price-need" data-v="1" class="${onlyNeed ? 'on' : ''}">단가 확인 필요<b>${need.length}</b></button>
     </div>
-    ${need.length ? `<button class="btn" data-act="price-check-copy" style="margin-bottom:12px">대표님께 단가 확인 요청 (${need.length}) · 복사</button>` : ''}
+    ${need.length ? `<button class="btn" data-act="price-fill" style="margin-bottom:8px">출고 건별 단가 채우기</button>
+    <button class="btn ghost" data-act="price-check-copy" style="margin-bottom:12px">대표님께 단가 확인 요청 · 복사</button>` : ''}
     ${cats.length ? cats.map((c) => `<div class="sec-title">${esc(c)} ${byCat[c].length}</div><div class="rows">${byCat[c].map(priceRow).join('')}</div>`).join('')
       : `<div class="empty"><div class="ico">${I.tag}</div>단가 확인 필요한 품목이 없어요</div>`}
     <p class="hint" style="margin-top:16px">품목을 누르면 매입처·단가를 수정할 수 있어요. (단가 변경 이력·업데이트 시점·엑셀 추출은 다음 단계에 추가)</p>`;
@@ -904,6 +905,30 @@ function sheetPriceCheck() {
   <p class="hint">대표님께 보낼 문구예요. 수정 후 복사해서 카톡으로 보내세요.</p>
   <div class="field"><textarea id="brief-text" rows="10">${buildPriceCheck()}</textarea></div>
   <button class="btn" type="button" data-act="briefing-copy">복사하기</button>
+  <button class="btn danger" type="button" data-act="close">닫기</button>`;
+}
+// 출고 건별 단가 채우기 — 단가 빠진 라인만 모아 빨간 칸에 입력
+function sheetPriceFill() {
+  const ships = S.getShipments()
+    .filter((s) => S.shipLines(s).some((l) => !(Number(l.unitPrice) > 0)))
+    .sort((a, b) => (b.date + b.id).localeCompare(a.date + a.id));
+  if (!ships.length) return `<div class="grab"></div><h2>${I.tag} 단가 채우기</h2>
+    <div class="empty"><div class="ico">${I.check}</div>단가 빠진 출고 건이 없어요 👍</div>
+    <button class="btn danger" type="button" data-act="close">닫기</button>`;
+  const blocks = ships.map((s) => {
+    const missing = S.shipLines(s).map((l, i) => ({ l, i })).filter((x) => !(Number(x.l.unitPrice) > 0));
+    return `<div class="pfill-blk">
+      <div class="pfill-hd"><b>${esc(s.client || '거래처 미지정')}</b><span>${esc(s.date)} · ${esc(whShort(s.warehouse))}</span></div>
+      ${missing.map((x) => `<div class="pfill-row">
+        <span class="pfill-nm">${esc(x.l.name || '(미지정)')}<span class="q2">${x.l.qty}${esc(x.l.unit || '')}</span></span>
+        <input class="pfill-in" data-sid="${s.id}" data-li="${x.i}" type="number" inputmode="numeric" placeholder="단가">
+      </div>`).join('')}
+    </div>`;
+  }).join('');
+  return `<div class="grab"></div><h2>${I.tag} 단가 채우기 (${ships.length}건)</h2>
+  <p class="hint">단가 빠진 품목만 모았어요. 빨간 칸에 구매단가를 넣고 저장하세요. (품목 단가도 같이 채워져요)</p>
+  ${blocks}
+  <button class="btn" type="button" data-act="pfill-save">입력한 단가 저장</button>
   <button class="btn danger" type="button" data-act="close">닫기</button>`;
 }
 
@@ -1399,15 +1424,24 @@ function sheetDoc(sh) {
     <h3>${esc(sh.client || '거래처 미지정')}</h3>
     <div class="docsub" style="margin-bottom:12px">출고일 ${esc(sh.date)}${isCourier ? ' · 택배' : ''}</div>
     ${(state.docEditLines && slId === sh.id) ? shipLinesEditor(sh) : `
-    <table>
-      <tr><th style="width:40%">품목</th><th class="n" style="width:19%">수량</th><th class="n" style="width:20%">단가</th><th class="n" style="width:21%">금액</th></tr>
-      ${S.shipLines(sh).map((l) => { const amt = (Number(l.qty) || 0) * (Number(l.unitPrice) || 0); const lwh = l.warehouse || sh.warehouse; return `<tr>
-        <td><div style="font-weight:600">${esc(l.name || '(미지정)')}</div><div style="margin-top:3px">${whTag(lwh)}${l.spec ? ` <span style="color:var(--muted);font-size:12px">${esc(l.spec)}</span>` : ''}</div></td>
-        <td class="n">${l.qty} ${esc(l.unit)}${(() => { const it = S.getItems().find((x) => x.name === l.name && x.warehouse === (l.warehouse || sh.warehouse)); return (it && Number(it.perBox) > 0 && (l.unit === '박스' || l.unit === 'plt' || l.unit === '파렛트')) ? `<br><span style="color:var(--muted);font-size:11px">${(Number(l.qty) * Number(it.perBox)).toLocaleString()}개</span>` : ''; })()}</td>
-        <td class="n">${Number(l.unitPrice) > 0 ? Number(l.unitPrice).toLocaleString() : '-'}</td>
-        <td class="n">${amt > 0 ? amt.toLocaleString() : '-'}</td>
-      </tr>`; }).join('')}
-    </table>
+    <div class="ilines">
+      ${S.shipLines(sh).map((l) => {
+        const price = Number(l.unitPrice) || 0;
+        const amt = (Number(l.qty) || 0) * price;
+        const lwh = l.warehouse || sh.warehouse;
+        const it = S.getItems().find((x) => x.name === l.name && x.warehouse === lwh);
+        const pcs = (it && Number(it.perBox) > 0 && (l.unit === '박스' || l.unit === 'plt' || l.unit === '파렛트')) ? ` <span class="il-pcs">${(Number(l.qty) * Number(it.perBox)).toLocaleString()}개</span>` : '';
+        return `<div class="iline">
+          <div class="il-l"><div class="il-nm">${esc(l.name || '(미지정)')}</div>
+            <div class="il-sub">${whTag(lwh)}${l.spec ? `<span>${esc(l.spec)}</span>` : ''}</div></div>
+          <div class="il-r">
+            <div class="il-qty">${l.qty}${esc(l.unit || '')}${pcs}</div>
+            <div class="il-price ${price > 0 ? '' : 'nop'}">${price > 0 ? price.toLocaleString() + '원' : '단가 미정'}</div>
+            ${amt > 0 ? `<div class="il-amt">${amt.toLocaleString()}원</div>` : ''}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
     <button class="btn ghost" type="button" data-act="doc-edit-lines" data-id="${sh.id}" style="margin-top:10px;font-size:13px;padding:9px">수량 · 품목 · 단가 수정</button>`}
     ${hasAddr ? `<div class="docblock">
       <div class="kv"><span>상차지</span><b>${esc(sh.loadPlace || sh.warehouse || '-')}</b></div>
@@ -1914,6 +1948,30 @@ app.addEventListener('click', (e) => {
   else if (act === 'checklist') { openSheet(sheetCheckList()); }
   else if (act === 'price-need') { state.priceNeed = t.dataset.v === '1'; render(); }
   else if (act === 'price-check-copy') { openSheet(sheetPriceCheck()); }
+  else if (act === 'price-fill') { openSheet(sheetPriceFill()); }
+  else if (act === 'pfill-save') {
+    const bySid = {};
+    document.querySelectorAll('.pfill-in').forEach((inp) => {
+      const v = Number(inp.value);
+      if (!(v > 0)) return;
+      (bySid[inp.dataset.sid] = bySid[inp.dataset.sid] || []).push({ li: Number(inp.dataset.li), price: v });
+    });
+    let n = 0;
+    Object.keys(bySid).forEach((sid) => {
+      const sh = S.getShipments().find((s) => s.id === sid); if (!sh) return;
+      const lines = S.shipLines(sh).map((l) => ({ ...l }));
+      bySid[sid].forEach(({ li, price }) => {
+        if (!lines[li]) return;
+        lines[li].unitPrice = price; n++;
+        const it = S.getItems().find((x) => x.name === lines[li].name && x.warehouse === (lines[li].warehouse || sh.warehouse));
+        if (it && !(Number(it.unitPrice) > 0)) S.updateItem(it.id, { unitPrice: price });
+      });
+      S.updateShipment(sid, { lines });
+    });
+    if (!n) return alert('입력한 단가가 없어요.');
+    alert(`${n}개 품목 단가를 저장했어요.`);
+    openSheet(sheetPriceFill());
+  }
   else if (act === 'color-ship') {
     const it = S.findItem(t.dataset.id);
     shipPrefill = { warehouse: it.warehouse, itemId: it.id, qty: '', unit: it.unit, client: '', status: '출고완료', note: '', matched: it.name };
