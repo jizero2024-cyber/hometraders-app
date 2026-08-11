@@ -584,7 +584,8 @@ function screenWarehouses() {
         </button>`;
       }).join('')}
     </div>
-    <button class="btn ghost" data-act="add-wh" style="margin-top:12px">＋ 창고 추가</button>
+    <button class="btn" data-act="add-inbound" style="margin-top:14px">＋ 입고 등록 (창고로 들어옴)</button>
+    <button class="btn ghost" data-act="add-wh" style="margin-top:8px">＋ 창고 추가</button>
   </div>`;
 }
 
@@ -728,7 +729,7 @@ function screenQuote() {
   </div>`;
 }
 
-// 명세서 메뉴 — 미발행 / 발행 탭
+// 명세서 메뉴 — 판매(미발행/발행) + 구매(매입처별)
 function screenInvoice() {
   const itab = state.invoiceTab || 'pending';
   const ships = S.getShipments().filter((s) => s.status === '출고완료');
@@ -737,7 +738,9 @@ function screenInvoice() {
   const tabs = `<div class="homtabs">
     <button data-act="invoicetab" data-t="pending" class="${itab === 'pending' ? 'on' : ''}">미발행${pending.length ? `<b>${pending.length}</b>` : ''}</button>
     <button data-act="invoicetab" data-t="issued" class="${itab === 'issued' ? 'on' : ''}">발행 완료${issued.length ? `<b>${issued.length}</b>` : ''}</button>
+    <button data-act="invoicetab" data-t="buy" class="${itab === 'buy' ? 'on' : ''}">구매</button>
   </div>`;
+  if (itab === 'buy') return `<div class="screen">${tabs}${buyBody()}</div>`;
   const row = (s) => `<div class="ship">
     <button class="ship-open" data-act="ship" data-id="${s.id}"><div class="body"><b>${esc(s.client || '거래처 미지정')}</b>
       <div class="meta">${esc(shipSummary(s).itemLabel)} ${esc(shipSummary(s).qtyLabel)} · ${esc(s.date)}</div></div></button>
@@ -750,6 +753,47 @@ function screenInvoice() {
     ${list.length ? `<div class="rows">${list.map(row).join('')}</div>`
       : `<div class="empty"><div class="ico">${I.invoice}</div>${itab === 'pending' ? '미발행 명세서가 없어요' : '발행 완료된 명세서가 없어요'}</div>`}
   </div>`;
+}
+// 출고 품목을 매입처별로 집계 → {매입처: [{name, unit, qty}]}
+function buyGroups() {
+  const g = {};
+  S.getShipments().forEach((s) => {
+    S.shipLines(s).forEach((l) => {
+      const q = Number(l.qty) || 0; if (!q) return;
+      const it = S.getItems().find((x) => x.name === l.name && x.warehouse === (l.warehouse || s.warehouse));
+      const sup = (it && it.supplier) || '(매입처 미정)';
+      const key = (l.name || '') + '|' + (l.unit || '');
+      (g[sup] = g[sup] || {})[key] = { name: l.name, unit: l.unit || '', qty: ((g[sup] && g[sup][key]) ? g[sup][key].qty : 0) + q };
+    });
+  });
+  return g;
+}
+function buyBody() {
+  const g = buyGroups();
+  const sups = Object.keys(g).sort();
+  if (!sups.length) return `<div class="empty"><div class="ico">${I.invoice}</div>출고된 품목이 없어요</div>`;
+  return `<p class="hint">출고 품목을 <b>매입처별</b>로 모았어요. 매입처에 보낼 구매명세서를 복사하세요. (구매단가 칸은 다음 단계)</p>
+    ${sups.map((sup) => {
+      const rows = Object.values(g[sup]).sort((a, b) => a.name.localeCompare(b.name));
+      return `<div class="psec"><span class="pttl" style="display:flex;justify-content:space-between"><span>${esc(sup)}</span><span style="color:var(--muted)">${rows.length}품목</span></span>
+        <div class="rows">${rows.map((r) => `<div class="prow"><span>${esc(r.name)}</span><span class="q">${r.qty}${esc(r.unit)}</span></div>`).join('')}</div>
+        <button class="btn ghost" type="button" data-act="buy-copy" data-sup="${esc(sup)}" style="margin-top:8px">${esc(sup)} 구매명세서 복사</button></div>`;
+    }).join('')}`;
+}
+function buildBuyStatement(sup) {
+  const g = buyGroups()[sup];
+  if (!g) return '해당 매입처 내역이 없습니다.';
+  const rows = Object.values(g).sort((a, b) => a.name.localeCompare(b.name));
+  const L = [`[구매명세서] ${esc(sup)}`, ''];
+  rows.forEach((r, i) => L.push(`${i + 1}. ${esc(r.name)} ${r.qty}${esc(r.unit)}`));
+  return L.join('\n');
+}
+function sheetBuyStatement(sup) {
+  return `<div class="grab"></div><h2>${I.invoice} 구매명세서 · ${esc(sup)}</h2>
+  <p class="hint">매입처에 보낼 문구예요. 수정 후 복사하세요.</p>
+  <div class="field"><textarea id="brief-text" rows="10">${buildBuyStatement(sup)}</textarea></div>
+  <button class="btn" type="button" data-act="briefing-copy">복사하기</button>
+  <button class="btn danger" type="button" data-act="close">닫기</button>`;
 }
 
 function quoteRow(q) {
@@ -1662,7 +1706,7 @@ const TITLES = { home: ['홈트레이더스', '재고 · 출고 관리'], quote:
 function render() {
   const [title, sub] = TITLES[state.route];
   const body = { home: screenHome, quote: screenQuote, silicone: screenSilicone, stock: screenStock, ship: screenShip, invoice: screenInvoice, settings: screenSettings }[state.route]();
-  const showFab = state.route === 'ship' || state.route === 'home';
+  const showFab = state.route === 'ship' || state.route === 'home' || state.route === 'stock';
   app.innerHTML = `
     <div class="appbar"><span class="logo">H</span><h1>${title}</h1><span class="sub">${sub}</span></div>
     ${body}
@@ -1670,6 +1714,7 @@ function render() {
       ${state.fabOpen ? `
         <button class="fab-item" data-act="briefing">${I.doc}<span>오늘 출고 공지</span></button>
         <button class="fab-item" data-act="smart">${I.bolt}<span>붙여넣기 인식</span></button>
+        <button class="fab-item" data-act="add-inbound">${I.box}<span>입고 등록</span></button>
         <button class="fab-item" data-act="new-ship">${I.plus}<span>출고 등록</span></button>` : ''}
       <button class="fab-main ${state.fabOpen ? 'open' : ''}" data-act="fab-toggle">${I.plus}</button>
     </div>` : ''}
@@ -1963,6 +2008,7 @@ app.addEventListener('click', (e) => {
   else if (act === 'checklist') { openSheet(sheetCheckList()); }
   else if (act === 'price-check-copy') { openSheet(sheetPriceCheck()); }
   else if (act === 'price-fill') { openSheet(sheetPriceFill()); }
+  else if (act === 'buy-copy') { openSheet(sheetBuyStatement(t.dataset.sup)); }
   else if (act === 'pfill-save') {
     const bySid = {};
     document.querySelectorAll('.pfill-in').forEach((inp) => {
