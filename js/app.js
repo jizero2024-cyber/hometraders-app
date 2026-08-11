@@ -273,8 +273,8 @@ function screenHome() {
   if (needCheck.length) problems.push(`<div class="psec"><span class="pttl">확인 필요 (${needCheck.length})</span>
     ${needCheck.slice(0, 5).map((s) => `<button class="prow" data-act="ship" data-id="${s.id}"><span>${esc(s.client || '-')} · ${s.name ? esc(s.note || '확인 필요') : '품목 미지정'}</span><span class="pill chk">확인</span></button>`).join('')}</div>`);
 
-  const ready = ships.filter((s) => s.status === '배차완료').sort((a, b) => ((a.date + (a.time || '~')).localeCompare(b.date + (b.time || '~'))));
-  const done = ships.filter((s) => s.status === '출고완료' && s.date === today).sort((a, b) => (a.time || '~').localeCompare(b.time || '~'));
+  const ready = ships.filter((s) => s.status === '배차완료').sort((a, b) => ((b.date + (b.time || '')).localeCompare(a.date + (a.time || ''))));
+  const done = ships.filter((s) => s.status === '출고완료' && s.date === today).sort((a, b) => (b.time || '').localeCompare(a.time || ''));
   const htab = state.homeTab || 'need';
   const tabList = htab === 'need' ? needDispatch : htab === 'ready' ? ready : done;
   const htabs = [['need', '배차 요청', needDispatch.length], ['ready', '출고 예정', ready.length], ['done', '오늘 출고', done.length]];
@@ -1241,8 +1241,44 @@ function sheetDoc(sh) {
     <button class="btn ghost" type="button" data-act="dispatch-paste" data-id="${sh.id}" style="margin-top:8px">배차 확인 붙여넣기 (회신 받으면)</button>` : ''}
   ${sh.status === '배차완료' && !isCourier ? `<button class="btn ghost" type="button" data-act="dispatch-paste" data-id="${sh.id}">배차 정보 다시 붙여넣기</button>` : ''}
   ${sh.status === '출고완료' ? `<button class="btn ${sh.docDone ? 'ghost' : ''}" type="button" data-act="toggle-doc" data-id="${sh.id}">${sh.docDone ? '명세서 발행됨 · 해제' : '명세서 발행 완료로 표시'}</button>` : ''}
+  <button class="btn ghost" type="button" data-act="print-ship" data-id="${sh.id}" style="margin-top:8px">출력 / PDF (A4 전표)</button>
   <button class="btn ghost" type="button" data-act="edit-ship" data-id="${sh.id}" style="margin-top:8px">출고 수정 (거래처 · 배차 · 상태)</button>
   <button class="btn danger" type="button" data-act="del-ship" data-id="${sh.id}">삭제</button>`;
+}
+
+// A4 출고 전표 (벽에 붙일 큰 글씨) — 거래처 숨김 옵션
+function sheetPrint(id) {
+  const sh = S.getShipments().find((s) => s.id === id);
+  if (!sh) return '';
+  const hide = !!state.printHide;
+  const lines = S.shipLines(sh);
+  const goods = lines.map((l) => {
+    const it = S.getItems().find((x) => x.name === l.name && x.warehouse === (l.warehouse || sh.warehouse));
+    const pcs = (it && Number(it.perBox) > 0 && (l.unit === '박스' || l.unit === 'plt' || l.unit === '파렛트')) ? ` (${(Number(l.qty) * Number(it.perBox)).toLocaleString()}개)` : '';
+    return `${esc(l.name)} <b>${l.qty}${esc(l.unit)}</b>${pcs}`;
+  }).join('<br>');
+  const row = (k, v) => v ? `<tr><th>${k}</th><td>${v}</td></tr>` : '';
+  const client = hide ? '홈트레이더스' : esc(sh.client || '-');
+  const unload = hide ? '' : esc(sh.unloadPlace || sh.client || '');
+  return `<div class="grab"></div><h2>${I.doc} A4 출고 전표</h2>
+  <p class="hint">벽에 붙일 큰 글씨 전표예요. 아래 <b>인쇄</b>로 프린터 출력 또는 <b>PDF 저장</b> 가능.</p>
+  <button type="button" class="tgl ${hide ? 'on' : ''}" data-act="print-hide" data-id="${id}" style="width:100%;margin-bottom:12px">거래처 숨김 (홈트레이더스로 표기)</button>
+  <div class="printarea">
+    <div class="pr-title">출 고 전 표</div>
+    <div class="pr-date">${esc(sh.date)}${sh.time ? ` &nbsp; ${esc(sh.time)}` : ''}</div>
+    <table class="pr-tbl">
+      ${row('거래처', `<big>${client}</big>`)}
+      ${row('품목', goods)}
+      ${row('상차지', `${esc(sh.loadPlace || sh.warehouse || '')}${sh.loadAddr ? `<br><span class="pr-sub">${esc(sh.loadAddr)}</span>` : ''}`)}
+      ${row('하차지', unload ? `${unload}${sh.unloadAddr ? `<br><span class="pr-sub">${esc(sh.unloadAddr)}</span>` : ''}` : (hide ? '<span class="pr-sub">— 비공개 —</span>' : ''))}
+      ${row('기사님', sh.driverName ? `${esc(sh.driverName)}${sh.driverPhone ? ` &nbsp; ${esc(sh.driverPhone)}` : ''}` : '')}
+      ${row('차량', esc(sh.vehicle || ''))}
+      ${row('운임', sh.freight ? `${Number(sh.freight).toLocaleString()}원${sh.payment ? ` · ${esc(sh.payment)}` : ''}` : '')}
+      ${row('비고', esc(sh.note || ''))}
+    </table>
+  </div>
+  <button class="btn" type="button" data-act="print-now" style="margin-top:14px">인쇄 · PDF 저장</button>
+  <button class="btn danger" type="button" data-act="close">닫기</button>`;
 }
 
 // 출고 품목 줄 편집 — 멀티라인 출고에서 줄 추가/삭제/수량변경 (예: 재고없는 품목 한 줄만 빼기)
@@ -1514,7 +1550,15 @@ app.addEventListener('click', (e) => {
   else if (act === 'partner-edit') { openSheet(sheetPartnerForm(t.dataset.w)); }
   else if (act === 'del-partner') { if (confirm('이 거래처를 삭제할까요?')) { S.deletePartner(t.dataset.w); closeSheet(); } }
   else if (act === 'copy-dispatch') { openSheet(sheetDispatchBuilder(t.dataset.id)); }
-  else if (act === 'db-toggle') { t.classList.toggle('on'); if (t.id === 'db-max') document.getElementById('db-weight')?.classList.remove('need'); }
+  else if (act === 'db-toggle') {
+    t.classList.toggle('on');
+    if (t.id === 'db-max') document.getElementById('db-weight')?.classList.remove('need');
+    if (t.id === 'db-urgent' && t.classList.contains('on')) {   // 바로 상하차 → 현재 시각 자동 입력
+      const d = new Date(); const hh = String(d.getHours()).padStart(2, '0'); const mm = String(d.getMinutes()).padStart(2, '0');
+      const el = document.getElementById('db-sched');
+      if (el) { el.value = `즉시 · 지금(${hh}:${mm}) 바로 상하차`; el.classList.remove('need'); }
+    }
+  }
   else if (act === 'db-search') {
     const target = t.dataset.t === 'from' ? 'db-from-addr' : 'db-to-addr';
     if (window.daum && window.daum.Postcode) {
@@ -1679,6 +1723,9 @@ app.addEventListener('click', (e) => {
     }
   }
   else if (act === 'del-ship') { if (confirm('이 출고를 삭제할까요? (재고가 복구됩니다)')) { S.deleteShipment(t.dataset.id); closeSheet(); } }
+  else if (act === 'print-ship') { state.printHide = false; openSheet(sheetPrint(t.dataset.id)); }
+  else if (act === 'print-hide') { state.printHide = !state.printHide; openSheet(sheetPrint(t.dataset.id)); }
+  else if (act === 'print-now') { window.print(); }
   else if (act === 'toggle-doc') {
     const sh = S.getShipments().find((s) => s.id === t.dataset.id);
     S.updateShipment(t.dataset.id, { docDone: !sh.docDone });
