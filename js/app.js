@@ -53,6 +53,37 @@ const STAGE_PILL = { 출고예정: 'plan', 배차완료: 'mid', 출고완료: 'd
 const ACCOUNT_NAMES = { admin: '김유화' };
 let myAccount = '';
 const myName = () => ACCOUNT_NAMES[myAccount] || myAccount || '담당자';
+
+// 주소 → "도 시/군" 요약. 도 접두어(충남/충청남도 등) 있으면 축약, 없으면 도시명으로 도 추정.
+const PROV = { 서울특별시: '서울', 부산광역시: '부산', 인천광역시: '인천', 대구광역시: '대구', 대전광역시: '대전', 광주광역시: '광주', 울산광역시: '울산', 세종특별자치시: '세종', 세종시: '세종', 경기도: '경기', 강원도: '강원', 강원특별자치도: '강원', 충청북도: '충북', 충청남도: '충남', 전라북도: '전북', 전북특별자치도: '전북', 전라남도: '전남', 경상북도: '경북', 경상남도: '경남', 제주특별자치도: '제주', 제주도: '제주' };
+const CITY_SIDO = {
+  수원: '경기', 성남: '경기', 고양: '경기', 용인: '경기', 부천: '경기', 안산: '경기', 안양: '경기', 남양주: '경기', 화성: '경기', 평택: '경기', 의정부: '경기', 시흥: '경기', 파주: '경기', 김포: '경기', 광명: '경기', 군포: '경기', 오산: '경기', 이천: '경기', 양주: '경기', 안성: '경기', 구리: '경기', 포천: '경기', 의왕: '경기', 하남: '경기', 여주: '경기', 동두천: '경기', 과천: '경기', 광주시: '경기',
+  춘천: '강원', 원주: '강원', 강릉: '강원', 동해: '강원', 태백: '강원', 속초: '강원', 삼척: '강원', 홍천: '강원', 횡성: '강원',
+  청주: '충북', 충주: '충북', 제천: '충북', 음성: '충북', 진천: '충북', 옥천: '충북', 영동: '충북',
+  천안: '충남', 공주: '충남', 보령: '충남', 아산: '충남', 서산: '충남', 논산: '충남', 계룡: '충남', 당진: '충남', 예산: '충남', 홍성: '충남', 청양: '충남', 부여: '충남', 서천: '충남', 금산: '충남', 태안: '충남',
+  전주: '전북', 군산: '전북', 익산: '전북', 정읍: '전북', 남원: '전북', 김제: '전북', 완주: '전북',
+  목포: '전남', 여수: '전남', 순천: '전남', 나주: '전남', 광양: '전남', 무안: '전남',
+  포항: '경북', 경주: '경북', 김천: '경북', 안동: '경북', 구미: '경북', 영주: '경북', 영천: '경북', 상주: '경북', 문경: '경북', 경산: '경북', 칠곡: '경북',
+  창원: '경남', 진주: '경남', 통영: '경남', 사천: '경남', 김해: '경남', 밀양: '경남', 거제: '경남', 양산: '경남', 함안: '경남',
+  제주: '제주', 서귀포: '제주',
+};
+const SIDO_SELF = new Set(['서울', '부산', '인천', '대구', '대전', '광주', '울산', '세종']);
+function region(addr, place) {
+  const a = (addr || '').trim();
+  if (a) {
+    const parts = a.split(/\s+/);
+    const first = parts[0] || '';
+    let prov = PROV[first] || '';
+    if (!prov && !/(시|군|구)$/.test(first)) prov = first;   // 축약 도명(충남·경기 등)
+    const rest = prov ? parts.slice(1).join(' ') : a;
+    let city = ((rest.match(/([가-힣]{2,}(?:시|군))/) || rest.match(/([가-힣]{2,}구)/)) || [''])[0];
+    if (!prov && city) prov = CITY_SIDO[city.replace(/(시|군)$/, '')] || '';  // 도 없으면 도시명으로 추정
+    if (SIDO_SELF.has(prov) && city && city === prov) city = '';              // 서울 서울 방지
+    if (city && prov && prov !== city) return `${prov} ${city}`;
+    return prov || city || first;
+  }
+  return (place || '').trim();
+}
 const DISPATCH = ['이음물류', '직접', '기타'];
 const COURIERS = ['경동택배', 'CJ대한통운', '로젠택배', '한진택배', '우체국택배', '대신택배'];
 const telHref = (p) => 'tel:' + String(p || '').replace(/[^0-9]/g, '');
@@ -260,20 +291,6 @@ function screenHome() {
     const docBtn = (s.status === '출고완료' && !s.docDone) ? `<button class="pill low" data-act="doc-done" data-id="${s.id}" style="flex:none">발행완료</button>` : '';
     const rightPill = isPlan ? `<span class="pill ${pillCls}">${pillTxt}</span>`
       : (s.status === '출고완료' && s.docDone) ? `<span class="pill done" style="font-size:11px">명세서 발행${s.docBy ? ' · ' + esc(s.docBy) : ''}</span>` : '';
-    // 주소에서 도 + 시/군(구) 뽑기 — "충청남도 천안시 서북구.." → "충남 천안시", 없으면 지점명
-    const PROV = { 서울특별시: '서울', 부산광역시: '부산', 인천광역시: '인천', 대구광역시: '대구', 대전광역시: '대전', 광주광역시: '광주', 울산광역시: '울산', 세종특별자치시: '세종', 경기도: '경기', 강원도: '강원', 강원특별자치도: '강원', 충청북도: '충북', 충청남도: '충남', 전라북도: '전북', 전북특별자치도: '전북', 전라남도: '전남', 경상북도: '경북', 경상남도: '경남', 제주특별자치도: '제주', 제주도: '제주' };
-    const region = (addr, place) => {
-      const a = (addr || '').trim();
-      if (a) {
-        const first = a.split(/\s+/)[0] || '';
-        const prov = PROV[first] || first;
-        const cm = a.match(/([가-힣]{2,}(?:시|군))/) || a.match(/([가-힣]{2,}구)/);
-        const city = cm ? cm[1] : '';
-        if (city && prov && prov !== city) return `${prov} ${city}`;
-        return city || prov;
-      }
-      return (place || '').trim();
-    };
     const fr = region(s.loadAddr, s.loadPlace), to = region(s.unloadAddr, s.unloadPlace);
     const route = (s.status === '출고완료' && (fr || to)) ? `${esc(fr || '-')} <span class="arr">→</span> ${esc(to || '-')}` : '';
     return `<div class="brd">

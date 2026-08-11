@@ -1,5 +1,5 @@
 // 오프라인 대비 캐시 — 네트워크 우선(온라인이면 항상 최신 코드), 오프라인이면 캐시.
-const CACHE = 'ht-v2';
+const CACHE = 'ht-v3';
 const ASSETS = [
   './', './index.html', './css/app.css',
   './js/app.js', './js/store-supabase.js', './js/data.js', './js/supabase-config.js', './js/partners-seed.js',
@@ -17,7 +17,7 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
   if (url.origin !== location.origin || e.request.method !== 'GET') return; // CDN(폰트)은 기본 처리
   e.respondWith(
-    fetch(e.request).then((res) => {
+    fetch(e.request, { cache: 'no-store' }).then((res) => {
       const copy = res.clone();
       caches.open(CACHE).then((c) => c.put(e.request, copy)).catch(() => {});
       return res;
