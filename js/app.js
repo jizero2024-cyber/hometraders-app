@@ -1288,7 +1288,11 @@ function chatStockAnswer(txt) {
     const flag = S.stockStatus(it) === 'out' ? ' (품절)' : S.stockStatus(it) === 'low' ? ' (부족)' : '';
     return `${whShort(it.warehouse)}: **${label}**${flag}`;
   });
-  return { role: 'bot', text: `${wh ? whShort(wh) + ' 창고 ' : ''}**${topName}** 재고\n${lines.join('\n')}` };
+  // 재고 답 + 그대로 출고 등록까지 연결 (재고문의 → 출고). 재고 있는 창고를 우선 프리필.
+  const primary = targets.find((it) => S.currentStock(it) > 0) || targets[0];
+  return { role: 'bot', kind: 'ship', actionLabel: `${topName} 출고 등록`,
+    payload: { warehouse: primary.warehouse, itemId: primary.id, unit: primary.unit || '', status: '출고예정' },
+    text: `${wh ? whShort(wh) + ' 창고 ' : ''}**${topName}** 재고\n${lines.join('\n')}\n출고 등록할까요?` };
 }
 // 붙여넣기/채팅 문구를 규칙기반으로 해석 → 봇 답변(요약+실행버튼)
 function chatInterpret(txt) {
