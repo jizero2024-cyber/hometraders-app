@@ -1092,19 +1092,11 @@ function sheetShipForm() {
       </div></div>
     <div class="field"><label>창고</label>
       <select name="warehouse" id="f-wh">${S.warehouseNames().map((w) => `<option ${p.warehouse === w ? 'selected' : ''}>${w}</option>`).join('')}</select></div>
-    <div class="field"><label>품목 <button type="button" data-act="toggle-manual" style="float:right;font-size:12px;color:var(--muted);background:none;border:0;font-weight:600;text-decoration:underline;padding:0">직접 입력 ↔ 목록</button></label>
-      <select name="itemId" id="f-item"></select>
-      <input name="manualItem" id="f-manual" list="f-manual-list" placeholder="품목명 직접 입력" autocapitalize="none" autocomplete="off" style="display:none;width:100%;padding:12px 13px;border-radius:11px;background:var(--surface-2);color:var(--ink);border:0">
-      <datalist id="f-manual-list"></datalist>
-      <p class="hint" id="f-stock" style="margin-top:8px"></p></div>
-    ${(shipPrefill && !shipPrefill.matched && shipPrefill.guess) ? `<div class="field"><label>별칭 학습 <span style="color:var(--faint);font-weight:400">이 문구에서 위 품목을 부른 말 → 저장하면 다음부터 자동인식</span></label><input name="learnAlias" value="${esc(shipPrefill.guess)}" placeholder="예: 다루끼" autocapitalize="none"></div>` : ''}
-    <div class="field"><div class="row2">
-      <div><label>수량</label><input name="qty" id="f-qty" type="number" min="1" inputmode="numeric" placeholder="0" value="${p.qty ?? ''}"></div>
-      <div><label>단위 <span style="color:var(--faint);font-weight:400">직접 입력</span></label><input name="unit" id="f-unit" list="f-unit-list" autocomplete="off" placeholder="박스" style="width:100%;padding:12px 13px;border-radius:11px;background:var(--surface-2);color:var(--ink);border:0"><datalist id="f-unit-list">${UNITS.map((u) => `<option value="${esc(u)}"></option>`).join('')}</datalist></div>
-    </div></div>
-    <div id="sf-extra"></div>
-    <button class="btn ghost" type="button" data-act="sf-add" style="margin:-2px 0 14px;padding:11px;font-size:14px">+ 품목 추가</button>
-    <datalist id="sf-items"></datalist>
+    <div class="field"><label>품목 <span style="color:var(--faint);font-weight:400">이름 입력하면 자동완성 · 여러 개 추가 가능</span></label>
+      <div id="sf-extra"></div>
+      <button class="btn ghost" type="button" data-act="sf-add" style="margin-top:2px;padding:12px;font-size:14px">＋ 품목 추가</button>
+      <datalist id="sf-items"></datalist>
+      <datalist id="f-unit-list">${UNITS.map((u) => `<option value="${esc(u)}"></option>`).join('')}</datalist></div>
     <div class="field"><label>거래처 (하차지)</label>
       <input name="client" list="ship-partners" id="sf-client" placeholder="거래처 검색·선택 또는 직접 입력" value="${esc(p.client || '')}" autocomplete="off">
       <datalist id="ship-partners">${S.getPartners().map((pt) => `<option value="${esc(pt.name)}"></option>`).join('')}</datalist></div>
@@ -1154,30 +1146,10 @@ function sheetShipForm() {
   </form>`;
 }
 
+// 출고 폼 품목: 창고 바뀌면 자동완성 목록 갱신 + 통일 리스트 다시 그림
 function fillItemSelect() {
-  const wh = document.getElementById('f-wh').value;
-  const sel = document.getElementById('f-item');
-  const man = document.getElementById('f-manual');
-  const items = S.getItems().filter((it) => it.warehouse === wh);
-  fillSfItems(wh); readSfExtra(); renderSfExtra();
-  const manualMode = wh === '매입창고' || items.length === 0;   // 매입창고·품목없음 → 직접 입력
-  if (man) man.style.display = manualMode ? 'block' : 'none';
-  sel.style.display = manualMode ? 'none' : 'block';
-  if (manualMode) {
-    const dl = document.getElementById('f-manual-list');
-    if (dl) dl.innerHTML = [...new Set(S.getItems().map((it) => it.name))].map((n) => `<option value="${esc(n)}"></option>`).join('');
-    const unitSel = document.getElementById('f-unit');
-    if (unitSel && !unitSel.value) unitSel.value = '박스';
-    const hint = document.getElementById('f-stock');
-    if (hint) hint.innerHTML = '<span style="color:var(--muted)">품목명을 직접 입력하세요 (재고 미차감)</span>';
-    return;
-  }
-  sel.innerHTML = items.map((it) => `<option value="${it.id}">${esc(it.name)} (${esc(it.category)})</option>`).join('')
-    || '<option value="">품목 없음</option>';
-  if (shipPrefill && shipPrefill.itemId && items.some((it) => it.id === shipPrefill.itemId)) {
-    sel.value = shipPrefill.itemId;
-  }
-  updateStockHint();
+  const whEl = document.getElementById('f-wh'); if (!whEl) return;
+  fillSfItems(whEl.value); readSfExtra(); renderSfExtra();
 }
 // 추가 품목 줄 (품명 datalist·수량·단위 직접입력)
 function fillSfItems(wh) {
@@ -1193,9 +1165,17 @@ function readSfExtra() {
     sfExtra[i][el.dataset.sf] = el.value;
   });
 }
+// 출고 폼 품목 리스트 초기화: 스마트 프리필 있으면 첫 줄 채우고, 없으면 빈 줄 1개
+function initShipLines() {
+  const p = shipPrefill || {};
+  const it = p.itemId ? S.findItem(p.itemId) : null;
+  const name = it ? it.name : (p.matched || p.guess || '');
+  sfExtra = [{ name, qty: p.qty || '', unit: p.unit || (it && it.unit) || '' }];
+}
 function renderSfExtra() {
   const box = document.getElementById('sf-extra');
   if (!box) return;
+  if (!sfExtra.length) sfExtra = [{ name: '', qty: '', unit: '' }];
   const inp = 'padding:11px 10px;border-radius:10px;background:var(--surface-2);color:var(--ink);border:0;font-size:15px;min-width:0';
   box.innerHTML = sfExtra.map((l, i) => `<div style="display:flex;gap:6px;margin-bottom:8px">
     <input data-sf="name" data-i="${i}" list="sf-items" value="${esc(l.name || '')}" placeholder="품목명" autocapitalize="none" autocomplete="off" style="flex:1;${inp}">
@@ -1377,23 +1357,6 @@ function sheetSmartShip(d) {
   <button class="btn ghost" type="button" data-act="smart" style="margin-top:8px">← 다시 붙여넣기</button>
   <button class="btn danger" type="button" data-act="close">취소</button>`;
 }
-function updateStockHint() {
-  const id = document.getElementById('f-item').value;
-  const it = S.findItem(id);
-  const hint = document.getElementById('f-stock');
-  const unitSel = document.getElementById('f-unit');
-  if (it) {
-    const sp = S.stockParts(it);
-    hint.innerHTML = `현재고 <b style="color:var(--ink)">${sp.whole}${esc(it.unit)}${sp.loose ? ` ${sp.loose}개` : ''}</b>${it.perBox ? ` · ${it.perBox}개입` : ''}`;
-    const opts = [it.unit];
-    if (Number(it.perBox) > 0 && it.unit !== '낱개') opts.push('낱개');
-    const dl = document.getElementById('f-unit-list');
-    if (dl) dl.innerHTML = [...new Set([...opts, ...UNITS])].map((u) => `<option value="${esc(u)}"></option>`).join('');
-    const prev = (shipPrefill && shipPrefill.unit) || unitSel.value;
-    unitSel.value = (prev && opts.concat(UNITS).includes(prev)) ? prev : it.unit;
-  } else { hint.textContent = ''; }
-}
-
 function sheetItemForm(existing) {
   const whs = S.warehouseNames();
   const it = existing || { warehouse: state.stockWH || whs[0], category: '실리콘', name: '', unit: '박스', initial: 0, note: '' };
@@ -1852,7 +1815,7 @@ app.addEventListener('click', (e) => {
     if (m.kind === 'quote') { quotePrefill = m.payload; state.route = 'quote'; openSheet(sheetQuoteForm(null)); }
     else if (m.kind === 'dispatch') { openSheet(sheetSmartDispatch(m.payload)); }
     else if (m.kind === 'multiship') { state.route = 'ship'; openSheet(sheetSmartShip(m.payload)); }
-    else if (m.kind === 'ship') { shipPrefill = m.payload; sfExtra = []; state.route = 'ship'; openSheet(sheetShipForm()); }
+    else if (m.kind === 'ship') { shipPrefill = m.payload; initShipLines(); state.route = 'ship'; openSheet(sheetShipForm()); }
   }
   else if (act === 'briefing') { openSheet(sheetBriefing()); }
   else if (act === 'briefing-copy') {
@@ -1878,7 +1841,7 @@ app.addEventListener('click', (e) => {
     else {
       const multi = parseMultiLines(txt);
       if (multi.lines.length >= 2) { state.route = 'ship'; openSheet(sheetSmartShip(multi)); }
-      else { shipPrefill = parseQuick(txt); sfExtra = []; state.route = 'ship'; openSheet(sheetShipForm()); }
+      else { shipPrefill = parseQuick(txt); initShipLines(); state.route = 'ship'; openSheet(sheetShipForm()); }
     }
   }
   else if (act === 'ss-save') {
@@ -2055,19 +2018,7 @@ app.addEventListener('click', (e) => {
     state.calM = m; state.calY = y; render();
   }
   else if (act === 'fab-toggle') { state.fabOpen = !state.fabOpen; render(); }
-  else if (act === 'new-ship') { shipPrefill = null; sfExtra = []; openSheet(sheetShipForm()); }
-  else if (act === 'toggle-manual') {
-    const man = document.getElementById('f-manual'); const sel = document.getElementById('f-item');
-    if (!man || !sel) return;
-    const showMan = man.style.display === 'none';
-    man.style.display = showMan ? 'block' : 'none'; sel.style.display = showMan ? 'none' : 'block';
-    if (showMan) {
-      const dl = document.getElementById('f-manual-list');
-      if (dl) dl.innerHTML = [...new Set(S.getItems().map((it) => it.name))].map((n) => `<option value="${esc(n)}"></option>`).join('');
-      const u = document.getElementById('f-unit'); if (u && !u.value) u.value = '박스';
-      const hint = document.getElementById('f-stock'); if (hint) hint.innerHTML = '<span style="color:var(--muted)">품목명 직접 입력 (재고 미차감)</span>';
-    } else { updateStockHint(); }
-  }
+  else if (act === 'new-ship') { shipPrefill = null; initShipLines(); openSheet(sheetShipForm()); }
   else if (act === 'sf-add') { readSfExtra(); sfExtra.push({ name: '', qty: '', unit: '' }); renderSfExtra(); }
   else if (act === 'sf-del') { readSfExtra(); sfExtra.splice(Number(t.dataset.i), 1); renderSfExtra(); }
   else if (act === 'quick') { shipPrefill = null; openSheet(sheetQuick()); }
@@ -2108,7 +2059,7 @@ app.addEventListener('click', (e) => {
   else if (act === 'color-ship') {
     const it = S.findItem(t.dataset.id);
     shipPrefill = { warehouse: it.warehouse, itemId: it.id, qty: '', unit: it.unit, client: '', status: '출고완료', note: '', matched: it.name };
-    sfExtra = []; state.route = 'ship'; openSheet(sheetShipForm());
+    initShipLines(); state.route = 'ship'; openSheet(sheetShipForm());
   }
   else if (act === 'stock-edit') {
     const it = S.findItem(t.dataset.id);
@@ -2126,7 +2077,7 @@ app.addEventListener('click', (e) => {
     const txt = document.getElementById('q-text').value;
     if (!txt.trim()) return alert('대표님 문구를 붙여넣으세요.');
     shipPrefill = parseQuick(txt);
-    sfExtra = []; state.route = 'ship';
+    initShipLines(); state.route = 'ship';
     openSheet(sheetShipForm());
   }
   else if (act === 'add-item') { openSheet(sheetItemForm(null)); }
@@ -2227,7 +2178,6 @@ app.addEventListener('input', (e) => {
 
 app.addEventListener('change', (e) => {
   if (e.target.id === 'f-wh') fillItemSelect();
-  if (e.target.id === 'f-item') updateStockHint();
   if (e.target.id === 'silout-color') { state.silOutColor = e.target.value; render(); }
   if (e.target.id === 'silout-client') { state.silOutClient = e.target.value; render(); }
   if (e.target.id === 'sf-client') { const p = S.findPartner(e.target.value.trim()); const a = document.getElementById('sf-unaddr'); if (p && p.address && a && !a.value.trim()) a.value = p.address; }
@@ -2263,10 +2213,6 @@ app.addEventListener('submit', (e) => {
   }
   if (form.id === 'ship-form') {
     const wh = document.getElementById('f-wh').value;
-    const manEl = document.getElementById('f-manual');
-    const manualMode = manEl && manEl.style.display !== 'none';
-    const qty0 = Number(form.qty.value);
-    const unit0 = document.getElementById('f-unit').value.trim() || '박스';
     const status = form.querySelector('#f-status .on').dataset.v;
     const common = {
       date: form.date.value, time: form.time.value, client: form.client.value.trim(), status,
@@ -2277,16 +2223,8 @@ app.addEventListener('submit', (e) => {
       courier: form.courier.value.trim(), trackingNo: form.trackingNo.value.trim(), courierFee: form.courierFee.value,
       recvName: form.recvName.value.trim(), recvPhone: form.recvPhone.value.trim(), recvAddr: form.recvAddr.value.trim(),
       unloadPlace: form.client.value.trim(), unloadAddr: (form.unloadAddr ? form.unloadAddr.value.trim() : '') };
-    // 첫 품목
+    // 품목 = 통일된 한 리스트(sfExtra)
     const lines = []; const stockRefs = [];
-    if (manualMode) {
-      const name = manEl.value.trim();
-      if (name && qty0 > 0) lines.push({ name, category: '', spec: '', unit: unit0, qty: qty0, unitPrice: 0 });
-    } else {
-      const it = S.findItem(document.getElementById('f-item').value);
-      if (it && qty0 > 0) { lines.push({ name: it.name, category: it.category, spec: '', unit: unit0, qty: qty0, unitPrice: it.unitPrice || 0 }); stockRefs.push({ it, qty: qty0, unit: unit0 }); }
-    }
-    // 추가 품목
     readSfExtra();
     sfExtra.forEach((l) => {
       const name = (l.name || '').trim(); const q = Number(l.qty);
