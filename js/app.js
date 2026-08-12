@@ -926,27 +926,69 @@ function rowShip(s) {
 // 단가표는 아직 제작 중이라 마스터 전체의 빈 단가는 여기 안 씀.
 const needPrice = (it) => !(Number(it.unitPrice) > 0);
 const priceStuckShips = () => S.getShipments().filter((s) => S.shipLines(s).some((l) => !(Number(l.unitPrice) > 0)));
-// 단가표 마스터 본문 — 품목별 최근 단가·공급처 (탭하면 단가 수정). 견적 메뉴의 '단가표' 탭에서 렌더.
+// 같은 품목명은 하나로 묶어 '마스터'로 봄 (창고 무관). 반환: [{name, category, unit, list, prices, suppliers, whs, perBox}]
+function itemMasters() {
+  const byName = {};
+  S.getItems().forEach((it) => { (byName[it.name || '(미지정)'] = byName[it.name || '(미지정)'] || []).push(it); });
+  return Object.keys(byName).map((name) => {
+    const list = byName[name];
+    return {
+      name, list,
+      category: (list.find((i) => i.category) || {}).category || '기타',
+      unit: (list.find((i) => i.unit) || {}).unit || '',
+      perBox: (list.find((i) => Number(i.perBox) > 0) || {}).perBox || 0,
+      prices: [...new Set(list.map((i) => Number(i.unitPrice) || 0).filter((v) => v > 0))],
+      anyZero: list.some((i) => !(Number(i.unitPrice) > 0)),
+      suppliers: [...new Set(list.map((i) => i.supplier).filter(Boolean))],
+      whs: [...new Set(list.map((i) => i.warehouse))],
+    };
+  });
+}
+function masterPriceLabel(m) {
+  if (!m.prices.length) return { txt: '단가 없음', nop: true };
+  if (m.prices.length === 1 && !m.anyZero) return { txt: m.prices[0].toLocaleString() + '원', nop: false };
+  if (m.prices.length === 1 && m.anyZero) return { txt: m.prices[0].toLocaleString() + '원 (일부 미입력)', nop: false };
+  return { txt: '창고별 상이', nop: false };
+}
+// 단가표 = 품목 마스터 (같은 품목명 한 줄, 단가는 품목명 단위). 견적 메뉴 '단가표' 탭.
 function priceBody() {
-  const items = S.getItems().slice();
+  const masters = itemMasters().sort((a, b) => a.name.localeCompare(b.name));
   const byCat = {};
-  items.forEach((it) => { (byCat[it.category || '기타'] = byCat[it.category || '기타'] || []).push(it); });
-  Object.values(byCat).forEach((list) => list.sort((a, b) => (a.name || '').localeCompare(b.name || '')));
+  masters.forEach((m) => { (byCat[m.category] = byCat[m.category] || []).push(m); });
   const cats = Object.keys(byCat).sort();
-  const priceRow = (it) => `<button class="ship" data-act="item" data-id="${it.id}">
-    ${swatchHTML(it.name)}
-    <div class="body"><b>${esc(it.name)}</b>
-      <div class="meta">${whTag(it.warehouse)} ${esc(it.unit || '')}${it.perBox ? ` · ${it.perBox}개입` : ''}${it.supplier ? ` · ${esc(it.supplier)}` : ''}</div></div>
-    <div class="right" style="flex-wrap:wrap;justify-content:flex-end;gap:6px">
-      <span class="q">${Number(it.unitPrice) > 0 ? Number(it.unitPrice).toLocaleString() + '원' : '단가 없음'}</span>
-      ${it.vatSeparate ? '<span class="pill low" style="font-size:11px">부가세 별도</span>' : ''}
-    </div>
-  </button>`;
-  const noPrice = items.filter((it) => !(Number(it.unitPrice) > 0)).length;
+  const row = (m) => { const pl = masterPriceLabel(m); return `<button class="ship" data-act="master" data-name="${esc(m.name)}">
+    ${swatchHTML(m.name)}
+    <div class="body"><b>${esc(m.name)}</b>
+      <div class="meta">${m.whs.map((w) => whTag(w)).join(' ')} ${esc(m.unit)}${m.perBox ? ` · ${m.perBox}개입` : ''}${m.suppliers.length ? ` · ${esc(m.suppliers.join(', '))}` : ''}</div></div>
+    <div class="right"><span class="q" ${pl.nop ? 'style="color:#c0392b;font-weight:700"' : ''}>${pl.txt}</span></div>
+  </button>`; };
+  const noPrice = masters.filter((m) => !m.prices.length).length;
   return `
-    <div class="quickbar" style="cursor:default;margin-top:4px"><span class="tx">품목 <b>${items.length}</b>${noPrice ? ` · 단가 미입력 <b>${noPrice}</b>` : ''}</span></div>
-    ${cats.map((c) => `<div class="sec-title">${esc(c)} ${byCat[c].length}</div><div class="rows">${byCat[c].map(priceRow).join('')}</div>`).join('')}
-    <p class="hint" style="margin-top:16px">품목을 누르면 매입처·단가를 수정할 수 있어요. (단가표 제작 중 — 이력·엑셀은 다음 단계)</p>`;
+    <div class="quickbar" style="cursor:default;margin-top:4px"><span class="tx">품목 마스터 <b>${masters.length}</b>종${noPrice ? ` · 단가 미입력 <b>${noPrice}</b>` : ''}</span></div>
+    ${cats.map((c) => `<div class="sec-title">${esc(c)} ${byCat[c].length}</div><div class="rows">${byCat[c].map(row).join('')}</div>`).join('')}
+    <p class="hint" style="margin-top:16px">같은 품목명은 한 줄(마스터)로 묶었어요. 누르면 판매단가·매입처·별칭을 모든 창고에 한 번에 적용합니다.</p>`;
+}
+// 품목 마스터 편집 — 같은 이름 전체에 판매단가·매입처·별칭·단위 일괄 적용
+function sheetMasterEdit(name) {
+  const list = S.getItems().filter((it) => (it.name || '(미지정)') === name);
+  if (!list.length) return '';
+  const first = list[0];
+  const prices = [...new Set(list.map((i) => Number(i.unitPrice) || 0).filter((v) => v > 0))];
+  const priceVal = prices.length === 1 ? prices[0] : '';
+  const supplier = [...new Set(list.map((i) => i.supplier).filter(Boolean))].join(', ');
+  return `<div class="grab"></div><h2>${swatchHTML(name)} ${esc(name)}</h2>
+  <p class="hint">판매단가·매입처·별칭을 <b>이 품목의 모든 창고</b>에 한 번에 적용해요.</p>
+  <form id="master-form" data-name="${esc(name)}">
+    <div class="field"><label>판매단가 (원)${prices.length > 1 ? ' <span style="color:#c0392b;font-weight:600">창고별 단가가 달라요 — 입력하면 통일됩니다</span>' : ''}</label>
+      <input name="unitPrice" type="number" inputmode="numeric" value="${priceVal}" placeholder="단가"></div>
+    <div class="field"><label>매입처</label><input name="supplier" value="${esc(supplier)}" placeholder="매입처 (비우면 미정)"></div>
+    <div class="field"><label>별칭 <span style="color:var(--faint);font-weight:400">이렇게도 불러요 (쉼표)</span></label><input name="aliases" value="${esc(first.aliases || '')}" placeholder="예: 다루끼, 각재30" autocapitalize="none"></div>
+    <div class="field"><label>단위</label><input name="unit" value="${esc(first.unit || '')}" placeholder="예: 박스"></div>
+    <div class="card" style="margin-top:4px;padding:6px 14px"><div class="pttl" style="padding:6px 0">창고별 재고</div>
+      ${list.map((it) => `<div class="kv"><span>${esc(whShort(it.warehouse))}</span><b>${Math.floor(S.currentStock(it)).toLocaleString()}${esc(it.unit || '')}</b></div>`).join('')}</div>
+    <button class="btn" type="submit">저장 (모든 창고 적용)</button>
+    <button class="btn danger" type="button" data-act="close">취소</button>
+  </form>`;
 }
 // 대표님께 보낼 단가 확인 요청 문구 — 실제 출고 건 기준
 function buildPriceCheck() {
@@ -1223,8 +1265,34 @@ function sheetQuick() {
 // 통합 스마트 붙여넣기 — 아무 문구나 넣으면 성격(출고·견적·배차) 판별 후 맞는 양식으로
 // 채팅 문구 포맷 — **굵게** / 줄바꿈
 function chatFmt(t) { return esc(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>'); }
+// 재고 물어보는 질문인지 (예: "천안창고 라떼 재고 몇개?")
+function isStockQuery(t) {
+  return /재고|몇\s*개|몇\s*박스|몇\s*장|얼마나\s*(남|있)|남았|남아\s*있/.test(t)
+    && !/출고|보내|나가|발주|주문|등록|빼\s*줘|차감|견적|배차|기사/.test(t);
+}
+// 재고 조회 답변 (창고·품목 감지 → 현재고)
+function chatStockAnswer(txt) {
+  const items = S.getItems();
+  const wh = /엔에스|앤에스|\bns\b/i.test(txt) ? 'NS로지스' : /천안/.test(txt) ? '천안창고' : null;
+  const aliasesOf = (it) => [it.name, ...String(it.aliases || '').split(/[,\n]/).map((s) => s.trim()).filter(Boolean)];
+  const matchLen = (it) => Math.max(0, ...aliasesOf(it).filter((a) => a && txt.includes(a)).map((a) => a.length));
+  const cands = items.filter((it) => matchLen(it) > 0).sort((a, b) => matchLen(b) - matchLen(a));
+  if (!cands.length) return { role: 'bot', text: '어떤 품목인지 못 찾았어요. 품목 이름을 정확히 적어주실래요? (예: 라떼, 베이지)' };
+  const topName = cands[0].name;
+  let targets = items.filter((it) => it.name === topName);
+  if (wh) targets = targets.filter((it) => it.warehouse === wh);
+  if (!targets.length) return { role: 'bot', text: `${whShort(wh)} 창고엔 ${topName} 품목이 등록돼 있지 않아요.` };
+  const lines = targets.map((it) => {
+    const p = S.stockParts(it);
+    const label = p.loose > 0 ? `${p.whole}${it.unit} +${p.loose}개` : `${p.whole}${it.unit || '개'}`;
+    const flag = S.stockStatus(it) === 'out' ? ' (품절)' : S.stockStatus(it) === 'low' ? ' (부족)' : '';
+    return `${whShort(it.warehouse)}: **${label}**${flag}`;
+  });
+  return { role: 'bot', text: `${wh ? whShort(wh) + ' 창고 ' : ''}**${topName}** 재고\n${lines.join('\n')}` };
+}
 // 붙여넣기/채팅 문구를 규칙기반으로 해석 → 봇 답변(요약+실행버튼)
 function chatInterpret(txt) {
+  if (isStockQuery(txt)) return chatStockAnswer(txt);
   const type = classifyPaste(txt);
   if (type === '견적') {
     const q = parseQuoteText(txt);
@@ -1251,7 +1319,7 @@ function sheetChat() {
   const bubbles = log.length ? log.map((m, i) => m.role === 'user'
     ? `<div class="cbub user">${chatFmt(m.text)}</div>`
     : `<div class="cbub bot">${chatFmt(m.text)}${m.actionLabel ? `<button class="cbtn" type="button" data-act="chat-go" data-i="${i}">${esc(m.actionLabel)}</button>` : ''}</div>`).join('')
-    : `<div class="cbub bot">안녕하세요! 카톡·문자 문구를 그대로 붙여넣거나 채팅하듯 적어주세요.<br>출고·견적·배차를 알아서 인식해 드려요.<br><span style="color:var(--muted);font-size:13px">예) 원익 베이지 50박스 내일 오전착</span></div>`;
+    : `<div class="cbub bot">안녕하세요! 카톡·문자 문구를 붙여넣거나 채팅하듯 적어주세요. 출고·견적·배차를 인식하고, <b>재고도 물어보면 답해드려요.</b><br><span style="color:var(--muted);font-size:13px">예) 원익 베이지 50박스 내일 오전착<br>예) 천안창고 라떼 재고 몇개?</span></div>`;
   return `<div class="grab"></div><h2>${I.bolt} 스마트 입력 · 챗봇</h2>
   <div class="chatlog" id="chat-log">${bubbles}</div>
   <div class="chatbar">
@@ -2009,6 +2077,7 @@ app.addEventListener('click', (e) => {
   else if (act === 'price-check-copy') { openSheet(sheetPriceCheck()); }
   else if (act === 'price-fill') { openSheet(sheetPriceFill()); }
   else if (act === 'buy-copy') { openSheet(sheetBuyStatement(t.dataset.sup)); }
+  else if (act === 'master') { openSheet(sheetMasterEdit(t.dataset.name)); }
   else if (act === 'pfill-save') {
     const bySid = {};
     document.querySelectorAll('.pfill-in').forEach((inp) => {
@@ -2231,6 +2300,15 @@ app.addEventListener('submit', (e) => {
     state.route = 'ship'; state.selDate = form.date.value;
     state.calY = +form.date.value.slice(0, 4); state.calM = +form.date.value.slice(5, 7);
     if (status === '출고예정' && newSh) openSheet(sheetPostSave(newSh.id)); else closeSheet();
+  }
+  else if (form.id === 'master-form') {
+    const name = form.dataset.name;
+    const up = form.unitPrice.value.trim();
+    const patch = { supplier: form.supplier.value.trim(), aliases: form.aliases.value.trim() };
+    if (up !== '') patch.unitPrice = Number(up);
+    const unit = form.unit.value.trim(); if (unit) patch.unit = unit;
+    S.getItems().filter((it) => (it.name || '(미지정)') === name).forEach((it) => S.updateItem(it.id, patch));
+    closeSheet();
   }
   else if (form.id === 'quote-form') {
     const client = form.client.value.trim();
