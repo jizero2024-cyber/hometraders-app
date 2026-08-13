@@ -1090,8 +1090,9 @@ function sheetShipForm() {
       <div class="seg" id="f-status">
         ${['출고예정', '출고완료'].map((s) => `<button type="button" data-v="${s}" class="${curSt === s ? 'on' : ''}">${s}</button>`).join('')}
       </div></div>
-    <div class="field"><label>창고</label>
-      <select name="warehouse" id="f-wh">${S.warehouseNames().map((w) => `<option ${p.warehouse === w ? 'selected' : ''}>${w}</option>`).join('')}</select></div>
+    <div class="field"><label>창고 <span style="color:var(--faint);font-weight:400">선택 또는 직접 입력 (매입창고 등)</span></label>
+      <input name="warehouse" id="f-wh" list="f-wh-list" value="${esc(p.warehouse || S.warehouseNames()[0] || '')}" placeholder="창고명" autocomplete="off" style="width:100%;padding:12px 13px;border-radius:11px;background:var(--surface-2);color:var(--ink);border:0">
+      <datalist id="f-wh-list">${S.warehouseNames().map((w) => `<option value="${esc(w)}"></option>`).join('')}</datalist></div>
     <div class="field"><label>품목 <span style="color:var(--faint);font-weight:400">이름 입력하면 자동완성 · 여러 개 추가 가능</span></label>
       <div id="sf-extra"></div>
       <button class="btn ghost" type="button" data-act="sf-add" style="margin-top:2px;padding:12px;font-size:14px">＋ 품목 추가</button>
