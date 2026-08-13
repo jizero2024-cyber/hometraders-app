@@ -2,6 +2,7 @@ import {
   CATEGORIES, UNITS, WH_ICON_KEYS, swatchFor,
 } from './data.js?v=2';
 import * as S from './store-supabase.js';
+import { ECOUNT_ITEMS } from './ecount-items.js';
 
 // 창고 아이콘 세트 (무채색)
 const WH_ICONS = {
@@ -713,8 +714,10 @@ function screenQuote() {
   const tabs = `<div class="homtabs">
     <button data-act="quotetab" data-t="quote" class="${qtab === 'quote' ? 'on' : ''}">견적</button>
     <button data-act="quotetab" data-t="price" class="${qtab === 'price' ? 'on' : ''}">단가표</button>
+    <button data-act="quotetab" data-t="ecount" class="${qtab === 'ecount' ? 'on' : ''}">이카운트 품목</button>
   </div>`;
   if (qtab === 'price') return `<div class="screen">${tabs}${priceBody()}</div>`;
+  if (qtab === 'ecount') return `<div class="screen">${tabs}${ecountBody()}</div>`;
   const all = S.getQuotes();
   const f = state.quoteFilter || '전체';
   const cnt = { 전체: all.length, 견적대기: all.filter((q) => q.status === '견적대기').length, 견적완료: all.filter((q) => q.status === '견적완료').length };
@@ -989,6 +992,21 @@ function sheetMasterEdit(name) {
     <button class="btn" type="submit">저장 (모든 창고 적용)</button>
     <button class="btn danger" type="button" data-act="close">취소</button>
   </form>`;
+}
+// 이카운트 품목 검색 결과 HTML (재렌더 없이 결과칸만 갱신 — IME 안전)
+function ecountResultsHTML(q) {
+  q = (q || '').trim();
+  let list = ECOUNT_ITEMS;
+  if (q) { const qq = q.toLowerCase(); list = list.filter(([c, n]) => c.toLowerCase().includes(qq) || n.includes(q)); }
+  const shown = list.slice(0, 200);
+  return `<div class="quickbar" style="cursor:default;margin:4px 0"><span class="tx">${q ? `검색 <b>${list.length}</b>개` : `전체 <b>${ECOUNT_ITEMS.length}</b>개`}</span></div>
+    ${shown.length ? `<div class="rows">${shown.map(([c, n]) => `<div class="ship"><div class="body"><b>${esc(n)}</b><div class="meta">코드 ${esc(c)}</div></div></div>`).join('')}</div>`
+      : `<div class="empty" style="padding:24px">검색 결과가 없어요</div>`}
+    ${list.length > 200 ? `<p class="hint" style="margin-top:12px">${list.length - 200}개 더 있어요 — 검색어를 더 입력하면 좁혀져요.</p>` : ''}`;
+}
+function ecountBody() {
+  return `<div class="field" style="margin-top:6px"><input id="ecount-search" placeholder="코드·품목명 검색 (예: 라떼 / 03000 / 구조재)" autocapitalize="off" autocomplete="off" style="width:100%;padding:12px 13px;border-radius:11px;background:var(--surface-2);color:var(--ink);border:0"></div>
+    <div id="ecount-results">${ecountResultsHTML('')}</div>`;
 }
 // 대표님께 보낼 단가 확인 요청 문구 — 실제 출고 건 기준
 function buildPriceCheck() {
@@ -2169,6 +2187,7 @@ app.addEventListener('click', (e) => {
 });
 
 app.addEventListener('input', (e) => {
+  if (e.target.id === 'ecount-search') { const box = document.getElementById('ecount-results'); if (box) box.innerHTML = ecountResultsHTML(e.target.value); return; }
   if (e.target.classList && e.target.classList.contains('need') && e.target.value.trim()) e.target.classList.remove('need');
   if (e.target.classList && (e.target.classList.contains('ql-qty') || e.target.classList.contains('ql-price'))) {
     const i = Number(e.target.dataset.i);
