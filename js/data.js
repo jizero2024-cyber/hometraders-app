@@ -22,13 +22,17 @@ export const SILICONE_COLORS = {
   '백색':         ['#FFFFFF', false],
   '돼지백색변성': ['#F7E7E1', false],
   '라떼':         ['#D8BE97', false],
+  '라떼색':       ['#D8BE97', false],
   '베이지':       ['#E4D3B0', false],
   '초코':         ['#5B3A29', true],
+  '초코색':       ['#5B3A29', true],
   '연밤색':       ['#C7A17F', false],
   '연혹색':       ['#D6D2CB', false],
+  '연흑색':       ['#D6D2CB', false],
   '진회색':       ['#6E6E6E', true],
   '네이비':       ['#2C3A57', true],
   '아이보리':     ['#FAF4E4', false],
+  '미색':         ['#FAF4E4', false],
   '징크그레이':   ['#96A0A6', false],
 };
 
