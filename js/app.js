@@ -2186,6 +2186,19 @@ app.addEventListener('click', (e) => {
 
 });
 
+// 붙여넣기 textarea 에서 Enter → 바로 실행 (Shift+Enter 는 줄바꿈, 한글 조합중 Enter 는 무시)
+app.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' || e.shiftKey || e.isComposing || e.keyCode === 229) return;
+  let sel = null;
+  if (e.target.id === 'chat-input') sel = '[data-act="chat-send"]';
+  else if (e.target.id === 'q-text') sel = '[data-act="q-parse"]';
+  if (!sel) return;
+  const btn = app.querySelector(sel);
+  if (!btn) return;
+  e.preventDefault();
+  btn.click();
+});
+
 app.addEventListener('input', (e) => {
   if (e.target.id === 'ecount-search') { const box = document.getElementById('ecount-results'); if (box) box.innerHTML = ecountResultsHTML(e.target.value); return; }
   if (e.target.classList && e.target.classList.contains('need') && e.target.value.trim()) e.target.classList.remove('need');
