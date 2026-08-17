@@ -10,18 +10,8 @@
   --nav-h:64px; --max:520px;
   --font:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",system-ui,"Noto Sans KR",sans-serif;
 }
-@media (prefers-color-scheme:dark){
-  :root{
-    --bg:#111110; --surface:#1d1d1c; --surface-2:#2a2a28; --surface-3:#343431;
-    --ink:#f1f0ee; --muted:#98958f; --faint:#6b6965;
-    --accent:#f1f0ee; --accent-ink:#141413; --accent-soft:#2e2e2c;
-    --ok-bg:#292927; --ok-ink:#8f8c87;
-    --low-bg:#3a3a37; --low-ink:#d7d5d1;
-    --out-bg:#f1f0ee; --out-ink:#141413;
-    --shadow:0 1px 2px rgba(0,0,0,.4); --shadow-lg:0 -2px 16px rgba(0,0,0,.5);
-  }
-  html{color-scheme:dark;}
-}
+/* 라이트 모드 단일 (다크모드 제거) */
+:root{color-scheme:light;}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 html,body{margin:0;padding:0;}
 body{font-family:var(--font);background:var(--bg);color:var(--ink);line-height:1.5;
@@ -34,8 +24,7 @@ input,select,textarea{font-family:inherit;font-size:16px;border:0;}
 .appbar{position:sticky;top:0;z-index:20;background:var(--surface);
   display:flex;align-items:center;gap:10px;padding:14px 18px;
   padding-top:calc(14px + env(safe-area-inset-top));box-shadow:0 2px 10px rgba(0,0,0,.03);}
-.appbar .logo{height:34px;width:auto;max-width:118px;object-fit:contain;flex:none;
-  background:#fff;border-radius:8px;padding:4px 7px;box-shadow:0 0 0 1px rgba(0,0,0,.06);}
+.appbar .logo{height:30px;width:auto;max-width:120px;object-fit:contain;flex:none;}
 .appbar h1{font-size:18px;font-weight:700;margin:0;letter-spacing:-.01em;flex:1;}
 .appbar .sub{font-size:12px;color:var(--muted);font-weight:500;}
 
@@ -117,7 +106,6 @@ input,select,textarea{font-family:inherit;font-size:16px;border:0;}
 .callrow{display:flex;align-items:center;justify-content:center;gap:8px;height:44px;border-radius:12px;
   background:#e6f4ea;color:#137333;font-size:15px;font-weight:700;text-decoration:none;}
 .callrow svg{width:19px;height:19px;}
-@media (prefers-color-scheme:dark){.callrow{background:#1f3a26;color:#7fe0a1;}}
 .rows > .brd:last-child{border-bottom:0;}
 .brd:active{background:var(--surface-2);}
 .brd .bmid b{font-size:15px;}
@@ -330,7 +318,6 @@ a.tel{color:var(--ink);font-weight:800;text-decoration:none;background:var(--sur
 .pfill-nm .q2{color:var(--muted);font-weight:500;font-size:13px;margin-left:6px;}
 .pfill-in{width:118px;flex:none;padding:11px 12px;border-radius:10px;background:#fbeceb;border:1px solid #e0a19b;color:var(--ink);font-size:15px;font-weight:700;text-align:right;}
 .pfill-in:focus{background:var(--surface);outline:2px solid var(--ink);border-color:var(--ink);}
-@media (prefers-color-scheme:dark){.pfill-in{background:#3a2020;border-color:#7a3b34;}}
 /* 출고 상세 품목 라인 */
 .ilines{display:flex;flex-direction:column;}
 .iline{display:flex;justify-content:space-between;gap:14px;padding:12px 0;border-bottom:1px solid var(--surface-2);}
@@ -344,7 +331,6 @@ a.tel{color:var(--ink);font-weight:800;text-decoration:none;background:var(--sur
 .il-price{font-size:13px;color:var(--muted);margin-top:3px;white-space:nowrap;}
 .il-price.nop{color:#c0392b;font-weight:700;}
 .il-amt{font-size:14px;font-weight:800;color:var(--ink);margin-top:3px;white-space:nowrap;}
-@media (prefers-color-scheme:dark){.alertbar{background:#3a2020;color:#f0a89e;}.alertbar .go{color:#f0a89e;}.alertbar .ab-ic .dot{background:#f0a89e;box-shadow:0 0 0 2px #3a2020;}}
 .sheet h2{font-size:19px;font-weight:700;margin:0 0 16px;display:flex;align-items:center;gap:8px;}
 .sheet h2 svg{width:18px;height:18px;}
 .field{margin-bottom:14px;}
@@ -424,7 +410,6 @@ textarea{resize:vertical;line-height:1.5;}
 .ship-open:active,.brd-open:active{opacity:.55;}
 .callbtn{flex:none;width:42px;height:42px;border-radius:50%;background:#e6f4ea;color:#137333;display:grid;place-items:center;margin-left:8px;}
 .callbtn svg{width:20px;height:20px;}
-@media (prefers-color-scheme:dark){.callbtn{background:#1f3a26;color:#7fe0a1;}}
 
 /* 홈/단가 탭 (진행중·완료 스타일 — 언더라인) */
 .homtabs{display:flex;gap:17px;border-bottom:1px solid var(--surface-2);margin:2px 2px 4px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
