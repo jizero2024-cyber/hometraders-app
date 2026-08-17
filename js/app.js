@@ -1780,7 +1780,7 @@ function render() {
   const body = { home: screenHome, quote: screenQuote, silicone: screenSilicone, stock: screenStock, ship: screenShip, invoice: screenInvoice, settings: screenSettings }[state.route]();
   const showFab = state.route === 'ship' || state.route === 'home' || state.route === 'stock';
   app.innerHTML = `
-    <div class="appbar"><span class="logo">H</span><h1>${title}</h1><span class="sub">${sub}</span></div>
+    <div class="appbar"><img class="logo" src="./icons/logo-full.png" alt="HOME TRADERS"><h1>${title}</h1><span class="sub">${sub}</span></div>
     ${body}
     ${showFab ? `<div class="fab-wrap">
       ${state.fabOpen ? `
