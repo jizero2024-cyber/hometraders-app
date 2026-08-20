@@ -469,25 +469,40 @@ function screenStock() {
 function colorStatus(total) { return total <= 0 ? 'out' : (total <= 10 ? 'low' : 'ok'); }
 
 function screenSilicone() {
-  const wh = state.silWH || null;
   const allSil = S.getItems().filter((it) => it.category === '실리콘');
-  const sil = wh ? allSil.filter((it) => it.warehouse === wh) : allSil;
-  const silWhs = [...new Set(allSil.map((it) => it.warehouse))];
-  const byName = {};
-  sil.forEach((it) => { (byName[it.name] = byName[it.name] || []).push(it); });
-  const rows = Object.keys(byName).map((name) => {
-    const list = byName[name];
-    const total = Math.floor(list.reduce((s, it) => s + Math.max(0, S.currentStock(it)), 0));
-    return { name, list, total, unit: list[0].unit, st: colorStatus(total) };
+  // 창고 → 열 그룹 (천안 / NS / 기타)
+  const whGroup = (w) => (w && w.includes('천안')) ? '천안' : (w && (w.includes('NS') || w.includes('로지스'))) ? 'NS' : '기타';
+  const mat = {}; const units = {};
+  allSil.forEach((it) => {
+    const g = whGroup(it.warehouse);
+    const q = Math.floor(Math.max(0, S.currentStock(it)));
+    (mat[it.name] = mat[it.name] || { 천안: 0, NS: 0, 기타: 0 })[g] += q;
+    units[it.name] = it.unit || '박스';
   });
+  const hasEtc = allSil.some((it) => whGroup(it.warehouse) === '기타');
+  const cols = hasEtc ? ['천안', 'NS', '기타'] : ['천안', 'NS'];
   const rank = { out: 0, low: 1, ok: 2 };
-  rows.sort((a, b) => rank[a.st] - rank[b.st] || b.total - a.total);
+  const rows = Object.keys(mat).map((name) => {
+    const m = mat[name]; const total = m['천안'] + m['NS'] + m['기타'];
+    return { name, m, total, unit: units[name], st: colorStatus(total) };
+  }).sort((a, b) => rank[a.st] - rank[b.st] || b.total - a.total);
+  const colTot = (c) => rows.reduce((s, r) => s + r.m[c], 0);
+  const grand = rows.reduce((s, r) => s + r.total, 0);
+  const matrix = `<div class="sec-title">실리콘 재고 · 색상 ${rows.length} · 창고 합산 ${grand}</div>
+    <div class="silmtx-wrap"><table class="silmtx">
+      <thead><tr><th class="cell-nm">색상</th>${cols.map((c) => `<th>${c}</th>`).join('')}<th class="cell-tot">합계</th></tr></thead>
+      <tbody>${rows.map((r) => `<tr data-act="color" data-c="${esc(r.name)}">
+        <td class="cell-nm"><span class="nmwrap">${swatchHTML(r.name)}${esc(r.name)}</span></td>
+        ${cols.map((c) => `<td class="${r.m[c] === 0 ? 'z' : ''}">${r.m[c]}</td>`).join('')}
+        <td class="cell-tot ${r.st}">${r.total}</td>
+      </tr>`).join('') || `<tr><td colspan="${cols.length + 2}" style="color:var(--muted);padding:22px">실리콘 품목이 없어요</td></tr>`}</tbody>
+      <tfoot><tr><td class="cell-nm">합계</td>${cols.map((c) => `<td>${colTot(c)}</td>`).join('')}<td class="cell-tot">${grand}</td></tr></tfoot>
+    </table></div>`;
 
   // 월별 실리콘 출고 내역 (어느 거래처에 몇 개)
   const silNames = new Set(allSil.map((it) => it.name));
   const outs = [];
   S.getShipments().forEach((s) => {
-    if (wh && s.warehouse !== wh) return;
     S.shipLines(s).forEach((l) => {
       if (silNames.has(l.name) && Number(l.qty) > 0) outs.push({ id: s.id, date: s.date || '', month: (s.date || '').slice(0, 7), client: s.client || '거래처 미지정', name: l.name, qty: Number(l.qty), unit: l.unit || '', status: s.status });
     });
@@ -518,21 +533,8 @@ function screenSilicone() {
     ${fMonths.length ? fMonths.map(monthBlock).join('') : '<div class="empty" style="padding:22px">해당 내역이 없어요</div>'}` : '';
 
   return `<div class="screen">
-    <div class="tabs" style="margin-bottom:12px">
-      <button data-act="sil-wh" data-w="" class="${!wh ? 'on' : ''}">전체</button>
-      ${silWhs.map((w) => `<button data-act="sil-wh" data-w="${esc(w)}" class="${wh === w ? 'on' : ''}">${esc(whShort(w))}</button>`).join('')}
-    </div>
-    <div class="sec-title">색상 ${rows.length} · ${wh ? esc(whShort(wh)) + ' 창고' : '창고 합산'}</div>
-    <div class="rows">
-      ${rows.map((r) => { const ns = r.list.filter((it) => (it.note || '').trim()).map((it) => esc((silWhs.length > 1 ? whShort(it.warehouse) + ' ' : '') + it.note)); return `<button class="row" data-act="color" data-c="${esc(r.name)}">
-        ${swatchHTML(r.name)}
-        <div class="nm" style="flex:0 1 auto;min-width:0"><b>${esc(r.name)}</b>
-          <div class="split">${r.list.map((it) => `<span class="wtag" style="${whStyle(it.warehouse)}">${esc(whShort(it.warehouse))} ${boxText(it)}</span>`).join('')}</div></div>
-        ${ns.length ? `<div style="flex:1;min-width:0;text-align:center;color:#e05a52;font-size:12px;font-weight:600;padding:0 8px;line-height:1.35">${ns.join(' · ')}</div>` : '<div style="flex:1"></div>'}
-        <div class="qty"><b>${r.total}</b><span>${esc(r.unit)}</span></div>
-        <span class="pill ${r.st}">${STATUS_KO[r.st]}</span>
-      </button>`; }).join('')}
-    </div>
+    ${matrix}
+    <p class="hint" style="margin-top:8px">색상 줄을 누르면 창고별 상세·비고를 볼 수 있어요</p>
     ${outList}
   </div>`;
 }

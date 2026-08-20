@@ -25,6 +25,20 @@ input,select,textarea{font-family:inherit;font-size:16px;border:0;}
   display:flex;align-items:center;gap:10px;padding:14px 18px;
   padding-top:calc(14px + env(safe-area-inset-top));box-shadow:0 2px 10px rgba(0,0,0,.03);}
 .appbar .logo{height:30px;width:auto;max-width:120px;object-fit:contain;flex:none;}
+/* 실리콘 재고 매트릭스 (색상 × 창고) */
+.silmtx-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-top:6px;border:1px solid var(--surface-3);border-radius:12px}
+.silmtx{width:100%;border-collapse:collapse;font-size:15px}
+.silmtx th,.silmtx td{padding:12px 8px;text-align:center;border-bottom:1px solid var(--surface-3);white-space:nowrap}
+.silmtx thead th{font-size:12px;color:var(--muted);font-weight:700;background:var(--surface-2)}
+.silmtx td.cell-nm,.silmtx th.cell-nm{text-align:left;padding-left:12px}
+.silmtx .nmwrap{display:inline-flex;align-items:center;gap:8px;font-weight:600}
+.silmtx td.z{color:var(--faint)}
+.silmtx .cell-tot{font-weight:800}
+.silmtx td.cell-tot.out{color:#e05a52}
+.silmtx td.cell-tot.low{color:#b26a1e}
+.silmtx tbody tr:active{background:var(--surface-2)}
+.silmtx tbody tr{cursor:pointer}
+.silmtx tfoot td{font-weight:800;background:var(--surface-2);border-bottom:0}
 .appbar h1{font-size:18px;font-weight:700;margin:0;letter-spacing:-.01em;flex:1;}
 .appbar .sub{font-size:12px;color:var(--muted);font-weight:500;}
 
