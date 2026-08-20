@@ -472,11 +472,12 @@ function screenSilicone() {
   const allSil = S.getItems().filter((it) => it.category === '실리콘');
   // 창고 → 열 그룹 (천안 / NS / 기타)
   const whGroup = (w) => (w && w.includes('천안')) ? '천안' : (w && (w.includes('NS') || w.includes('로지스'))) ? 'NS' : '기타';
-  const mat = {}; const units = {};
+  const mat = {}; const units = {}; const lists = {};
   allSil.forEach((it) => {
     const g = whGroup(it.warehouse);
     const q = Math.floor(Math.max(0, S.currentStock(it)));
     (mat[it.name] = mat[it.name] || { 천안: 0, NS: 0, 기타: 0 })[g] += q;
+    (lists[it.name] = lists[it.name] || []).push(it);
     units[it.name] = it.unit || '박스';
   });
   const hasEtc = allSil.some((it) => whGroup(it.warehouse) === '기타');
@@ -484,7 +485,9 @@ function screenSilicone() {
   const rank = { out: 0, low: 1, ok: 2 };
   const rows = Object.keys(mat).map((name) => {
     const m = mat[name]; const total = m['천안'] + m['NS'] + m['기타'];
-    return { name, m, total, unit: units[name], st: colorStatus(total) };
+    const notes = lists[name].filter((it) => (it.note || '').trim())
+      .map((it) => (lists[name].length > 1 ? whShort(it.warehouse) + ' ' : '') + it.note.trim());
+    return { name, m, total, unit: units[name], st: colorStatus(total), notes };
   }).sort((a, b) => rank[a.st] - rank[b.st] || b.total - a.total);
   const colTot = (c) => rows.reduce((s, r) => s + r.m[c], 0);
   const grand = rows.reduce((s, r) => s + r.total, 0);
@@ -492,7 +495,7 @@ function screenSilicone() {
     <div class="silmtx-wrap"><table class="silmtx">
       <thead><tr><th class="cell-nm">색상</th>${cols.map((c) => `<th>${c}</th>`).join('')}<th class="cell-tot">합계</th></tr></thead>
       <tbody>${rows.map((r) => `<tr data-act="color" data-c="${esc(r.name)}">
-        <td class="cell-nm"><span class="nmwrap">${swatchHTML(r.name)}${esc(r.name)}</span></td>
+        <td class="cell-nm"><span class="nmwrap">${swatchHTML(r.name)}${esc(r.name)}</span>${r.notes.length ? `<div class="mtx-note">${esc(r.notes.join(' · '))}</div>` : ''}</td>
         ${cols.map((c) => `<td class="${r.m[c] === 0 ? 'z' : ''}">${r.m[c]}</td>`).join('')}
         <td class="cell-tot ${r.st}">${r.total}</td>
       </tr>`).join('') || `<tr><td colspan="${cols.length + 2}" style="color:var(--muted);padding:22px">실리콘 품목이 없어요</td></tr>`}</tbody>

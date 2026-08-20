@@ -32,6 +32,7 @@ input,select,textarea{font-family:inherit;font-size:16px;border:0;}
 .silmtx thead th{font-size:15px;color:var(--ink);font-weight:800;background:var(--surface-2)}
 .silmtx td.cell-nm,.silmtx th.cell-nm{text-align:left;padding-left:12px}
 .silmtx .nmwrap{display:inline-flex;align-items:center;gap:9px;font-weight:700;font-size:17px}
+.silmtx .mtx-note{margin-top:4px;margin-left:31px;color:#e05a52;font-size:12.5px;font-weight:600;white-space:normal;line-height:1.35}
 .silmtx td.z{color:var(--faint)}
 .silmtx .cell-tot{font-weight:800}
 .silmtx td.cell-tot.out{color:#e05a52}
