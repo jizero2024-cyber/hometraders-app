@@ -401,7 +401,7 @@ function sheetCheckList() {
     : `<button class="prow" data-act="quote-open" data-id="${h.o.id}"><span>${esc(h.o.client || '-')}${h.o.content ? ` · ${esc(h.o.content)}` : ''}</span><span class="pill out">보류 · ${esc(h.o.holdReason)}</span></button>`;
   const docRow = (sh) => `<button class="prow" data-act="ship" data-id="${sh.id}"><span>${esc(sh.client || '-')} · ${esc(shipSummary(sh).itemLabel)}</span><span class="pill low">${daysSince(sh.doneAt || sh.date)}일째 미발행</span></button>`;
   const qRow = (q) => `<button class="prow" data-act="quote-open" data-id="${q.id}"><span>${esc(q.client || '-')}${q.content ? ` · ${esc(q.content)}` : ''}</span><span class="pill low">견적 ${daysSince(q.date)}일째</span></button>`;
-  const pRow = (sh) => { const miss = S.shipLines(sh).filter((l) => !(Number(l.unitPrice) > 0)).map((l) => esc(l.name)).join(', ');
+  const pRow = (sh) => { const miss = S.shipLines(sh).filter((l) => effPrice(l, sh).price <= 0).map((l) => esc(l.name)).join(', ');
     return `<button class="prow" data-act="ship" data-id="${sh.id}"><span>${esc(sh.client || '-')} · ${miss}</span><span class="pill low">${esc(sh.date)}</span></button>`; };
   const priceSection = s.prices.length ? `<div class="psec"><span class="pttl">단가 확인 필요 (${s.prices.length}건)</span>
     <div style="display:flex;gap:8px;margin:6px 0 10px">
@@ -933,10 +933,34 @@ function rowShip(s) {
   </div>`;
 }
 
+// 그 거래처 + 그 품목의 마지막 판매단가 (종전가) — 다른 거래처는 안 봄
+function lastSalePrice(name, client, excludeId) {
+  if (!name || !client) return null;
+  const cands = [];
+  S.getShipments().forEach((s) => {
+    if (s.id === excludeId || (s.client || '') !== client) return;
+    S.shipLines(s).forEach((l) => {
+      const p = Number(l.unitPrice) || 0;
+      if (l.name === name && p > 0) cands.push({ price: p, date: s.date || '' });
+    });
+  });
+  cands.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  return cands[0] || null;
+}
+// 유효 판매단가: ①라인 직접입력 > ②품목 마스터 판매단가 > ③종전가(그 거래처·그 품목) > 0
+function effPrice(l, sh) {
+  const direct = Number(l.unitPrice) || 0;
+  if (direct > 0) return { price: direct, src: '' };
+  const it = S.getItems().find((x) => x.name === l.name && x.warehouse === (l.warehouse || (sh && sh.warehouse)));
+  if (it && Number(it.unitPrice) > 0) return { price: Number(it.unitPrice), src: '단가표' };
+  const prev = lastSalePrice(l.name, sh && sh.client, sh && sh.id);
+  if (prev) return { price: prev.price, src: '종전가 ' + (prev.date || '').slice(0, 7) };
+  return { price: 0, src: '' };
+}
 // 단가 확인 필요 = 실제 나간 출고 건 중 단가 빠진 라인이 있는 것 (판가 못 정해 명세서 못 냄)
-// 단가표는 아직 제작 중이라 마스터 전체의 빈 단가는 여기 안 씀.
+// 종전가까지 폴백해도 값이 없는 라인만 '확인 필요'로 본다.
 const needPrice = (it) => !(Number(it.unitPrice) > 0);
-const priceStuckShips = () => S.getShipments().filter((s) => S.shipLines(s).some((l) => !(Number(l.unitPrice) > 0)));
+const priceStuckShips = () => S.getShipments().filter((s) => S.shipLines(s).some((l) => effPrice(l, s).price <= 0));
 // 같은 품목명은 하나로 묶어 '마스터'로 봄 (창고 무관). 반환: [{name, category, unit, list, prices, suppliers, whs, perBox}]
 function itemMasters() {
   const byName = {};
@@ -1037,7 +1061,7 @@ function buildPriceCheck() {
   if (!ships.length) return '단가 확인 필요한 출고 건이 없습니다.';
   const L = ['[단가 확인 요청]', '아래 출고 건 구매단가 확인 부탁드립니다.', ''];
   ships.forEach((s) => {
-    const miss = S.shipLines(s).filter((l) => !(Number(l.unitPrice) > 0)).map((l) => `${l.name} ${l.qty}${l.unit || ''}`);
+    const miss = S.shipLines(s).filter((l) => effPrice(l, s).price <= 0).map((l) => `${l.name} ${l.qty}${l.unit || ''}`);
     L.push(`· ${s.client || '거래처'} (${s.date}) — ${miss.join(', ')}`);
   });
   return L.join('\n');
@@ -1052,13 +1076,13 @@ function sheetPriceCheck() {
 // 출고 건별 단가 채우기 — 단가 빠진 라인만 모아 빨간 칸에 입력
 function sheetPriceFill() {
   const ships = S.getShipments()
-    .filter((s) => S.shipLines(s).some((l) => !(Number(l.unitPrice) > 0)))
+    .filter((s) => S.shipLines(s).some((l) => effPrice(l, s).price <= 0))
     .sort((a, b) => (b.date + b.id).localeCompare(a.date + a.id));
   if (!ships.length) return `<div class="grab"></div><h2>${I.tag} 단가 채우기</h2>
     <div class="empty"><div class="ico">${I.check}</div>단가 빠진 출고 건이 없어요 👍</div>
     <button class="btn danger" type="button" data-act="close">닫기</button>`;
   const blocks = ships.map((s) => {
-    const missing = S.shipLines(s).map((l, i) => ({ l, i })).filter((x) => !(Number(x.l.unitPrice) > 0));
+    const missing = S.shipLines(s).map((l, i) => ({ l, i })).filter((x) => effPrice(x.l, s).price <= 0);
     return `<div class="pfill-blk">
       <div class="pfill-hd"><b>${esc(s.client || '거래처 미지정')}</b><span>${esc(s.date)} · ${esc(whShort(s.warehouse))}</span></div>
       ${missing.map((x) => `<div class="pfill-row">
@@ -1562,7 +1586,8 @@ function sheetDoc(sh) {
     ${(state.docEditLines && slId === sh.id) ? shipLinesEditor(sh) : `
     <div class="ilines">
       ${S.shipLines(sh).map((l) => {
-        const price = Number(l.unitPrice) || 0;
+        const ep = effPrice(l, sh);
+        const price = ep.price;
         const amt = (Number(l.qty) || 0) * price;
         const lwh = l.warehouse || sh.warehouse;
         const it = S.getItems().find((x) => x.name === l.name && x.warehouse === lwh);
@@ -1572,7 +1597,7 @@ function sheetDoc(sh) {
             <div class="il-sub">${whTag(lwh)}${l.spec ? `<span>${esc(l.spec)}</span>` : ''}</div></div>
           <div class="il-r">
             <div class="il-qty">${l.qty}${esc(l.unit || '')}${pcs}</div>
-            <div class="il-price ${price > 0 ? '' : 'nop'}">${price > 0 ? price.toLocaleString() + '원' : '단가 미정'}</div>
+            <div class="il-price ${price > 0 ? '' : 'nop'}">${price > 0 ? price.toLocaleString() + '원' : '단가 미정'}${ep.src ? ` <span class="il-src">${esc(ep.src)}</span>` : ''}</div>
             ${amt > 0 ? `<div class="il-amt">${amt.toLocaleString()}원</div>` : ''}
           </div>
         </div>`;
