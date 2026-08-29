@@ -1283,21 +1283,32 @@ function sheetInboundForm() {
 function fillInboundItems() {
   const wh = document.getElementById('ib-wh').value;
   const sel = document.getElementById('ib-item');
-  const its = S.getItems().filter((it) => it.warehouse === wh);
-  sel.innerHTML = its.map((it) => `<option value="${it.id}">${esc(it.name)} (${esc(it.category)})</option>`).join('')
-    || '<option value="">품목 없음 · 먼저 품목 추가</option>';
+  // 모든 창고의 품목을 이름+분류로 중복 제거 → 그 창고에 재고/레코드가 없어도 입고할 수 있게
+  const seen = new Map();
+  S.getItems().forEach((it) => { const k = it.category + '|' + it.name; if (!seen.has(k)) seen.set(k, it); });
+  const list = [...seen.values()].sort((a, b) => (a.category + a.name).localeCompare(b.category + b.name));
+  sel.innerHTML = list.map((it) => {
+    const here = S.getItems().some((x) => x.warehouse === wh && x.category === it.category && x.name === it.name);
+    return `<option value="${esc(it.name)}" data-cat="${esc(it.category)}" data-unit="${esc(it.unit || '')}" data-pb="${it.perBox || ''}">${esc(it.name)} (${esc(it.category)})${here ? '' : ' · 신규'}</option>`;
+  }).join('') || '<option value="">품목 없음 · 먼저 품목 추가</option>';
   updateInboundHint();
 }
 function updateInboundHint() {
-  const it = S.findItem(document.getElementById('ib-item').value);
+  const opt = document.getElementById('ib-item').selectedOptions[0];
+  const wh = document.getElementById('ib-wh').value;
   const hint = document.getElementById('ib-stock');
   const unit = document.getElementById('ib-unit');
   const pb = document.querySelector('#inbound-form [name=perBox]');
-  if (it) {
-    const sp = S.stockParts(it);
-    hint.innerHTML = `현재고 <b style="color:var(--ink)">${sp.whole}${esc(it.unit)}${sp.loose ? ` ${sp.loose}개` : ''}</b>`;
-    unit.value = it.unit;
-    if (pb && !pb.value && it.perBox) pb.value = it.perBox;
+  if (opt && opt.value) {
+    const it = S.getItems().find((x) => x.warehouse === wh && x.category === opt.dataset.cat && x.name === opt.value);
+    unit.value = it ? it.unit : (opt.dataset.unit || '');
+    if (pb && !pb.value && (it ? it.perBox : opt.dataset.pb)) pb.value = it ? it.perBox : opt.dataset.pb;
+    if (it) {
+      const sp = S.stockParts(it);
+      hint.innerHTML = `현재고 <b style="color:var(--ink)">${sp.whole}${esc(it.unit)}${sp.loose ? ` ${sp.loose}개` : ''}</b>`;
+    } else {
+      hint.innerHTML = `이 창고엔 <b style="color:#e05a52">신규 품목</b> · 재고 0에서 시작`;
+    }
   } else { hint.textContent = ''; unit.value = ''; }
 }
 
@@ -2354,15 +2365,19 @@ app.addEventListener('submit', (e) => {
     closeSheet();
   }
   else if (form.id === 'inbound-form') {
-    const it = S.findItem(document.getElementById('ib-item').value);
+    const opt = document.getElementById('ib-item').selectedOptions[0];
+    const warehouse = document.getElementById('ib-wh').value;
     const qty = Number(form.qty.value);
-    if (!it) return alert('품목을 선택하세요. (없으면 먼저 품목 추가)');
+    if (!opt || !opt.value) return alert('품목을 선택하세요. (없으면 먼저 품목 추가)');
     if (!qty || qty <= 0) return alert('입고 수량을 입력하세요.');
-    S.addInbound({ date: form.date.value, warehouse: it.warehouse, category: it.category, name: it.name,
-      qty, unit: it.unit, perBox: form.perBox.value, unitPrice: form.unitPrice.value,
+    const cat = opt.dataset.cat;
+    const unit = opt.dataset.unit || (document.getElementById('ib-unit').value || '');
+    // addInbound 가 그 창고에 품목 레코드 없으면 자동 생성 (재고 0에서 시작)
+    S.addInbound({ date: form.date.value, warehouse, category: cat, name: opt.value,
+      qty, unit, perBox: form.perBox.value, unitPrice: form.unitPrice.value,
       vatSeparate: form.querySelector('#ib-vat .on').dataset.v === '1',
       supplier: form.supplier.value.trim(), note: form.note.value.trim() });
-    state.stockWH = it.warehouse;
+    state.stockWH = warehouse;
     closeSheet();
   }
   else if (form.id === 'item-form') {
