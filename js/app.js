@@ -1817,6 +1817,7 @@ function sheetEditShip(sh) {
 const TITLES = { home: ['홈트레이더스', '재고 · 출고 관리'], quote: ['견적', '견적 · 단가표'], silicone: ['실리콘', '색상별 재고'], stock: ['창고', '창고별 재고'], ship: ['출고', '등록하면 재고 자동 차감'], invoice: ['명세서', '거래명세서 발행 관리'], settings: ['설정', '품목 · 데이터'] };
 
 function render() {
+  try { sessionStorage.setItem('ht_route', state.route); } catch (e) { /* 무시 */ }
   const [title, sub] = TITLES[state.route];
   const body = { home: screenHome, quote: screenQuote, silicone: screenSilicone, stock: screenStock, ship: screenShip, invoice: screenInvoice, settings: screenSettings }[state.route]();
   const showFab = state.route === 'ship' || state.route === 'home' || state.route === 'stock';
@@ -2455,6 +2456,7 @@ async function boot() {
   myAccount = ((session.user && session.user.email) || '').split('@')[0];
   if (booted) { render(); return; }
   app.innerHTML = '<div style="padding:64px 24px;text-align:center;color:#888;font-size:15px">불러오는 중…</div>';
+  try { const r = sessionStorage.getItem('ht_route'); if (r && TITLES[r]) state.route = r; } catch (e) { /* 무시 */ }
   try { await S.init(); booted = true; render(); }
   catch (e) { app.innerHTML = `<div style="padding:48px 24px;text-align:center"><b>연결 오류</b><br><span style="color:#888;font-size:13px">${esc(e.message || String(e))}</span></div>`; }
 }
