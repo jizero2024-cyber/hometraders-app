@@ -192,11 +192,12 @@ export function addInbound(o) {
     qty: num(o.qty), unit: o.unit || '', perBox: num(o.perBox), unitPrice: num(o.unitPrice), vatSeparate: !!o.vatSeparate, supplier: o.supplier || '', note: o.note || '' };
   inbounds.push(rec); put('inbounds', rec);
   let it = items.find((x) => x.warehouse === o.warehouse && x.category === o.category && x.name === o.name);
-  if (it) { if (rec.perBox) it.perBox = rec.perBox; if (rec.unitPrice) { it.unitPrice = rec.unitPrice; it.vatSeparate = rec.vatSeparate; } if (rec.supplier) it.supplier = rec.supplier; put('items', it); }
+  if (it) { if (rec.perBox) it.perBox = rec.perBox; if (rec.unitPrice) it.unitPrice = rec.unitPrice; if (rec.supplier) it.supplier = rec.supplier; put('items', it); }
   else {
     // 그 창고에 품목 레코드가 없으면 새로 생성 (재고 0에서 시작 → 이 입고분이 곧 재고)
+    // ※ items 테이블엔 vatSeparate 컬럼이 없으므로 넣지 않는다
     it = { id: nid('it'), warehouse: o.warehouse, category: o.category, name: o.name, unit: rec.unit || '',
-      initial: 0, note: '', perBox: rec.perBox, unitPrice: rec.unitPrice, vatSeparate: rec.vatSeparate, supplier: rec.supplier || '', aliases: '' };
+      initial: 0, note: '', perBox: rec.perBox, unitPrice: rec.unitPrice, supplier: rec.supplier || '', aliases: '' };
     items.push(it); put('items', it);
   }
   notify(); return rec;
