@@ -1236,19 +1236,72 @@ function initShipLines() {
   const p = shipPrefill || {};
   const it = p.itemId ? S.findItem(p.itemId) : null;
   const name = it ? it.name : (p.matched || p.guess || '');
-  sfExtra = [{ name, qty: p.qty || '', unit: p.unit || (it && it.unit) || '' }];
+  sfExtra = [{ name, qty: p.qty || '', unit: p.unit || (it && it.unit) || '', price: '' }];
+}
+// 출고 라인의 추천 판매단가 (그 거래처·그 품목 기준: 마스터 판매단가 > 종전가)
+function suggestSalePrice(name, wh, client) {
+  const it = S.getItems().find((x) => x.name === name && x.warehouse === wh) || S.getItems().find((x) => x.name === name);
+  if (it && Number(it.unitPrice) > 0) return Number(it.unitPrice);
+  const prev = lastSalePrice(name, client);
+  return prev ? prev.price : 0;
 }
 function renderSfExtra() {
   const box = document.getElementById('sf-extra');
   if (!box) return;
-  if (!sfExtra.length) sfExtra = [{ name: '', qty: '', unit: '' }];
-  const inp = 'padding:11px 10px;border-radius:10px;background:var(--surface-2);color:var(--ink);border:0;font-size:15px;min-width:0';
-  box.innerHTML = sfExtra.map((l, i) => `<div style="display:flex;gap:6px;margin-bottom:8px">
-    <input data-sf="name" data-i="${i}" list="sf-items" value="${esc(l.name || '')}" placeholder="품목명" autocapitalize="none" autocomplete="off" style="flex:1;${inp}">
-    <input data-sf="qty" data-i="${i}" type="number" min="0" inputmode="numeric" value="${esc(l.qty || '')}" placeholder="수량" style="width:62px;text-align:right;${inp}">
-    <input data-sf="unit" data-i="${i}" list="f-unit-list" value="${esc(l.unit || '')}" placeholder="단위" autocomplete="off" style="width:60px;${inp}">
-    <button class="pill" type="button" data-act="sf-del" data-i="${i}" style="flex:none">✕</button>
-  </div>`).join('');
+  if (!sfExtra.length) sfExtra = [{ name: '', qty: '', unit: '', price: '' }];
+  const inp = 'padding:10px;border-radius:9px;background:var(--surface);color:var(--ink);border:0;font-size:15px;min-width:0';
+  box.innerHTML = sfExtra.map((l, i) => `<div class="sfline">
+    <div style="display:flex;gap:6px;align-items:center;margin-bottom:7px">
+      <input data-sf="name" data-i="${i}" list="sf-items" value="${esc(l.name || '')}" placeholder="품목 검색·선택" autocapitalize="none" autocomplete="off" style="flex:1;${inp}">
+      <span class="sfl-cur" id="sfcur-${i}"></span>
+      <button class="pill" type="button" data-act="sf-del" data-i="${i}" style="flex:none">✕</button>
+    </div>
+    <div style="display:flex;gap:6px">
+      <input data-sf="qty" data-i="${i}" type="number" min="0" inputmode="numeric" value="${esc(l.qty || '')}" placeholder="수량" style="width:70px;text-align:right;${inp}">
+      <input data-sf="unit" data-i="${i}" list="f-unit-list" value="${esc(l.unit || '')}" placeholder="단위" autocomplete="off" style="width:64px;${inp}">
+      <input data-sf="price" data-i="${i}" type="number" min="0" inputmode="numeric" value="${esc(l.price || '')}" placeholder="단가" style="flex:1;text-align:right;${inp}">
+    </div>
+    <div class="sfl-amt" id="sfamt-${i}"></div>
+  </div>`).join('') + `<div class="sf-foot" id="sf-foot"></div>`;
+  recalcSf();
+}
+// 실시간 계산: 라인별 현재고·공급가·부가세·합계 + 하단 합계 (입력 재렌더 없이 span만 갱신 → IME 안전)
+function recalcSf() {
+  const whEl = document.getElementById('f-wh'); if (!whEl) return;
+  const wh = whEl.value;
+  const clientEl = document.getElementById('sf-client');
+  const client = clientEl ? clientEl.value.trim() : '';
+  let tQty = 0, tSup = 0, tVat = 0;
+  document.querySelectorAll('#sf-extra .sfline').forEach((row, i) => {
+    const g = (sf) => row.querySelector(`[data-sf="${sf}"]`);
+    const name = (g('name').value || '').trim();
+    const qty = Number(g('qty').value) || 0;
+    const unit = (g('unit').value || '').trim();
+    let price = Number(g('price').value) || 0;
+    const it = S.getItems().find((x) => x.name === name && x.warehouse === wh);
+    // 단가 비었으면 추천가 자동 채움
+    if (!price && name) { const s = suggestSalePrice(name, wh, client); if (s) { price = s; g('price').value = s; } }
+    const curEl = document.getElementById('sfcur-' + i);
+    if (curEl) {
+      if (it) {
+        const cur = Math.floor(S.currentStock(it));
+        const req = (unit === '낱개' && it.perBox) ? qty / it.perBox : qty;
+        const over = req > cur + 1e-9;
+        curEl.textContent = '재고 ' + cur;
+        curEl.style.cssText = 'flex:none;font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px;' + (over ? 'background:#fdecea;color:#e05a52' : 'background:var(--surface-2);color:var(--muted)');
+      } else { curEl.textContent = name ? '신규' : ''; curEl.style.cssText = 'flex:none;font-size:11px;color:var(--faint);padding:3px 6px'; }
+    }
+    const sup = qty * price, vat = Math.round(sup * 0.1);
+    const amtEl = document.getElementById('sfamt-' + i);
+    if (amtEl) amtEl.innerHTML = qty && price
+      ? `<span>공급가 ${sup.toLocaleString()}</span><span>부가세 ${vat.toLocaleString()}</span><span style="color:var(--ink);font-weight:700">합계 ${(sup + vat).toLocaleString()}</span>`
+      : '';
+    tQty += qty; tSup += sup; tVat += vat;
+  });
+  const foot = document.getElementById('sf-foot');
+  if (foot) foot.innerHTML = tSup
+    ? `<div><span>수량 합계</span><b>${tQty.toLocaleString()}</b></div><div><span>공급가액 계</span><b>${tSup.toLocaleString()}</b></div><div><span>부가세 계</span><b>${tVat.toLocaleString()}</b></div><div class="big"><span>합계 금액</span><b>${(tSup + tVat).toLocaleString()}</b></div>`
+    : '';
 }
 
 function sheetInboundForm() {
@@ -2098,7 +2151,7 @@ app.addEventListener('click', (e) => {
   }
   else if (act === 'fab-toggle') { state.fabOpen = !state.fabOpen; render(); }
   else if (act === 'new-ship') { shipPrefill = null; initShipLines(); openSheet(sheetShipForm()); }
-  else if (act === 'sf-add') { readSfExtra(); sfExtra.push({ name: '', qty: '', unit: '' }); renderSfExtra(); }
+  else if (act === 'sf-add') { readSfExtra(); sfExtra.push({ name: '', qty: '', unit: '', price: '' }); renderSfExtra(); }
   else if (act === 'sf-del') { readSfExtra(); sfExtra.splice(Number(t.dataset.i), 1); renderSfExtra(); }
   else if (act === 'quick') { shipPrefill = null; openSheet(sheetQuick()); }
   else if (act === 'add-inbound') { openSheet(sheetInboundForm()); }
@@ -2274,7 +2327,8 @@ app.addEventListener('change', (e) => {
   if (e.target.id === 'f-wh') fillItemSelect();
   if (e.target.id === 'silout-color') { state.silOutColor = e.target.value; render(); }
   if (e.target.id === 'silout-client') { state.silOutClient = e.target.value; render(); }
-  if (e.target.id === 'sf-client') { const p = S.findPartner(e.target.value.trim()); const a = document.getElementById('sf-unaddr'); if (p && p.address && a && !a.value.trim()) a.value = p.address; }
+  if (e.target.id === 'sf-client') { const p = S.findPartner(e.target.value.trim()); const a = document.getElementById('sf-unaddr'); if (p && p.address && a && !a.value.trim()) a.value = p.address; recalcSf(); }
+  if (e.target.dataset && e.target.dataset.sf) recalcSf();
   if (e.target.id === 'ib-wh') fillInboundItems();
   if (e.target.id === 'ib-item') updateInboundHint();
   if (e.target.id === 'db-from') { const p = getPlaces().find((x) => x.name === e.target.value); const a = document.getElementById('db-from-addr'), ph = document.getElementById('db-from-phone'); if (a) a.value = p ? p.address : ''; if (ph) ph.value = p ? p.phone : ''; }
@@ -2325,7 +2379,7 @@ app.addEventListener('submit', (e) => {
       if (!name || !(q > 0)) return;
       const it = S.getItems().find((x) => x.name === name && x.warehouse === wh);
       const unit = (l.unit || '').trim() || (it ? it.unit : '박스');
-      lines.push({ name, category: it ? it.category : '', spec: '', unit, qty: q, unitPrice: it ? it.unitPrice : 0 });
+      lines.push({ name, category: it ? it.category : '', spec: '', unit, qty: q, unitPrice: Number(l.price) || (it ? Number(it.unitPrice) : 0) });
       if (it) stockRefs.push({ it, qty: q, unit });
     });
     if (!lines.length) return alert('품목과 수량을 입력하세요.');

@@ -26,6 +26,16 @@ input,select,textarea{font-family:inherit;font-size:16px;border:0;}
   padding-top:calc(14px + env(safe-area-inset-top));box-shadow:0 2px 10px rgba(0,0,0,.03);}
 .appbar .logo{height:30px;width:auto;max-width:120px;object-fit:contain;flex:none;}
 .il-src{font-size:11px;color:var(--muted);font-weight:600;margin-left:3px}
+/* 이카운트식 출고/입고 품목 라인 */
+.sfline{background:var(--surface-2);border:1px solid var(--surface-3);border-radius:12px;padding:10px 11px;margin-bottom:8px}
+.sfl-amt{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted);margin-top:8px;min-height:0}
+.sfl-amt:empty{display:none;margin-top:0}
+.sf-foot:empty{display:none}
+.sf-foot{background:var(--surface-2);border:1px solid var(--surface-3);border-radius:12px;padding:11px 13px;margin-top:4px}
+.sf-foot>div{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin-bottom:5px}
+.sf-foot>div b{color:var(--ink);font-weight:600}
+.sf-foot>div.big{font-size:16px;padding-top:6px;margin-top:1px;margin-bottom:0;border-top:1px solid var(--surface-3)}
+.sf-foot>div.big span,.sf-foot>div.big b{color:var(--ink);font-weight:700}
 /* 실리콘 재고 매트릭스 (색상 × 창고) */
 .silmtx-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-top:6px;border:1px solid var(--surface-3);border-radius:12px}
 .silmtx{width:100%;border-collapse:collapse;font-size:15px}
