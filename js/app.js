@@ -481,25 +481,33 @@ function screenSilicone() {
     units[it.name] = it.unit || '박스';
   });
   const hasEtc = allSil.some((it) => whGroup(it.warehouse) === '기타');
-  const cols = hasEtc ? ['천안', 'NS', '기타'] : ['천안', 'NS'];
+  const groups = ['천안', 'NS'].concat(hasEtc ? ['기타'] : []);
+  const selWH = (state.silWH && groups.includes(state.silWH)) ? state.silWH : null;
+  const cols = selWH ? [selWH] : groups;      // 창고 선택 시 그 창고 열만
+  const showTot = !selWH;                      // 전체일 때만 합계 열
   const rank = { out: 0, low: 1, ok: 2 };
-  const rows = Object.keys(mat).map((name) => {
-    const m = mat[name]; const total = m['천안'] + m['NS'] + m['기타'];
+  let rows = Object.keys(mat).map((name) => {
+    const m = mat[name]; const total = selWH ? m[selWH] : (m['천안'] + m['NS'] + m['기타']);
     const notes = lists[name].filter((it) => (it.note || '').trim())
       .map((it) => (lists[name].length > 1 ? whShort(it.warehouse) + ' ' : '') + it.note.trim());
     return { name, m, total, unit: units[name], st: colorStatus(total), notes };
   }).sort((a, b) => rank[a.st] - rank[b.st] || b.total - a.total);
+  if (selWH) rows = rows.filter((r) => lists[r.name].some((it) => whGroup(it.warehouse) === selWH)); // 그 창고에 있는 색상만
   const colTot = (c) => rows.reduce((s, r) => s + r.m[c], 0);
   const grand = rows.reduce((s, r) => s + r.total, 0);
-  const matrix = `<div class="sec-title">실리콘 재고 · 색상 ${rows.length} · 창고 합산 ${grand}</div>
+  const tabs = `<div class="tabs" style="margin-bottom:10px">
+    <button data-act="sil-wh" data-w="" class="${!selWH ? 'on' : ''}">전체</button>
+    ${groups.map((g) => `<button data-act="sil-wh" data-w="${esc(g)}" class="${selWH === g ? 'on' : ''}">${esc(g)}</button>`).join('')}
+  </div>`;
+  const matrix = `${tabs}<div class="sec-title">실리콘 재고 · ${selWH ? esc(selWH) + '창고' : '창고 합산'} · 색상 ${rows.length} · ${grand}</div>
     <div class="silmtx-wrap"><table class="silmtx">
-      <thead><tr><th class="cell-nm">색상</th>${cols.map((c) => `<th>${c}</th>`).join('')}<th class="cell-tot">합계</th></tr></thead>
+      <thead><tr><th class="cell-nm">색상</th>${cols.map((c) => `<th>${c}</th>`).join('')}${showTot ? '<th class="cell-tot">합계</th>' : ''}</tr></thead>
       <tbody>${rows.map((r) => `<tr data-act="color" data-c="${esc(r.name)}">
         <td class="cell-nm"><span class="nmwrap">${swatchHTML(r.name)}${esc(r.name)}</span>${r.notes.length ? `<div class="mtx-note">${esc(r.notes.join(' · '))}</div>` : ''}</td>
-        ${cols.map((c) => `<td class="${r.m[c] === 0 ? 'z' : ''}">${r.m[c]}</td>`).join('')}
-        <td class="cell-tot ${r.st}">${r.total}</td>
-      </tr>`).join('') || `<tr><td colspan="${cols.length + 2}" style="color:var(--muted);padding:22px">실리콘 품목이 없어요</td></tr>`}</tbody>
-      <tfoot><tr><td class="cell-nm">합계</td>${cols.map((c) => `<td>${colTot(c)}</td>`).join('')}<td class="cell-tot">${grand}</td></tr></tfoot>
+        ${cols.map((c) => `<td class="${r.m[c] === 0 ? 'z' : ''}${selWH ? ' cell-tot ' + r.st : ''}">${r.m[c]}</td>`).join('')}
+        ${showTot ? `<td class="cell-tot ${r.st}">${r.total}</td>` : ''}
+      </tr>`).join('') || `<tr><td colspan="${cols.length + (showTot ? 2 : 1)}" style="color:var(--muted);padding:22px">실리콘 품목이 없어요</td></tr>`}</tbody>
+      <tfoot><tr><td class="cell-nm">합계</td>${cols.map((c) => `<td>${colTot(c)}</td>`).join('')}${showTot ? `<td class="cell-tot">${grand}</td>` : ''}</tr></tfoot>
     </table></div>`;
 
   // 월별 실리콘 출고 내역 (어느 거래처에 몇 개)
