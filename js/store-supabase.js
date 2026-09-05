@@ -32,6 +32,13 @@ function put(tbl, row) {
     return { error };
   });
 }
+// 삭제 — 실패(RLS 삭제정책 없음 등)를 조용히 넘기지 않고 알림
+function del(tbl, col, val) {
+  return sb.from(tbl).delete().eq(col, val).then(({ error }) => {
+    if (error) { console.error('[삭제 실패]', tbl, error.message); errListeners.forEach((fn) => fn('삭제 실패: ' + error.message + '\n(Supabase 삭제 권한/정책 확인 필요)')); }
+    return { error };
+  });
+}
 
 // ── 초기 로드 + 최초 시드 + 실시간 ─────────────────────
 // init()은 토큰 갱신(onAuthChange) 등으로 여러 번 불릴 수 있어 중복/동시 호출을 막는다.
@@ -154,7 +161,7 @@ export function updateItem(id, patch) {
   Object.assign(it, patch); if (patch.initial != null) it.initial = num(patch.initial);
   put('items', it); notify();
 }
-export function deleteItem(id) { items = items.filter((x) => x.id !== id); sb.from('items').delete().eq('id', id); notify(); }
+export function deleteItem(id) { items = items.filter((x) => x.id !== id); del('items', 'id', id); notify(); }
 // 현재고를 실사 수량(target)으로 맞춤 — 초기재고를 보정(입고·출고완료는 그대로 유지)
 export function setStock(id, target) {
   const it = findItem(id); if (!it) return;
@@ -183,7 +190,7 @@ export function updateShipment(id, patch) {
   Object.assign(sh, patch); if (patch.qty != null) sh.qty = num(patch.qty);
   put('shipments', sh); notify();
 }
-export function deleteShipment(id) { shipments = shipments.filter((x) => x.id !== id); sb.from('shipments').delete().eq('id', id); notify(); }
+export function deleteShipment(id) { shipments = shipments.filter((x) => x.id !== id); del('shipments', 'id', id); notify(); }
 
 // ── 입고 ────────────────────────────────────────────
 export const getInbounds = () => inbounds.slice().sort((a, b) => (b.date + b.id).localeCompare(a.date + a.id));
@@ -202,7 +209,7 @@ export function addInbound(o) {
   }
   notify(); return rec;
 }
-export function deleteInbound(id) { inbounds = inbounds.filter((x) => x.id !== id); sb.from('inbounds').delete().eq('id', id); notify(); }
+export function deleteInbound(id) { inbounds = inbounds.filter((x) => x.id !== id); del('inbounds', 'id', id); notify(); }
 
 // ── 창고 ────────────────────────────────────────────
 export const getWarehouses = () => warehouses.slice();
@@ -225,7 +232,7 @@ export function renameWarehouse(oldName, newName) {
 }
 export function deleteWarehouse(name) {
   if (items.some((it) => it.warehouse === name)) return false;
-  warehouses = warehouses.filter((w) => w.name !== name); sb.from('warehouses').delete().eq('name', name); notify(); return true;
+  warehouses = warehouses.filter((w) => w.name !== name); del('warehouses', 'name', name); notify(); return true;
 }
 export function warehouseSummary(name) {
   const its = items.filter((it) => it.warehouse === name);
@@ -248,7 +255,7 @@ export function updatePartner(origName, o) {
   p.name = nm; p.address = o.address || ''; p.phone = o.phone || ''; p.note = o.note || '';
   put('partners', p); notify(); return true;
 }
-export function deletePartner(name) { partners = partners.filter((p) => p.name !== name); sb.from('partners').delete().eq('name', name); notify(); }
+export function deletePartner(name) { partners = partners.filter((p) => p.name !== name); del('partners', 'name', name); notify(); }
 
 // ── 견적 ────────────────────────────────────────────
 export const getQuotes = () => quotes.slice().sort((a, b) => (b.date + b.id).localeCompare(a.date + a.id));
@@ -258,7 +265,7 @@ export function addQuote(o) {
   quotes.push(q); put('quotes', q); notify();
 }
 export function updateQuote(id, patch) { const q = quotes.find((x) => x.id === id); if (q) { Object.assign(q, patch); put('quotes', q); notify(); } }
-export function deleteQuote(id) { quotes = quotes.filter((x) => x.id !== id); sb.from('quotes').delete().eq('id', id); notify(); }
+export function deleteQuote(id) { quotes = quotes.filter((x) => x.id !== id); del('quotes', 'id', id); notify(); }
 export function logQuoteCall(id) {
   const q = quotes.find((x) => x.id === id); if (!q) return;
   const d = new Date(); const p = (n) => String(n).padStart(2, '0');
