@@ -1,7 +1,7 @@
 // 오프라인 대비 캐시 — 네트워크 우선(온라인이면 항상 최신 코드), 오프라인이면 캐시.
-const CACHE = 'ht-v17';
+const CACHE = 'ht-v18';
 const ASSETS = [
-  './', './index.html', './css/app.css',
+  './', './index.html', './css/app.css', './css/erp.css',
   './js/app.js', './js/store-supabase.js', './js/data.js', './js/ecount-items.js', './js/item-map.js', './js/supabase-config.js', './js/partners-seed.js',
   './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/logo-full.png', './icons/favicon.png', './icons/apple-touch-icon.png',
 ];

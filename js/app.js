@@ -1151,6 +1151,7 @@ function screenSettings() {
 
 // ── 시트(모달) ────────────────────────────────────────
 function sheetShipForm() {
+  if (isDesk()) return sheetShipFormDesk();
   const p = shipPrefill || {};
   const curSt = p.status || '출고예정';
   const hasDisp = !!(p.dispatchVia || p.driverName || p.driverPhone || p.vehicle || p.freight || p.payment);
@@ -1220,6 +1221,68 @@ function sheetShipForm() {
   </form>`;
 }
 
+// PC 전표형 출고 입력 — 모바일 폼과 입력칸 이름·id·data-act 가 같아서 저장 처리(ship-form submit)는 그대로 쓴다
+function sheetShipFormDesk() {
+  const p = shipPrefill || {};
+  const curSt = p.status || '출고예정';
+  const hasDisp = !!(p.dispatchVia || p.driverName || p.driverPhone || p.vehicle || p.freight || p.payment);
+  const courier = p.method === '택배';
+  return `<h2>출고 입력</h2>
+  <div class="e-sf-top">
+    ${shipPrefill ? `<div class="parsed" style="margin:0">${I.bolt}<span>인식됨${p.matched ? '' : ' · 품목을 못 찾았어요, 직접 선택하세요'}</span></div>` : `<button type="button" class="e-btn" data-act="smart">${I.bolt} 문구 붙여넣어 자동 입력</button>`}
+    <span class="sp"></span><span class="e-keys" style="font-size:11px;color:var(--e-faint)"><kbd>Enter</kbd>다음 칸<kbd>F8</kbd>저장<kbd>Esc</kbd>닫기</span>
+  </div>
+  <form id="ship-form">
+    <table class="e-ftbl"><colgroup><col style="width:92px"><col><col style="width:92px"><col><col style="width:92px"><col></colgroup>
+      <tr><th>상태</th><td><div class="seg" id="f-status">${['출고예정', '출고완료'].map((s) => `<button type="button" data-v="${s}" class="${curSt === s ? 'on' : ''}">${s}</button>`).join('')}</div></td>
+        <th class="req">출고일</th><td><div class="row"><input class="e-in" name="date" type="date" value="${state.selDate || S.todayStr()}"><input class="e-in" name="time" type="time" value="${p.time || ''}" style="max-width:110px"></div></td>
+        <th>출고 방식</th><td><div class="seg" id="f-method">${['배차', '택배'].map((m) => `<button type="button" data-v="${m}" class="${(p.method || '배차') === m ? 'on' : ''}">${m}</button>`).join('')}</div></td></tr>
+      <tr><th class="req">거래처</th><td><input class="e-in" name="client" list="ship-partners" id="sf-client" placeholder="거래처 검색·선택 또는 직접 입력" value="${esc(p.client || '')}" autocomplete="off">
+          <datalist id="ship-partners">${S.getPartners().map((pt) => `<option value="${esc(pt.name)}"></option>`).join('')}</datalist></td>
+        <th class="req">창고</th><td><input class="e-in" name="warehouse" id="f-wh" list="f-wh-list" value="${esc(p.warehouse || S.warehouseNames()[0] || '')}" placeholder="창고명" autocomplete="off">
+          <datalist id="f-wh-list">${S.warehouseNames().map((w) => `<option value="${esc(w)}"></option>`).join('')}</datalist></td>
+        <th>비고</th><td><input class="e-in" name="note" placeholder="경로 / 혼적 / 당착 등" value="${esc(p.note || '')}"></td></tr>
+      <tr><th>하차지 주소</th><td colspan="5"><div class="row"><input class="e-in" name="unloadAddr" id="sf-unaddr" placeholder="하차지 주소 (거래처 선택 시 등록 주소 자동)" value="${esc(p.unloadAddr || '')}" autocomplete="off"><button type="button" class="e-btn" data-act="db-search" data-target="sf-unaddr">주소검색</button></div></td></tr>
+    </table>
+    <div class="e-disp" id="f-dispatch-block"${courier ? ' style="display:none"' : ''}>
+      <div class="e-disp-hd"><b>배차 정보</b><button type="button" class="tgl" data-act="toggle-disp" id="f-disp-toggle">${hasDisp ? '− 배차 정보 접기' : '＋ 배차 정보 입력 (기사·차량·운임) · 선택'}</button></div>
+      <div id="f-disp-fields" style="display:${hasDisp ? 'block' : 'none'}">
+        <table class="e-ftbl"><colgroup><col style="width:92px"><col><col style="width:92px"><col><col style="width:92px"><col></colgroup>
+          <tr><th>배차 업체</th><td><input class="e-in" name="dispatchVia" list="dispatch-list" value="${esc(p.dispatchVia || '')}" placeholder="예: 이음물류 · 직접" autocomplete="off">
+              <datalist id="dispatch-list">${dispatchList().map((d) => `<option value="${esc(d)}"></option>`).join('')}</datalist></td>
+            <th>기사님</th><td><input class="e-in" name="driverName" placeholder="이름" value="${esc(p.driverName || '')}"></td>
+            <th>기사 전화</th><td><input class="e-in" name="driverPhone" type="tel" placeholder="010-0000-0000" value="${esc(p.driverPhone || '')}"></td></tr>
+          <tr><th>차량</th><td><input class="e-in" name="vehicle" placeholder="예: 1톤카고 / 경기85사7749" value="${esc(p.vehicle || '')}"></td>
+            <th>운임 (원)</th><td><input class="e-in" name="freight" type="number" value="${p.freight || ''}" placeholder="예: 80000"></td>
+            <th>결제</th><td><select class="e-sel" name="payment" style="width:100%;height:26px"><option value="">-</option><option ${p.payment === '현불' ? 'selected' : ''}>현불</option><option ${p.payment === '착불' ? 'selected' : ''}>착불</option></select></td></tr>
+        </table>
+      </div>
+    </div>
+    <div class="e-disp" id="f-courier-block"${courier ? '' : ' style="display:none"'}>
+      <div class="e-disp-hd"><b>택배 정보</b></div>
+      <table class="e-ftbl"><colgroup><col style="width:92px"><col><col style="width:92px"><col><col style="width:92px"><col></colgroup>
+        <tr><th>택배사</th><td><input class="e-in" name="courier" list="courier-list" value="${esc(p.courier || '')}" placeholder="예: 경동택배">
+            <datalist id="courier-list">${COURIERS.map((c) => `<option value="${c}"></option>`).join('')}</datalist></td>
+          <th>송장번호</th><td><input class="e-in" name="trackingNo" value="${esc(p.trackingNo || '')}" placeholder="예: 1234-5678-9012"></td>
+          <th>택배비 (원)</th><td><input class="e-in" name="courierFee" type="number" value="${p.courierFee || ''}" placeholder="예: 4000"></td></tr>
+        <tr><th>받는 사람</th><td><input class="e-in" name="recvName" value="${esc(p.recvName || '')}" placeholder="성함"></td>
+          <th>연락처</th><td><input class="e-in" name="recvPhone" type="tel" value="${esc(p.recvPhone || '')}" placeholder="010-0000-0000"></td>
+          <th>받는 주소</th><td><input class="e-in" name="recvAddr" value="${esc(p.recvAddr || '')}" placeholder="배송지 주소"></td></tr>
+      </table>
+    </div>
+    <div class="e-lines-hd"><b>품목</b><span class="hint2">이름 입력하면 자동완성 · 여러 개 추가 가능</span><span class="sp"></span>
+      <button class="e-btn sm" type="button" data-act="sf-add">＋ 행 추가</button></div>
+    <div id="sf-extra"></div>
+    <datalist id="sf-items"></datalist>
+    <datalist id="f-unit-list">${UNITS.map((u) => `<option value="${esc(u)}"></option>`).join('')}</datalist>
+    <div class="e-fbar">
+      <div class="sf-foot" id="sf-foot"></div><span class="sp"></span>
+      <button class="btn danger" type="button" data-act="close">취소</button>
+      <button class="btn" type="submit">저장 <span style="font-weight:500;opacity:.8">F8</span></button>
+    </div>
+  </form>`;
+}
+
 // 출고 폼 품목: 창고 바뀌면 자동완성 목록 갱신 + 통일 리스트 다시 그림
 function fillItemSelect() {
   const whEl = document.getElementById('f-wh'); if (!whEl) return;
@@ -1231,7 +1294,9 @@ function fillSfItems(wh) {
   if (!dl) return;
   wh = wh || (document.getElementById('f-wh') || {}).value;
   const names = [...new Set(S.getItems().filter((it) => !wh || it.warehouse === wh).map((it) => it.name))];
-  dl.innerHTML = names.map((n) => `<option value="${esc(n)}"></option>`).join('');
+  dl.innerHTML = names.map((n) => `<option value="${esc(n)}"></option>`).join('')
+    // PC: 창고에 없는 품목도 이카운트 품목 목록에서 바로 고를 수 있게 (창고 품목이 먼저)
+    + (isDesk() ? ECOUNT_ITEMS.filter(([, n]) => !names.includes(n)).map(([c, n]) => `<option value="${esc(n)}">${esc(c)}</option>`).join('') : '');
 }
 function readSfExtra() {
   document.querySelectorAll('#sf-extra [data-sf]').forEach((el) => {
@@ -1257,6 +1322,21 @@ function renderSfExtra() {
   const box = document.getElementById('sf-extra');
   if (!box) return;
   if (!sfExtra.length) sfExtra = [{ name: '', qty: '', unit: '', price: '' }];
+  if (isDesk()) {   // PC 전표형 품목 그리드 (입력칸 data-sf/data-i 와 id 는 모바일과 동일)
+    box.innerHTML = `<table class="e-grid"><colgroup><col style="width:32px"><col style="width:118px"><col><col style="width:78px"><col style="width:72px"><col style="width:62px"><col style="width:92px"><col style="width:96px"><col style="width:84px"><col style="width:100px"><col style="width:30px"></colgroup>
+      <thead><tr><th>No</th><th>품목코드</th><th>품목명</th><th>현재고</th><th>수량</th><th>단위</th><th>단가</th><th>공급가</th><th>세액</th><th>합계</th><th></th></tr></thead>
+      <tbody>${sfExtra.map((l, i) => `<tr class="sfline">
+        <td class="no">${i + 1}</td><td class="code" id="sfcode-${i}"></td>
+        <td><input data-sf="name" data-i="${i}" list="sf-items" value="${esc(l.name || '')}" placeholder="품목 검색·선택" autocomplete="off"></td>
+        <td class="c"><span class="sfl-cur" id="sfcur-${i}"></span></td>
+        <td><input class="num" data-sf="qty" data-i="${i}" type="number" min="0" value="${esc(l.qty || '')}"></td>
+        <td><input data-sf="unit" data-i="${i}" list="f-unit-list" value="${esc(l.unit || '')}" autocomplete="off"></td>
+        <td><input class="num" data-sf="price" data-i="${i}" type="number" min="0" value="${esc(l.price || '')}"></td>
+        <td class="n" id="sfsup-${i}"></td><td class="n" id="sfvat-${i}"></td><td class="n" id="sftot-${i}" style="font-weight:700"></td>
+        <td class="c"><button class="del" type="button" data-act="sf-del" data-i="${i}" title="행 삭제">✕</button></td></tr>`).join('')}</tbody></table>`;
+    recalcSf();
+    return;
+  }
   const inp = 'padding:10px;border-radius:9px;background:var(--surface);color:var(--ink);border:0;font-size:15px;min-width:0';
   box.innerHTML = sfExtra.map((l, i) => `<div class="sfline">
     <div style="display:flex;gap:6px;align-items:center;margin-bottom:7px">
@@ -1274,7 +1354,8 @@ function renderSfExtra() {
   recalcSf();
 }
 // 실시간 계산: 라인별 현재고·공급가·부가세·합계 + 하단 합계 (입력 재렌더 없이 span만 갱신 → IME 안전)
-function recalcSf() {
+// opt.noFill: 타이핑 중(수량·단가 입력) 재계산에선 빈 단가 자동채움을 하지 않음 (기존처럼 칸을 벗어날 때 채움)
+function recalcSf(opt = {}) {
   const whEl = document.getElementById('f-wh'); if (!whEl) return;
   const wh = whEl.value;
   const clientEl = document.getElementById('sf-client');
@@ -1288,7 +1369,7 @@ function recalcSf() {
     let price = Number(g('price').value) || 0;
     const it = S.getItems().find((x) => x.name === name && x.warehouse === wh);
     // 단가 비었으면 추천가 자동 채움
-    if (!price && name) { const s = suggestSalePrice(name, wh, client); if (s) { price = s; g('price').value = s; } }
+    if (!price && name && !opt.noFill) { const s = suggestSalePrice(name, wh, client); if (s) { price = s; g('price').value = s; } }
     const curEl = document.getElementById('sfcur-' + i);
     if (curEl) {
       if (it) {
@@ -1300,6 +1381,10 @@ function recalcSf() {
       } else { curEl.textContent = name ? '신규' : ''; curEl.style.cssText = 'flex:none;font-size:11px;color:var(--faint);padding:3px 6px'; }
     }
     const sup = qty * price, vat = Math.round(sup * 0.1);
+    // PC 그리드 칸 (품목코드·공급가·세액·합계) — 계산식은 위와 동일, 표시만
+    const cEl = document.getElementById('sfcode-' + i); if (cEl) cEl.textContent = ecountCode(name) || (it && it.ecountCode) || '';
+    const put = (k, v) => { const el = document.getElementById(k + i); if (el) el.textContent = v ? v.toLocaleString() : ''; };
+    put('sfsup-', qty && price ? sup : 0); put('sfvat-', qty && price ? vat : 0); put('sftot-', qty && price ? sup + vat : 0);
     const amtEl = document.getElementById('sfamt-' + i);
     if (amtEl) amtEl.innerHTML = qty && price
       ? `<span>공급가 ${sup.toLocaleString()}</span><span>부가세 ${vat.toLocaleString()}</span><span style="color:var(--ink);font-weight:700">합계 ${(sup + vat).toLocaleString()}</span>`
@@ -1644,6 +1729,7 @@ function dispatchText(sh) {
 }
 
 function sheetDoc(sh) {
+  if (isDesk()) return sheetDocDesk(sh);
   const hasDispatch = sh.dispatchVia || sh.driverName || sh.driverPhone || sh.vehicle || sh.freight || sh.payment;
   const hasAddr = sh.loadAddr || sh.unloadAddr || sh.loadPlace || sh.unloadPlace;
   const isCourier = sh.method === '택배';
@@ -1874,10 +1960,1141 @@ function sheetEditShip(sh) {
   </form>`;
 }
 
+// ══════════════════════════════════════════════════════════════
+// PC 업무형(ERP) 화면 — 가로 1024px 이상에서만. 모바일은 아래 render() 기존 화면 그대로.
+// 데이터·계산·저장은 기존 함수와 data-act 핸들러를 그대로 부르고, 화면 구성만 새로 한다.
+// ══════════════════════════════════════════════════════════════
+const DESK_MQ = window.matchMedia('(min-width: 1024px)');
+const isDesk = () => DESK_MQ.matches;
+
+// 메뉴 — 기초등록 → 영업 → 구매 → 재고 → 설정 순. [route, 이름, act] act 있으면 입력 팝업 실행
+const DESK_MENU = [
+  ['현황', [['dash', '업무 현황']]],
+  ['기초등록', [['partners', '거래처 등록'], ['items', '품목 등록'], ['whs', '창고 등록'], ['ecount', '이카운트 품목 조회'], ['itemmap', '품목 매핑 사전']]],
+  ['영업관리', [['quotes', '견적서 조회'], ['', '견적서 입력', 'add-quote'], ['', '출고 입력', 'new-ship'], ['ships', '출고 조회'], ['dispatch', '배차 관리'], ['invoices', '거래명세서']]],
+  ['구매관리', [['', '입고 입력', 'add-inbound'], ['inbound', '입고 조회'], ['buy', '구매명세서']]],
+  ['재고', [['stock', '재고 현황'], ['silicone', '실리콘 재고']]],
+  ['문서', [['docread', '문서 인식 (발주서·명세표)'], ['delivdocs', '납품확인서']]],
+  ['설정', [['settings', '환경설정']]],
+];
+const DESK_TITLES = {};
+DESK_MENU.forEach(([g, items]) => items.forEach(([r, l]) => { if (r) DESK_TITLES[r] = [l, g]; }));
+// 모바일 route ↔ PC route
+const DESK_FROM_MOBILE = { home: 'dash', quote: 'quotes', ship: 'ships', invoice: 'invoices', stock: 'stock', silicone: 'silicone', settings: 'settings' };
+const MOBILE_FROM_DESK = { dash: 'home', partners: 'settings', items: 'quote', whs: 'settings', ecount: 'quote', itemmap: 'quote', quotes: 'quote',
+  ships: 'ship', dispatch: 'home', invoices: 'invoice', inbound: 'stock', buy: 'invoice', stock: 'stock', silicone: 'silicone', settings: 'settings',
+  docread: 'home', delivdocs: 'home' };
+function deskRoute(r) {
+  if (DESK_TITLES[r]) return r;
+  if (r === 'quote') { const t = state.quoteTab; state.quoteTab = 'quote'; return t === 'price' ? 'items' : t === 'ecount' ? 'ecount' : t === 'map' ? 'itemmap' : 'quotes'; }
+  if (r === 'invoice' && state.invoiceTab === 'buy') { state.invoiceTab = 'pending'; return 'buy'; }
+  return DESK_FROM_MOBILE[r] || 'dash';
+}
+function mobileFromDesk() {
+  const r = state.route;
+  if (r === 'items') state.quoteTab = 'price';
+  if (r === 'ecount') state.quoteTab = 'ecount';
+  if (r === 'itemmap') state.quoteTab = 'map';
+  if (r === 'quotes') state.quoteTab = 'quote';
+  if (r === 'buy') state.invoiceTab = 'buy';
+  state.route = MOBILE_FROM_DESK[r] || 'home';
+}
+
+// ── 공통 조각 ─────────────────────────────────────
+const eN = (v) => { const n = Number(v) || 0; return n ? n.toLocaleString() : ''; };
+const eAddDays = (ds, n) => { const [y, m, d] = ds.split('-').map(Number); const t = new Date(y, m - 1, d + n); return dstr(t.getFullYear(), t.getMonth() + 1, t.getDate()); };
+const eHas = (hay, q) => !q || String(hay || '').toLowerCase().includes(String(q).toLowerCase());
+// 출고 금액 — 출고 상세(sheetDoc)와 같은 식: 라인 단가×수량 합, 부가세는 합계의 10%
+function eAmt(s) {
+  const sup = S.shipLines(s).reduce((a, l) => a + (Number(l.qty) || 0) * (Number(l.unitPrice) || 0), 0);
+  const vat = Math.round(sup * 0.1);
+  return { sup, vat, tot: sup + vat };
+}
+const eNoPrice = (s) => S.shipLines(s).some((l) => effPrice(l, s).price <= 0);
+function eShipBadge(s) {
+  if (s.status === '출고예정') return s.method === '택배' ? '<span class="e-b gray">출고예정</span>' : '<span class="e-b orange">배차필요</span>';
+  if (s.status === '배차완료') return '<span class="e-b blue">배차완료</span>';
+  if (s.status === '출고완료') return '<span class="e-b green">출고완료</span>';
+  return `<span class="e-b gray">${esc(s.status)}</span>`;
+}
+function eDocBadge(s) {
+  if (s.status !== '출고완료') return '<span class="e-b ghost">-</span>';
+  return s.docDone ? `<span class="e-b green">발행${s.docBy ? ' · ' + esc(s.docBy) : ''}</span>` : '<span class="e-b red">미발행</span>';
+}
+function eStockBadge(it) {
+  if ((it.note || '').includes('확인')) return '<span class="e-b red">확인</span>';
+  const st = S.stockStatus(it);
+  return st === 'out' ? '<span class="e-b red">품절</span>' : st === 'low' ? '<span class="e-b orange">부족</span>' : '<span class="e-b green">정상</span>';
+}
+const eSite = (s) => (s.unloadPlace && s.unloadPlace !== s.client) ? s.unloadPlace : (s.unloadAddr || '');
+function eRoute(s) {
+  const whAddr = (S.getWarehouses().find((w) => w.name === s.warehouse) || {}).address || '';
+  const clAddr = (S.findPartner(s.client) || {}).address || '';
+  const fr = region(s.loadAddr || whAddr, s.loadPlace || s.warehouse);
+  const to = region(s.unloadAddr || clAddr, s.unloadPlace || s.client);
+  return (fr || to) ? `${fr || '-'} → ${to || '-'}` : '';
+}
+let _ecMap = null;   // 이카운트 품목명 → 코드
+const ecountCode = (name) => { if (!_ecMap) _ecMap = new Map(ECOUNT_ITEMS.map(([c, n]) => [n, c])); return _ecMap.get((name || '').trim()) || ''; };
+
+// 필터/정렬/선택 상태 (화면별)
+state.eF = state.eF || {};
+state.eSort = state.eSort || {};
+state.eClosed = state.eClosed || {};
+let eSel = { route: '', ids: new Set() };
+let eLast = null;   // 마지막으로 그린 표 (엑셀 저장용)
+function eFilter(route, defaults) { state.eF[route] = { ...defaults, ...(state.eF[route] || {}) }; return state.eF[route]; }
+function eSortRows(route, cols, rows) {
+  const so = state.eSort[route]; if (!so) return rows;
+  const col = cols.find((c) => c.k === so.k); if (!col) return rows;
+  const val = col.sv || ((r) => String(col.v(r)).replace(/<[^>]*>/g, ''));
+  return rows.slice().sort((a, b) => {
+    const x = val(a), y = val(b);
+    const r = (typeof x === 'number' && typeof y === 'number') ? x - y : String(x).localeCompare(String(y), 'ko', { numeric: true });
+    return so.d === 'desc' ? -r : r;
+  });
+}
+
+// 검색조건 줄 — fields: [{label, html, grow}]
+const eCond = (fields) => `<div class="e-cond">${fields.map((f) => `<div class="e-cf ${f.grow ? 'grow' : ''}"><label>${f.label}</label><div class="v">${f.html}</div></div>`).join('')}</div>`;
+const eIn = (k, v, cls = 'w-m', ph = '', list = '') => `<input class="e-in ${cls}" data-f="${k}" value="${esc(v || '')}" placeholder="${esc(ph)}" ${list ? `list="${list}"` : ''} autocomplete="off">`;
+const eDate = (k, v) => `<input class="e-in w-date" type="date" data-f="${k}" value="${esc(v || '')}">`;
+const eSel2 = (k, v, opts) => `<select class="e-sel" data-f="${k}">${opts.map((o) => { const [val, lab] = Array.isArray(o) ? o : [o, o]; return `<option value="${esc(val)}" ${String(v) === String(val) ? 'selected' : ''}>${esc(lab)}</option>`; }).join('')}</select>`;
+const eBtn = (label, act, extra = '', cls = '') => `<button class="e-btn ${cls}" type="button" data-act="${act}" ${extra}>${label}</button>`;
+const eKey = (k) => `<span class="k">${k}</span>`;
+function eStdTools(opts = {}) {
+  const sel = opts.bulk ? `<span class="sep"></span><span class="e-selinfo">선택 <b id="e-selcnt">${eSel.ids.size}</b>건</span>${opts.bulk}` : '';
+  return `<div class="e-tools">
+    ${eBtn(`조회 ${eKey('F8')}`, 'erp-q', '', 'pri')}
+    ${opts.newAct ? eBtn(`신규 ${eKey('F2')}`, opts.newAct) : ''}
+    ${opts.extra || ''}
+    ${eBtn('엑셀', 'erp-excel')}${eBtn('새로고침', 'erp-reload')}
+    ${sel}<span class="sp"></span>${eBtn('조건 초기화', 'erp-reset')}
+  </div>`;
+}
+const eTabs = (key, tabs) => `<div class="e-tabs">${tabs.map(([v, l, n]) => `<button class="e-tab ${state[key] === v ? 'on' : ''}" type="button" data-act="erp-tab" data-k="${key}" data-v="${v}">${l}${n != null ? `<span class="n">${n}</span>` : ''}</button>`).join('')}</div>`;
+
+// 표 — cols: [{k, h, w, cls, v(row)→html, sv(row)→정렬값, csv(row)→엑셀값}]
+function eTable(o) {
+  const { route, cols, rows, rowAttr, sel, foot, empty, title, maxH } = o;
+  const so = state.eSort[route] || {};
+  const ids = sel && eSel.route === route ? eSel.ids : new Set();
+  if (sel && eSel.route !== route) eSel = { route, ids: new Set() };
+  if (!o.noExport) eLast = { title: title || (DESK_TITLES[route] || [''])[0], cols, rows };
+  const allOn = sel && rows.length && rows.every((r) => ids.has(r.id));
+  const th = (c) => `<th class="${c.cls || ''} ${o.noSort ? '' : 'srt'}" ${o.noSort ? '' : `data-act="erp-sort" data-r="${route}" data-k="${c.k}"`}>${c.h}${so.k === c.k ? `<span class="ar">${so.d === 'desc' ? '▼' : '▲'}</span>` : ''}</th>`;
+  return `<div class="e-tw ${o.auto ? 'auto' : ''}" ${maxH ? `style="max-height:${maxH}"` : ''}><table class="e-tbl">
+    <colgroup>${sel ? '<col style="width:30px">' : ''}<col style="width:38px">${cols.map((c) => `<col ${c.w ? `style="width:${c.w}px"` : ''}>`).join('')}</colgroup>
+    <thead><tr>${sel ? `<th class="chk"><input type="checkbox" data-act="erp-selall" ${allOn ? 'checked' : ''} aria-label="전체 선택"></th>` : ''}<th>No</th>${cols.map(th).join('')}</tr></thead>
+    <tbody>${rows.length ? rows.map((r, i) => `<tr class="${rowAttr ? 'ck' : ''} ${ids.has(r.id) ? 'sel' : ''}" tabindex="0" ${rowAttr ? rowAttr(r) : ''}>
+      ${sel ? `<td class="chk"><input type="checkbox" data-act="erp-sel" data-id="${esc(r.id)}" ${ids.has(r.id) ? 'checked' : ''}></td>` : ''}<td class="no">${i + 1}</td>
+      ${cols.map((c) => { const h = c.v(r); const tt = String(h).replace(/<[^>]*>/g, '').trim(); return `<td class="${c.cls || ''}"${tt.length > 14 ? ` title="${tt.replace(/"/g, '&quot;')}"` : ''}>${h}</td>`; }).join('')}</tr>`).join('')
+      : `<tr><td colspan="${cols.length + (sel ? 2 : 1)}" class="e-empty">${empty || '조회된 내역이 없습니다.'}</td></tr>`}</tbody>
+    ${foot ? `<tfoot><tr>${sel ? '<td></td>' : ''}<td></td>${foot}</tr></tfoot>` : ''}
+  </table></div>`;
+}
+const ePage = (inner, cls = '') => `<div class="e-body ${cls}">${inner}</div>`;
+
+// ── 헤더 · 메뉴 ───────────────────────────────────
+function deskTop() {
+  const n = stuckItems().total;
+  return `<header class="e-top">
+    <div class="e-brand"><img src="./icons/favicon.png" alt=""><b>홈트레이더스 재고·출고</b></div>
+    <div class="e-corp">주식회사 홈트레이더스</div>
+    <div class="e-quick">
+      <button type="button" data-act="new-ship">${I.plus}출고 입력</button>
+      <button type="button" data-act="add-inbound">입고 입력</button>
+      <button type="button" data-act="add-quote">견적 입력</button>
+      <button type="button" data-act="smart">붙여넣기 인식</button>
+      <button type="button" data-act="briefing">출고 공지</button>
+    </div>
+    <div class="e-tr">
+      <button type="button" class="e-bell" data-act="checklist" title="확인 필요">${I.bell}확인 필요${n ? `<span class="cnt">${n}</span>` : ''}</button>
+      <span class="e-sep"></span>
+      <span class="e-user">${esc(myName())}</span>
+      <button type="button" data-act="erp-nav" data-r="settings">환경설정</button>
+      <button type="button" data-act="logout">로그아웃</button>
+    </div>
+  </header>`;
+}
+function deskSide() {
+  const ships = S.getShipments();
+  const cnt = { dispatch: ships.filter((s) => s.status === '출고예정').length, invoices: ships.filter((s) => s.status === '출고완료' && !s.docDone).length, quotes: S.quotesPending() };
+  return `<nav class="e-side">${DESK_MENU.map(([g, items]) => `<div class="e-grp ${state.eClosed[g] ? 'closed' : ''}">
+    <button class="e-grp-hd" type="button" data-act="erp-grp" data-g="${g}"><span>${g}</span><span class="car">${state.eClosed[g] ? '▶' : '▼'}</span></button>
+    <div class="e-grp-items">${items.map(([r, l, act]) => act
+      ? `<button class="e-mi" type="button" data-act="${act}"><span>${l}</span><span class="act">＋</span></button>`
+      : `<button class="e-mi ${state.route === r ? 'on' : ''}" type="button" data-act="erp-nav" data-r="${r}"><span>${l}</span>${cnt[r] ? `<span class="n ${r === 'invoices' ? 'hot' : ''}">${cnt[r]}</span>` : ''}</button>`).join('')}</div></div>`).join('')}</nav>`;
+}
+const ePhead = (title, grp) => `<div class="e-phead"><h1>${esc(title)}</h1><span class="e-crumb">${esc(grp)} › ${esc(title)}</span><span class="sp"></span>
+  <span class="e-keys"><kbd>F2</kbd>신규<kbd>F8</kbd>조회<kbd>↑↓</kbd>행 이동<kbd>Enter</kbd>열기<kbd>/</kbd>검색</span></div>`;
+
+// ── 화면: 업무 현황 ───────────────────────────────
+function deskDash() {
+  const ships = S.getShipments(); const today = S.todayStr();
+  const need = ships.filter((s) => s.status === '출고예정').sort((a, b) => (a.date || '9').localeCompare(b.date || '9'));
+  const ready = ships.filter((s) => s.status === '배차완료').sort((a, b) => (b.date + (b.time || '')).localeCompare(a.date + (a.time || '')));
+  const doneToday = ships.filter((s) => s.status === '출고완료' && (s.doneAt || s.date) === today);
+  const docPend = ships.filter((s) => s.status === '출고완료' && !s.docDone).sort((a, b) => (a.doneAt || a.date).localeCompare(b.doneAt || b.date));
+  const quotes = S.getQuotes().filter((q) => q.status === '견적대기').sort((a, b) => a.date.localeCompare(b.date));
+  const outs = S.getItems().filter((it) => S.stockStatus(it) === 'out');
+  const stuck = stuckItems();
+  const needRel = (d) => { const n = daysSince(d); return n === 0 ? '오늘' : n === -1 ? '내일' : n < 0 ? `${-n}일 후` : `<span class="red">${n}일 지연</span>`; };
+  const kpi = [
+    ['배차 요청', need.length, 'data-act="erp-nav" data-r="dispatch" data-set="eDispTab=need"'],
+    ['오늘 출고 (배차완료)', ready.length, 'data-act="erp-nav" data-r="dispatch" data-set="eDispTab=ready"'],
+    ['오늘 출고완료', doneToday.length, 'data-act="erp-nav" data-r="dispatch" data-set="eDispTab=done"'],
+    ['명세서 미발행', docPend.length, 'data-act="erp-nav" data-r="invoices" data-set="eInvTab=pending"', true],
+    ['견적 대기', quotes.length, 'data-act="erp-nav" data-r="quotes"'],
+    ['확인 필요', stuck.total, 'data-act="checklist"', true],
+    ['품절 품목', outs.length, 'data-act="erp-nav" data-r="stock" data-preset="stock.status=out"', true],
+  ];
+  const panel = (title, n, tools, table) => `<div class="e-panel"><div class="e-panel-hd"><b>${title}</b><span class="n">${n}건</span><span class="sp"></span>${tools}</div>${table}</div>`;
+  const shipAttr = (s) => `data-act="ship" data-id="${s.id}"`;
+  const t1 = eTable({ route: 'dash-need', noSort: true, noExport: true, rows: need, rowAttr: shipAttr, empty: '배차 요청할 건이 없습니다.', cols: [
+    { k: 'date', h: '출고일', w: 84, cls: 'c', v: (s) => esc(mdDow(s.date)) },
+    { k: 'rel', h: '경과', w: 70, cls: 'c', v: (s) => s.date ? needRel(s.date) : '<span class="muted">미정</span>' },
+    { k: 'client', h: '거래처', v: (s) => esc(s.client || '(미지정)') },
+    { k: 'item', h: '품목', v: (s) => esc(shipSummary(s).itemLabel) },
+    { k: 'qty', h: '수량', w: 60, cls: 'n', v: (s) => esc(shipSummary(s).qtyLabel) },
+    { k: 'wh', h: '창고', w: 60, cls: 'c', v: (s) => esc(whShort(s.warehouse || '')) },
+  ] });
+  const t2 = eTable({ route: 'dash-ready', noSort: true, noExport: true, rows: ready, rowAttr: shipAttr, empty: '배차 완료된 건이 없습니다.', cols: [
+    { k: 'd', h: '출고일', w: 84, cls: 'c', v: (s) => esc(mdDow(s.date)) + (s.time ? ` ${esc(s.time)}` : '') },
+    { k: 'client', h: '거래처', v: (s) => esc(s.client || '(미지정)') },
+    { k: 'item', h: '품목', v: (s) => esc(shipSummary(s).itemLabel) },
+    { k: 'drv', h: '기사', w: 110, v: (s) => s.method === '택배' ? esc(s.courier || '택배') : `${esc(s.driverName || '')}${s.driverPhone ? ` <a class="tel" href="${telHref(s.driverPhone)}">${esc(s.driverPhone)}</a>` : ''}` },
+    { k: 'act', h: '처리', w: 74, cls: 'c', v: (s) => `<button class="e-btn sm" type="button" data-act="mark-done" data-id="${s.id}">출고완료</button>` },
+  ] });
+  const t3 = eTable({ route: 'dash-doc', noSort: true, noExport: true, rows: docPend, rowAttr: shipAttr, empty: '미발행 명세서가 없습니다.', cols: [
+    { k: 'd', h: '출고완료', w: 84, cls: 'c', v: (s) => esc(mdDow(s.doneAt || s.date)) },
+    { k: 'ago', h: '경과', w: 60, cls: 'c', v: (s) => { const n = daysSince(s.doneAt || s.date); return n >= 1 ? `<span class="red">${n}일</span>` : '오늘'; } },
+    { k: 'client', h: '거래처', v: (s) => esc(s.client || '(미지정)') },
+    { k: 'item', h: '품목', v: (s) => esc(shipSummary(s).itemLabel) },
+    { k: 'tot', h: '합계', w: 90, cls: 'n', v: (s) => eN(eAmt(s).tot) || '<span class="red">단가확인</span>' },
+    { k: 'act', h: '처리', w: 62, cls: 'c', v: (s) => `<button class="e-btn sm" type="button" data-act="doc-done" data-id="${s.id}">발행</button>` },
+  ] });
+  const t4 = eTable({ route: 'dash-quote', noSort: true, noExport: true, rows: quotes, rowAttr: (q) => `data-act="quote-open" data-id="${q.id}"`, empty: '받은 견적요청이 없습니다.', cols: [
+    { k: 'd', h: '접수일', w: 84, cls: 'c', v: (q) => esc(mdDow(q.date)) },
+    { k: 'st', h: '경과', w: 80, cls: 'c', v: (q) => daysSince(q.date) >= 2 ? `<span class="red">${pendingLabel(q.date)}</span>` : esc(pendingLabel(q.date)) },
+    { k: 'client', h: '거래처', w: 130, v: (q) => esc(q.client || '(미지정)') },
+    { k: 'c', h: '요청 내용', v: (q) => esc(q.content || '') },
+  ] });
+  return ePage(`
+    <div class="e-kpi">${kpi.map(([k, v, attr, hot]) => `<button type="button" ${attr}><span class="k">${k}</span><span class="v ${hot && v ? 'hot' : ''}">${v}<small>건</small></span></button>`).join('')}</div>
+    <div class="e-tools">${eBtn(`출고 입력 ${eKey('F2')}`, 'new-ship', '', 'pri')}${eBtn('붙여넣기 인식', 'smart')}${eBtn('오늘 출고 공지', 'briefing')}${eBtn('입고 입력', 'add-inbound')}${eBtn('견적 입력', 'add-quote')}<span class="sp"></span>${eBtn('새로고침', 'erp-reload')}</div>
+    <div class="e-panels">
+      ${panel('배차 요청 (출고예정)', need.length, eBtn('배차 관리', 'erp-nav', 'data-r="dispatch" data-set="eDispTab=need"', 'sm'), t1)}
+      ${panel('오늘 출고 (배차완료)', ready.length, eBtn('배차 관리', 'erp-nav', 'data-r="dispatch" data-set="eDispTab=ready"', 'sm'), t2)}
+      ${panel('명세서 미발행', docPend.length, eBtn('거래명세서', 'erp-nav', 'data-r="invoices"', 'sm'), t3)}
+      ${panel('견적 요청 (대기)', quotes.length, eBtn('견적서 조회', 'erp-nav', 'data-r="quotes"', 'sm'), t4)}
+    </div>`);
+}
+
+// ── 화면: 출고 조회 ───────────────────────────────
+function deskShips() {
+  state.eShipView = state.eShipView || 'list';
+  const tabs = eTabs('eShipView', [['list', '목록'], ['cal', '달력']]);
+  if (state.eShipView === 'cal') {
+    return ePage(`${tabs}<div class="e-tools">${eBtn(`출고 입력 ${eKey('F2')}`, 'new-ship', '', 'pri')}${eBtn('붙여넣기 인식', 'smart')}</div>
+      <div class="e-legacy e-calwrap"><div>${calendarHTML()}</div><div>${dayDetailHTML()}</div></div>`, 'scroll');
+  }
+  const today = S.todayStr();
+  const f = eFilter('ships', { from: eAddDays(today, -30), to: '', client: '', status: '', wh: '', doc: '', item: '', q: '' });
+  let rows = S.getShipments().filter((s) => {
+    if (f.from && (s.date || '') < f.from) return false;
+    if (f.to && (s.date || '') > f.to) return false;
+    if (f.status && s.status !== f.status) return false;
+    if (f.wh && s.warehouse !== f.wh) return false;
+    if (f.doc === 'pending' && !(s.status === '출고완료' && !s.docDone)) return false;
+    if (f.doc === 'issued' && !s.docDone) return false;
+    if (!eHas(s.client, f.client)) return false;
+    if (f.item && !S.shipLines(s).some((l) => eHas(l.name, f.item))) return false;
+    if (f.q && !eHas([s.note, s.driverName, s.driverPhone, s.vehicle, s.unloadPlace, s.unloadAddr, s.trackingNo, s.courier, s.dispatchVia].join(' '), f.q)) return false;
+    return true;
+  });
+  const cols = [
+    { k: 'date', h: '출고일', w: 94, cls: 'c', v: (s) => esc((s.date || '').slice(5)) + (s.time ? ` <span class="muted">${esc(s.time)}</span>` : ''), sv: (s) => (s.date || '') + (s.time || ''), csv: (s) => `${s.date || ''} ${s.time || ''}`.trim() },
+    { k: 'client', h: '거래처', w: 120, v: (s) => esc(s.client || '(미지정)') },
+    { k: 'site', h: '현장 / 하차지', w: 140, v: (s) => esc(eSite(s)) },
+    { k: 'item', h: '품목', v: (s) => esc(shipSummary(s).itemLabel), csv: (s) => S.shipLines(s).map((l) => `${l.name} ${l.qty}${l.unit || ''}`).join(' / ') },
+    { k: 'qty', h: '수량', w: 56, cls: 'n', v: (s) => esc(shipSummary(s).qtyLabel) },
+    { k: 'sup', h: '공급가', w: 94, cls: 'n', v: (s) => eN(eAmt(s).sup) || (eNoPrice(s) ? '<span class="red">단가확인</span>' : ''), sv: (s) => eAmt(s).sup, csv: (s) => eAmt(s).sup },
+    { k: 'tot', h: '합계', w: 94, cls: 'n', v: (s) => eN(eAmt(s).tot), sv: (s) => eAmt(s).tot, csv: (s) => eAmt(s).tot },
+    { k: 'wh', h: '창고', w: 52, cls: 'c', v: (s) => esc(whShort(s.warehouse || '')) },
+    { k: 'drv', h: '배차 / 기사', w: 130, v: (s) => s.method === '택배' ? `<span class="e-b gray">택배</span> ${esc([s.courier, s.trackingNo].filter(Boolean).join(' '))}` : esc([s.dispatchVia, s.driverName].filter(Boolean).join(' · ')),
+      csv: (s) => (s.method === '택배' ? ['택배', s.courier, s.trackingNo] : [s.dispatchVia, s.driverName]).filter(Boolean).join(' ') },
+    { k: 'status', h: '상태', w: 70, cls: 'c', v: eShipBadge, sv: (s) => STAGES.indexOf(s.status), csv: (s) => s.status },
+    { k: 'doc', h: '명세서', w: 88, cls: 'c', v: eDocBadge, sv: (s) => (s.status === '출고완료' ? (s.docDone ? 2 : 1) : 0), csv: (s) => (s.status === '출고완료' ? (s.docDone ? '발행' : '미발행') : '') },
+    { k: 'note', h: '비고 / 보류', w: 110, v: (s) => s.holdReason ? `<span class="e-b orange">보류 · ${esc(s.holdReason)}</span>` : esc(s.note || ''), csv: (s) => [s.holdReason && '보류:' + s.holdReason, s.note].filter(Boolean).join(' ') },
+  ];
+  rows = eSortRows('ships', cols, rows);
+  const sum = rows.reduce((a, s) => { const m = eAmt(s); a.sup += m.sup; a.tot += m.tot; return a; }, { sup: 0, tot: 0 });
+  const whOpts = [['', '전체'], ...S.warehouseNames().map((w) => [w, w])];
+  return ePage(`
+    ${tabs}
+    ${eCond([
+      { label: '출고일', html: `${eDate('from', f.from)}<span class="e-tilde">~</span>${eDate('to', f.to)}` },
+      { label: '거래처', html: eIn('client', f.client, 'w-m', '거래처명', 'e-dl-partners') },
+      { label: '상태', html: eSel2('status', f.status, [['', '전체'], '출고예정', '배차완료', '출고완료']) },
+      { label: '창고', html: eSel2('wh', f.wh, whOpts) },
+      { label: '명세서', html: eSel2('doc', f.doc, [['', '전체'], ['pending', '미발행'], ['issued', '발행']]) },
+      { label: '품목', html: eIn('item', f.item, 'w-m', '품목명 일부') },
+      { label: '검색', html: eIn('q', f.q, 'w-l', '비고·기사·주소·송장 등'), grow: true },
+    ])}
+    <datalist id="e-dl-partners">${S.getPartners().map((p) => `<option value="${esc(p.name)}"></option>`).join('')}</datalist>
+    ${eStdTools({ newAct: 'new-ship', extra: eBtn('붙여넣기 인식', 'smart'),
+      bulk: `${eBtn('선택 출고완료', 'erp-bulk', 'data-b="done"', 'sm')}${eBtn('선택 명세서 발행', 'erp-bulk', 'data-b="doc"', 'sm')}` })}
+    ${eTable({ route: 'ships', cols, rows, sel: true, rowAttr: (s) => `data-act="ship" data-id="${s.id}"`,
+      foot: `<td colspan="5" style="text-align:left">합계 ${rows.length.toLocaleString()}건</td><td class="n">${eN(sum.sup)}</td><td class="n">${eN(sum.tot)}</td><td colspan="5"></td>` })}`);
+}
+
+// ── 화면: 배차 관리 ───────────────────────────────
+function deskDispatch() {
+  state.eDispTab = state.eDispTab || 'need';
+  const ships = S.getShipments();
+  const need = ships.filter((s) => s.status === '출고예정').sort((a, b) => (a.date || '9').localeCompare(b.date || '9'));
+  const ready = ships.filter((s) => s.status === '배차완료').sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')));
+  const done = ships.filter((s) => s.status === '출고완료').sort((a, b) => (b.doneAt || b.date).localeCompare(a.doneAt || a.date));
+  const tab = state.eDispTab;
+  const rel = (d) => { if (!d) return '<span class="muted">미정</span>'; const n = daysSince(d); return n === 0 ? '오늘' : n === -1 ? '내일' : n < 0 ? `${-n}일 후` : `<span class="red">${n}일 지연</span>`; };
+  const base = [
+    { k: 'date', h: '출고일', w: 94, cls: 'c', v: (s) => esc(s.date || '') },
+    { k: 'client', h: '거래처', w: 130, v: (s) => esc(s.client || '(미지정)') },
+    { k: 'route', h: '상차 → 하차', w: 170, v: (s) => esc(eRoute(s)) },
+    { k: 'item', h: '품목', v: (s) => esc(shipSummary(s).itemLabel) },
+    { k: 'qty', h: '수량', w: 60, cls: 'n', v: (s) => esc(shipSummary(s).qtyLabel) },
+  ];
+  let cols, rows;
+  if (tab === 'need') {
+    rows = need;
+    cols = [base[0], { k: 'rel', h: '경과', w: 70, cls: 'c', v: (s) => rel(s.date), sv: (s) => -daysSince(s.date) }, ...base.slice(1),
+      { k: 'method', h: '방식', w: 46, cls: 'c', v: (s) => esc(s.method || '배차') },
+      { k: 'hold', h: '보류', w: 110, v: (s) => s.holdReason ? `<span class="e-b orange">${esc(s.holdReason)}</span>` : '' },
+      { k: 'act', h: '처리', w: 176, cls: 'c', v: (s) => s.method === '택배' ? '' : `${eBtn('배차 요청 양식', 'copy-dispatch', `data-id="${s.id}"`, 'sm')}${eBtn('배차 완료', 'dispatch-paste', `data-id="${s.id}"`, 'sm')}` }];
+  } else if (tab === 'ready') {
+    rows = ready;
+    cols = [{ ...base[0], v: (s) => esc(s.date || '') + (s.time ? ` ${esc(s.time)}` : '') }, ...base.slice(1),
+      { k: 'via', h: '배차업체', w: 80, v: (s) => esc(s.method === '택배' ? (s.courier || '택배') : s.dispatchVia || '') },
+      { k: 'drv', h: '기사', w: 64, v: (s) => esc(s.driverName || s.recvName || '') },
+      { k: 'tel', h: '연락처', w: 108, v: (s) => s.driverPhone ? `<a class="tel" href="${telHref(s.driverPhone)}">${esc(s.driverPhone)}</a>` : '' },
+      { k: 'veh', h: '차량 / 송장', w: 130, v: (s) => esc(s.method === '택배' ? s.trackingNo || '' : s.vehicle || '') },
+      { k: 'fr', h: '운임', w: 76, cls: 'n', v: (s) => eN(s.freight || s.courierFee), sv: (s) => Number(s.freight || s.courierFee) || 0 },
+      { k: 'pay', h: '결제', w: 46, cls: 'c', v: (s) => esc(s.payment || '') },
+      { k: 'act', h: '처리', w: 74, cls: 'c', v: (s) => eBtn('출고완료', 'mark-done', `data-id="${s.id}"`, 'sm') }];
+  } else {
+    rows = done;
+    cols = [{ k: 'doneAt', h: '출고완료', w: 94, cls: 'c', v: (s) => esc(s.doneAt || s.date || '') }, ...base.slice(1),
+      { k: 'drv', h: '기사 / 택배', w: 120, v: (s) => esc(s.method === '택배' ? [s.courier, s.trackingNo].filter(Boolean).join(' ') : [s.driverName, s.vehicle].filter(Boolean).join(' · ')) },
+      { k: 'fr', h: '운임', w: 76, cls: 'n', v: (s) => eN(s.freight || s.courierFee), sv: (s) => Number(s.freight || s.courierFee) || 0 },
+      { k: 'pay', h: '결제', w: 46, cls: 'c', v: (s) => esc(s.payment || '') },
+      { k: 'doc', h: '명세서', w: 92, cls: 'c', v: eDocBadge }];
+  }
+  rows = eSortRows('dispatch-' + tab, cols, rows);
+  return ePage(`
+    ${eTabs('eDispTab', [['need', '배차 요청', need.length], ['ready', '배차 완료 (출고 대기)', ready.length], ['done', '출고 완료', done.length]])}
+    <div class="e-tools">${eBtn('오늘 출고 공지', 'briefing', '', 'pri')}${eBtn('붙여넣기 인식', 'smart')}${eBtn(`출고 입력 ${eKey('F2')}`, 'new-ship')}
+      ${tab === 'ready' ? `<span class="sep"></span><span class="e-selinfo">선택 <b id="e-selcnt">${eSel.ids.size}</b>건</span>${eBtn('선택 출고완료', 'erp-bulk', 'data-b="done"', 'sm')}` : ''}
+      <span class="sp"></span>${eBtn('엑셀', 'erp-excel')}${eBtn('새로고침', 'erp-reload')}</div>
+    ${eTable({ route: 'dispatch-' + tab, cols, rows, sel: tab === 'ready', rowAttr: (s) => `data-act="ship" data-id="${s.id}"`, title: '배차 관리' })}`);
+}
+
+// ── 화면: 거래명세서 ─────────────────────────────
+function deskInvoices() {
+  state.eInvTab = state.eInvTab || 'pending';
+  const all = S.getShipments().filter((s) => s.status === '출고완료');
+  const pending = all.filter((s) => !s.docDone);
+  const issued = all.filter((s) => s.docDone);
+  const tab = state.eInvTab;
+  const f = eFilter('invoices', { client: '', from: '', to: '' });
+  let rows = (tab === 'pending' ? pending : issued).filter((s) => eHas(s.client, f.client) && (!f.from || (s.doneAt || s.date) >= f.from) && (!f.to || (s.doneAt || s.date) <= f.to))
+    .sort((a, b) => (b.doneAt || b.date).localeCompare(a.doneAt || a.date));
+  const cols = [
+    { k: 'date', h: '출고일', w: 94, cls: 'c', v: (s) => esc(s.date || '') },
+    { k: 'doneAt', h: '출고완료', w: 94, cls: 'c', v: (s) => esc(s.doneAt || '') },
+    { k: 'client', h: '거래처', w: 140, v: (s) => esc(s.client || '(미지정)') },
+    { k: 'site', h: '현장 / 하차지', w: 170, v: (s) => esc(eSite(s)) },
+    { k: 'item', h: '품목', v: (s) => esc(shipSummary(s).itemLabel), csv: (s) => S.shipLines(s).map((l) => `${l.name} ${l.qty}${l.unit || ''}`).join(' / ') },
+    { k: 'qty', h: '수량', w: 60, cls: 'n', v: (s) => esc(shipSummary(s).qtyLabel) },
+    { k: 'sup', h: '공급가', w: 92, cls: 'n', v: (s) => eN(eAmt(s).sup) || (eNoPrice(s) ? '<span class="red">단가확인</span>' : ''), sv: (s) => eAmt(s).sup, csv: (s) => eAmt(s).sup },
+    { k: 'vat', h: '세액', w: 80, cls: 'n', v: (s) => eN(eAmt(s).vat), sv: (s) => eAmt(s).vat, csv: (s) => eAmt(s).vat },
+    { k: 'tot', h: '합계', w: 92, cls: 'n', v: (s) => eN(eAmt(s).tot), sv: (s) => eAmt(s).tot, csv: (s) => eAmt(s).tot },
+    { k: 'wh', h: '창고', w: 60, cls: 'c', v: (s) => esc(whShort(s.warehouse || '')) },
+    tab === 'pending'
+      ? { k: 'ago', h: '경과', w: 60, cls: 'c', v: (s) => { const n = daysSince(s.doneAt || s.date); return n >= 1 ? `<span class="red">${n}일</span>` : '오늘'; }, sv: (s) => daysSince(s.doneAt || s.date) }
+      : { k: 'by', h: '발행자', w: 80, cls: 'c', v: (s) => esc(s.docBy || '') },
+    tab === 'pending'
+      ? { k: 'act', h: '처리', w: 62, cls: 'c', v: (s) => eBtn('발행', 'doc-done', `data-id="${s.id}"`, 'sm') }
+      : { k: 'st', h: '상태', w: 70, cls: 'c', v: eDocBadge },
+  ];
+  rows = eSortRows('invoices-' + tab, cols, rows);
+  const sum = rows.reduce((a, s) => { const m = eAmt(s); a.sup += m.sup; a.vat += m.vat; a.tot += m.tot; return a; }, { sup: 0, vat: 0, tot: 0 });
+  return ePage(`
+    ${eTabs('eInvTab', [['pending', '미발행', pending.length], ['issued', '발행 완료', issued.length]])}
+    ${eCond([
+      { label: '출고완료', html: `${eDate('from', f.from)}<span class="e-tilde">~</span>${eDate('to', f.to)}` },
+      { label: '거래처', html: eIn('client', f.client, 'w-l', '거래처명', 'e-dl-partners'), grow: true },
+    ])}
+    <datalist id="e-dl-partners">${S.getPartners().map((p) => `<option value="${esc(p.name)}"></option>`).join('')}</datalist>
+    ${eStdTools({ bulk: tab === 'pending' ? eBtn('선택 명세서 발행', 'erp-bulk', 'data-b="doc"', 'sm') : '' })}
+    ${eTable({ route: 'invoices-' + tab, cols, rows, sel: tab === 'pending', rowAttr: (s) => `data-act="ship" data-id="${s.id}"`, title: tab === 'pending' ? '거래명세서_미발행' : '거래명세서_발행',
+      foot: `<td colspan="6" style="text-align:left">합계 ${rows.length}건</td><td class="n">${eN(sum.sup)}</td><td class="n">${eN(sum.vat)}</td><td class="n">${eN(sum.tot)}</td><td colspan="3"></td>` })}`);
+}
+
+// ── 화면: 구매명세서 (매입처별 출고 품목) ───────────
+function deskBuy() {
+  const g = buyGroups();
+  const sups = Object.keys(g).sort();
+  const f = eFilter('buy', { sup: '', item: '' });
+  const rows = [];
+  sups.filter((s) => eHas(s, f.sup)).forEach((sup) => {
+    const list = Object.values(g[sup]).filter((r) => eHas(r.name, f.item)).sort((a, b) => a.name.localeCompare(b.name));
+    if (!list.length) return;
+    rows.push({ grp: true, sup, n: list.length });
+    list.forEach((r) => rows.push({ sup, ...r }));
+  });
+  eLast = { title: '구매명세서', cols: [{ h: '매입처', csv: (r) => r.sup }, { h: '품목', csv: (r) => r.name }, { h: '수량', csv: (r) => r.qty }, { h: '단위', csv: (r) => r.unit }], rows: rows.filter((r) => !r.grp) };
+  let no = 0;
+  return ePage(`
+    ${eCond([{ label: '매입처', html: eIn('sup', f.sup, 'w-m', '매입처명') }, { label: '품목', html: eIn('item', f.item, 'w-l', '품목명 일부'), grow: true }])}
+    ${eStdTools({})}
+    <p class="hint" style="margin:0;color:var(--e-muted)">출고 품목을 <b>매입처별</b>로 모았어요. 매입처에 보낼 구매명세서를 복사하세요. (구매단가 칸은 다음 단계)</p>
+    <div class="e-tw"><table class="e-tbl"><colgroup><col style="width:38px"><col style="width:180px"><col><col style="width:100px"><col style="width:70px"></colgroup>
+      <thead><tr><th>No</th><th>매입처</th><th>품목</th><th class="n">수량</th><th>단위</th></tr></thead>
+      <tbody>${rows.length ? rows.map((r) => r.grp
+        ? `<tr class="grp"><td></td><td colspan="2">${esc(r.sup)} <span style="color:var(--e-muted);font-weight:600">${r.n}품목</span></td><td colspan="2" class="c">${eBtn('구매명세서 복사', 'buy-copy', `data-sup="${esc(r.sup)}"`, 'sm')}</td></tr>`
+        : `<tr><td class="no">${++no}</td><td class="muted">${esc(r.sup)}</td><td>${esc(r.name)}</td><td class="n">${eN(r.qty)}</td><td class="c">${esc(r.unit)}</td></tr>`).join('')
+        : '<tr><td colspan="5" class="e-empty">출고된 품목이 없습니다.</td></tr>'}</tbody></table></div>`);
+}
+
+// ── 화면: 견적서 조회 ─────────────────────────────
+function deskQuotes() {
+  const f = eFilter('quotes', { status: '', client: '', from: '', to: '', q: '' });
+  let rows = S.getQuotes().filter((q) => (!f.status || q.status === f.status) && eHas(q.client, f.client)
+    && (!f.from || q.date >= f.from) && (!f.to || q.date <= f.to) && eHas([q.content, q.note, q.phone].join(' '), f.q));
+  const cols = [
+    { k: 'date', h: '접수일', w: 94, cls: 'c', v: (q) => esc(q.date || '') },
+    { k: 'client', h: '거래처', w: 150, v: (q) => esc(q.client || '(미지정)') },
+    { k: 'phone', h: '연락처', w: 118, v: (q) => q.phone ? `<a class="tel" href="${telHref(q.phone)}" data-act="quote-call" data-id="${q.id}">${esc(q.phone)}</a>` : '', csv: (q) => q.phone || '' },
+    { k: 'content', h: '요청 내용', v: (q) => esc(q.content || '') },
+    { k: 'lines', h: '품목', w: 50, cls: 'n', v: (q) => (q.lines || []).length || '', sv: (q) => (q.lines || []).length },
+    { k: 'amt', h: '견적금액', w: 100, cls: 'n', v: (q) => eN(quoteTotal(q.lines)), sv: (q) => quoteTotal(q.lines), csv: (q) => quoteTotal(q.lines) },
+    { k: 'status', h: '상태', w: 74, cls: 'c', v: (q) => q.status === '견적완료' ? '<span class="e-b green">견적완료</span>' : '<span class="e-b gray">견적대기</span>', csv: (q) => q.status },
+    { k: 'ago', h: '경과', w: 84, cls: 'c', v: (q) => q.status === '견적완료' ? '' : (daysSince(q.date) >= 2 ? `<span class="red">${pendingLabel(q.date)}</span>` : esc(pendingLabel(q.date))), sv: (q) => daysSince(q.date) },
+    { k: 'call', h: '최근 통화', w: 120, v: (q) => esc((q.calls || []).slice(-1)[0] || '') },
+    { k: 'hold', h: '보류', w: 110, v: (q) => q.holdReason ? `<span class="e-b orange">${esc(q.holdReason)}</span>` : '' },
+  ];
+  rows = eSortRows('quotes', cols, rows);
+  const n = (st) => S.getQuotes().filter((q) => !st || q.status === st).length;
+  return ePage(`
+    ${eCond([
+      { label: '접수일', html: `${eDate('from', f.from)}<span class="e-tilde">~</span>${eDate('to', f.to)}` },
+      { label: '상태', html: eSel2('status', f.status, [['', `전체 (${n('')})`], ['견적대기', `견적대기 (${n('견적대기')})`], ['견적완료', `견적완료 (${n('견적완료')})`]]) },
+      { label: '거래처', html: eIn('client', f.client, 'w-m', '거래처명') },
+      { label: '검색', html: eIn('q', f.q, 'w-l', '요청 내용·메모·연락처'), grow: true },
+    ])}
+    ${eStdTools({ newAct: 'add-quote' })}
+    ${eTable({ route: 'quotes', cols, rows, rowAttr: (q) => `data-act="quote-open" data-id="${q.id}"` })}`);
+}
+
+// ── 화면: 재고 현황 — 품목별(창고를 열로) / 창고별 상세. 행을 누르면 재고 수불부 ──
+function deskStock() {
+  if (state.stockWH) { state.eF.stock = { ...(state.eF.stock || {}), wh: state.stockWH }; state.stockWH = null; }
+  state.eStockView = state.eStockView || 'item';
+  const f = eFilter('stock', { wh: '', cat: '', status: '', q: '' });
+  const items = S.getItems();
+  const whs = S.getWarehouses();
+  const cats = [...new Set(items.map((it) => it.category).filter(Boolean))].sort();
+  const match = (it) => (!f.cat || it.category === f.cat) && eHas([it.name, it.aliases, it.supplier, it.note].join(' '), f.q);
+  const ledger = (name) => `data-act="erp-ledger" data-name="${esc(name)}"`;
+  const qtyHTML = (it) => { const sp = S.stockParts(it); const c = S.currentStock(it); return `<span class="${c <= 0 ? 'red' : ''}">${sp.whole.toLocaleString()}</span>${sp.loose ? `<span class="muted"> +${sp.loose}개</span>` : ''}`; };
+  let cols, rows, rowAttr;
+  if (state.eStockView === 'item') {
+    // 같은 품목명 = 한 줄, 창고마다 열 (이카운트 창고별재고현황 방식)
+    const byName = {};
+    items.filter(match).forEach((it) => { (byName[it.name] = byName[it.name] || []).push(it); });
+    rows = Object.entries(byName).map(([name, list]) => {
+      const cur = list.reduce((a, it) => a + S.currentStock(it), 0);
+      const res = list.reduce((a, it) => a + S.reservedQty(it), 0);
+      const prices = [...new Set(list.map((i) => Number(i.unitPrice) || 0).filter((v) => v > 0))];
+      return { id: name, name, list, cur, res, prices, cat: list[0].category || '', unit: (list.find((i) => i.unit) || {}).unit || '',
+        pb: (list.find((i) => Number(i.perBox) > 0) || {}).perBox || 0, code: (list.find((i) => i.ecountCode) || {}).ecountCode || ecountCode(name),
+        sup: [...new Set(list.map((i) => i.supplier).filter(Boolean))].join(', '), note: list.map((i) => i.note).filter(Boolean).join(' / '),
+        st: list.some((i) => (i.note || '').includes('확인')) ? 'chk' : colorStatus(cur) };
+    });
+    if (f.wh) rows = rows.filter((r) => r.list.some((it) => it.warehouse === f.wh));
+    if (f.status) rows = rows.filter((r) => r.st === f.status);
+    const whCols = f.wh ? whs.filter((w) => w.name === f.wh) : whs;
+    cols = [
+      { k: 'cat', h: '구분', w: 60, cls: 'c', v: (r) => esc(r.cat) },
+      { k: 'name', h: '품목', v: (r) => `<b>${esc(r.name)}</b>`, csv: (r) => r.name },
+      { k: 'code', h: '품목코드', w: 116, v: (r) => `<span class="muted">${esc(r.code)}</span>`, csv: (r) => r.code },
+      { k: 'unit', h: '단위', w: 50, cls: 'c', v: (r) => esc(r.unit) },
+      ...whCols.map((w) => ({ k: 'wh:' + w.name, h: esc(whShort(w.name)), w: 76, cls: 'n',
+        v: (r) => { const it = r.list.find((i) => i.warehouse === w.name); return it ? qtyHTML(it) : '<span class="muted">·</span>'; },
+        sv: (r) => { const it = r.list.find((i) => i.warehouse === w.name); return it ? S.currentStock(it) : -1e9; },
+        csv: (r) => { const it = r.list.find((i) => i.warehouse === w.name); return it ? Math.floor(S.currentStock(it)) : ''; } })),
+      { k: 'cur', h: '재고 합계', w: 80, cls: 'n', v: (r) => `<b class="${r.cur <= 0 ? 'red' : ''}">${Math.floor(r.cur).toLocaleString()}</b>`, sv: (r) => r.cur, csv: (r) => Math.floor(r.cur) },
+      { k: 'res', h: '출고예정', w: 70, cls: 'n', v: (r) => eN(Math.round(r.res)), sv: (r) => r.res },
+      { k: 'av', h: '가용', w: 64, cls: 'n', v: (r) => { const a = Math.floor(r.cur - r.res); return a < 0 ? `<span class="red">${a.toLocaleString()}</span>` : a.toLocaleString(); }, sv: (r) => r.cur - r.res },
+      { k: 'price', h: '판매단가', w: 84, cls: 'n', v: (r) => r.prices.length === 1 ? r.prices[0].toLocaleString() : r.prices.length ? '<span class="muted">창고별 상이</span>' : '', sv: (r) => r.prices[0] || 0 },
+      { k: 'sup', h: '매입처', w: 84, v: (r) => esc(r.sup) },
+      { k: 'note', h: '비고', w: 120, v: (r) => r.note.includes('확인') ? `<span class="red">${esc(r.note)}</span>` : esc(r.note) },
+      { k: 'st', h: '상태', w: 54, cls: 'c', v: (r) => r.st === 'chk' ? '<span class="e-b red">확인</span>' : r.st === 'out' ? '<span class="e-b red">품절</span>' : r.st === 'low' ? '<span class="e-b orange">부족</span>' : '<span class="e-b green">정상</span>',
+        sv: (r) => ({ chk: -1, out: 0, low: 1, ok: 2 }[r.st]), csv: (r) => ({ chk: '확인', out: '품절', low: '부족', ok: '정상' }[r.st]) },
+    ];
+    rowAttr = (r) => ledger(r.name);
+  } else {
+    rows = items.filter((it) => match(it) && (!f.wh || it.warehouse === f.wh) && (!f.status || S.stockStatus(it) === f.status));
+    const avail = (it) => Math.floor(S.currentStock(it) - S.reservedQty(it));
+    cols = [
+      { k: 'wh', h: '창고', w: 84, v: (it) => esc(it.warehouse) },
+      { k: 'cat', h: '구분', w: 60, cls: 'c', v: (it) => esc(it.category || '') },
+      { k: 'name', h: '품목', v: (it) => esc(it.name) },
+      { k: 'code', h: '품목코드', w: 116, v: (it) => `<span class="muted">${esc(it.ecountCode || ecountCode(it.name))}</span>`, csv: (it) => it.ecountCode || ecountCode(it.name) },
+      { k: 'unit', h: '단위', w: 50, cls: 'c', v: (it) => esc(it.unit || '') },
+      { k: 'pb', h: '입수', w: 50, cls: 'n', v: (it) => eN(it.perBox), sv: (it) => Number(it.perBox) || 0 },
+      { k: 'cur', h: '현재고', w: 84, cls: 'n', v: (it) => `<b>${qtyHTML(it)}</b>`, sv: (it) => S.currentStock(it), csv: (it) => Math.floor(S.currentStock(it)) },
+      { k: 'res', h: '출고예정', w: 70, cls: 'n', v: (it) => eN(Math.round(S.reservedQty(it))), sv: (it) => S.reservedQty(it) },
+      { k: 'av', h: '가용', w: 64, cls: 'n', v: (it) => { const a = avail(it); return a < 0 ? `<span class="red">${a.toLocaleString()}</span>` : a.toLocaleString(); }, sv: avail },
+      { k: 'price', h: '판매단가', w: 84, cls: 'n', v: (it) => eN(it.unitPrice), sv: (it) => Number(it.unitPrice) || 0 },
+      { k: 'sup', h: '매입처', w: 84, v: (it) => esc(it.supplier || '') },
+      { k: 'note', h: '비고', w: 120, v: (it) => (it.note || '').includes('확인') ? `<span class="red">${esc(it.note)}</span>` : esc(it.note || '') },
+      { k: 'st', h: '상태', w: 54, cls: 'c', v: eStockBadge, sv: (it) => ({ out: 0, low: 1, ok: 2 }[S.stockStatus(it)]), csv: (it) => STATUS_KO[S.stockStatus(it)] },
+    ];
+    rowAttr = (it) => ledger(it.name);
+  }
+  rows = eSortRows('stock-' + state.eStockView, cols, rows);
+  const nAll = (c) => new Set(items.filter((it) => !c || it.category === c).map((it) => it.name)).size;
+  const warn = rows.filter((r) => (r.st || S.stockStatus(r)) !== 'ok').length;
+  return ePage(`
+    <div class="e-kpi">${whs.map((w) => { const sm = S.warehouseSummary(w.name); return `<button type="button" data-act="erp-nav" data-r="stock" data-preset="stock.wh=${f.wh === w.name ? '' : esc(w.name)}" style="${f.wh === w.name ? 'background:var(--e-sel)' : ''}"><span class="k">${esc(w.name)} · ${sm.itemCount}품목</span><span class="v">${sm.total.toLocaleString()}${sm.low ? `<small style="color:var(--e-warn)">부족·품절 ${sm.low}</small>` : ''}</span></button>`; }).join('')}</div>
+    <div class="e-tabs">${[['', '전체'], ...cats.map((c) => [c, c])].map(([v, l]) => `<button class="e-tab ${f.cat === v ? 'on' : ''}" type="button" data-act="erp-nav" data-r="stock" data-preset="stock.cat=${esc(v)}">${esc(l)}<span class="n">${nAll(v)}</span></button>`).join('')}
+      <span style="flex:1"></span>
+      <span class="e-seg">${[['item', '품목별 (창고 합산)'], ['wh', '창고별 상세']].map(([v, l]) => `<button type="button" class="${state.eStockView === v ? 'on' : ''}" data-act="erp-tab" data-k="eStockView" data-v="${v}">${l}</button>`).join('')}</span></div>
+    ${eCond([
+      { label: '창고', html: eSel2('wh', f.wh, [['', '전체'], ...whs.map((w) => [w.name, w.name])]) },
+      { label: '상태', html: eSel2('status', f.status, [['', '전체'], ['ok', '정상'], ['low', '부족'], ['out', '품절']]) },
+      { label: '품목', html: eIn('q', f.q, 'w-l', '품목명·별칭·매입처·비고'), grow: true },
+    ])}
+    ${eStdTools({ newAct: 'add-item', extra: `${eBtn('입고 입력', 'add-inbound')}${eBtn('창고 등록', 'erp-nav', 'data-r="whs"')}` })}
+    ${eTable({ route: 'stock-' + state.eStockView, cols, rows, rowAttr, title: '재고현황' })}
+    <div class="e-sum"><span>품목 <b>${rows.length}</b>개${warn ? ` · 부족·품절·확인 <b style="color:var(--e-err)">${warn}</b>개` : ''}</span></div>`);
+}
+
+// 재고 수불부 — 품목의 창고별 재고 + 입고/출고 내역과 잔량 (재고 계산은 store 와 같은 기준으로 표시만)
+function sheetStockLedger(name) {
+  const list = S.getItems().filter((it) => (it.name || '(미지정)') === name);
+  if (!list.length) return '';
+  const f = list[0];
+  const whRows = list.map((it) => {
+    const cur = S.currentStock(it); const inb = S.inboundQty(it);
+    return { it, cur, inb, out: Number(it.initial || 0) + inb - cur, res: S.reservedQty(it) };
+  });
+  // 이력: 입고(창고·구분·품목 일치) + 출고(출고의 창고 · 라인 품목 일치, 낱개는 입수로 나눔) — store 재고 계산과 같은 기준
+  const ev = [];
+  S.getInbounds().forEach((r) => { const it = list.find((i) => i.warehouse === r.warehouse && i.category === r.category); if (it && r.name === name) ev.push({ d: r.date || '', wh: r.warehouse, kind: '입고', who: r.supplier || '', q: `${r.qty}${r.unit || ''}`, base: Number(r.qty) || 0 }); });
+  S.getShipments().forEach((s) => S.shipLines(s).forEach((l) => {
+    if (l.name !== name) return;
+    const it = list.find((i) => i.warehouse === s.warehouse); if (!it) return;
+    const pb = Number(it.perBox) || 0;
+    const base = (l.unit === '낱개' && pb > 0) ? (Number(l.qty) || 0) / pb : (Number(l.qty) || 0);
+    ev.push({ d: s.date || '', wh: s.warehouse, kind: s.status === '출고완료' ? '출고' : s.status, who: s.client || '', q: `${l.qty}${l.unit || ''}`, base: -base, sid: s.id, plan: s.status !== '출고완료' });
+  }));
+  const done = ev.filter((e) => !e.plan).sort((a, b) => a.d.localeCompare(b.d));
+  const bal = {}; list.forEach((it) => { bal[it.warehouse] = Number(it.initial) || 0; });
+  const histRows = done.map((e) => { bal[e.wh] += e.base; return { ...e, bal: bal[e.wh] }; }).reverse();
+  const plans = ev.filter((e) => e.plan).sort((a, b) => a.d.localeCompare(b.d));
+  const fmt = (n) => (Math.round(n * 100) / 100).toLocaleString();
+  return `<h2>재고 수불부 · ${esc(name)}</h2>
+  <table class="e-ftbl"><colgroup><col style="width:92px"><col><col style="width:92px"><col><col style="width:92px"><col></colgroup>
+    <tr><th>품목</th><td colspan="3"><b>${esc(name)}</b></td><th>품목코드</th><td>${esc(f.ecountCode || ecountCode(name))}</td></tr>
+    <tr><th>구분</th><td>${esc(f.category || '')}</td><th>단위</th><td>${esc(f.unit || '')}${Number(f.perBox) > 0 ? ` · ${f.perBox}개입` : ''}</td><th>매입처</th><td>${esc([...new Set(list.map((i) => i.supplier).filter(Boolean))].join(', '))}</td></tr>
+  </table>
+  <div class="e-lines-hd"><b>창고별 재고</b><span class="hint2">현재고 = 기초 + 입고 − 출고완료</span></div>
+  <table class="e-grid"><colgroup><col><col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:90px"><col style="width:80px"><col style="width:80px"><col style="width:170px"></colgroup>
+    <thead><tr><th>창고</th><th>기초</th><th>입고</th><th>출고완료</th><th>현재고</th><th>출고예정</th><th>가용</th><th>처리</th></tr></thead>
+    <tbody>${whRows.map((w) => `<tr><td style="padding-left:7px">${esc(w.it.warehouse)}</td><td class="n">${fmt(Number(w.it.initial) || 0)}</td><td class="n">${fmt(w.inb)}</td><td class="n">${fmt(w.out)}</td>
+      <td class="n"><b class="${w.cur <= 0 ? 'red' : ''}">${fmt(w.cur)}</b></td><td class="n">${fmt(w.res)}</td><td class="n">${fmt(w.cur - w.res)}</td>
+      <td class="c">${eBtn('실사 수정', 'erp-stockfix', `data-id="${w.it.id}"`, 'sm')}${eBtn('품목 수정', 'item', `data-id="${w.it.id}"`, 'sm')}</td></tr>`).join('')}</tbody></table>
+  ${plans.length ? `<div class="e-lines-hd"><b>출고 예정</b><span class="hint2">아직 재고에서 빠지지 않은 건</span></div>
+  <table class="e-grid"><colgroup><col style="width:94px"><col style="width:84px"><col style="width:80px"><col><col style="width:90px"></colgroup>
+    <thead><tr><th>출고일</th><th>창고</th><th>상태</th><th>거래처</th><th>수량</th></tr></thead>
+    <tbody>${plans.map((e) => `<tr class="ck" data-act="ship" data-id="${e.sid}"><td class="c">${esc(e.d)}</td><td class="c">${esc(whShort(e.wh))}</td><td class="c">${eShipBadge({ status: e.kind })}</td><td style="padding-left:7px">${esc(e.who)}</td><td class="n">${esc(e.q)}</td></tr>`).join('')}</tbody></table>` : ''}
+  <div class="e-lines-hd"><b>입출고 내역</b><span class="hint2">최근 순 · 잔량은 창고별</span></div>
+  <table class="e-grid"><colgroup><col style="width:94px"><col style="width:84px"><col style="width:60px"><col><col style="width:90px"><col style="width:90px"></colgroup>
+    <thead><tr><th>일자</th><th>창고</th><th>구분</th><th>거래처 / 매입처</th><th>수량</th><th>잔량</th></tr></thead>
+    <tbody>${histRows.length ? histRows.map((e) => `<tr ${e.sid ? `class="ck" data-act="ship" data-id="${e.sid}"` : ''}><td class="c">${esc(e.d)}</td><td class="c">${esc(whShort(e.wh))}</td>
+      <td class="c">${e.kind === '입고' ? '<span class="e-b blue">입고</span>' : '<span class="e-b gray">출고</span>'}</td><td style="padding-left:7px">${esc(e.who)}</td>
+      <td class="n">${e.base > 0 ? '+' : '−'}${esc(e.q)}</td><td class="n"><b>${fmt(e.bal)}</b></td></tr>`).join('')
+      : '<tr><td colspan="6" class="e-empty">입고·출고 내역이 없습니다.</td></tr>'}
+      ${list.map((it) => `<tr><td class="c muted">-</td><td class="c">${esc(whShort(it.warehouse))}</td><td class="c"><span class="e-b ghost">기초</span></td><td class="muted" style="padding-left:7px">기초재고 (실사 반영)</td><td class="n"></td><td class="n">${fmt(Number(it.initial) || 0)}</td></tr>`).join('')}</tbody></table>
+  <div class="e-fbar"><span class="sp"></span>
+    <button class="btn ghost" type="button" data-act="add-inbound">입고 입력</button>
+    <button class="btn ghost" type="button" data-act="color-ship" data-id="${list[0].id}">출고 입력</button>
+    <button class="btn danger" type="button" data-act="close">닫기</button></div>`;
+}
+
+// 출고 상세 — 이카운트처럼 전표 화면 그대로 (상단 기본정보 · 품목 그리드 · 하단 처리 버튼). 모든 버튼은 기존 동작.
+function sheetDocDesk(sh) {
+  const isCourier = sh.method === '택배';
+  const stages = isCourier ? ['출고예정', '출고완료'] : STAGES;
+  const hasDispatch = sh.dispatchVia || sh.driverName || sh.driverPhone || sh.vehicle || sh.freight || sh.payment;
+  const lines = S.shipLines(sh);
+  const m = eAmt(sh);
+  const editing = state.docEditLines && slId === sh.id;
+  const cliPhone = (S.findPartner(sh.client) || {}).phone || '';
+  const calls = sh.calls || [];
+  const lineRows = lines.map((l, i) => {
+    const raw = Number(l.unitPrice) || 0; const ep = effPrice(l, sh);
+    const sup = (Number(l.qty) || 0) * raw; const vat = Math.round(sup * 0.1);
+    const lwh = l.warehouse || sh.warehouse;
+    const it = S.getItems().find((x) => x.name === l.name && x.warehouse === lwh);
+    const pcs = (it && Number(it.perBox) > 0 && (l.unit === '박스' || l.unit === 'plt' || l.unit === '파렛트')) ? `${(Number(l.qty) * Number(it.perBox)).toLocaleString()}개` : '';
+    const price = raw > 0 ? raw.toLocaleString() : (ep.price > 0 ? `<span class="muted">${ep.price.toLocaleString()} · ${esc(ep.src)}</span>` : '<span class="red">단가 미정</span>');
+    return `<tr><td class="no">${i + 1}</td><td class="code">${esc(ecountCode(l.name) || (it && it.ecountCode) || '')}</td>
+      <td style="padding-left:6px">${esc(l.name || '(미지정)')}${l.spec ? ` <span class="muted">${esc(l.spec)}</span>` : ''}</td><td class="c">${esc(whShort(lwh))}</td>
+      <td class="n">${esc(l.qty)}</td><td class="c">${esc(l.unit || '')}</td><td class="n muted">${pcs}</td><td class="n">${price}</td>
+      <td class="n">${eN(sup)}</td><td class="n">${eN(vat)}</td><td class="n"><b>${eN(sup + vat)}</b></td></tr>`;
+  }).join('');
+  const tqty = lines.reduce((a, l) => a + (Number(l.qty) || 0), 0);
+  const grid = editing ? shipLinesEditorDesk(sh) : `<table class="e-grid"><colgroup><col style="width:32px"><col style="width:112px"><col><col style="width:54px"><col style="width:62px"><col style="width:54px"><col style="width:64px"><col style="width:120px"><col style="width:92px"><col style="width:80px"><col style="width:96px"></colgroup>
+    <thead><tr><th>No</th><th>품목코드</th><th>품목명</th><th>창고</th><th>수량</th><th>단위</th><th>낱개</th><th>단가</th><th>공급가</th><th>세액</th><th>합계</th></tr></thead>
+    <tbody>${lineRows}</tbody>
+    <tfoot><tr><td></td><td></td><td style="padding-left:6px;font-weight:700">합계</td><td></td><td class="n"><b>${tqty.toLocaleString()}</b></td><td></td><td></td><td></td><td class="n"><b>${eN(m.sup)}</b></td><td class="n"><b>${eN(m.vat)}</b></td><td class="n"><b style="color:var(--e-blue)">${eN(m.tot)}</b></td></tr></tfoot></table>`;
+  const stage = `<span class="e-seg">${stages.map((s) => `<button type="button" class="${sh.status === s ? 'on' : ''}" data-act="ship-stage" data-id="${sh.id}" data-v="${s}">${s}</button>`).join('')}</span>`;
+  const docCell = sh.status === '출고완료'
+    ? `${eDocBadge(sh)} ${eBtn(sh.docDone ? '발행 해제' : '발행 완료로 표시', 'toggle-doc', `data-id="${sh.id}"`, 'sm')}` : '<span class="muted">출고완료 후 발행</span>';
+  const hold = sh.holdReason
+    ? `<span class="e-b orange">보류 · ${esc(sh.holdReason)}</span> ${eBtn('보류 해제', 'unhold', `data-id="${sh.id}" data-kind="ship"`, 'sm')}`
+    : HOLD_REASONS.map((r) => eBtn(esc(r), 'hold', `data-id="${sh.id}" data-kind="ship" data-r="${esc(r)}"`, 'sm')).join('');
+  return `<h2>출고 전표 <span class="e-b gray" style="margin-left:4px">${esc(sh.date || '')}${sh.time ? ' ' + esc(sh.time) : ''}</span> ${eShipBadge(sh)}</h2>
+  <table class="e-ftbl"><colgroup><col style="width:92px"><col><col style="width:92px"><col><col style="width:92px"><col></colgroup>
+    <tr><th>진행 상태</th><td colspan="3">${stage}</td><th>명세서</th><td>${docCell}</td></tr>
+    <tr><th>출고일</th><td>${esc(sh.date || '')}${sh.time ? ' ' + esc(sh.time) : ''}</td><th>거래처</th><td><b>${esc(sh.client || '(미지정)')}</b>${cliPhone ? ` <a class="tel" href="${telHref(cliPhone)}" data-act="ship-call" data-id="${sh.id}">${esc(cliPhone)}</a>` : ''}</td><th>창고</th><td>${esc(sh.warehouse || '')}</td></tr>
+    <tr><th>출고 방식</th><td>${esc(sh.method || '배차')}</td><th>상차지</th><td>${esc(sh.loadPlace || sh.warehouse || '')}${sh.loadAddr ? ` <span class="muted">${esc(sh.loadAddr)}</span>` : ''}</td><th>하차지</th><td>${esc(sh.unloadPlace || sh.client || '')}${sh.unloadAddr ? ` <span class="muted">${esc(sh.unloadAddr)}</span>` : ''}</td></tr>
+    ${isCourier ? `<tr><th>택배사</th><td>${esc(sh.courier || '')}</td><th>송장번호</th><td>${esc(sh.trackingNo || '')}</td><th>택배비</th><td>${eN(sh.courierFee)}</td></tr>
+      <tr><th>받는 사람</th><td>${esc(sh.recvName || '')} ${esc(sh.recvPhone || '')}</td><th>받는 주소</th><td colspan="3">${esc(sh.recvAddr || '')}</td></tr>`
+      : `<tr><th>배차</th><td>${esc(sh.dispatchVia || '')}${!hasDispatch ? '<span class="muted">배차 정보 없음</span>' : ''}</td><th>기사님</th><td>${esc(sh.driverName || '')}${sh.driverPhone ? ` <a class="tel" href="${telHref(sh.driverPhone)}">${esc(sh.driverPhone)}</a>` : ''}</td><th>차량 / 운임</th><td>${esc(sh.vehicle || '')}${sh.freight ? ` · ${Number(sh.freight).toLocaleString()}원` : ''}${sh.payment ? ` · ${esc(sh.payment)}` : ''}</td></tr>`}
+    <tr><th>비고</th><td colspan="3">${esc(sh.note || '')}</td><th>보류</th><td>${hold}</td></tr>
+  </table>
+  <div class="e-lines-hd"><b>품목</b><span class="sp"></span>${editing ? '' : eBtn('품목 · 수량 · 단가 수정', 'doc-edit-lines', `data-id="${sh.id}"`, 'sm')}</div>
+  ${grid}
+  ${calls.length || !cliPhone ? `<div class="e-lines-hd" style="margin-top:8px"><b>거래처 연락</b><span class="sp"></span>${cliPhone ? '' : eBtn('거래처 전화번호 등록', 'ship-addphone', `data-id="${sh.id}"`, 'sm')}</div>
+    ${calls.length ? `<div class="e-calls">${calls.slice().reverse().map((c) => `<span>${esc(c)} 통화 ✓</span>`).join('')}</div>` : ''}` : ''}
+  <div class="e-fbar">
+    <button class="btn ghost" type="button" data-act="edit-ship" data-id="${sh.id}">전표 수정</button>
+    <button class="btn ghost" type="button" data-act="print-ship" data-id="${sh.id}">인쇄 / PDF</button>
+    ${sh.status === '출고예정' && !isCourier ? `<button class="btn ghost" type="button" data-act="copy-dispatch" data-id="${sh.id}">배차 요청 양식</button>
+      <button class="btn ghost" type="button" data-act="dispatch-paste" data-id="${sh.id}">배차 완료</button>` : ''}
+    ${sh.status === '배차완료' && !isCourier ? `<button class="btn ghost" type="button" data-act="dispatch-paste" data-id="${sh.id}">배차 정보 다시 붙여넣기</button>` : ''}
+    <span class="sp"></span>
+    <button class="btn danger" type="button" data-act="del-ship" data-id="${sh.id}" style="color:var(--e-err)">삭제</button>
+    <button class="btn" type="button" data-act="close">닫기</button>
+  </div>`;
+}
+// 출고 상세 안에서 품목 줄 편집 (기존 sl-* 동작·data-sl 입력칸 그대로)
+function shipLinesEditorDesk(sh) {
+  const names = [...new Set(S.getItems().filter((it) => it.warehouse === sh.warehouse).map((it) => it.name))];
+  return `<datalist id="sl-items">${names.map((n) => `<option value="${esc(n)}"></option>`).join('')}</datalist>
+  <table class="e-grid"><colgroup><col style="width:32px"><col><col style="width:130px"><col style="width:70px"><col style="width:80px"><col style="width:100px"><col style="width:30px"></colgroup>
+    <thead><tr><th>No</th><th>품목명</th><th>규격</th><th>단위</th><th>수량</th><th>단가</th><th></th></tr></thead>
+    <tbody>${slLines.map((l, i) => `<tr><td class="no">${i + 1}</td>
+      <td><input data-sl="name" data-i="${i}" list="sl-items" value="${esc(l.name || '')}" placeholder="품명 (직접 입력 가능)" autocomplete="off"></td>
+      <td><input data-sl="spec" data-i="${i}" value="${esc(l.spec || '')}"></td>
+      <td><input data-sl="unit" data-i="${i}" value="${esc(l.unit || '')}"></td>
+      <td><input class="num" data-sl="qty" data-i="${i}" type="number" min="0" value="${l.qty}"></td>
+      <td><input class="num" data-sl="unitPrice" data-i="${i}" type="number" min="0" value="${l.unitPrice || ''}"></td>
+      <td class="c"><button class="del" type="button" data-act="sl-del" data-i="${i}" title="행 삭제">✕</button></td></tr>`).join('')}</tbody></table>
+  <div class="e-tools" style="margin-top:6px">${eBtn('＋ 행 추가', 'sl-add', '', 'sm')}<span class="sp"></span>${eBtn('취소', 'sl-cancel', `data-id="${sh.id}"`)}${eBtn('품목 저장', 'sl-save', `data-id="${sh.id}"`, 'pri')}</div>`;
+}
+
+// ── 화면: 입고 조회 ───────────────────────────────
+function deskInbound() {
+  const f = eFilter('inbound', { from: '', to: '', wh: '', q: '' });
+  let rows = S.getInbounds().filter((r) => (!f.from || r.date >= f.from) && (!f.to || r.date <= f.to) && (!f.wh || r.warehouse === f.wh)
+    && eHas([r.name, r.supplier, r.note].join(' '), f.q));
+  const cols = [
+    { k: 'date', h: '입고일', w: 94, cls: 'c', v: (r) => esc(r.date || '') },
+    { k: 'wh', h: '창고', w: 84, v: (r) => esc(r.warehouse || '') },
+    { k: 'cat', h: '구분', w: 64, cls: 'c', v: (r) => esc(r.category || '') },
+    { k: 'name', h: '품목', v: (r) => esc(r.name || '') },
+    { k: 'qty', h: '수량', w: 70, cls: 'n', v: (r) => eN(r.qty), sv: (r) => Number(r.qty) || 0 },
+    { k: 'unit', h: '단위', w: 50, cls: 'c', v: (r) => esc(r.unit || '') },
+    { k: 'pb', h: '입수', w: 50, cls: 'n', v: (r) => eN(r.perBox) },
+    { k: 'price', h: '단가', w: 84, cls: 'n', v: (r) => eN(r.unitPrice), sv: (r) => Number(r.unitPrice) || 0 },
+    { k: 'vat', h: '부가세', w: 56, cls: 'c', v: (r) => (r.vatSeparate ? '별도' : '포함') },
+    { k: 'sup', h: '매입처', w: 100, v: (r) => esc(r.supplier || '') },
+    { k: 'note', h: '비고', w: 160, v: (r) => esc(r.note || '') },
+  ];
+  rows = eSortRows('inbound', cols, rows);
+  return ePage(`
+    ${eCond([
+      { label: '입고일', html: `${eDate('from', f.from)}<span class="e-tilde">~</span>${eDate('to', f.to)}` },
+      { label: '창고', html: eSel2('wh', f.wh, [['', '전체'], ...S.warehouseNames().map((w) => [w, w])]) },
+      { label: '검색', html: eIn('q', f.q, 'w-l', '품목·매입처·비고'), grow: true },
+    ])}
+    ${eStdTools({ newAct: 'add-inbound' })}
+    ${eTable({ route: 'inbound', cols, rows })}`);
+}
+
+// ── 화면: 거래처 / 품목 / 창고 등록 ───────────────
+function deskPartners() {
+  const f = eFilter('partners', { q: '' });
+  const stat = {};
+  S.getShipments().forEach((s) => { const k = s.client || ''; const o = stat[k] = stat[k] || { n: 0, last: '' }; o.n++; if ((s.date || '') > o.last) o.last = s.date; });
+  let rows = S.getPartners().filter((p) => eHas([p.name, p.address, p.phone, p.note].join(' '), f.q)).map((p) => ({ ...p, id: p.name }));
+  const cols = [
+    { k: 'name', h: '거래처명', w: 170, v: (p) => `<b>${esc(p.name)}</b>` , csv: (p) => p.name },
+    { k: 'addr', h: '주소', v: (p) => esc(p.address || '') },
+    { k: 'phone', h: '전화', w: 120, v: (p) => esc(p.phone || '') },
+    { k: 'note', h: '비고', w: 180, v: (p) => esc(p.note || '') },
+    { k: 'n', h: '출고건수', w: 70, cls: 'n', v: (p) => eN((stat[p.name] || {}).n), sv: (p) => (stat[p.name] || {}).n || 0 },
+    { k: 'last', h: '최근 출고', w: 90, cls: 'c', v: (p) => esc((stat[p.name] || {}).last || '') },
+  ];
+  rows = eSortRows('partners', cols, rows);
+  return ePage(`${eCond([{ label: '검색', html: eIn('q', f.q, 'w-l', '거래처명·주소·전화·비고'), grow: true }])}
+    ${eStdTools({ newAct: 'add-partner' })}
+    ${eTable({ route: 'partners', cols, rows, rowAttr: (p) => `data-act="partner-edit" data-w="${esc(p.name)}"` })}`);
+}
+function deskItems() {
+  state.eItemTab = state.eItemTab || 'master';
+  const tab = state.eItemTab;
+  const f = eFilter('items', { cat: '', q: '' });
+  const cats = [...new Set(S.getItems().map((it) => it.category).filter(Boolean))].sort();
+  let cols, rows, rowAttr;
+  if (tab === 'master') {
+    rows = itemMasters().filter((m) => (!f.cat || m.category === f.cat) && eHas([m.name, m.suppliers.join(' '), (m.list[0] || {}).aliases].join(' '), f.q)).map((m) => ({ ...m, id: m.name }));
+    cols = [
+      { k: 'cat', h: '구분', w: 64, cls: 'c', v: (m) => esc(m.category) },
+      { k: 'name', h: '품목명', v: (m) => esc(m.name) },
+      { k: 'code', h: '이카운트 코드', w: 118, v: (m) => esc((m.list.find((i) => i.ecountCode) || {}).ecountCode || ecountCode(m.name)) },
+      { k: 'unit', h: '단위', w: 50, cls: 'c', v: (m) => esc(m.unit) },
+      { k: 'pb', h: '입수', w: 50, cls: 'n', v: (m) => eN(m.perBox) },
+      { k: 'price', h: '판매단가', w: 130, cls: 'n', v: (m) => { const pl = masterPriceLabel(m); return pl.nop ? `<span class="red">${pl.txt}</span>` : esc(pl.txt); }, sv: (m) => m.prices[0] || 0 },
+      { k: 'sup', h: '매입처', w: 110, v: (m) => esc(m.suppliers.join(', ')) },
+      { k: 'alias', h: '별칭', w: 140, v: (m) => esc((m.list.find((i) => i.aliases) || {}).aliases || '') },
+      { k: 'whs', h: '보관 창고', w: 110, v: (m) => esc(m.whs.map(whShort).join(', ')) },
+    ];
+    rowAttr = (m) => `data-act="master" data-name="${esc(m.name)}"`;
+  } else {
+    rows = S.getItems().filter((it) => (!f.cat || it.category === f.cat) && eHas([it.name, it.aliases, it.supplier, it.note].join(' '), f.q));
+    cols = [
+      { k: 'wh', h: '창고', w: 84, v: (it) => esc(it.warehouse) },
+      { k: 'cat', h: '구분', w: 64, cls: 'c', v: (it) => esc(it.category || '') },
+      { k: 'name', h: '품목', v: (it) => esc(it.name) },
+      { k: 'unit', h: '단위', w: 50, cls: 'c', v: (it) => esc(it.unit || '') },
+      { k: 'init', h: '초기재고', w: 70, cls: 'n', v: (it) => eN(it.initial), sv: (it) => Number(it.initial) || 0 },
+      { k: 'cur', h: '현재고', w: 70, cls: 'n', v: (it) => Math.floor(S.currentStock(it)).toLocaleString(), sv: (it) => S.currentStock(it) },
+      { k: 'price', h: '판매단가', w: 84, cls: 'n', v: (it) => eN(it.unitPrice), sv: (it) => Number(it.unitPrice) || 0 },
+      { k: 'sup', h: '매입처', w: 90, v: (it) => esc(it.supplier || '') },
+      { k: 'alias', h: '별칭', w: 130, v: (it) => esc(it.aliases || '') },
+      { k: 'note', h: '비고', w: 130, v: (it) => esc(it.note || '') },
+    ];
+    rowAttr = (it) => `data-act="item" data-id="${it.id}"`;
+  }
+  rows = eSortRows('items-' + tab, cols, rows);
+  return ePage(`
+    ${eTabs('eItemTab', [['master', '품목 마스터 (단가)'], ['wh', '창고별 품목']])}
+    ${eCond([{ label: '구분', html: eSel2('cat', f.cat, [['', '전체'], ...cats.map((c) => [c, c])]) }, { label: '검색', html: eIn('q', f.q, 'w-l', '품목명·별칭·매입처'), grow: true }])}
+    ${eStdTools({ newAct: 'add-item' })}
+    ${tab === 'master' ? '<p class="hint" style="margin:0;color:var(--e-muted)">같은 품목명은 한 줄(마스터)로 묶었어요. 누르면 판매단가·매입처·별칭을 모든 창고에 한 번에 적용합니다.</p>' : ''}
+    ${eTable({ route: 'items-' + tab, cols, rows, rowAttr, title: tab === 'master' ? '품목마스터' : '창고별품목' })}`);
+}
+function deskWhs() {
+  const rows = S.getWarehouses().map((w) => ({ ...w, id: w.name, sm: S.warehouseSummary(w.name) }));
+  const cols = [
+    { k: 'name', h: '창고명', w: 140, v: (w) => `<b>${esc(w.name)}</b>`, csv: (w) => w.name },
+    { k: 'addr', h: '주소', v: (w) => esc(w.address || '') },
+    { k: 'phone', h: '전화', w: 120, v: (w) => esc(w.phone || '') },
+    { k: 'n', h: '품목수', w: 64, cls: 'n', v: (w) => eN(w.sm.itemCount), sv: (w) => w.sm.itemCount },
+    { k: 'total', h: '재고 합', w: 80, cls: 'n', v: (w) => w.sm.total.toLocaleString(), sv: (w) => w.sm.total },
+    { k: 'low', h: '부족·품절', w: 74, cls: 'n', v: (w) => w.sm.low ? `<span class="red">${w.sm.low}</span>` : '', sv: (w) => w.sm.low },
+    { k: 'act', h: '재고', w: 76, cls: 'c', v: (w) => eBtn('재고 보기', 'wh', `data-w="${esc(w.name)}"`, 'sm') },
+  ];
+  return ePage(`<div class="e-tools">${eBtn(`신규 ${eKey('F2')}`, 'add-wh', '', 'pri')}${eBtn('엑셀', 'erp-excel')}</div>
+    ${eTable({ route: 'whs', cols, rows: eSortRows('whs', cols, rows), rowAttr: (w) => `data-act="wh-edit" data-w="${esc(w.name)}"` })}`);
+}
+
+// ── 화면: 이카운트 품목 / 품목 매핑 사전 (입력 즉시 결과표만 갱신 — IME 안전) ──
+function deskEcountTable(q) {
+  q = (q || '').trim();
+  let list = ECOUNT_ITEMS;
+  if (q) { const qq = q.toLowerCase(); list = list.filter(([c, n]) => c.toLowerCase().includes(qq) || n.includes(q)); }
+  const shown = list.slice(0, 500);
+  return `<div class="e-sum">${q ? `검색 <b>${list.length.toLocaleString()}</b>건` : `전체 <b>${ECOUNT_ITEMS.length.toLocaleString()}</b>건`}${list.length > 500 ? ' · 앞 500건만 표시 — 검색어를 더 입력하세요' : ''}</div>
+    <div class="e-tw"><table class="e-tbl"><colgroup><col style="width:44px"><col style="width:180px"><col></colgroup>
+    <thead><tr><th>No</th><th>품목코드</th><th>품목명</th></tr></thead>
+    <tbody>${shown.length ? shown.map(([c, n], i) => `<tr><td class="no">${i + 1}</td><td>${esc(c)}</td><td>${esc(n)}</td></tr>`).join('') : '<tr><td colspan="3" class="e-empty">검색 결과가 없습니다.</td></tr>'}</tbody></table></div>`;
+}
+function deskMapTable(q) {
+  q = (q || '').trim();
+  let list = ITEM_MAP;
+  if (q) { const qq = q.toLowerCase(); list = list.filter(([p, ext, ours]) => ext.toLowerCase().includes(qq) || ours.includes(q) || p.includes(q)); }
+  return `<div class="e-sum">${q ? `검색 <b>${list.length}</b>건` : `사전 <b>${ITEM_MAP.length}</b>건`}</div>
+    <div class="e-tw"><table class="e-tbl"><colgroup><col style="width:44px"><col style="width:140px"><col><col></colgroup>
+    <thead><tr><th>No</th><th>거래처</th><th>거래처 표기</th><th>우리 품목명 (이카운트)</th></tr></thead>
+    <tbody>${list.length ? list.slice(0, 500).map(([p, ext, ours], i) => `<tr><td class="no">${i + 1}</td><td>${esc(p)}</td><td>${esc(ext)}</td><td>${esc(ours)}</td></tr>`).join('')
+      : '<tr><td colspan="4" class="e-empty">사전에 없어요. 거래처 표기를 다르게 넣어보거나, 이카운트 품목 조회에서 직접 찾아보세요.</td></tr>'}</tbody></table></div>`;
+}
+const deskEcount = () => ePage(`${eCond([{ label: '검색', html: '<input id="ecount-search" class="e-in w-l" placeholder="코드·품목명 (예: 라떼 / 03000 / 구조재)" autocomplete="off">', grow: true }])}
+  <div id="ecount-results" style="display:flex;flex-direction:column;flex:1;min-height:0;gap:4px">${deskEcountTable('')}</div>`);
+const deskItemMap = () => ePage(`${eCond([{ label: '검색', html: '<input id="map-search" class="e-in w-l" placeholder="거래처 표기로 검색 (예: 평와샤 12*50 / 구조재VIDA)" autocomplete="off">', grow: true }])}
+  <div id="map-results" style="display:flex;flex-direction:column;flex:1;min-height:0;gap:4px">${deskMapTable('')}</div>`);
+
+// ── 화면: 실리콘 재고 (기존 매트릭스 재사용) · 환경설정 ──
+const deskSilicone = () => ePage(`<div class="e-tools">${eBtn(`출고 입력 ${eKey('F2')}`, 'new-ship', '', 'pri')}${eBtn('입고 입력', 'add-inbound')}</div><div class="e-legacy">${screenSilicone()}</div>`, 'scroll');
+function deskSettings() {
+  return ePage(`
+    <div class="e-box" style="max-width:760px"><div class="e-box-hd">사용자</div>
+      <div class="e-kv"><span>이름</span><div>${esc(myName())}</div></div>
+      <div class="e-kv"><span>아이디</span><div>${esc(myAccount)}</div></div>
+      <div class="e-kv"><span>로그아웃</span><div>${eBtn('로그아웃', 'logout', '', 'sm')}</div></div></div>
+    <div class="e-box" style="max-width:760px"><div class="e-box-hd">데이터</div>
+      <div class="e-kv"><span>데이터 내보내기</span><div>${eBtn('JSON 내보내기', 'export', '', 'sm')}</div></div>
+      <div class="e-kv"><span>거래명세서 카톡 발송</span><div style="color:var(--e-muted)">2단계 예정</div></div>
+      <div class="e-kv"><span>이카운트 ERP 연동</span><div style="color:var(--e-muted)">2단계 예정</div></div></div>
+    <div class="e-box" style="max-width:760px"><div class="e-box-hd">단축키</div>
+      ${[['F2', '신규 (화면별: 출고·견적·입고·품목·거래처·창고)'], ['F8', '조회 / 입력창에서는 저장'], ['Ctrl + Enter', '입력창 저장'], ['Enter', '입력창: 다음 칸 · 품목 마지막 칸이면 행 추가 / 목록: 선택한 행 열기'], ['↑ ↓', '목록 행 이동'], ['/', '검색칸으로 이동'], ['Esc', '입력창 닫기']]
+        .map(([k, d]) => `<div class="e-kv"><span><kbd style="font-family:inherit">${k}</kbd></span><div>${d}</div></div>`).join('')}</div>`, 'scroll');
+}
+
+// ── 화면: 문서 인식 · 납품확인서 — 이 맥의 로컬 도우미(127.0.0.1:4180)가 AI 판독·매핑·견적서 생성을 맡는다 ──
+const HELPER = 'http://127.0.0.1:4180';
+let dr = { name: '', url: '', mime: '', b64: '', busy: false, err: '', doc: null, usage: null, quote: null, note: '' };
+let helperState = { checked: false, up: false, info: null };
+let dd = { rows: null, err: '' };
+async function helperFetch(path, body) {
+  const r = await fetch(HELPER + path, body ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) } : {});
+  const j = await r.json().catch(() => ({ ok: false, error: '도우미 응답을 읽지 못했어요.' }));
+  if (!j.ok) throw new Error(j.error || '도우미 오류');
+  return j;
+}
+function helperCheck() {
+  helperFetch('/api/health').then((j) => { helperState = { checked: true, up: true, info: j }; })
+    .catch(() => { helperState = { checked: true, up: false, info: null }; }).finally(() => { if (['docread', 'delivdocs'].includes(state.route)) render(); });
+}
+const helperBadge = () => !helperState.checked ? '<span class="e-b gray">도우미 확인 중…</span>'
+  : !helperState.up ? '<span class="e-b red">로컬 도우미 꺼짐</span>'
+    : `<span class="e-b green">도우미 연결</span> ${helperState.info.ai ? '<span class="e-b green">AI 판독 가능</span>' : '<span class="e-b orange">AI 키 없음 · 엑셀만</span>'}`;
+const helperOff = () => `<div class="e-box"><div class="e-box-hd">로컬 도우미가 꺼져 있어요</div><div class="e-box-bd">이 맥의 터미널에서 켜주세요:<br>
+  <code>cd ~/claude_workspace/homt-delivery-helper &amp;&amp; python3 server.py</code><br>${eBtn('다시 확인', 'erp-dr-check', '', 'sm')}</div></div>`;
+const DR_CONF = { high: ['dr-high', '확실'], mid: ['dr-mid', '확인 필요'], none: ['dr-none', '못 찾음'], edit: ['dr-edit', '직접 지정'] };
+function drTotals() {
+  const ls = (dr.doc && dr.doc.lines) || [];
+  const sup = ls.reduce((a, l) => a + (Number(l.qty) || 0) * (Number(l.price) || 0), 0);
+  const vat = Math.round(sup * 0.1);
+  return { sup, vat, tot: sup + vat, noPrice: ls.filter((l) => !(Number(l.price) > 0)).length };
+}
+function deskDocRead() {
+  if (!helperState.checked) helperCheck();
+  const d = dr.doc;
+  const left = dr.url || dr.name ? (dr.mime.startsWith('image/') ? `<img src="${dr.url}" alt="원본">`
+    : dr.mime === 'application/pdf' ? `<iframe src="${dr.url}" title="원본 PDF"></iframe>`
+      : `<div class="dr-file"><b>${esc(dr.name)}</b><span>엑셀 파일은 미리보기 없이 바로 인식합니다</span></div>`)
+    : '<div class="dr-empty">발주서·거래명세표 파일을 여기로 끌어다 놓거나<br><b>[파일 선택]</b>을 누르세요<br><span>사진(JPG·PNG·HEIC) · PDF · 엑셀</span></div>';
+  let right;
+  if (!helperState.up && helperState.checked) right = helperOff();
+  else if (dr.busy) right = '<div class="e-empty">문서를 읽는 중이에요… (사진·PDF는 20~60초)</div>';
+  else if (!d) right = `${dr.err ? `<div class="dr-err">${esc(dr.err)}</div>` : ''}<div class="e-empty">왼쪽에 문서를 올린 뒤 <b>[인식 시작]</b>을 누르세요.</div>`;
+  else {
+    const t = drTotals();
+    const cnt = { high: 0, mid: 0, none: 0, edit: 0 }; d.lines.forEach((l) => { cnt[l.conf] = (cnt[l.conf] || 0) + 1; });
+    right = `${dr.err ? `<div class="dr-err">${esc(dr.err)}</div>` : ''}
+    <table class="e-ftbl"><colgroup><col style="width:80px"><col><col style="width:80px"><col><col style="width:80px"><col></colgroup>
+      <tr><th>문서</th><td>${esc(d.doc_type || '')}${dr.usage ? ` <span class="muted">AI ${dr.usage.in + dr.usage.out}토큰 · 약 ${Math.round(dr.usage.usd * 1400).toLocaleString()}원</span>` : ' <span class="muted">AI 미사용</span>'}</td>
+        <th>거래처</th><td><input class="e-in" data-drh="partner" value="${esc(d.partner || '')}"></td><th>담당자</th><td><input class="e-in" data-drh="manager" value="${esc(d.manager || '')}"></td></tr>
+      <tr><th>건축주</th><td><input class="e-in" data-drh="owner" value="${esc(d.owner || '')}"></td><th>납품장소</th><td><input class="e-in" data-drh="site" value="${esc(d.site || '')}"></td><th>일자</th><td><input class="e-in" data-drh="doc_date" value="${esc(d.doc_date || '')}"></td></tr>
+      ${d.remarks ? `<tr><th>메모</th><td colspan="5">${esc(d.remarks)}</td></tr>` : ''}
+    </table>
+    <div class="e-lines-hd"><b>품목 ${d.lines.length}</b>
+      <span class="dr-legend"><i class="dr-high"></i>확실 ${cnt.high}<i class="dr-mid"></i>확인 필요 ${cnt.mid}<i class="dr-none"></i>못 찾음 ${cnt.none}${cnt.edit ? `<i class="dr-edit"></i>직접 지정 ${cnt.edit}` : ''}</span><span class="sp"></span></div>
+    <div class="e-tw" style="flex:1"><table class="e-grid"><colgroup><col style="width:30px"><col style="width:27%"><col style="width:84px"><col style="width:44px"><col style="width:48px"><col><col style="width:96px"><col style="width:82px"><col style="width:86px"></colgroup>
+      <thead><tr><th>No</th><th>문서 품명 (원문)</th><th>규격</th><th>단위</th><th>수량</th><th>우리 품목 (이카운트)</th><th>종전가</th><th>견적 단가</th><th>금액(별도)</th></tr></thead>
+      <tbody>${d.lines.map((l, i) => { const [cls] = DR_CONF[l.conf] || DR_CONF.none; return `<tr>
+        <td class="no">${i + 1}</td><td title="${esc(l.raw_name)}" style="padding-left:6px">${esc(l.raw_name)}${l.unclear ? ' <span class="e-b orange">흐림</span>' : ''}${l.note ? ` <span class="muted">${esc(l.note)}</span>` : ''}</td>
+        <td class="muted" title="${esc(l.spec)}">${esc(l.spec)}</td><td class="c">${esc(l.unit)}</td><td class="n">${esc(l.qty)}</td>
+        <td class="${cls}"><input data-drf="ours" data-i="${i}" list="dr-ec" value="${esc(l.ours || '')}" placeholder="${l.cands && l.cands.length ? '후보: ' + esc(l.cands[0]) : '우리 품목 검색·선택'}" title="${esc(l.ours || '')}${l.cands && l.cands.length ? '\n후보: ' + l.cands.map(esc).join(' / ') : ''}"></td>
+        <td class="n">${l.prev ? `${Number(l.prev.price).toLocaleString()}<br><span class="muted">${esc(l.prev.src)}</span>` : '<span class="muted">-</span>'}</td>
+        <td><input class="num" data-drf="price" data-i="${i}" type="number" min="0" value="${esc(l.price || '')}"></td>
+        <td class="n" id="dr-amt-${i}">${eN((Number(l.qty) || 0) * (Number(l.price) || 0))}</td></tr>`; }).join('')}</tbody>
+      <tfoot><tr><td></td><td colspan="4" style="padding-left:6px;font-weight:700">합계 <span class="muted" id="dr-noprice">${t.noPrice ? `단가 없음 ${t.noPrice}` : ''}</span></td><td class="n muted" colspan="2">부가세 <b id="dr-vat">${eN(t.vat)}</b></td><td class="n muted">포함 <b id="dr-tot">${eN(t.tot)}</b></td><td class="n"><b id="dr-sup">${eN(t.sup)}</b></td></tr></tfoot></table></div>
+    <datalist id="dr-ec">${ECOUNT_ITEMS.map(([c, n]) => `<option value="${esc(n)}">${esc(c)}</option>`).join('')}</datalist>
+    <div class="e-tools">${eBtn('매핑 저장 (다음부터 자동)', 'erp-dr-learn')}${eBtn('출고 입력으로 보내기', 'erp-dr-ship')}<span class="sp"></span>
+      ${dr.quote ? `<a class="e-btn" href="${HELPER}/api/file?path=${encodeURIComponent(dr.quote.out)}">견적서 받기 · ${esc(dr.quote.out.split('/').pop())}</a>` : ''}
+      ${eBtn('견적서 만들기 (거래처 양식)', 'erp-dr-quote', '', 'pri')}</div>
+    ${dr.note ? `<div class="e-sum"><span>${esc(dr.note)}</span></div>` : ''}`;
+  }
+  return ePage(`<div class="e-tools"><label class="e-btn pri" for="dr-file">파일 선택</label><input type="file" id="dr-file" accept="image/*,.heic,.pdf,.xlsx,.xls,.csv" hidden>
+      ${eBtn('인식 시작', 'erp-dr-read', dr.b64 && !dr.busy ? '' : 'disabled')}${dr.name ? `<span class="e-selinfo">${esc(dr.name)}</span>${eBtn('비우기', 'erp-dr-clear', '', 'sm')}` : ''}
+      <span class="sp"></span>${helperBadge()}</div>
+    <div class="e-dr"><div class="e-panel dr-drop"><div class="e-panel-hd"><b>원본 문서</b></div><div class="dr-view">${left}</div></div>
+      <div class="e-panel"><div class="e-panel-hd"><b>인식 결과</b><span class="sp"></span></div><div class="dr-res">${right}</div></div></div>`);
+}
+function drLoadFile(file) {
+  if (!file) return;
+  if (dr.url) URL.revokeObjectURL(dr.url);
+  const rd = new FileReader();
+  rd.onload = () => {
+    dr = { ...dr, name: file.name, mime: file.type || '', url: URL.createObjectURL(file), b64: String(rd.result).split(',')[1] || '', doc: null, usage: null, quote: null, err: '', note: '' };
+    render();
+  };
+  rd.readAsDataURL(file);
+}
+function drRead() {
+  if (!dr.b64 || dr.busy) return;
+  dr.busy = true; dr.err = ''; render();
+  helperFetch('/api/doc/read', { name: dr.name, data: dr.b64 }).then((j) => {
+    const doc = j.doc;
+    doc.lines = doc.lines.map((l) => ({ ...l, ours: l.match.ours, code: l.match.code, conf: l.match.conf, cands: l.match.cands, price: l.prev ? l.prev.price : '' }));
+    dr.doc = doc; dr.usage = j.usage; dr.quote = null;
+  }).catch((e) => { dr.err = e.message; }).finally(() => { dr.busy = false; render(); });
+}
+function drLearn() {
+  if (!dr.doc) return;
+  const items = dr.doc.lines.filter((l) => l.ours && l.conf !== 'high').map((l) => ({ raw: l.raw_name, spec: l.spec, ours: l.ours }));
+  if (!items.length) { dr.note = '새로 저장할 매핑이 없어요 (확실한 줄은 이미 사전에 있음).'; render(); return; }
+  helperFetch('/api/map/learn', { partner: dr.doc.partner, items }).then((j) => {
+    dr.doc.lines.forEach((l) => { if (l.ours && l.conf !== 'high') l.conf = 'high'; });
+    dr.note = `매핑 ${j.saved}개 저장 — 같은 거래처 표기는 다음부터 자동으로 초록(확실)으로 잡혀요.`;
+  }).catch((e) => { dr.err = e.message; }).finally(render);
+}
+function drQuote() {
+  if (!dr.doc) return;
+  const t = drTotals();
+  if (t.noPrice && !confirm(`단가가 없는 품목이 ${t.noPrice}개 있어요. 그 줄은 단가 없이 들어갑니다. 계속할까요?`)) return;
+  dr.busy = true; render();
+  helperFetch('/api/quote', { doc: dr.doc, lines: dr.doc.lines.map((l) => ({ raw_name: l.raw_name, spec: l.spec, unit: l.unit, qty: l.qty, price: Number(l.price) || 0 })) })
+    .then((j) => { dr.quote = j; dr.note = `견적서 저장: ${j.out} · 합계 ${Math.round(j.total_incl).toLocaleString()}원(부가세 포함)`; })
+    .catch((e) => { dr.err = e.message; }).finally(() => { dr.busy = false; render(); });
+}
+function drToShip() {
+  if (!dr.doc) return;
+  const nm = (s) => (s || '').replace(/\(주\)|주식회사|\s/g, '');
+  const pt = S.getPartners().find((p) => nm(p.name) === nm(dr.doc.partner)) || S.getPartners().find((p) => nm(dr.doc.partner).includes(nm(p.name)) && nm(p.name));
+  shipPrefill = { client: pt ? pt.name : (dr.doc.partner || ''), unloadAddr: dr.doc.site || '', status: '출고예정', matched: true,
+    note: [dr.doc.owner && `건축주 ${dr.doc.owner}`].filter(Boolean).join(' '), warehouse: S.warehouseNames()[0] || '' };
+  sfExtra = dr.doc.lines.map((l) => ({ name: l.ours || l.raw_name, qty: l.qty || '', unit: l.unit || '', price: l.price || '' }));
+  openSheet(sheetShipForm());
+}
+function deskDelivDocs() {
+  if (!helperState.checked) helperCheck();
+  if (helperState.up && dd.rows === null && !dd.loading) {
+    dd.loading = true;
+    helperFetch('/api/delivery').then((j) => { dd.rows = j.rows; dd.err = ''; }).catch((e) => { dd.err = e.message; dd.rows = []; })
+      .finally(() => { dd.loading = false; if (state.route === 'delivdocs') render(); });
+  }
+  if (helperState.checked && !helperState.up) return ePage(helperOff());
+  const w = helperState.info || {};
+  const rows = (dd.rows || []).map((r, i) => ({ ...r, id: String(i) }));
+  const cols = [
+    { k: 't', h: '처리 시각', w: 130, cls: 'c', v: (r) => esc(r['처리시각']) },
+    { k: 'd', h: '출고일', w: 94, cls: 'c', v: (r) => esc(r['출고일']) },
+    { k: 'c', h: '거래처', w: 130, v: (r) => esc(r['거래처']) },
+    { k: 'p', h: '납품처', w: 220, v: (r) => esc(r['납품처']) },
+    { k: 'j', h: '판정', w: 90, cls: 'c', v: (r) => r['판정'] === '불필요' ? '<span class="e-b gray">불필요</span>' : `<span class="e-b green">${esc(r['판정'])}</span>` },
+    { k: 'n', h: '내용', v: (r) => esc(r['내용']) },
+    { k: 'f', h: '파일', w: 76, cls: 'c', v: (r) => r['파일'] ? `<a class="e-btn sm" href="${HELPER}/api/file?path=${encodeURIComponent(r['파일'])}">받기</a>` : '' },
+  ];
+  return ePage(`<div class="e-tools">${eBtn('새로고침', 'erp-dd-reload', '', 'pri')}<span class="sp"></span>${helperBadge()}
+      ${w.watch ? '<span class="e-b green">자동 감시 중</span>' : `<span class="e-b orange" title="${esc(w.watchErr || '')}">자동 감시 꺼짐${w.watchErr ? ' · ' + esc(w.watchErr) : ''}</span>`}</div>
+    ${dd.err ? `<div class="dr-err">${esc(dd.err)}</div>` : ''}
+    ${dd.rows === null ? '<div class="e-empty">불러오는 중…</div>' : eTable({ route: 'delivdocs', cols, rows, title: '납품확인서', empty: '아직 만들어진 납품확인서가 없어요.' })}`);
+}
+
+const DESK_SCREENS = { dash: deskDash, partners: deskPartners, items: deskItems, whs: deskWhs, ecount: deskEcount, itemmap: deskItemMap,
+  quotes: deskQuotes, ships: deskShips, dispatch: deskDispatch, invoices: deskInvoices, inbound: deskInbound, buy: deskBuy,
+  stock: deskStock, silicone: deskSilicone, settings: deskSettings, docread: deskDocRead, delivdocs: deskDelivDocs };
+// 화면별 F2(신규)
+const DESK_NEW = { dash: 'new-ship', ships: 'new-ship', dispatch: 'new-ship', silicone: 'new-ship', quotes: 'add-quote', inbound: 'add-inbound',
+  stock: 'add-item', items: 'add-item', partners: 'add-partner', whs: 'add-wh' };
+
+function renderDesk() {
+  document.body.classList.add('erp');
+  state.route = deskRoute(state.route);
+  try { sessionStorage.setItem('ht_route', state.route); } catch (e) { /* 무시 */ }
+  const prevTw = app.querySelector('.e-main .e-tw');
+  const keep = prevTw && app.dataset.route === state.route ? prevTw.scrollTop : 0;
+  const [title, grp] = DESK_TITLES[state.route];
+  app.dataset.route = state.route;
+  app.innerHTML = `${deskTop()}${deskSide()}<main class="e-main">${ePhead(title, grp)}${DESK_SCREENS[state.route]()}</main>
+    ${state.sheet ? `<div class="sheet-bg" data-act="backdrop"><div class="sheet"><button class="sheet-x" type="button" data-act="close" aria-label="닫기">✕</button>${state.sheet}</div></div>` : ''}`;
+  if (keep) { const tw = app.querySelector('.e-main .e-tw'); if (tw) tw.scrollTop = keep; }
+  if (state.sheet && document.getElementById('f-wh')) { fillItemSelect(); }
+  if (state.sheet && document.getElementById('ib-wh')) { fillInboundItems(); }
+}
+
+// 조회 — 검색조건 칸 값을 읽어 필터 반영
+function eApplyFilters() {
+  const key = state.route;
+  const box = app.querySelector('.e-main .e-cond'); if (!box) { render(); return; }
+  const f = state.eF[key] = state.eF[key] || {};
+  box.querySelectorAll('[data-f]').forEach((el) => { f[el.dataset.f] = el.value.trim(); });
+  render();
+}
+function eDownloadCSV() {
+  if (!eLast || !eLast.rows) return alert('내보낼 표가 없어요.');
+  const txt = (v) => String(v ?? '').replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').trim();
+  const cell = (v) => { const s = txt(v); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+  const cols = eLast.cols.filter((c) => c.k !== 'act');
+  const lines = [cols.map((c) => cell(c.h)).join(',')];
+  eLast.rows.forEach((r) => lines.push(cols.map((c) => cell(c.csv ? c.csv(r) : c.v(r))).join(',')));
+  const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${eLast.title}_${S.todayStr()}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+// 선택 일괄 처리 — 각 건에 기존 개별 처리(mark-done / doc-done)와 같은 값을 넣는다
+function eBulk(kind) {
+  const ships = S.getShipments().filter((s) => eSel.ids.has(s.id));
+  if (!ships.length) return alert('먼저 목록에서 체크박스로 선택하세요.');
+  if (kind === 'done') {
+    const list = ships.filter((s) => s.status !== '출고완료');
+    if (!list.length) return alert('선택한 건이 모두 이미 출고완료예요.');
+    if (!confirm(`선택한 ${list.length}건을 출고완료 처리할까요?\n(담당자 확인 · 재고에서 차감됩니다)\n\n${list.slice(0, 12).map((s) => `· ${s.client || '(미지정)'} ${shipSummary(s).itemLabel}`).join('\n')}${list.length > 12 ? `\n외 ${list.length - 12}건` : ''}`)) return;
+    list.forEach((s) => S.updateShipment(s.id, { status: '출고완료', doneAt: S.todayStr() }));
+  } else if (kind === 'doc') {
+    const list = ships.filter((s) => s.status === '출고완료' && !s.docDone);
+    if (!list.length) return alert('선택한 건 중 명세서 발행할 건(출고완료 · 미발행)이 없어요.');
+    if (!confirm(`선택한 ${list.length}건의 명세서를 발행완료로 표시할까요?\n\n${list.slice(0, 12).map((s) => `· ${s.client || '(미지정)'} ${shipSummary(s).itemLabel}`).join('\n')}${list.length > 12 ? `\n외 ${list.length - 12}건` : ''}`)) return;
+    list.forEach((s) => S.updateShipment(s.id, { docDone: true, docBy: myName() }));
+  }
+  eSel.ids.clear();
+  render();
+}
+// erp-* 클릭 처리
+function erpAct(act, t) {
+  if (act === 'erp-nav') {
+    state.route = t.dataset.r; state.sheet = null; eSel = { route: '', ids: new Set() };
+    if (t.dataset.set) { const [k, v] = t.dataset.set.split('='); state[k] = v; }
+    if (t.dataset.preset) { const [path, v] = t.dataset.preset.split('='); const [rt, k] = path.split('.'); state.eF[rt] = { ...(state.eF[rt] || {}), [k]: v }; }
+    render();
+  } else if (act === 'erp-grp') { state.eClosed[t.dataset.g] = !state.eClosed[t.dataset.g]; render(); }
+  else if (act === 'erp-tab') { state[t.dataset.k] = t.dataset.v; eSel = { route: '', ids: new Set() }; render(); }
+  else if (act === 'erp-q') { eApplyFilters(); }
+  else if (act === 'erp-reset') { delete state.eF[state.route]; render(); }
+  else if (act === 'erp-reload') { location.reload(); }
+  else if (act === 'erp-excel') { eDownloadCSV(); }
+  else if (act === 'erp-sort') {
+    const cur = state.eSort[t.dataset.r];
+    state.eSort[t.dataset.r] = (cur && cur.k === t.dataset.k) ? (cur.d === 'asc' ? { k: t.dataset.k, d: 'desc' } : null) : { k: t.dataset.k, d: 'asc' };
+    if (!state.eSort[t.dataset.r]) delete state.eSort[t.dataset.r];
+    render();
+  } else if (act === 'erp-sel' || act === 'erp-selall') {
+    // 선택은 다시 그리지 않고 행 표시·건수만 갱신 (스크롤 유지)
+    const tbl = t.closest('table');
+    const boxes = act === 'erp-selall' ? [...tbl.querySelectorAll('tbody input[data-act="erp-sel"]')] : [t];
+    const on = t.checked;
+    boxes.forEach((b) => { b.checked = on; b.closest('tr').classList.toggle('sel', on); if (on) eSel.ids.add(b.dataset.id); else eSel.ids.delete(b.dataset.id); });
+    if (act === 'erp-sel') { const all = tbl.querySelector('thead input[data-act="erp-selall"]'); const bx = [...tbl.querySelectorAll('tbody input[data-act="erp-sel"]')]; if (all) all.checked = bx.length && bx.every((b) => b.checked); }
+    const c = document.getElementById('e-selcnt'); if (c) c.textContent = eSel.ids.size;
+  } else if (act === 'erp-bulk') { eBulk(t.dataset.b); }
+  else if (act === 'erp-ledger') { openSheet(sheetStockLedger(t.dataset.name)); }
+  else if (act === 'erp-dr-read') drRead();
+  else if (act === 'erp-dr-learn') drLearn();
+  else if (act === 'erp-dr-quote') drQuote();
+  else if (act === 'erp-dr-ship') drToShip();
+  else if (act === 'erp-dr-clear') { if (dr.url) URL.revokeObjectURL(dr.url); dr = { name: '', url: '', mime: '', b64: '', busy: false, err: '', doc: null, usage: null, quote: null, note: '' }; render(); }
+  else if (act === 'erp-dr-check') { helperState.checked = false; helperCheck(); render(); }
+  else if (act === 'erp-dd-reload') { dd = { rows: null, err: '' }; helperState.checked = false; helperCheck(); render(); }
+  else if (act === 'erp-stockfix') {   // 실사 수정 — 기존 stock-edit 과 같은 입력·같은 저장(setStock), 끝나면 수불부로 복귀
+    const it = S.findItem(t.dataset.id); if (!it) return;
+    const v = prompt(`${it.name} · ${it.warehouse}\n현재 재고를 실제 수량(${it.unit})으로 수정`, S.currentStock(it));
+    if (v !== null && String(v).trim() !== '') { S.setStock(it.id, v); openSheet(sheetStockLedger(it.name)); }
+  }
+}
+// 문서 인식 — 파일 선택/끌어놓기, 입력칸 반영 (다시 그리지 않고 합계 칸만 갱신 → 한글 입력 안전)
+function drUpdateTotals(i) {
+  const l = dr.doc.lines[i];
+  const a = document.getElementById('dr-amt-' + i); if (a) a.textContent = eN((Number(l.qty) || 0) * (Number(l.price) || 0));
+  const t = drTotals();
+  [['dr-sup', t.sup], ['dr-vat', t.vat], ['dr-tot', t.tot]].forEach(([id, v]) => { const el = document.getElementById(id); if (el) el.textContent = eN(v); });
+  const np = document.getElementById('dr-noprice'); if (np) np.textContent = t.noPrice ? `단가 없음 ${t.noPrice}` : '';
+}
+app.addEventListener('change', (e) => {
+  const el = e.target;
+  if (el.id === 'dr-file') { drLoadFile(el.files && el.files[0]); return; }
+  if (!dr.doc || !el.dataset) return;
+  if (el.dataset.drh) { dr.doc[el.dataset.drh] = el.value.trim(); return; }
+  if (el.dataset.drf === 'ours') {
+    const l = dr.doc.lines[Number(el.dataset.i)]; if (!l) return;
+    l.ours = el.value.trim();
+    l.conf = !l.ours ? 'none' : (l.ours === l.match.ours && l.match.conf === 'high') ? 'high' : 'edit';
+    el.parentElement.className = (DR_CONF[l.conf] || DR_CONF.none)[0];
+  }
+});
+app.addEventListener('input', (e) => {
+  if (dr.doc && e.target.dataset && e.target.dataset.drf === 'price') { const i = Number(e.target.dataset.i); dr.doc.lines[i].price = e.target.value; drUpdateTotals(i); }
+});
+app.addEventListener('dragover', (e) => { if (e.target.closest && e.target.closest('.dr-drop')) { e.preventDefault(); e.target.closest('.dr-drop').classList.add('over'); } });
+app.addEventListener('dragleave', (e) => { const z = e.target.closest && e.target.closest('.dr-drop'); if (z) z.classList.remove('over'); });
+app.addEventListener('drop', (e) => { if (e.target.closest && e.target.closest('.dr-drop')) { e.preventDefault(); drLoadFile(e.dataTransfer.files && e.dataTransfer.files[0]); } });
+
+// 화면 폭이 기준(1024px)을 넘나들면 다시 그림
+DESK_MQ.addEventListener('change', () => { if (!isDesk()) document.body.classList.remove('erp'); render(); });
+
+// 키보드 — PC 화면에서만
+function eFocusNext(el) {
+  const form = el.form || el.closest('.sheet');
+  const f = [...form.querySelectorAll('input, select')].filter((x) => !x.disabled && !x.readOnly && x.type !== 'hidden' && x.type !== 'checkbox' && x.offsetParent !== null);
+  const i = f.indexOf(el);
+  // 출고 입력: 마지막 품목 줄의 단가에서 Enter → 행 추가
+  if (el.dataset && el.dataset.sf === 'price' && Number(el.dataset.i) === sfExtra.length - 1) {
+    const add = form.querySelector('[data-act="sf-add"]');
+    if (add) { add.click(); const nx = document.querySelector(`#sf-extra [data-sf="name"][data-i="${sfExtra.length - 1}"]`); if (nx) nx.focus(); return; }
+  }
+  if (i >= 0 && f[i + 1]) { f[i + 1].focus(); if (f[i + 1].select && f[i + 1].type !== 'date' && f[i + 1].type !== 'time') f[i + 1].select(); }
+}
+document.addEventListener('keydown', (e) => {
+  if (!isDesk() || e.isComposing || e.keyCode === 229) return;
+  const sheet = app.querySelector('.sheet');
+  const tag = (e.target.tagName || '').toLowerCase();
+  const typing = tag === 'input' || tag === 'textarea' || tag === 'select';
+  if (e.key === 'F2') {
+    e.preventDefault();
+    if (!sheet) { const a = DESK_NEW[state.route] || 'new-ship'; const b = document.createElement('button'); b.dataset.act = a; b.style.display = 'none'; app.appendChild(b); b.click(); b.remove(); }
+    return;
+  }
+  if (e.key === 'F8' || (e.key === 'Enter' && (e.ctrlKey || e.metaKey))) {
+    if (sheet) { const form = sheet.querySelector('form'); if (form) { e.preventDefault(); form.requestSubmit(); } return; }
+    if (e.key === 'F8') { e.preventDefault(); eApplyFilters(); }
+    return;
+  }
+  if (e.key === 'Escape' && sheet) {
+    const form = sheet.querySelector('form');
+    if (form && ![...form.querySelectorAll('input, textarea')].some((x) => x.value && x.defaultValue !== x.value)) { closeSheet(); return; }
+    if (!form || confirm('입력 중인 내용이 있어요. 닫을까요?')) closeSheet();
+    return;
+  }
+  if (e.key === 'Enter' && !e.shiftKey) {
+    if (!sheet && e.target.closest && e.target.closest('.e-cond')) { e.preventDefault(); eApplyFilters(); return; }
+    if (sheet && tag === 'input' && e.target.form && !['submit', 'button', 'checkbox', 'radio', 'file'].includes(e.target.type)) { e.preventDefault(); eFocusNext(e.target); return; }
+    if (!sheet && tag === 'tr') { e.preventDefault(); e.target.click(); return; }
+  }
+  if (!sheet && (e.key === 'ArrowDown' || e.key === 'ArrowUp') && (tag === 'tr' || !typing)) {
+    const rows = [...app.querySelectorAll('.e-main .e-tbl tbody tr.ck')];
+    if (!rows.length) return;
+    e.preventDefault();
+    const i = rows.indexOf(e.target);
+    const nx = i < 0 ? rows[0] : rows[Math.max(0, Math.min(rows.length - 1, i + (e.key === 'ArrowDown' ? 1 : -1)))];
+    nx.focus(); nx.scrollIntoView({ block: 'nearest' });
+    return;
+  }
+  if (e.key === '/' && !sheet && !typing) {
+    const q = app.querySelector('.e-main .e-cond [data-f="q"], .e-main .e-cond input, #ecount-search, #map-search');
+    if (q) { e.preventDefault(); q.focus(); }
+  }
+});
+
 // ── 렌더 ──────────────────────────────────────────────
 const TITLES = { home: ['홈트레이더스', '재고 · 출고 관리'], quote: ['견적', '견적 · 단가표'], silicone: ['실리콘', '색상별 재고'], stock: ['창고', '창고별 재고'], ship: ['출고', '등록하면 재고 자동 차감'], invoice: ['명세서', '거래명세서 발행 관리'], settings: ['설정', '품목 · 데이터'] };
 
 function render() {
+  if (isDesk()) { renderDesk(); return; }   // PC(1024px↑) = 업무형 화면
+  document.body.classList.remove('erp');
+  if (!TITLES[state.route]) mobileFromDesk();
   try { sessionStorage.setItem('ht_route', state.route); } catch (e) { /* 무시 */ }
   const [title, sub] = TITLES[state.route];
   const body = { home: screenHome, quote: screenQuote, silicone: screenSilicone, stock: screenStock, ship: screenShip, invoice: screenInvoice, settings: screenSettings }[state.route]();
@@ -1926,6 +3143,7 @@ app.addEventListener('click', (e) => {
   const t = e.target.closest('[data-act]');
   if (!t) return;
   const act = t.dataset.act;
+  if (act.startsWith('erp-')) { erpAct(act, t); return; }   // PC 업무형 화면 전용 (조회·정렬·선택·일괄처리 등)
 
   if (act === 'nav') { state.route = t.dataset.r; state.sheet = null; if (t.dataset.r === 'stock') state.stockWH = null; if (t.dataset.r === 'ship') state.shipCat = null; render(); }
   else if (act === 'wh') { state.route = 'stock'; state.stockWH = t.dataset.w; render(); }
@@ -2321,8 +3539,10 @@ app.addEventListener('keydown', (e) => {
 });
 
 app.addEventListener('input', (e) => {
-  if (e.target.id === 'ecount-search') { const box = document.getElementById('ecount-results'); if (box) box.innerHTML = ecountResultsHTML(e.target.value); return; }
-  if (e.target.id === 'map-search') { const box = document.getElementById('map-results'); if (box) box.innerHTML = mapResultsHTML(e.target.value); return; }
+  if (e.target.id === 'ecount-search') { const box = document.getElementById('ecount-results'); if (box) box.innerHTML = isDesk() ? deskEcountTable(e.target.value) : ecountResultsHTML(e.target.value); return; }
+  if (e.target.id === 'map-search') { const box = document.getElementById('map-results'); if (box) box.innerHTML = isDesk() ? deskMapTable(e.target.value) : mapResultsHTML(e.target.value); return; }
+  // 출고 품목 수량·단가 타이핑하는 동안 금액·합계 즉시 갱신 (입력칸은 다시 그리지 않음 → IME 안전)
+  if (e.target.dataset && (e.target.dataset.sf === 'qty' || e.target.dataset.sf === 'price')) recalcSf({ noFill: true });
   if (e.target.classList && e.target.classList.contains('need') && e.target.value.trim()) e.target.classList.remove('need');
   if (e.target.classList && (e.target.classList.contains('ql-qty') || e.target.classList.contains('ql-price'))) {
     const i = Number(e.target.dataset.i);
@@ -2518,7 +3738,7 @@ async function boot() {
   myAccount = ((session.user && session.user.email) || '').split('@')[0];
   if (booted) { render(); return; }
   app.innerHTML = '<div style="padding:64px 24px;text-align:center;color:#888;font-size:15px">불러오는 중…</div>';
-  try { const r = sessionStorage.getItem('ht_route'); if (r && TITLES[r]) state.route = r; } catch (e) { /* 무시 */ }
+  try { const r = sessionStorage.getItem('ht_route'); if (r && (TITLES[r] || DESK_TITLES[r])) state.route = r; } catch (e) { /* 무시 */ }
   try { await S.init(); booted = true; render(); }
   catch (e) { app.innerHTML = `<div style="padding:48px 24px;text-align:center"><b>연결 오류</b><br><span style="color:#888;font-size:13px">${esc(e.message || String(e))}</span></div>`; }
 }
