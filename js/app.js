@@ -2761,7 +2761,7 @@ function deskSettings() {
 
 // ── 화면: 문서 인식 · 납품확인서 — 이 맥의 로컬 도우미(127.0.0.1:4180)가 AI 판독·매핑·견적서 생성을 맡는다 ──
 const HELPER = 'http://127.0.0.1:4180';
-let dr = { name: '', url: '', mime: '', b64: '', busy: false, err: '', doc: null, usage: null, quote: null, note: '' };
+let dr = { name: '', url: '', mime: '', b64: '', busy: false, err: '', doc: null, orig: null, usage: null, quote: null, note: '' };
 let helperState = { checked: false, up: false, info: null };
 let dd = { rows: null, err: '' };
 async function helperFetch(path, body) {
@@ -2847,29 +2847,37 @@ function drRead() {
   helperFetch('/api/doc/read', { name: dr.name, data: dr.b64 }).then((j) => {
     const doc = j.doc;
     doc.lines = doc.lines.map((l) => ({ ...l, ours: l.match.ours, code: l.match.code, conf: l.match.conf, cands: l.match.cands, price: l.prev ? l.prev.price : '' }));
-    dr.doc = doc; dr.usage = j.usage; dr.quote = null;
+    dr.doc = doc; dr.orig = JSON.parse(JSON.stringify(doc.lines || [])); dr.usage = j.usage; dr.quote = null;
   }).catch((e) => { dr.err = e.message; }).finally(() => { dr.busy = false; render(); });
 }
 function drLearn() {
   if (!dr.doc) return;
   const items = dr.doc.lines.filter((l) => l.ours && l.conf !== 'high').map((l) => ({ raw: l.raw_name, spec: l.spec, ours: l.ours }));
   if (!items.length) { dr.note = '새로 저장할 매핑이 없어요 (확실한 줄은 이미 사전에 있음).'; render(); return; }
+  drSaveFixes();
   helperFetch('/api/map/learn', { partner: dr.doc.partner, items }).then((j) => {
     dr.doc.lines.forEach((l) => { if (l.ours && l.conf !== 'high') l.conf = 'high'; });
     dr.note = `매핑 ${j.saved}개 저장 — 같은 거래처 표기는 다음부터 자동으로 초록(확실)으로 잡혀요.`;
   }).catch((e) => { dr.err = e.message; }).finally(render);
+}
+// 화면에서 고친 값을 도우미에 알려줘 다음 판독부터 맞게 읽게 한다 (조용히)
+function drSaveFixes() {
+  if (!dr.doc || !dr.orig) return;
+  helperFetch('/api/doc/learn', { partner: dr.doc.partner, orig: dr.orig, lines: dr.doc.lines }).catch(() => {});
 }
 function drQuote() {
   if (!dr.doc) return;
   const t = drTotals();
   if (t.noPrice && !confirm(`단가가 없는 품목이 ${t.noPrice}개 있어요. 그 줄은 단가 없이 들어갑니다. 계속할까요?`)) return;
   dr.busy = true; render();
+  drSaveFixes();
   helperFetch('/api/quote', { doc: dr.doc, lines: dr.doc.lines.map((l) => ({ raw_name: l.raw_name, spec: l.spec, unit: l.unit, qty: l.qty, price: Number(l.price) || 0 })) })
     .then((j) => { dr.quote = j; dr.note = `견적서 저장: ${j.out} · 합계 ${Math.round(j.total_incl).toLocaleString()}원(부가세 포함)`; })
     .catch((e) => { dr.err = e.message; }).finally(() => { dr.busy = false; render(); });
 }
 function drToShip() {
   if (!dr.doc) return;
+  drSaveFixes();
   const nm = (s) => (s || '').replace(/\(주\)|주식회사|\s/g, '');
   const pt = S.getPartners().find((p) => nm(p.name) === nm(dr.doc.partner)) || S.getPartners().find((p) => nm(dr.doc.partner).includes(nm(p.name)) && nm(p.name));
   shipPrefill = { client: pt ? pt.name : (dr.doc.partner || ''), unloadAddr: dr.doc.site || '', status: '출고예정', matched: true,
@@ -2996,7 +3004,7 @@ function erpAct(act, t) {
   else if (act === 'erp-dr-learn') drLearn();
   else if (act === 'erp-dr-quote') drQuote();
   else if (act === 'erp-dr-ship') drToShip();
-  else if (act === 'erp-dr-clear') { if (dr.url) URL.revokeObjectURL(dr.url); dr = { name: '', url: '', mime: '', b64: '', busy: false, err: '', doc: null, usage: null, quote: null, note: '' }; render(); }
+  else if (act === 'erp-dr-clear') { if (dr.url) URL.revokeObjectURL(dr.url); dr = { name: '', url: '', mime: '', b64: '', busy: false, err: '', doc: null, orig: null, usage: null, quote: null, note: '' }; render(); }
   else if (act === 'erp-dr-check') { helperState.checked = false; helperCheck(); render(); }
   else if (act === 'erp-dd-reload') { dd = { rows: null, err: '' }; helperState.checked = false; helperCheck(); render(); }
   else if (act === 'erp-stockfix') {   // 실사 수정 — 기존 stock-edit 과 같은 입력·같은 저장(setStock), 끝나면 수불부로 복귀
