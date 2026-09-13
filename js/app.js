@@ -2787,7 +2787,7 @@ function drTotals() {
   return { sup, vat, tot: sup + vat, noPrice: ls.filter((l) => !(Number(l.price) > 0)).length };
 }
 function deskDocRead() {
-  if (!helperState.checked) helperCheck();
+  if (!helperState.checked || !helperState.at || Date.now() - helperState.at > 60000) { helperState.at = Date.now(); helperCheck(); }
   if (drq.files.length > 1 && dr.fromBatch === undefined) return drqPanel();
   const d = dr.doc;
   const left = dr.url || dr.name ? (dr.mime.startsWith('image/') ? `<img src="${dr.url}" alt="원본">`
@@ -2810,7 +2810,7 @@ function deskDocRead() {
     </table>
     <div class="e-lines-hd"><b>품목 ${d.lines.length}</b>
       <span class="dr-legend"><i class="dr-high"></i>확실 ${cnt.high}<i class="dr-mid"></i>확인 필요 ${cnt.mid}<i class="dr-none"></i>못 찾음 ${cnt.none}${cnt.edit ? `<i class="dr-edit"></i>직접 지정 ${cnt.edit}` : ''}</span><span class="sp"></span></div>
-    <div class="e-tw" style="flex:1"><table class="e-grid"><colgroup><col style="width:30px"><col style="width:27%"><col style="width:84px"><col style="width:44px"><col style="width:48px"><col><col style="width:96px"><col style="width:82px"><col style="width:86px"></colgroup>
+    <div class="e-tw" style="flex:1;overflow-x:auto"><table class="e-grid" style="min-width:980px"><colgroup><col style="width:30px"><col style="width:22%"><col style="width:84px"><col style="width:44px"><col style="width:48px"><col style="min-width:240px"><col style="width:96px"><col style="width:82px"><col style="width:86px"></colgroup>
       <thead><tr><th>No</th><th>문서 품명 (원문)</th><th>규격</th><th>단위</th><th>수량</th><th>우리 품목 (이카운트)</th><th>종전가</th><th>견적 단가</th><th>금액(별도)</th></tr></thead>
       <tbody>${d.lines.map((l, i) => { const [cls] = DR_CONF[l.conf] || DR_CONF.none; return `<tr>
         <td class="no">${i + 1}</td><td title="${esc(l.raw_name)}" style="padding-left:6px">${esc(l.raw_name)}${l.unclear ? ' <span class="e-b orange">흐림</span>' : ''}${l.note ? ` <span class="muted">${esc(l.note)}</span>` : ''}</td>
@@ -2920,7 +2920,7 @@ function drqPanel() {
     ${dr.err ? `<div class="dr-err">${esc(dr.err)}</div>` : ''}
     <div class="e-panel"><div class="e-panel-hd"><b>구매전표 모음</b><span class="sp"></span>
       ${eBtn(drq.busy ? '처리 중…' : '전부 인식', 'erp-drq-read', drq.busy || read === n ? 'disabled' : '', read === n ? '' : 'pri')}${eBtn('다시 검사', 'erp-drq-check', drq.busy || !read ? 'disabled' : '')}</div>
-      <div class="e-tw"><table class="e-grid"><colgroup><col style="width:30px"><col style="width:22%"><col style="width:90px"><col style="width:100px"><col style="width:240px"><col><col style="width:100px"></colgroup>
+      <div class="e-tw" style="overflow-x:auto"><table class="e-grid" style="min-width:900px"><colgroup><col style="width:30px"><col style="width:22%"><col style="width:90px"><col style="width:100px"><col style="width:240px"><col><col style="width:100px"></colgroup>
         <thead><tr><th>No</th><th>거래처 / 파일</th><th>일자</th><th>총액</th><th>규격 (날짜/판매처/현장)</th><th>상태</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
       <div class="e-sum"><span class="muted">규격은 이카운트 규격 칸에 들어가요 (기본 첫 줄). 막힌 명세서는 [열어서 고치기]로 품목·거래처를 고친 뒤 돌아오세요. 파일·복사에는 합계가 맞는 명세서만 들어가요.</span></div>
       <div class="e-tools"><span class="sp"></span>
@@ -2944,7 +2944,7 @@ function drRead() {
   helperFetch('/api/doc/read', { name: dr.name, data: dr.b64 }).then((j) => {
     const doc = j.doc;
     doc.lines = doc.lines.map((l) => ({ ...l, ours: l.match.ours, code: l.match.code, conf: l.match.conf, cands: l.match.cands, price: l.prev ? l.prev.price : '' }));
-    dr.doc = doc; dr.orig = JSON.parse(JSON.stringify(doc.lines || [])); dr.usage = j.usage; dr.quote = null; dr.buy = null; dr.buyFile = ''; dr.pushed = null; dr.buyCopied = false; dr.buyTag = undefined; dr.buyAll = false;
+    dr.doc = doc; dr.orig = JSON.parse(JSON.stringify(doc.lines || [])); dr.usage = j.usage; if (j.usage && helperState.info) helperState.info.ai = true; dr.quote = null; dr.buy = null; dr.buyFile = ''; dr.pushed = null; dr.buyCopied = false; dr.buyTag = undefined; dr.buyAll = false;
   }).catch((e) => { dr.err = e.message; }).finally(() => { dr.busy = false; render(); });
 }
 function drLearn() {
@@ -3020,7 +3020,7 @@ function drBuyPanel() {
     ${b.errors.length ? `<div class="dr-err">${b.errors.map(esc).join('<br>')}</div>` : ''}
     ${b.warnings.length ? `<div class="e-sum"><span class="muted">${b.warnings.map(esc).join('<br>')}</span></div>` : ''}
     ${b.valid ? '<div class="e-sum"><span class="muted">이카운트 등록: 구매관리 → 구매입력 → 웹자료올리기 → 표 첫 칸(1번 줄 일자) 클릭 → Cmd+V → 확인 후 저장(F8). ※ 판매입력 화면에 붙여넣지 마세요.</span></div>' : ''}
-    <div class="e-tw"><table class="e-grid"><colgroup><col style="width:30px"><col style="width:110px"><col><col style="width:60px"><col style="width:84px"><col style="width:96px"><col style="width:84px"></colgroup>
+    <div class="e-tw" style="overflow-x:auto"><table class="e-grid" style="min-width:760px"><colgroup><col style="width:30px"><col style="width:110px"><col style="min-width:260px"><col style="width:60px"><col style="width:84px"><col style="width:96px"><col style="width:84px"></colgroup>
       <thead><tr><th>No</th><th>품목코드</th><th>품목명 [규격]</th><th>수량</th><th>단가</th><th>공급가액</th><th>부가세</th></tr></thead>
       <tbody>${v.lines.map((x, i) => `<tr><td class="no">${i + 1}</td><td>${x.prod_cd ? esc(x.prod_cd) : '<span class="e-b red">없음</span>'}</td><td title="${esc(x.prod_des)}">${esc(x.prod_des)}${x.spec ? ` <span class="muted">[${esc(x.spec)}]</span>` : ''}</td>
         <td class="n">${esc(x.qty)}</td><td class="n">${eN(x.price)}</td><td class="n">${eN(x.supply)}</td><td class="n">${eN(x.vat)}</td></tr>`).join('')}</tbody></table></div>
