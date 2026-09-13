@@ -2793,7 +2793,7 @@ function deskDocRead() {
   const left = dr.url || dr.name ? (dr.mime.startsWith('image/') ? `<img src="${dr.url}" alt="원본">`
     : dr.mime === 'application/pdf' ? `<iframe src="${dr.url}" title="원본 PDF"></iframe>`
       : `<div class="dr-file"><b>${esc(dr.name)}</b><span>엑셀 파일은 미리보기 없이 바로 인식합니다</span></div>`)
-    : '<div class="dr-empty">발주서·거래명세표 파일을 여기로 끌어다 놓거나<br><b>[파일 선택]</b>을 누르세요<br><span>사진(JPG·PNG·HEIC) · PDF · 엑셀</span></div>';
+    : '<div class="dr-empty">발주서·거래명세표 파일을 여기로 끌어다 놓거나<br><b>[파일 선택]</b>을 누르세요<br>캡처·카톡 사진은 복사해서 <b>Cmd+V</b>로 붙여넣어도 돼요<br><span>사진(JPG·PNG·HEIC) · PDF · 엑셀 · 여러 장 가능</span></div>';
   let right;
   if (!helperState.up && helperState.checked) right = helperOff();
   else if (dr.busy) right = '<div class="e-empty">문서를 읽는 중이에요… (사진·PDF는 20~60초)</div>';
@@ -2835,6 +2835,43 @@ function deskDocRead() {
 }
 // 명세서 여러 개 — 한 번에 인식해서 구매전표 모음으로 (한 개면 기존 화면 그대로)
 let drq = { files: [], docs: [], busy: false, idx: -1, batch: null, batchFile: '', copied: '', tags: {}, tagAll: {} };
+// 클립보드 이미지(캡처·카톡 사진 복사) 붙여넣기 — Cmd+V
+function drFileObj(f) {
+  return new Promise((ok) => { const rd = new FileReader(); rd.onload = () => ok({ name: f.name, mime: f.type || '', b64: String(rd.result).split(',')[1] || '' }); rd.readAsDataURL(f); });
+}
+function drPasteFiles(files) {
+  if (!files.length) return;
+  const inBatch = drq.files.length > 1 && dr.fromBatch === undefined;
+  const pendingSingle = !inBatch && dr.b64 && !dr.doc;        // 한 장 올려놓고 아직 인식 안 한 상태면 거기에 더함
+  if (!inBatch && !pendingSingle) { drLoadFiles(files); return; }
+  Promise.all(files.map(drFileObj)).then((arr) => {
+    if (inBatch) {
+      drq.files.push(...arr); drq.docs.push(...arr.map(() => null)); drq.batch = null; drq.batchFile = ''; drq.copied = '';
+    } else {
+      const first = { name: dr.name, mime: dr.mime, b64: dr.b64 };
+      drq = { files: [first, ...arr], docs: [first, ...arr].map(() => null), busy: false, idx: -1, batch: null, batchFile: '', copied: '', tags: {}, tagAll: {} };
+      if (dr.url) URL.revokeObjectURL(dr.url);
+      dr = { ...dr, name: '', url: '', mime: '', b64: '', doc: null, buy: null, buyFile: '', err: '', note: '' };
+    }
+    render();
+  });
+}
+document.addEventListener('paste', (e) => {
+  if (state.route !== 'docread' || !isDesk()) return;
+  const items = [...((e.clipboardData && e.clipboardData.items) || [])];
+  const stamp = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  const base = `붙여넣기_${stamp.getFullYear()}${pad(stamp.getMonth() + 1)}${pad(stamp.getDate())}_${pad(stamp.getHours())}${pad(stamp.getMinutes())}${pad(stamp.getSeconds())}`;
+  const files = items.filter((it) => it.kind === 'file' && /^image\/|pdf$/.test(it.type)).map((it, i) => {
+    const f = it.getAsFile();
+    if (!f) return null;
+    const ext = (f.type.split('/')[1] || 'png').replace('jpeg', 'jpg').replace('svg+xml', 'svg');
+    return f.name && f.name !== 'image.png' ? f : new File([f], `${base}${i ? '_' + (i + 1) : ''}.${ext}`, { type: f.type });
+  }).filter(Boolean);
+  if (!files.length) return;          // 글자 붙여넣기(규격 칸 등)는 그대로 둠
+  e.preventDefault();
+  drPasteFiles(files);
+});
 function drLoadFiles(list) {
   const files = [...(list || [])];
   if (files.length <= 1) { drq = { ...drq, files: [], docs: [], batch: null, batchFile: '', copied: '' }; drLoadFile(files[0]); return; }
