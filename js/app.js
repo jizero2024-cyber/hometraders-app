@@ -2848,7 +2848,7 @@ function drRead() {
   helperFetch('/api/doc/read', { name: dr.name, data: dr.b64 }).then((j) => {
     const doc = j.doc;
     doc.lines = doc.lines.map((l) => ({ ...l, ours: l.match.ours, code: l.match.code, conf: l.match.conf, cands: l.match.cands, price: l.prev ? l.prev.price : '' }));
-    dr.doc = doc; dr.orig = JSON.parse(JSON.stringify(doc.lines || [])); dr.usage = j.usage; dr.quote = null; dr.buy = null; dr.buyFile = '';
+    dr.doc = doc; dr.orig = JSON.parse(JSON.stringify(doc.lines || [])); dr.usage = j.usage; dr.quote = null; dr.buy = null; dr.buyFile = ''; dr.pushed = null;
   }).catch((e) => { dr.err = e.message; }).finally(() => { dr.busy = false; render(); });
 }
 function drLearn() {
@@ -2885,6 +2885,18 @@ function drBuyFile() {
   helperFetch('/api/purchase/file', drBuyPayload()).then((j) => { dr.buy = j; dr.buyFile = j.out; })
     .catch((e) => { dr.err = e.message; }).finally(() => { dr.busy = false; render(); });
 }
+function drBuyPush() {
+  const b = dr.buy;
+  if (!dr.doc || dr.busy || !b || !b.valid) return;
+  const e = b.ecount || {};
+  if (!e.ready) { alert('이카운트 연결 정보가 없어요. 도우미 .env 에 ' + (e.missing || []).join(', ') + ' 를 넣고 도우미를 다시 켜주세요.'); return; }
+  const v = b.voucher;
+  const where = e.mode === '실서버' ? '실제 이카운트 ERP' : '이카운트 테스트 서버';
+  if (!confirm(`${where}에 구매전표를 등록할까요?\n\n거래처: ${v.cust_name} (${v.cust_code})\n일자: ${v.date}\n품목 ${v.lines.length}줄 · 총액 ${eN(b.sums.total)}원 (공급가액 ${eN(b.sums.supply)} + 부가세 ${eN(b.sums.vat)})`)) return;
+  dr.busy = true; render();
+  helperFetch('/api/purchase/push', drBuyPayload()).then((j) => { dr.buy = j; dr.pushed = j.push; dr.err = ''; })
+    .catch((err) => { dr.err = err.message; }).finally(() => { dr.busy = false; render(); });
+}
 function drBuyPanel() {
   const b = dr.buy;
   if (!b) return '';
@@ -2909,9 +2921,11 @@ function drBuyPanel() {
         <td class="n">${esc(x.qty)}</td><td class="n">${eN(x.price)}</td><td class="n">${eN(x.supply)}</td><td class="n">${eN(x.vat)}</td></tr>`).join('')}</tbody></table></div>
     <table class="e-grid" style="margin-top:6px"><thead><tr><th style="width:110px"></th><th>전표</th><th>명세서</th><th style="width:110px">대조</th></tr></thead>
       <tbody><tr>${cmp('supply', '공급가액 합계')}</tr><tr>${cmp('vat', '부가세 합계')}</tr><tr>${cmp('total', '총액')}</tr></tbody></table>
+    ${dr.pushed && dr.pushed.ok ? `<div class="e-sum"><span class="e-b green">이카운트 등록 완료</span> <span>${esc(dr.pushed.mode)} · 전표번호 ${esc((dr.pushed.slip_nos || []).join(', ') || '-')}</span></div>` : ''}
     <div class="e-tools">${eBtn('다시 검사', 'erp-dr-buy')}<span class="sp"></span>
       ${dr.buyFile ? `<a class="e-btn" href="${HELPER}/api/file?path=${encodeURIComponent(dr.buyFile)}">받기 · ${esc(dr.buyFile.split('/').pop())}</a>` : ''}
-      ${eBtn('이카운트 올리기 엑셀 만들기', 'erp-dr-buyfile', b.valid ? '' : 'disabled', 'pri')}</div></div>`;
+      ${eBtn('이카운트 올리기 엑셀 만들기', 'erp-dr-buyfile', b.valid ? '' : 'disabled')}
+      ${eBtn(`이카운트에 바로 등록${b.ecount && b.ecount.mode === '테스트' ? ' (테스트)' : ''}`, 'erp-dr-buypush', b.valid && b.ecount && b.ecount.ready && !(dr.pushed && dr.pushed.ok) ? '' : `disabled title="${esc(b.ecount && !b.ecount.ready ? '도우미 .env 에 이카운트 API 인증키가 필요해요' : '')}"`, 'pri')}</div></div>`;
 }
 function drQuote() {
   if (!dr.doc) return;
@@ -3053,6 +3067,7 @@ function erpAct(act, t) {
   else if (act === 'erp-dr-quote') drQuote();
   else if (act === 'erp-dr-buy') drBuy();
   else if (act === 'erp-dr-buyfile') drBuyFile();
+  else if (act === 'erp-dr-buypush') drBuyPush();
   else if (act === 'erp-dr-ship') drToShip();
   else if (act === 'erp-dr-clear') { if (dr.url) URL.revokeObjectURL(dr.url); dr = { name: '', url: '', mime: '', b64: '', busy: false, err: '', doc: null, orig: null, usage: null, quote: null, note: '', buy: null, buyFile: '' }; render(); }
   else if (act === 'erp-dr-check') { helperState.checked = false; helperCheck(); render(); }
