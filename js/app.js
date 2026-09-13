@@ -2912,7 +2912,7 @@ function drqPanel() {
     const st = !r ? '<span class="muted">검사 전</span>' : r.ok ? '<span class="e-b green">합계 일치</span>' : `<span class="e-b red">막힘</span><div class="muted" style="white-space:normal">${r.errors.map(esc).join('<br>')}</div>`;
     return `<tr><td class="no">${i + 1}</td><td title="${esc(f.name)}">${esc(v ? v.cust_name : d.partner || '')}<div class="muted">${esc(f.name)}</div></td>
       <td class="c">${esc(d.doc_date || '')}</td><td class="n">${r ? eN(r.sums.total) : ''}</td>
-      <td style="white-space:nowrap"><input class="e-in" id="drq-tag-${i}" value="${esc(drq.tags[i] ?? '')}" placeholder="MMDD/판매처" style="width:calc(100% - 70px)"> <label class="muted"><input type="checkbox" id="drq-all-${i}" ${drq.tagAll[i] ? 'checked' : ''}> 모든 줄</label></td>
+      <td style="white-space:nowrap"><input class="e-in" id="drq-tag-${i}" value="${esc(drq.tags[i] ?? '')}" placeholder="0911/뉴하우징/평택김인숙" style="width:calc(100% - 70px)"> <label class="muted"><input type="checkbox" id="drq-all-${i}" ${drq.tagAll[i] ? 'checked' : ''}> 모든 줄</label></td>
       <td style="white-space:normal">${st}</td><td class="c">${eBtn('열어서 고치기', 'erp-drq-open', `data-i="${i}"`, 'sm')}</td></tr>`;
   }).join('');
   return ePage(`<div class="e-tools"><label class="e-btn" for="dr-file">파일 선택</label><input type="file" id="dr-file" accept="image/*,.heic,.pdf,.xlsx,.xls,.csv" multiple hidden>
@@ -2921,7 +2921,7 @@ function drqPanel() {
     <div class="e-panel"><div class="e-panel-hd"><b>구매전표 모음</b><span class="sp"></span>
       ${eBtn(drq.busy ? '처리 중…' : '전부 인식', 'erp-drq-read', drq.busy || read === n ? 'disabled' : '', read === n ? '' : 'pri')}${eBtn('다시 검사', 'erp-drq-check', drq.busy || !read ? 'disabled' : '')}</div>
       <div class="e-tw"><table class="e-grid"><colgroup><col style="width:30px"><col style="width:22%"><col style="width:90px"><col style="width:100px"><col style="width:240px"><col><col style="width:100px"></colgroup>
-        <thead><tr><th>No</th><th>거래처 / 파일</th><th>일자</th><th>총액</th><th>규격 (날짜/판매처)</th><th>상태</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+        <thead><tr><th>No</th><th>거래처 / 파일</th><th>일자</th><th>총액</th><th>규격 (날짜/판매처/현장)</th><th>상태</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
       <div class="e-sum"><span class="muted">규격은 이카운트 규격 칸에 들어가요 (기본 첫 줄). 막힌 명세서는 [열어서 고치기]로 품목·거래처를 고친 뒤 돌아오세요. 파일·복사에는 합계가 맞는 명세서만 들어가요.</span></div>
       <div class="e-tools"><span class="sp"></span>
         ${drq.batchFile ? `<a class="e-btn" href="${HELPER}/api/file?path=${encodeURIComponent(drq.batchFile)}">받기 · ${esc(drq.batchFile.split('/').pop())}</a>` : ''}
@@ -3015,7 +3015,7 @@ function drBuyPanel() {
       <tr><th>거래처</th><td><input class="e-in" id="dr-buy-cust" value="${esc(v.cust_code)}" placeholder="거래처코드" style="width:130px"> ${esc(v.cust_name)} <span class="muted">${esc(v.cust_how)}</span></td>
         <th>입고창고</th><td><select class="e-sel" id="dr-buy-wh">${(b.warehouses || []).map((w) => `<option value="${esc(w.code)}"${w.code === v.wh_code ? ' selected' : ''}>${esc(w.code)} ${esc(w.name)}</option>`).join('')}</select></td></tr>
       <tr><th>일자</th><td>${esc(v.date)}</td>
-        <th>규격</th><td><input class="e-in" id="dr-buy-tag" value="${esc(v.tag || '')}" placeholder="MMDD/판매처" style="width:180px"> <label class="muted"><input type="checkbox" id="dr-buy-all" ${v.tag_all ? 'checked' : ''}> 모든 줄</label> <span class="muted">(이카운트 규격 칸 · 고친 뒤 [다시 검사])</span></td></tr>
+        <th>규격</th><td><input class="e-in" id="dr-buy-tag" value="${esc(v.tag || '')}" placeholder="0911/뉴하우징/평택김인숙" style="width:180px"> <label class="muted"><input type="checkbox" id="dr-buy-all" ${v.tag_all ? 'checked' : ''}> 모든 줄</label> <span class="muted">(이카운트 규격 칸 · 고친 뒤 [다시 검사])</span></td></tr>
     </table>
     ${b.errors.length ? `<div class="dr-err">${b.errors.map(esc).join('<br>')}</div>` : ''}
     ${b.warnings.length ? `<div class="e-sum"><span class="muted">${b.warnings.map(esc).join('<br>')}</span></div>` : ''}
