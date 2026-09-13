@@ -2788,6 +2788,7 @@ function drTotals() {
 }
 function deskDocRead() {
   if (!helperState.checked) helperCheck();
+  if (drq.files.length > 1 && dr.fromBatch === undefined) return drqPanel();
   const d = dr.doc;
   const left = dr.url || dr.name ? (dr.mime.startsWith('image/') ? `<img src="${dr.url}" alt="원본">`
     : dr.mime === 'application/pdf' ? `<iframe src="${dr.url}" title="원본 PDF"></iframe>`
@@ -2826,11 +2827,106 @@ function deskDocRead() {
     ${dr.note ? `<div class="e-sum"><span>${esc(dr.note)}</span></div>` : ''}
     ${drBuyPanel()}`;
   }
-  return ePage(`<div class="e-tools"><label class="e-btn pri" for="dr-file">파일 선택</label><input type="file" id="dr-file" accept="image/*,.heic,.pdf,.xlsx,.xls,.csv" hidden>
+  return ePage(`<div class="e-tools">${dr.fromBatch !== undefined ? eBtn('← 구매전표 모음으로', 'erp-drq-back', '', 'pri') : ''}<label class="e-btn ${dr.fromBatch !== undefined ? '' : 'pri'}" for="dr-file">파일 선택</label><input type="file" id="dr-file" accept="image/*,.heic,.pdf,.xlsx,.xls,.csv" multiple hidden>
       ${eBtn('인식 시작', 'erp-dr-read', dr.b64 && !dr.busy ? '' : 'disabled')}${dr.name ? `<span class="e-selinfo">${esc(dr.name)}</span>${eBtn('비우기', 'erp-dr-clear', '', 'sm')}` : ''}
       <span class="sp"></span>${helperBadge()}</div>
     <div class="e-dr"><div class="e-panel dr-drop"><div class="e-panel-hd"><b>원본 문서</b></div><div class="dr-view">${left}</div></div>
       <div class="e-panel"><div class="e-panel-hd"><b>인식 결과</b><span class="sp"></span></div><div class="dr-res">${right}</div></div></div>`);
+}
+// 명세서 여러 개 — 한 번에 인식해서 구매전표 모음으로 (한 개면 기존 화면 그대로)
+let drq = { files: [], docs: [], busy: false, idx: -1, batch: null, batchFile: '', copied: '', tags: {}, tagAll: {} };
+function drLoadFiles(list) {
+  const files = [...(list || [])];
+  if (files.length <= 1) { drq = { ...drq, files: [], docs: [], batch: null, batchFile: '', copied: '' }; drLoadFile(files[0]); return; }
+  Promise.all(files.map((f) => new Promise((ok) => { const rd = new FileReader(); rd.onload = () => ok({ name: f.name, mime: f.type || '', b64: String(rd.result).split(',')[1] || '' }); rd.readAsDataURL(f); })))
+    .then((arr) => { drq = { files: arr, docs: arr.map(() => null), busy: false, idx: -1, batch: null, batchFile: '', copied: '', tags: {}, tagAll: {} }; if (dr.url) URL.revokeObjectURL(dr.url); dr = { ...dr, name: '', url: '', mime: '', b64: '', doc: null, buy: null, buyFile: '', err: '', note: '' }; render(); });
+}
+async function drqReadAll() {
+  if (drq.busy || !drq.files.length) return;
+  drq.busy = true; render();
+  for (let i = 0; i < drq.files.length; i++) {
+    if (drq.docs[i] && drq.docs[i].lines) continue;
+    drq.idx = i; render();
+    try {
+      const f = drq.files[i];
+      const j = await helperFetch('/api/doc/read', { name: f.name, data: f.b64 });
+      const doc = j.doc;
+      doc.lines = doc.lines.map((l) => ({ ...l, ours: l.match.ours, code: l.match.code, conf: l.match.conf, cands: l.match.cands, price: l.prev ? l.prev.price : '' }));
+      doc._orig = JSON.parse(JSON.stringify(doc.lines));
+      drq.docs[i] = doc;
+      if (drq.tags[i] === undefined && /^\d{4}-\d{2}-\d{2}$/.test(doc.doc_date || '')) drq.tags[i] = doc.doc_date.slice(5, 7) + doc.doc_date.slice(8, 10) + '/';
+    } catch (e) { drq.docs[i] = { error: e.message }; }
+  }
+  drq.idx = -1; drq.busy = false;
+  drqCheck();
+}
+function drqItems() {
+  return drq.docs.map((d, i) => (d && d.lines ? { doc: d, tag: (document.getElementById('drq-tag-' + i) || {}).value ?? drq.tags[i] ?? '', tag_all: !!drq.tagAll[i] } : null)).filter(Boolean);
+}
+function drqSyncTags() {
+  drq.docs.forEach((d, i) => { const el = document.getElementById('drq-tag-' + i); if (el) drq.tags[i] = el.value; const cb = document.getElementById('drq-all-' + i); if (cb) drq.tagAll[i] = cb.checked; });
+}
+function drqCheck() {
+  drqSyncTags();
+  const items = drqItems();
+  if (!items.length) { render(); return; }
+  drq.busy = true; drq.batchFile = ''; drq.copied = ''; render();
+  helperFetch('/api/purchase/batch', { items }).then((j) => { drq.batch = j; })
+    .catch((e) => { dr.err = e.message; }).finally(() => { drq.busy = false; render(); });
+}
+function drqFile() {
+  drqSyncTags();
+  drq.busy = true; render();
+  helperFetch('/api/purchase/batch/file', { items: drqItems() }).then((j) => { drq.batch = j; drq.batchFile = j.out; })
+    .catch((e) => { dr.err = e.message; }).finally(() => { drq.busy = false; render(); });
+}
+function drCopyPaste(text, done) {
+  if (!text) { alert('합계가 맞는 명세서가 없어 복사할 게 없어요.'); return; }
+  navigator.clipboard.writeText(text).then(done).catch(() => { prompt('자동 복사가 막혀 있어요. 아래 글자를 전부 선택해 복사하세요.', text); });
+}
+function drqOpen(i) {
+  const d = drq.docs[i];
+  if (!d || !d.lines) return;
+  drqSyncTags();
+  dr = { ...dr, name: drq.files[i].name, mime: drq.files[i].mime, url: '', b64: drq.files[i].b64, doc: d, orig: d._orig, buy: null, buyFile: '', pushed: null, err: '', note: '', fromBatch: i };
+  render();
+}
+function drqBack() {
+  if (dr.fromBatch !== undefined && dr.doc) { drq.docs[dr.fromBatch] = dr.doc; }
+  dr = { ...dr, name: '', url: '', mime: '', b64: '', doc: null, buy: null, buyFile: '', fromBatch: undefined };
+  drqCheck();
+}
+function drqPanel() {
+  const n = drq.files.length;
+  const read = drq.docs.filter((d) => d && d.lines).length;
+  const b = drq.batch;
+  const res = b ? b.results : [];
+  let k = -1;
+  const rows = drq.files.map((f, i) => {
+    const d = drq.docs[i];
+    if (!d) return `<tr><td class="no">${i + 1}</td><td colspan="6">${esc(f.name)} <span class="muted">${drq.busy && drq.idx === i ? '읽는 중…' : '인식 전'}</span></td></tr>`;
+    if (d.error) return `<tr><td class="no">${i + 1}</td><td colspan="6">${esc(f.name)} <span class="e-b red">인식 실패</span> <span class="muted">${esc(d.error)}</span></td></tr>`;
+    k += 1;
+    const r = res[k];
+    const v = r ? r.voucher : null;
+    const st = !r ? '<span class="muted">검사 전</span>' : r.ok ? '<span class="e-b green">합계 일치</span>' : `<span class="e-b red">막힘</span><div class="muted" style="white-space:normal">${r.errors.map(esc).join('<br>')}</div>`;
+    return `<tr><td class="no">${i + 1}</td><td title="${esc(f.name)}">${esc(v ? v.cust_name : d.partner || '')}<div class="muted">${esc(f.name)}</div></td>
+      <td class="c">${esc(d.doc_date || '')}</td><td class="n">${r ? eN(r.sums.total) : ''}</td>
+      <td style="white-space:nowrap"><input class="e-in" id="drq-tag-${i}" value="${esc(drq.tags[i] ?? '')}" placeholder="MMDD/판매처" style="width:calc(100% - 70px)"> <label class="muted"><input type="checkbox" id="drq-all-${i}" ${drq.tagAll[i] ? 'checked' : ''}> 모든 줄</label></td>
+      <td style="white-space:normal">${st}</td><td class="c">${eBtn('열어서 고치기', 'erp-drq-open', `data-i="${i}"`, 'sm')}</td></tr>`;
+  }).join('');
+  return ePage(`<div class="e-tools"><label class="e-btn" for="dr-file">파일 선택</label><input type="file" id="dr-file" accept="image/*,.heic,.pdf,.xlsx,.xls,.csv" multiple hidden>
+      <span class="e-selinfo">명세서 ${n}개 · 인식 ${read}개${b ? ` · 합계 일치 ${b.passed}개 / 막힘 ${b.failed}개` : ''}</span><span class="sp"></span>${helperBadge()}</div>
+    ${dr.err ? `<div class="dr-err">${esc(dr.err)}</div>` : ''}
+    <div class="e-panel"><div class="e-panel-hd"><b>구매전표 모음</b><span class="sp"></span>
+      ${eBtn(drq.busy ? '처리 중…' : '전부 인식', 'erp-drq-read', drq.busy || read === n ? 'disabled' : '', read === n ? '' : 'pri')}${eBtn('다시 검사', 'erp-drq-check', drq.busy || !read ? 'disabled' : '')}</div>
+      <div class="e-tw"><table class="e-grid"><colgroup><col style="width:30px"><col style="width:22%"><col style="width:90px"><col style="width:100px"><col style="width:240px"><col><col style="width:100px"></colgroup>
+        <thead><tr><th>No</th><th>거래처 / 파일</th><th>일자</th><th>총액</th><th>규격 (날짜/판매처)</th><th>상태</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+      <div class="e-sum"><span class="muted">규격은 이카운트 규격 칸에 들어가요 (기본 첫 줄). 막힌 명세서는 [열어서 고치기]로 품목·거래처를 고친 뒤 돌아오세요. 파일·복사에는 합계가 맞는 명세서만 들어가요.</span></div>
+      <div class="e-tools"><span class="sp"></span>
+        ${drq.batchFile ? `<a class="e-btn" href="${HELPER}/api/file?path=${encodeURIComponent(drq.batchFile)}">받기 · ${esc(drq.batchFile.split('/').pop())}</a>` : ''}
+        ${eBtn('엑셀 만들기', 'erp-drq-file', b && b.passed ? '' : 'disabled')}
+        ${eBtn(drq.copied ? '복사됨 ✓' : `이카운트 붙여넣기용 복사${b && b.passed ? ` (${b.passed}건)` : ''}`, 'erp-drq-copy', b && b.passed ? '' : 'disabled', 'pri')}</div></div>`);
 }
 function drLoadFile(file) {
   if (!file) return;
@@ -2848,7 +2944,7 @@ function drRead() {
   helperFetch('/api/doc/read', { name: dr.name, data: dr.b64 }).then((j) => {
     const doc = j.doc;
     doc.lines = doc.lines.map((l) => ({ ...l, ours: l.match.ours, code: l.match.code, conf: l.match.conf, cands: l.match.cands, price: l.prev ? l.prev.price : '' }));
-    dr.doc = doc; dr.orig = JSON.parse(JSON.stringify(doc.lines || [])); dr.usage = j.usage; dr.quote = null; dr.buy = null; dr.buyFile = ''; dr.pushed = null;
+    dr.doc = doc; dr.orig = JSON.parse(JSON.stringify(doc.lines || [])); dr.usage = j.usage; dr.quote = null; dr.buy = null; dr.buyFile = ''; dr.pushed = null; dr.buyCopied = false; dr.buyTag = undefined; dr.buyAll = false;
   }).catch((e) => { dr.err = e.message; }).finally(() => { dr.busy = false; render(); });
 }
 function drLearn() {
@@ -2870,13 +2966,20 @@ function drSaveFixes() {
 function drBuyPayload() {
   const wh = document.getElementById('dr-buy-wh');
   const cust = document.getElementById('dr-buy-cust');
-  return { doc: dr.doc, wh: wh ? wh.value : '', cust: cust ? cust.value.trim() : '' };
+  const tag = document.getElementById('dr-buy-tag');
+  const all = document.getElementById('dr-buy-all');
+  if (tag) dr.buyTag = tag.value;
+  if (all) dr.buyAll = all.checked;
+  const d = dr.doc || {};
+  const defTag = /^\d{4}-\d{2}-\d{2}$/.test(d.doc_date || '') ? d.doc_date.slice(5, 7) + d.doc_date.slice(8, 10) + '/' : '';
+  return { doc: dr.doc, wh: wh ? wh.value : '', cust: cust ? cust.value.trim() : '', tag: tag ? tag.value : (dr.buyTag ?? defTag), tag_all: all ? all.checked : !!dr.buyAll };
 }
 function drBuy() {
   if (!dr.doc || dr.busy) return;
   drSaveFixes();
-  dr.busy = true; dr.buyFile = ''; render();
-  helperFetch('/api/purchase', drBuyPayload()).then((j) => { dr.buy = j; })
+  const payload = drBuyPayload();
+  dr.busy = true; dr.buyFile = ''; dr.buyCopied = false; render();
+  helperFetch('/api/purchase', payload).then((j) => { dr.buy = j; })
     .catch((e) => { dr.err = e.message; }).finally(() => { dr.busy = false; render(); });
 }
 function drBuyFile() {
@@ -2911,13 +3014,15 @@ function drBuyPanel() {
     <table class="e-ftbl"><colgroup><col style="width:80px"><col><col style="width:80px"><col></colgroup>
       <tr><th>거래처</th><td><input class="e-in" id="dr-buy-cust" value="${esc(v.cust_code)}" placeholder="거래처코드" style="width:130px"> ${esc(v.cust_name)} <span class="muted">${esc(v.cust_how)}</span></td>
         <th>입고창고</th><td><select class="e-sel" id="dr-buy-wh">${(b.warehouses || []).map((w) => `<option value="${esc(w.code)}"${w.code === v.wh_code ? ' selected' : ''}>${esc(w.code)} ${esc(w.name)}</option>`).join('')}</select></td></tr>
-      <tr><th>일자</th><td colspan="3">${esc(v.date)}</td></tr>
+      <tr><th>일자</th><td>${esc(v.date)}</td>
+        <th>규격</th><td><input class="e-in" id="dr-buy-tag" value="${esc(v.tag || '')}" placeholder="MMDD/판매처" style="width:180px"> <label class="muted"><input type="checkbox" id="dr-buy-all" ${v.tag_all ? 'checked' : ''}> 모든 줄</label> <span class="muted">(이카운트 규격 칸 · 고친 뒤 [다시 검사])</span></td></tr>
     </table>
     ${b.errors.length ? `<div class="dr-err">${b.errors.map(esc).join('<br>')}</div>` : ''}
     ${b.warnings.length ? `<div class="e-sum"><span class="muted">${b.warnings.map(esc).join('<br>')}</span></div>` : ''}
+    ${b.valid ? '<div class="e-sum"><span class="muted">이카운트 등록: 구매관리 → 구매입력 → 웹자료올리기 → 표 첫 칸(1번 줄 일자) 클릭 → Cmd+V → 확인 후 저장(F8). ※ 판매입력 화면에 붙여넣지 마세요.</span></div>' : ''}
     <div class="e-tw"><table class="e-grid"><colgroup><col style="width:30px"><col style="width:110px"><col><col style="width:60px"><col style="width:84px"><col style="width:96px"><col style="width:84px"></colgroup>
-      <thead><tr><th>No</th><th>품목코드</th><th>품목명</th><th>수량</th><th>단가</th><th>공급가액</th><th>부가세</th></tr></thead>
-      <tbody>${v.lines.map((x, i) => `<tr><td class="no">${i + 1}</td><td>${x.prod_cd ? esc(x.prod_cd) : '<span class="e-b red">없음</span>'}</td><td title="${esc(x.prod_des)}">${esc(x.prod_des)}</td>
+      <thead><tr><th>No</th><th>품목코드</th><th>품목명 [규격]</th><th>수량</th><th>단가</th><th>공급가액</th><th>부가세</th></tr></thead>
+      <tbody>${v.lines.map((x, i) => `<tr><td class="no">${i + 1}</td><td>${x.prod_cd ? esc(x.prod_cd) : '<span class="e-b red">없음</span>'}</td><td title="${esc(x.prod_des)}">${esc(x.prod_des)}${x.spec ? ` <span class="muted">[${esc(x.spec)}]</span>` : ''}</td>
         <td class="n">${esc(x.qty)}</td><td class="n">${eN(x.price)}</td><td class="n">${eN(x.supply)}</td><td class="n">${eN(x.vat)}</td></tr>`).join('')}</tbody></table></div>
     <table class="e-grid" style="margin-top:6px"><thead><tr><th style="width:110px"></th><th>전표</th><th>명세서</th><th style="width:110px">대조</th></tr></thead>
       <tbody><tr>${cmp('supply', '공급가액 합계')}</tr><tr>${cmp('vat', '부가세 합계')}</tr><tr>${cmp('total', '총액')}</tr></tbody></table>
@@ -2925,6 +3030,7 @@ function drBuyPanel() {
     <div class="e-tools">${eBtn('다시 검사', 'erp-dr-buy')}<span class="sp"></span>
       ${dr.buyFile ? `<a class="e-btn" href="${HELPER}/api/file?path=${encodeURIComponent(dr.buyFile)}">받기 · ${esc(dr.buyFile.split('/').pop())}</a>` : ''}
       ${eBtn('이카운트 올리기 엑셀 만들기', 'erp-dr-buyfile', b.valid ? '' : 'disabled')}
+      ${eBtn(dr.buyCopied ? '복사됨 ✓' : '이카운트 붙여넣기용 복사', 'erp-dr-buycopy', b.valid ? '' : 'disabled')}
       ${eBtn(`이카운트에 바로 등록${b.ecount && b.ecount.mode === '테스트' ? ' (테스트)' : ''}`, 'erp-dr-buypush', b.valid && b.ecount && b.ecount.ready && !(dr.pushed && dr.pushed.ok) ? '' : `disabled title="${esc(b.ecount && !b.ecount.ready ? '도우미 .env 에 이카운트 API 인증키가 필요해요' : '')}"`, 'pri')}</div></div>`;
 }
 function drQuote() {
@@ -3068,6 +3174,13 @@ function erpAct(act, t) {
   else if (act === 'erp-dr-buy') drBuy();
   else if (act === 'erp-dr-buyfile') drBuyFile();
   else if (act === 'erp-dr-buypush') drBuyPush();
+  else if (act === 'erp-dr-buycopy') { if (dr.buy) drCopyPaste(dr.buy.paste, () => { dr.buyCopied = true; render(); }); }
+  else if (act === 'erp-drq-read') drqReadAll();
+  else if (act === 'erp-drq-check') drqCheck();
+  else if (act === 'erp-drq-file') drqFile();
+  else if (act === 'erp-drq-copy') { drqSyncTags(); if (drq.batch) drCopyPaste(drq.batch.paste, () => { drq.copied = 'y'; render(); }); }
+  else if (act === 'erp-drq-open') drqOpen(Number(t.dataset.i));
+  else if (act === 'erp-drq-back') drqBack();
   else if (act === 'erp-dr-ship') drToShip();
   else if (act === 'erp-dr-clear') { if (dr.url) URL.revokeObjectURL(dr.url); dr = { name: '', url: '', mime: '', b64: '', busy: false, err: '', doc: null, orig: null, usage: null, quote: null, note: '', buy: null, buyFile: '' }; render(); }
   else if (act === 'erp-dr-check') { helperState.checked = false; helperCheck(); render(); }
@@ -3088,7 +3201,7 @@ function drUpdateTotals(i) {
 }
 app.addEventListener('change', (e) => {
   const el = e.target;
-  if (el.id === 'dr-file') { drLoadFile(el.files && el.files[0]); return; }
+  if (el.id === 'dr-file') { drLoadFiles(el.files); return; }
   if (!dr.doc || !el.dataset) return;
   if (el.dataset.drh) { dr.doc[el.dataset.drh] = el.value.trim(); return; }
   if (el.dataset.drf === 'ours') {
@@ -3103,7 +3216,7 @@ app.addEventListener('input', (e) => {
 });
 app.addEventListener('dragover', (e) => { if (e.target.closest && e.target.closest('.dr-drop')) { e.preventDefault(); e.target.closest('.dr-drop').classList.add('over'); } });
 app.addEventListener('dragleave', (e) => { const z = e.target.closest && e.target.closest('.dr-drop'); if (z) z.classList.remove('over'); });
-app.addEventListener('drop', (e) => { if (e.target.closest && e.target.closest('.dr-drop')) { e.preventDefault(); drLoadFile(e.dataTransfer.files && e.dataTransfer.files[0]); } });
+app.addEventListener('drop', (e) => { if (e.target.closest && e.target.closest('.dr-drop')) { e.preventDefault(); drLoadFiles(e.dataTransfer.files); } });
 
 // 화면 폭이 기준(1024px)을 넘나들면 다시 그림
 DESK_MQ.addEventListener('change', () => { if (!isDesk()) document.body.classList.remove('erp'); render(); });
