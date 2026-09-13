@@ -2761,7 +2761,7 @@ function deskSettings() {
 
 // ── 화면: 문서 인식 · 납품확인서 — 이 맥의 로컬 도우미(127.0.0.1:4180)가 AI 판독·매핑·견적서 생성을 맡는다 ──
 const HELPER = 'http://127.0.0.1:4180';
-let dr = { name: '', url: '', mime: '', b64: '', busy: false, err: '', doc: null, orig: null, usage: null, quote: null, note: '' };
+let dr = { name: '', url: '', mime: '', b64: '', busy: false, err: '', doc: null, orig: null, usage: null, quote: null, note: '', buy: null, buyFile: '' };
 let helperState = { checked: false, up: false, info: null };
 let dd = { rows: null, err: '' };
 async function helperFetch(path, body) {
@@ -2820,10 +2820,11 @@ function deskDocRead() {
         <td class="n" id="dr-amt-${i}">${eN((Number(l.qty) || 0) * (Number(l.price) || 0))}</td></tr>`; }).join('')}</tbody>
       <tfoot><tr><td></td><td colspan="4" style="padding-left:6px;font-weight:700">합계 <span class="muted" id="dr-noprice">${t.noPrice ? `단가 없음 ${t.noPrice}` : ''}</span></td><td class="n muted" colspan="2">부가세 <b id="dr-vat">${eN(t.vat)}</b></td><td class="n muted">포함 <b id="dr-tot">${eN(t.tot)}</b></td><td class="n"><b id="dr-sup">${eN(t.sup)}</b></td></tr></tfoot></table></div>
     <datalist id="dr-ec">${ECOUNT_ITEMS.map(([c, n]) => `<option value="${esc(n)}">${esc(c)}</option>`).join('')}</datalist>
-    <div class="e-tools">${eBtn('매핑 저장 (다음부터 자동)', 'erp-dr-learn')}${eBtn('출고 입력으로 보내기', 'erp-dr-ship')}<span class="sp"></span>
+    <div class="e-tools">${eBtn('매핑 저장 (다음부터 자동)', 'erp-dr-learn')}${eBtn('출고 입력으로 보내기', 'erp-dr-ship')}${eBtn('구매전표 만들기', 'erp-dr-buy')}<span class="sp"></span>
       ${dr.quote ? `<a class="e-btn" href="${HELPER}/api/file?path=${encodeURIComponent(dr.quote.out)}">견적서 받기 · ${esc(dr.quote.out.split('/').pop())}</a>` : ''}
       ${eBtn('견적서 만들기 (거래처 양식)', 'erp-dr-quote', '', 'pri')}</div>
-    ${dr.note ? `<div class="e-sum"><span>${esc(dr.note)}</span></div>` : ''}`;
+    ${dr.note ? `<div class="e-sum"><span>${esc(dr.note)}</span></div>` : ''}
+    ${drBuyPanel()}`;
   }
   return ePage(`<div class="e-tools"><label class="e-btn pri" for="dr-file">파일 선택</label><input type="file" id="dr-file" accept="image/*,.heic,.pdf,.xlsx,.xls,.csv" hidden>
       ${eBtn('인식 시작', 'erp-dr-read', dr.b64 && !dr.busy ? '' : 'disabled')}${dr.name ? `<span class="e-selinfo">${esc(dr.name)}</span>${eBtn('비우기', 'erp-dr-clear', '', 'sm')}` : ''}
@@ -2847,7 +2848,7 @@ function drRead() {
   helperFetch('/api/doc/read', { name: dr.name, data: dr.b64 }).then((j) => {
     const doc = j.doc;
     doc.lines = doc.lines.map((l) => ({ ...l, ours: l.match.ours, code: l.match.code, conf: l.match.conf, cands: l.match.cands, price: l.prev ? l.prev.price : '' }));
-    dr.doc = doc; dr.orig = JSON.parse(JSON.stringify(doc.lines || [])); dr.usage = j.usage; dr.quote = null;
+    dr.doc = doc; dr.orig = JSON.parse(JSON.stringify(doc.lines || [])); dr.usage = j.usage; dr.quote = null; dr.buy = null; dr.buyFile = '';
   }).catch((e) => { dr.err = e.message; }).finally(() => { dr.busy = false; render(); });
 }
 function drLearn() {
@@ -2864,6 +2865,53 @@ function drLearn() {
 function drSaveFixes() {
   if (!dr.doc || !dr.orig) return;
   helperFetch('/api/doc/learn', { partner: dr.doc.partner, orig: dr.orig, lines: dr.doc.lines }).catch(() => {});
+}
+// 구매전표 — 거래처 거래명세서 → 이카운트 구매입력. 금액은 명세서 그대로, 합계가 1원이라도 다르면 파일을 만들지 않음
+function drBuyPayload() {
+  const wh = document.getElementById('dr-buy-wh');
+  const cust = document.getElementById('dr-buy-cust');
+  return { doc: dr.doc, wh: wh ? wh.value : '', cust: cust ? cust.value.trim() : '' };
+}
+function drBuy() {
+  if (!dr.doc || dr.busy) return;
+  drSaveFixes();
+  dr.busy = true; dr.buyFile = ''; render();
+  helperFetch('/api/purchase', drBuyPayload()).then((j) => { dr.buy = j; })
+    .catch((e) => { dr.err = e.message; }).finally(() => { dr.busy = false; render(); });
+}
+function drBuyFile() {
+  if (!dr.doc || dr.busy) return;
+  dr.busy = true; render();
+  helperFetch('/api/purchase/file', drBuyPayload()).then((j) => { dr.buy = j; dr.buyFile = j.out; })
+    .catch((e) => { dr.err = e.message; }).finally(() => { dr.busy = false; render(); });
+}
+function drBuyPanel() {
+  const b = dr.buy;
+  if (!b) return '';
+  const v = b.voucher, st = b.sums, dt = b.doc_totals || {};
+  const cmp = (k, label) => {
+    if (dt[k] === undefined) return `<td>${label}</td><td class="n">${eN(st[k])}</td><td class="n muted">명세서에 없음</td><td></td>`;
+    const same = dt[k] === st[k];
+    return `<td>${label}</td><td class="n">${eN(st[k])}</td><td class="n">${eN(dt[k])}</td><td class="c">${same ? '<span class="e-b green">일치</span>' : `<span class="e-b red">${eN(st[k] - dt[k])}원 차이</span>`}</td>`;
+  };
+  return `<div class="e-panel" style="margin-top:8px"><div class="e-panel-hd"><b>구매전표 미리보기</b><span class="sp"></span>
+      ${b.valid ? '<span class="e-b green">명세서와 합계 일치</span>' : '<span class="e-b red">전표 만들 수 없음</span>'}</div>
+    <table class="e-ftbl"><colgroup><col style="width:80px"><col><col style="width:80px"><col></colgroup>
+      <tr><th>거래처</th><td><input class="e-in" id="dr-buy-cust" value="${esc(v.cust_code)}" placeholder="거래처코드" style="width:130px"> ${esc(v.cust_name)} <span class="muted">${esc(v.cust_how)}</span></td>
+        <th>입고창고</th><td><select class="e-sel" id="dr-buy-wh">${(b.warehouses || []).map((w) => `<option value="${esc(w.code)}"${w.code === v.wh_code ? ' selected' : ''}>${esc(w.code)} ${esc(w.name)}</option>`).join('')}</select></td></tr>
+      <tr><th>일자</th><td colspan="3">${esc(v.date)}</td></tr>
+    </table>
+    ${b.errors.length ? `<div class="dr-err">${b.errors.map(esc).join('<br>')}</div>` : ''}
+    ${b.warnings.length ? `<div class="e-sum"><span class="muted">${b.warnings.map(esc).join('<br>')}</span></div>` : ''}
+    <div class="e-tw"><table class="e-grid"><colgroup><col style="width:30px"><col style="width:110px"><col><col style="width:60px"><col style="width:84px"><col style="width:96px"><col style="width:84px"></colgroup>
+      <thead><tr><th>No</th><th>품목코드</th><th>품목명</th><th>수량</th><th>단가</th><th>공급가액</th><th>부가세</th></tr></thead>
+      <tbody>${v.lines.map((x, i) => `<tr><td class="no">${i + 1}</td><td>${x.prod_cd ? esc(x.prod_cd) : '<span class="e-b red">없음</span>'}</td><td title="${esc(x.prod_des)}">${esc(x.prod_des)}</td>
+        <td class="n">${esc(x.qty)}</td><td class="n">${eN(x.price)}</td><td class="n">${eN(x.supply)}</td><td class="n">${eN(x.vat)}</td></tr>`).join('')}</tbody></table></div>
+    <table class="e-grid" style="margin-top:6px"><thead><tr><th style="width:110px"></th><th>전표</th><th>명세서</th><th style="width:110px">대조</th></tr></thead>
+      <tbody><tr>${cmp('supply', '공급가액 합계')}</tr><tr>${cmp('vat', '부가세 합계')}</tr><tr>${cmp('total', '총액')}</tr></tbody></table>
+    <div class="e-tools">${eBtn('다시 검사', 'erp-dr-buy')}<span class="sp"></span>
+      ${dr.buyFile ? `<a class="e-btn" href="${HELPER}/api/file?path=${encodeURIComponent(dr.buyFile)}">받기 · ${esc(dr.buyFile.split('/').pop())}</a>` : ''}
+      ${eBtn('이카운트 올리기 엑셀 만들기', 'erp-dr-buyfile', b.valid ? '' : 'disabled', 'pri')}</div></div>`;
 }
 function drQuote() {
   if (!dr.doc) return;
@@ -3003,8 +3051,10 @@ function erpAct(act, t) {
   else if (act === 'erp-dr-read') drRead();
   else if (act === 'erp-dr-learn') drLearn();
   else if (act === 'erp-dr-quote') drQuote();
+  else if (act === 'erp-dr-buy') drBuy();
+  else if (act === 'erp-dr-buyfile') drBuyFile();
   else if (act === 'erp-dr-ship') drToShip();
-  else if (act === 'erp-dr-clear') { if (dr.url) URL.revokeObjectURL(dr.url); dr = { name: '', url: '', mime: '', b64: '', busy: false, err: '', doc: null, orig: null, usage: null, quote: null, note: '' }; render(); }
+  else if (act === 'erp-dr-clear') { if (dr.url) URL.revokeObjectURL(dr.url); dr = { name: '', url: '', mime: '', b64: '', busy: false, err: '', doc: null, orig: null, usage: null, quote: null, note: '', buy: null, buyFile: '' }; render(); }
   else if (act === 'erp-dr-check') { helperState.checked = false; helperCheck(); render(); }
   else if (act === 'erp-dd-reload') { dd = { rows: null, err: '' }; helperState.checked = false; helperCheck(); render(); }
   else if (act === 'erp-stockfix') {   // 실사 수정 — 기존 stock-edit 과 같은 입력·같은 저장(setStock), 끝나면 수불부로 복귀
