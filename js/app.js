@@ -2909,7 +2909,8 @@ function drqPanel() {
     k += 1;
     const r = res[k];
     const v = r ? r.voucher : null;
-    const st = !r ? '<span class="muted">검사 전</span>' : r.ok ? '<span class="e-b green">합계 일치</span>' : `<span class="e-b red">막힘</span><div class="muted" style="white-space:normal">${r.errors.map(esc).join('<br>')}</div>`;
+    const warn = r && r.warnings.length ? `<div class="muted" style="white-space:normal">⚠ ${r.warnings.map(esc).join('<br>⚠ ')}</div>` : '';
+    const st = !r ? '<span class="muted">검사 전</span>' : (r.ok ? '<span class="e-b green">합계 일치</span>' : `<span class="e-b red">막힘</span><div class="muted" style="white-space:normal">${r.errors.map(esc).join('<br>')}</div>`) + warn;
     return `<tr><td class="no">${i + 1}</td><td title="${esc(f.name)}">${esc(v ? v.cust_name : d.partner || '')}<div class="muted">${esc(f.name)}</div></td>
       <td class="c">${esc(d.doc_date || '')}</td><td class="n">${r ? eN(r.sums.total) : ''}</td>
       <td style="white-space:nowrap"><input class="e-in" id="drq-tag-${i}" value="${esc(drq.tags[i] ?? '')}" placeholder="0911/뉴하우징/평택김인숙" style="width:calc(100% - 70px)"> <label class="muted"><input type="checkbox" id="drq-all-${i}" ${drq.tagAll[i] ? 'checked' : ''}> 모든 줄</label></td>
