@@ -3207,8 +3207,13 @@ app.addEventListener('change', (e) => {
   if (el.dataset.drf === 'ours') {
     const l = dr.doc.lines[Number(el.dataset.i)]; if (!l) return;
     l.ours = el.value.trim();
+    // 이름을 고르면 품목코드도 같이 (예전엔 이름만 바뀌고 코드는 비어서 구매전표에서 '품목 지정 안 됨'으로 막힘)
+    const hit = ECOUNT_ITEMS.find(([, n]) => n === l.ours);
+    l.code = hit ? hit[0] : '';
     l.conf = !l.ours ? 'none' : (l.ours === l.match.ours && l.match.conf === 'high') ? 'high' : 'edit';
     el.parentElement.className = (DR_CONF[l.conf] || DR_CONF.none)[0];
+    el.title = l.ours ? (hit ? `품목코드 ${hit[0]}` : '품목 목록에 없는 이름 — 이카운트 품목명과 똑같이 적어야 붙여넣을 때 코드가 채워져요') : '';
+    if (dr.buy) { dr.buy = null; dr.buyFile = ''; render(); }   // 품목을 바꿨으니 구매전표는 다시 검사
   }
 });
 app.addEventListener('input', (e) => {
