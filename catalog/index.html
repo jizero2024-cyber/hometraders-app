@@ -1,0 +1,1546 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>아이큐브 카탈로그 편집기</title>
+<style>
+@font-face{font-family:"Pretendard";src:url("fonts/Pretendard-Regular.otf") format("opentype");font-weight:400;font-style:normal;font-display:swap;}
+@font-face{font-family:"Pretendard";src:url("fonts/Pretendard-Medium.otf") format("opentype");font-weight:500;font-style:normal;font-display:swap;}
+@font-face{font-family:"Pretendard";src:url("fonts/Pretendard-SemiBold.otf") format("opentype");font-weight:600;font-style:normal;font-display:swap;}
+@font-face{font-family:"Pretendard";src:url("fonts/Pretendard-Bold.otf") format("opentype");font-weight:700;font-style:normal;font-display:swap;}
+@font-face{font-family:"Pretendard";src:url("fonts/Pretendard-ExtraBold.otf") format("opentype");font-weight:800;font-style:normal;font-display:swap;}
+</style>
+<style>
+  @page { size: A4; margin: 0; }
+  :root{
+    --bg:#FFFFFF; --soft:#F7F7F7; --ink:#1A1A1A; --ink2:#4A4A4A; --muted:#8A8A8A;
+    --line:#E6E6E6; --accent:#DC6D27;
+    --font:"Pretendard", "Apple SD Gothic Neo", sans-serif;
+  }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html,body{ background:#9a9a9a; }
+  body{ font-family:var(--font); font-weight:400; color:var(--ink); letter-spacing:-0.02em;
+        font-variant-numeric:lining-nums tabular-nums; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .page{ width:210mm; height:297mm; background:var(--bg); position:relative; overflow:hidden; page-break-after:always; margin:0 auto; }
+  img{ display:block; }
+  .label{ font-size:6.6pt; font-weight:700; letter-spacing:0.15em; text-transform:uppercase; color:var(--muted); }
+  /* 하단 줄 — 스타일 가이드 페이지(.sg .ft)와 같게 */
+  .foot{ position:absolute; left:18mm; right:18mm; bottom:14mm; display:flex; justify-content:space-between; align-items:baseline; border-top:1px solid #DCDCDC; padding-top:3mm; }
+  .foot .label{ font-size:7.5pt; font-weight:400; letter-spacing:.16em; color:#8C8C8C; text-transform:none; }
+  .foot .no{ font-size:11pt; font-weight:600; color:#1A1A1A; letter-spacing:0; }
+  .phead{ position:absolute; left:16mm; right:16mm; top:18mm; padding-bottom:5mm; border-bottom:.3mm solid var(--ink); display:flex; justify-content:space-between; align-items:flex-end; }
+  .phead h2{ margin-top:2mm; font-size:26pt; font-weight:800; line-height:1.1; letter-spacing:-0.02em; }
+  .phead .side{ font-size:8pt; color:var(--ink2); text-align:right; line-height:1.6; }
+  .note{ position:absolute; left:16mm; right:16mm; bottom:22mm; font-size:6.8pt; color:var(--muted); line-height:1.7; }
+
+  /* ── P1 표지 ── */
+  .cover .photo{ position:absolute; inset:0; }
+  .cover .photo img{ width:100%; height:100%; object-fit:cover; object-position:50% 50%; }
+  .cover .photo::before{ content:""; position:absolute; inset:0 0 auto 0; height:62mm; background:linear-gradient(to bottom, rgba(0,0,0,.58), rgba(0,0,0,0)); }
+  .cover .photo::after{ content:""; position:absolute; inset:auto 0 0 0; height:120mm; background:linear-gradient(to top, rgba(0,0,0,.66), rgba(0,0,0,0)); }
+  .cover .logo{ position:absolute; left:162mm; top:14mm; width:32mm; z-index:1; }
+  .cover .edition{ position:absolute; left:16mm; top:17mm; z-index:1; text-align:left; line-height:1.9; }
+  .cover .title{ position:absolute; left:16mm; right:16mm; bottom:34mm; z-index:1; color:#fff; }
+  .cover .title .rule{ width:12mm; height:1mm; background:var(--accent); margin-bottom:7mm; }
+  .cover .title .en{ font-size:44pt; font-weight:800; line-height:1; }
+  .cover .title .ko{ margin-top:4mm; font-size:15pt; font-weight:700; }
+  .cover .title .sub{ margin-top:3mm; font-size:9pt; color:rgba(255,255,255,.82); }
+  .cover .bottom{ position:absolute; left:16mm; right:16mm; bottom:13mm; z-index:1; display:flex; justify-content:space-between; font-size:7pt; color:rgba(255,255,255,.75); }
+
+  /* ── P2 특장점 ── */
+  .feat .lead{ position:absolute; left:16mm; right:16mm; top:50mm; display:grid; grid-template-columns:1fr 1fr; column-gap:10mm; }
+  .feat .lead h3{ font-size:15pt; font-weight:700; line-height:1.45; }
+  .feat .lead p{ font-size:8.2pt; line-height:1.8; color:var(--ink2); }
+  .fgrid{ position:absolute; left:16mm; right:16mm; top:80mm; display:grid; grid-template-columns:repeat(4,1fr); column-gap:6mm; row-gap:7mm; }
+  .fitem .ic{ width:14mm; height:14mm; border-radius:50%; background:var(--soft); display:flex; align-items:center; justify-content:center; color:var(--ink); }
+  .fitem .ic svg{ width:7mm; height:7mm; }
+  .fitem h4{ margin-top:3mm; font-size:9pt; font-weight:700; }
+  .fitem p{ margin-top:1.4mm; font-size:7pt; line-height:1.6; color:var(--ink2); }
+  .fitem p b{ color:var(--ink); font-weight:700; }
+  .dims{ position:absolute; left:16mm; right:16mm; top:160mm; background:var(--soft); padding:6mm 7mm; }
+  .dims .row{ display:grid; grid-template-columns:1fr 34mm; column-gap:6mm; align-items:center; }
+  .dims .panel{ position:relative; padding:0 0 7mm 0; }
+  .dims .panel img{ width:100%; height:18mm; object-fit:cover; }
+  .dims .w{ position:absolute; left:0; right:0; bottom:0; height:4mm; display:flex; align-items:center; justify-content:center; font-size:7pt; color:var(--ink2); }
+  .dims .w::before, .dims .w::after{ content:""; flex:1; height:.25mm; background:var(--muted); margin:0 2mm; }
+  .dims .h{ font-size:7pt; color:var(--ink2); }
+  .dims .cap{ margin-bottom:3mm; }
+  table.t{ width:100%; border-collapse:collapse; font-size:7.6pt; margin-top:5mm; }
+  table.t th{ text-align:left; padding:2.2mm 2mm; border-bottom:.3mm solid var(--ink); }
+  table.t td{ padding:2.4mm 2mm; border-bottom:.25mm solid var(--line); background:#fff; }
+  table.t td:first-child{ font-weight:700; }
+  .process{ position:absolute; left:16mm; right:16mm; top:232mm; display:grid; grid-template-columns:1fr auto 1fr auto 1fr auto 1.25fr; align-items:center; column-gap:3mm; }
+  .process .st{ border:.25mm solid var(--line); padding:3.4mm 3mm; text-align:center; }
+  .process .st b{ display:block; font-size:12pt; font-weight:800; }
+  .process .st span{ font-size:7pt; color:var(--ink2); }
+  .process .op{ font-size:12pt; font-weight:700; color:var(--muted); }
+  .process .st.out{ background:var(--ink); color:#fff; border-color:var(--ink); }
+  .process .st.out span{ color:rgba(255,255,255,.8); }
+
+
+  /* ── 기능 상세 ── */
+  .perf .grid4{ position:absolute; left:16mm; right:16mm; top:48mm; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:auto auto; column-gap:7mm; row-gap:9mm; }
+  .perf .keys{ position:absolute; left:16mm; right:16mm; bottom:24mm; display:grid; grid-template-columns:repeat(4,1fr); background:var(--soft); padding:5mm 6mm; column-gap:5mm; }
+  .perf .keys b{ display:block; font-size:17pt; font-weight:800; letter-spacing:-0.02em; }
+  .perf .keys b small{ font-size:8pt; font-weight:700; margin-left:1mm; }
+  .perf .keys span{ display:block; margin-top:1mm; font-size:7pt; color:var(--ink2); }
+  .perf .cell{ border-top:.3mm solid var(--ink); padding-top:3mm; display:flex; flex-direction:column; }
+  .perf .cell .no2{ font-size:6.6pt; font-weight:700; letter-spacing:0.15em; color:var(--muted); }
+  .perf .cell h3{ margin-top:1.2mm; font-size:12pt; font-weight:800; }
+  .perf .cell .d{ margin-top:1.2mm; font-size:7.2pt; line-height:1.6; color:var(--ink2); }
+  .perf .cell svg{ display:block; width:100%; margin-top:2.5mm; }
+  .perf .cell .fn{ margin-top:2mm; padding-top:0; font-size:6pt; line-height:1.55; color:var(--muted); }
+  .perf ol{ list-style:none; margin-top:2mm; display:grid; row-gap:1.4mm; }
+  .perf ol li{ display:grid; grid-template-columns:5mm 1fr; font-size:6.8pt; line-height:1.5; color:var(--ink2); }
+  .perf ol li b{ font-size:8pt; font-weight:800; color:var(--accent); }
+  .perf .hyper{ margin-top:1.8mm; background:var(--soft); padding:2mm 2.6mm; font-size:6.6pt; line-height:1.55; color:var(--ink2); }
+  .perf .hyper b{ color:var(--ink); font-weight:700; }
+
+  /* ── P3 시리즈 오프너 ── */
+  .opener .hero{ position:absolute; left:0; right:0; top:0; height:150mm; }
+  .opener .hero img{ width:100%; height:100%; object-fit:cover; object-position:50% 45%; }
+  .opener .hero::after{ content:""; position:absolute; left:0; right:0; bottom:0; height:30mm; background:linear-gradient(to top, rgba(0,0,0,.42), rgba(0,0,0,0)); }
+  .opener .hero .cap{ position:absolute; right:16mm; bottom:5mm; z-index:1; font-size:7pt; color:#fff; }
+  .opener .head{ position:absolute; left:16mm; right:16mm; top:163mm; display:grid; grid-template-columns:56mm 1fr; column-gap:10mm; }
+  .opener .big{ font-size:64pt; font-weight:800; line-height:.9; }
+  .opener .big small{ display:block; margin-top:3mm; }
+  .opener .intro h2{ font-size:15pt; font-weight:700; line-height:1.45; margin:2mm 0 4mm; }
+  .opener .intro p{ font-size:8.2pt; line-height:1.8; color:var(--ink2); }
+  .spec{ position:absolute; left:16mm; right:16mm; top:208mm; display:grid; grid-template-columns:repeat(4,1fr); background:var(--soft); padding:4mm 5mm; }
+  .spec dd{ margin-top:1.8mm; font-size:8.6pt; color:var(--ink); line-height:1.45; }
+  .lineup{ position:absolute; left:16mm; right:16mm; top:236mm; display:grid; grid-template-columns:repeat(6,1fr); gap:3mm; }
+  .lineup figure img{ width:100%; aspect-ratio:1/1; object-fit:cover; }
+  .lineup figcaption{ margin-top:1.8mm; font-size:6.8pt; color:var(--ink2); line-height:1.4; }
+  .lineup figcaption b{ display:block; font-size:8pt; font-weight:700; color:var(--ink); letter-spacing:0; }
+
+  /* ── P4 패턴과 색상 ── */
+  .pc .left{ position:absolute; left:16mm; top:50mm; width:58mm; bottom:22mm; }
+  .pc .left p{ font-size:8pt; line-height:1.8; color:var(--ink2); }
+  .pc .left h4{ margin-top:6mm; font-size:8.6pt; font-weight:700; }
+  .pc table.t{ margin-top:2mm; font-size:7.2pt; }
+  .pc table.t td{ padding:2mm 1.6mm; }
+  .pc table.t td:first-child{ font-weight:400; color:var(--muted); width:18mm; }
+  .icons4{ margin-top:2.4mm; display:grid; grid-template-columns:repeat(4,1fr); gap:2mm; text-align:center; }
+  .icons4 .ic{ margin:0 auto; width:11mm; height:11mm; border-radius:50%; background:var(--soft); display:flex; align-items:center; justify-content:center; }
+  .icons4 .ic svg{ width:5.6mm; height:5.6mm; }
+  .icons4 span{ display:block; margin-top:1.6mm; font-size:6.2pt; color:var(--ink2); line-height:1.3; }
+  .pc .left .ph{ position:absolute; left:0; right:0; bottom:0; height:92mm; }
+  .pc .left .ph img{ width:100%; height:100%; object-fit:cover; object-position:30% 50%; }
+  .pc .right{ position:absolute; left:82mm; right:16mm; top:50mm; }
+  .grp{ margin-bottom:4.2mm; }
+  .grp h5{ display:flex; align-items:baseline; gap:2mm; font-size:9pt; font-weight:700; padding-bottom:1.6mm; border-bottom:.25mm solid var(--line); margin-bottom:2mm; }
+  .grp h5 span{ font-size:6pt; font-weight:700; letter-spacing:0.15em; color:var(--muted); }
+  .sws{ display:grid; column-gap:2.4mm; row-gap:2.4mm; }
+  .sws.c2{ grid-template-columns:repeat(2,1fr); }
+  .sws.c3{ grid-template-columns:repeat(3,1fr); }
+  .sws figure img{ width:100%; aspect-ratio:806/221; object-fit:cover; }
+  .sws figcaption{ margin-top:1mm; font-size:6.8pt; color:var(--ink2); }
+  .sws figcaption b{ font-weight:700; color:var(--ink); letter-spacing:0; margin-right:1.2mm; }
+
+  /* ── P5 패턴 상세 ── */
+  .detail .tex{ position:absolute; left:0; top:0; bottom:0; width:92mm; }
+  .detail .tex img{ width:100%; height:100%; object-fit:cover; }
+  .detail .tex .chip{ position:absolute; left:10mm; bottom:14mm; background:#fff; padding:2.4mm 3.2mm; font-size:7pt; color:var(--ink2); }
+  .detail .body{ position:absolute; left:104mm; right:14mm; top:18mm; bottom:26mm; display:flex; flex-direction:column; }
+  .detail .title{ margin-top:4mm; font-size:32pt; font-weight:800; line-height:1; }
+  .detail .title-ko{ margin-top:2.5mm; font-size:13pt; font-weight:700; color:var(--ink2); }
+  .detail .desc{ margin-top:6mm; font-size:8pt; line-height:1.8; color:var(--ink2); }
+  .detail .minispec{ margin-top:5mm; display:flex; gap:5mm; font-size:7pt; color:var(--muted); }
+  .detail .minispec b{ color:var(--ink); font-weight:700; margin-left:1.2mm; }
+  .colors{ margin-top:8mm; border-top:.3mm solid var(--ink); }
+  .color{ display:grid; grid-template-columns:30mm 1fr; align-items:center; column-gap:5mm; padding:2.4mm 0; border-bottom:.25mm solid var(--line); }
+  .color .sw{ width:30mm; height:12mm; overflow:hidden; background:var(--soft); }
+  .color .sw img{ width:100%; height:100%; object-fit:cover; }
+  .color .code{ font-size:11pt; font-weight:700; letter-spacing:0; }
+  .color .name{ font-size:8pt; color:var(--ink2); margin-top:.8mm; }
+  /* 사진은 색상 목록 바로 아래로 이어지고 남는 높이를 채운다 — 색상 수가 늘어도 겹치지 않게 */
+  .detail .case{ flex:1; min-height:40mm; margin-top:6mm; display:flex; flex-direction:column; }
+  .detail .case img{ flex:1; min-height:0; width:100%; object-fit:cover; object-position:40% 45%; }
+  .detail .case .cap{ margin-top:2mm; font-size:7pt; color:var(--muted); }
+  .detail .foot{ left:104mm; }
+
+  /* ── P6 색상표 ── */
+  .grid{ position:absolute; left:16mm; right:16mm; top:50mm; display:grid; grid-template-columns:repeat(3,1fr); column-gap:6mm; row-gap:8mm; }
+  .grid figure img{ width:100%; aspect-ratio:6/5; object-fit:cover; }
+  .grid figcaption{ margin-top:2.4mm; display:grid; grid-template-columns:1fr auto; row-gap:.8mm; align-items:baseline; }
+  .grid .code{ font-size:10.5pt; font-weight:700; letter-spacing:0; }
+  .grid .ser{ font-size:6pt; font-weight:700; letter-spacing:0.15em; color:var(--muted); text-align:right; }
+  .grid .nm{ grid-column:1 / -1; font-size:7.6pt; color:var(--ink2); }
+
+  /* ── P7 부속자재 ── */
+  .acc .groups{ position:absolute; left:16mm; right:16mm; top:50mm; }
+  .agroup{ display:grid; grid-template-columns:30mm 1fr; column-gap:5mm; margin-bottom:10mm; }
+  .agroup .gname{ background:var(--soft); padding:4mm 3.4mm; }
+  .agroup .gname b{ display:block; font-size:10pt; font-weight:800; line-height:1.3; }
+  .agroup .gname span{ display:block; margin-top:2mm; font-size:6.8pt; color:var(--ink2); line-height:1.5; }
+  .atiles{ display:grid; grid-template-columns:repeat(5,1fr); column-gap:3mm; row-gap:4mm; }
+  .atile .box{ aspect-ratio:1/1; background:var(--soft); display:flex; align-items:center; justify-content:center; padding:3mm; }
+  .atile .box img{ max-width:100%; max-height:100%; object-fit:contain; mix-blend-mode:multiply; }
+  .atile .nm{ margin-top:1.8mm; font-size:7.6pt; font-weight:700; }
+  .atile .sub{ margin-top:.4mm; font-size:6.6pt; color:var(--ink2); }
+
+  /* ── P8 시공방법 ── */
+  .inst .steps{ position:absolute; left:16mm; right:16mm; top:50mm; display:grid; grid-template-columns:repeat(4,1fr); column-gap:4mm; }
+  .inst .steps div{ border-top:.3mm solid var(--ink); padding-top:2.4mm; }
+  .inst .steps b{ display:block; font-size:12pt; font-weight:800; letter-spacing:0; }
+  .inst .steps p{ margin-top:1.4mm; font-size:7.2pt; line-height:1.6; color:var(--ink2); }
+  .inst .drawing{ position:absolute; left:16mm; right:16mm; top:80mm; bottom:24mm; border:.25mm solid var(--line); padding:3mm; display:flex; align-items:center; justify-content:center; }
+  .inst .drawing img{ max-width:100%; max-height:100%; object-fit:contain; }
+  .inst .src{ position:absolute; right:16mm; bottom:19mm; font-size:6.2pt; color:var(--muted); }
+
+  /* ── P9 재고 현황 ── */
+  table.stock{ position:absolute; left:16mm; right:16mm; top:52mm; width:calc(100% - 32mm); border-collapse:collapse; font-size:8.6pt; }
+  table.stock th{ text-align:left; background:var(--soft); padding:3mm 3mm; border-bottom:.25mm solid var(--line); }
+  table.stock th .label{ color:var(--ink2); }
+  table.stock td{ padding:3.4mm 3mm; border-bottom:.25mm solid var(--line); vertical-align:middle; }
+  table.stock td.code{ font-weight:700; letter-spacing:0; }
+  table.stock td.sw{ width:16mm; }
+  table.stock td.sw img{ width:12mm; height:8mm; object-fit:cover; }
+  table.stock td.ser{ font-size:6.6pt; font-weight:700; letter-spacing:0.15em; color:var(--muted); }
+  .legend{ display:flex; gap:6mm; font-size:7.6pt; color:var(--ink2); justify-content:flex-end; }
+  .dot{ display:inline-flex; align-items:center; gap:1.8mm; white-space:nowrap; }
+  .dot::before{ content:"●"; font-size:8pt; color:var(--ink); }
+  .dot.no{ color:var(--muted); }
+  .dot.no::before{ content:"○"; color:var(--muted); }
+
+
+  html,body{ background:#ECECEC; }
+  .app{ display:grid; grid-template-columns:320px minmax(0,1fr); min-height:100vh; }
+  .side{ position:sticky; top:0; height:100vh; overflow:auto; background:#fff; border-right:1px solid #E6E6E6; padding:22px 18px; font-size:13px; letter-spacing:-0.02em; }
+  .side h1{ font-size:18px; font-weight:800; }
+  .side .sub{ margin-top:4px; color:#6A6A6A; font-size:12px; }
+  .side .btns{ display:flex; gap:8px; margin:16px 0 14px; }
+  .side button{ font:inherit; cursor:pointer; }
+  .btn{ flex:1; height:38px; border-radius:10px; border:1px solid #D9D9D9; background:#fff; font-weight:700; }
+  .btn.primary{ background:#1A1A1A; color:#fff; border-color:#1A1A1A; }
+  .plist{ list-style:none; display:grid; gap:6px; }
+  .pitem{ border:1px solid #E6E6E6; border-radius:12px; padding:10px 10px 10px 12px; background:#fff; }
+  .pitem.off{ background:#F7F7F7; }
+  .pitem.off .nm{ color:#9A9A9A; }
+  .prow{ display:flex; align-items:center; gap:8px; }
+  .prow input{ width:16px; height:16px; accent-color:#DC6D27; }
+  .nm{ flex:1; font-weight:700; color:#1A1A1A; }
+  .no{ min-width:22px; font-size:11px; font-weight:700; color:#DC6D27; }
+  .mv{ width:26px; height:26px; border-radius:7px; border:1px solid #E6E6E6; background:#fff; color:#4A4A4A; }
+  .mv:disabled{ opacity:.3; cursor:default; }
+  .vars{ margin:10px 0 2px; display:grid; grid-template-columns:repeat(var(--n,2),1fr); gap:8px; }
+  .vopt{ position:relative; display:flex; flex-direction:column; gap:5px; cursor:pointer; font-size:11px; line-height:1.3; color:#6A6A6A; }
+  .vopt input{ position:absolute; opacity:0; width:1px; height:1px; }
+  .vthumb{ position:relative; aspect-ratio:210/297; overflow:hidden; border:1px solid #E6E6E6; border-radius:6px; background:#fff; }
+  .vthumb > .page{ position:absolute; top:0; left:0; margin:0; box-shadow:none; pointer-events:none; transform-origin:0 0; }
+  .vopt:hover .vthumb{ border-color:#BDBDBD; }
+  .vopt.on .vthumb{ border:2px solid #E4641E; }
+  .vopt.on{ color:#1A1A1A; font-weight:700; }
+  .vopt input:focus-visible + .vthumb{ outline:2px solid #E4641E; outline-offset:2px; }
+  @media screen{ .preview .page{ zoom:var(--z,1); } }
+  .count{ margin-top:14px; font-size:12px; color:#6A6A6A; }
+  .preview{ padding:28px 0 60px; display:flex; flex-direction:column; align-items:center; gap:18px; }
+  .preview .page{ margin:0; box-shadow:0 2px 12px rgba(0,0,0,.08); }
+  .page[hidden]{ display:none !important; }
+
+  /* ── 스타일 가이드 v1.0 페이지 (.sg) ── */
+  .page.sg{ padding:18mm 18mm 14mm; display:flex; flex-direction:column; background:#fff; color:#1A1A1A; letter-spacing:normal; }
+  .sg .lab{ font-size:7.5pt; font-weight:500; letter-spacing:.2em; color:#8C8C8C; }
+  .sg .h1{ font-size:23pt; font-weight:800; letter-spacing:-.03em; line-height:1.25; margin-top:5mm; }
+  .sg .h1 em{ font-style:normal; color:#E4641E; }
+  .sg .h2{ font-size:12.5pt; font-weight:700; letter-spacing:-.025em; margin-top:2mm; }
+  .sg .h3{ font-size:10.5pt; font-weight:700; letter-spacing:-.025em; margin-top:1.4mm; }
+  .sg .sub{ font-size:9pt; color:#8C8C8C; line-height:1.65; letter-spacing:-.01em; margin-top:3.5mm; max-width:122mm; }
+  .sg .body{ font-size:8pt; color:#8C8C8C; line-height:1.6; letter-spacing:-.01em; margin-top:1.4mm; }
+  .sg .num{ font-size:8pt; font-weight:700; letter-spacing:.1em; color:#E4641E; }
+  .sg .cap{ font-size:7.5pt; color:#8C8C8C; line-height:1.5; letter-spacing:-.01em; margin-top:2mm; }
+  .sg .rule{ height:1.5px; background:#1A1A1A; margin-top:7mm; flex:none; }
+  .sg .rule.thin{ height:1px; background:#DCDCDC; margin-top:6mm; }
+  .sg .g22{ flex:1; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:8mm 10mm; padding-top:8mm; }
+  .sg .g4{ display:grid; grid-template-columns:repeat(4,1fr); gap:0 6mm; padding-top:7mm; }
+  .sg .g2{ flex:1; display:grid; grid-template-columns:1fr 1fr; gap:0 10mm; padding-top:6mm; }
+  .sg .cell{ display:flex; flex-direction:column; min-height:0; }
+  .sg .g22 .fig, .sg .g2 .fig{ flex:1; display:flex; align-items:center; margin-top:3mm; }
+  .sg .g4 .fig{ margin-bottom:3mm; }
+  .sg svg{ width:100%; height:auto; overflow:visible; display:block; }
+  .sg svg text{ font-family:'Pretendard',sans-serif; }
+  .sg .svg-n{ font-size:27px; font-weight:800; letter-spacing:-1px; }
+  .sg .svg-u{ font-size:8px; font-weight:500; letter-spacing:.5px; }
+  .sg .svg-t{ font-size:8.5px; font-weight:600; }
+  .sg .svg-s{ font-size:7.5px; font-weight:500; }
+  .sg .specs{ margin-top:4mm; border-top:1px solid #DCDCDC; }
+  .sg .specs div{ display:grid; grid-template-columns:20mm 1fr; padding:2.6mm 0; border-bottom:1px solid #DCDCDC; }
+  .sg .specs dt{ font-size:8pt; color:#8C8C8C; }
+  .sg .specs dd{ font-size:8.5pt; font-weight:600; line-height:1.55; letter-spacing:-.01em; }
+  .sg .specs dd span{ font-weight:400; color:#8C8C8C; font-size:8pt; }
+  .sg .ft{ display:flex; justify-content:space-between; align-items:baseline; border-top:1px solid #DCDCDC; padding-top:3mm; margin-top:3mm; flex:none; }
+  .sg .ft span{ font-size:7.5pt; letter-spacing:.16em; color:#8C8C8C; }
+  .sg .ft b{ font-size:11pt; font-weight:600; }
+  /* 뒷표지 — 명함 내용 */
+  .back{ background:#fff; }
+  .back .logo{ position:absolute; left:18mm; top:18mm; width:38mm; }
+  .back .tag{ position:absolute; left:18mm; right:18mm; top:112mm; }
+  .back .tag .rule{ width:12mm; height:1mm; background:#E4641E; margin-bottom:7mm; }
+  .back .tag p{ font-size:30pt; font-weight:800; letter-spacing:-.03em; line-height:1.2; color:#1A1A1A; }
+  .back .contact{ position:absolute; left:18mm; bottom:38mm; }
+  .back .who b{ display:block; font-size:14pt; font-weight:700; letter-spacing:-.01em; color:#1A1A1A; }
+  .back .who span{ display:block; margin-top:1mm; font-size:9pt; color:#8C8C8C; }
+  .back .lines{ margin-top:7mm; font-size:9.5pt; line-height:1.8; color:#1A1A1A; }
+  .back .qr{ position:absolute; right:18mm; bottom:38mm; width:26mm; }
+  .back .bottom{ position:absolute; left:18mm; right:18mm; bottom:14mm; display:flex; justify-content:space-between; border-top:1px solid #DCDCDC; padding-top:3mm; font-size:7.5pt; color:#8C8C8C; }
+  .back .bottom .en{ letter-spacing:.16em; }
+  .back.solo .logo{ left:50%; top:50%; width:92mm; transform:translate(-50%,-50%); }
+  .back.solo .qr{ right:auto; bottom:auto; left:50%; top:50%; width:46mm; transform:translate(-50%,-50%); }
+  /* 시공방법 A — 기본 구조도 다시 그림 */
+  .inst2 .iso{ margin-top:7mm; flex:none; }
+  .inst2 .i2{ flex:1; display:grid; grid-template-columns:54mm 1fr; gap:0 9mm; padding-top:9mm; min-height:0; align-content:start; }
+  .inst2 .notes{ list-style:none; margin-top:2.5mm; }
+  .inst2 .notes li{ font-size:8pt; line-height:1.6; letter-spacing:-.01em; color:#1A1A1A; padding-left:3mm; text-indent:-3mm; margin-top:1.8mm; word-break:keep-all; }
+  .inst2 .notes li::before{ content:"·"; display:inline-block; width:3mm; text-indent:0; }
+  .inst2 .i2 .fig{ margin-top:3mm; }
+  .inst2 .dnote{ font-size:8pt; line-height:1.6; letter-spacing:-.01em; color:#1A1A1A; margin-top:3mm; word-break:keep-all; flex:none; }
+  .inst2 .d4{ gap:6mm 10mm; padding-top:6mm; }
+  .inst2 .d4 .h2{ margin-top:0; font-size:11pt; }
+  .inst2 .d4 .fig{ align-items:flex-start; margin-top:4mm; }
+  .inst2 .d4 .dnote{ font-size:7.5pt; }
+  .dw .sq{ font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif; }
+  .dw .ln{ fill:none; stroke:#1A1A1A; stroke-width:.3; stroke-linejoin:round; }
+  .dw .st{ fill:#fff; stroke:#1A1A1A; stroke-width:.3; stroke-linejoin:round; }
+  .dw .sb{ fill:none; stroke:#8C8C8C; stroke-width:.2; }
+  .dw .grv{ fill:none; stroke:#DCDCDC; stroke-width:.2; }
+  .dw .ld{ fill:none; stroke:#8C8C8C; stroke-width:.15; }
+  .dw .dot{ fill:#1A1A1A; }
+  .dw .pn{ fill:#fff; stroke:#E4641E; stroke-width:.45; stroke-linejoin:round; }
+  .dw .pnl{ fill:none; stroke:#E4641E; stroke-width:.35; }
+  .dw .seal{ fill:none; stroke:#1A1A1A; stroke-width:.5; }
+  .dw .flash{ fill:none; stroke:#1A1A1A; stroke-width:.5; stroke-linejoin:round; }
+  .dw .fillk{ fill:#1A1A1A; stroke:none; }
+  .dw .cc{ fill:#F5F2EE; stroke:#8C8C8C; stroke-width:.2; }
+  .dw .tri{ fill:none; stroke:#BDBDBD; stroke-width:.15; }
+  .dw .insb{ fill:#fff; stroke:#8C8C8C; stroke-width:.2; }
+  .dw .ins{ fill:none; stroke:#8C8C8C; stroke-width:.16; }
+  .dw .lb{ font-size:2.25px; font-weight:500; fill:#1A1A1A; letter-spacing:-.02em; paint-order:stroke; stroke:#fff; stroke-width:.8px; stroke-linejoin:round; }
+  .dw .dm{ font-size:1.9px; font-weight:500; fill:#8C8C8C; }
+  /* 시리즈별 선택 색상 */
+  .sg .srows{ flex:1; display:flex; flex-direction:column; padding-top:1mm; min-height:0; }
+  .sg .srow{ display:grid; grid-template-columns:36mm 1fr; gap:0 6mm; padding:3.2mm 0; border-bottom:1px solid #DCDCDC; }
+  .sg .sname b{ display:block; font-size:11pt; font-weight:700; letter-spacing:-.025em; line-height:1.3; }
+  .sg .sname span{ display:block; margin-top:1mm; font-size:7.5pt; color:#8C8C8C; }
+  .sg .sgrid{ display:grid; grid-template-columns:repeat(3,1fr); gap:3mm 4mm; }
+  .sg .srows.big .srow{ padding:7mm 0; }
+  .sg .srows.big .sgrid{ grid-template-columns:repeat(2,1fr); gap:5mm 6mm; }
+  .sg .srows.fit{ flex:none; }
+  /* 부속자재 — 스타일 가이드형 */
+  .acc2 .agroups{ flex:1; display:flex; flex-direction:column; padding-top:1mm; min-height:0; }
+  .acc2 .ag{ flex:1; display:grid; grid-template-columns:34mm 1fr; gap:0 6mm; align-items:center; padding:4mm 0; border-bottom:1px solid #DCDCDC; min-height:0; }
+  .acc2 .ag-name b{ display:block; font-size:11pt; font-weight:700; letter-spacing:-.025em; line-height:1.3; word-break:keep-all; }
+  .acc2 .ag-name span{ display:block; margin-top:1.4mm; font-size:7.5pt; color:#8C8C8C; line-height:1.5; word-break:keep-all; }
+  .acc2 .ag-items{ display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:0 4mm; }
+  .acc2 .ag-img{ aspect-ratio:1/1; overflow:hidden; }
+  .acc2 .ag-img img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .acc2 figcaption{ margin-top:1.8mm; }
+  .acc2 figcaption b{ display:block; font-size:8pt; font-weight:700; letter-spacing:-.01em; line-height:1.35; word-break:keep-all; }
+  .acc2 figcaption span{ display:block; margin-top:.4mm; font-size:7pt; color:#8C8C8C; }
+  .sg .sgrid img{ width:100%; aspect-ratio:600/251; object-fit:cover; display:block; }
+  .sg .sgrid figcaption{ margin-top:1.4mm; font-size:7.5pt; color:#8C8C8C; letter-spacing:-.01em; display:flex; gap:1.6mm; align-items:baseline; }
+  .sg .sgrid figcaption b{ font-size:8.5pt; font-weight:700; color:#1A1A1A; letter-spacing:0; }
+  /* V16 소개 — 사이즈표 (패턴 1개) */
+  .sizechart{ position:absolute; left:16mm; right:16mm; top:234mm; }
+  .sc-w{ position:relative; height:4mm; margin-right:12mm; border-bottom:.25mm solid #8C8C8C; }
+  .sc-w::before,.sc-w::after{ content:""; position:absolute; bottom:-1.2mm; width:.25mm; height:2.4mm; background:#8C8C8C; }
+  .sc-w::before{ left:0; } .sc-w::after{ right:0; }
+  .sc-w span{ position:absolute; left:50%; bottom:-1.9mm; transform:translateX(-50%); background:#fff; padding:0 2mm; font-size:7.5pt; color:#8C8C8C; }
+  .sc-body{ display:flex; margin-top:3mm; }
+  .sc-body .panel{ flex:1; aspect-ratio:3030/455; background-size:auto 100%; background-repeat:repeat-x; background-position:left center; box-shadow:inset 0 0 0 .25mm #DCDCDC; }
+  .sc-h{ position:relative; width:12mm; }
+  .sc-h::before{ content:""; position:absolute; left:3mm; top:0; bottom:0; width:.25mm; background:#8C8C8C; }
+  .sc-h span{ position:absolute; left:4.6mm; top:50%; transform:translateY(-50%); font-size:7.5pt; color:#8C8C8C; }
+  .sc-cap{ margin-top:3mm; margin-right:12mm; font-size:8pt; color:#8C8C8C; letter-spacing:-.01em; display:flex; gap:2mm; align-items:baseline; }
+  .sc-cap b{ color:#1A1A1A; font-weight:700; letter-spacing:0; }
+  .sc-cap i{ font-style:normal; margin-left:auto; }
+  /* 책처럼 넘겨보기 */
+  #book{ position:fixed; inset:0; z-index:100; background:#2A2A2A; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; }
+  #book[hidden]{ display:none; }
+  .bk-bar{ position:absolute; top:14px; left:16px; right:16px; display:flex; justify-content:space-between; align-items:center; color:#fff; font-size:13px; font-variant-numeric:tabular-nums; }
+  .bk-bar button, .bk-nav button{ font:inherit; font-size:13px; color:#fff; background:rgba(255,255,255,.14); border:0; border-radius:999px; padding:8px 18px; cursor:pointer; }
+  .bk-bar button:hover, .bk-nav button:hover:not(:disabled){ background:rgba(255,255,255,.24); }
+  .bk-bar button:focus-visible, .bk-nav button:focus-visible{ outline:2px solid #E4641E; outline-offset:2px; }
+  .bk-nav{ display:flex; gap:10px; }
+  .bk-nav button:disabled{ opacity:.3; cursor:default; }
+  .bk-stage{ position:relative; }
+  .bk-inner{ position:absolute; top:0; left:0; transform-origin:0 0; perspective:4200px; }
+  .bk-slot{ position:absolute; top:0; width:210mm; height:297mm; overflow:hidden; background:#fff; cursor:pointer; }
+  .bk-slot.left{ left:0; } .bk-slot.right{ left:210mm; }
+  .bk-inner.single .bk-slot.right{ left:0; }
+  .bk-slot.blank{ background:transparent; cursor:default; }
+  .bk-inner .page{ margin:0; box-shadow:none; }
+  .bk-flip{ position:absolute; top:0; left:210mm; width:210mm; height:297mm; transform-style:preserve-3d; z-index:2; pointer-events:none; }
+  .bk-inner.single .bk-flip{ left:0; }
+  /* 넘기는 쪽 = 세로 띠를 이어 붙여 휘게 함 */
+  .bk-strip{ position:absolute; top:0; height:297mm; transform-style:preserve-3d; transform-origin:left center; will-change:transform; }
+  .bk-face{ position:absolute; top:0; left:0; bottom:0; right:0; overflow:hidden; background:#fff; backface-visibility:hidden; -webkit-backface-visibility:hidden; }
+  .bk-face.rear{ transform:rotateY(180deg); }
+  .bk-face > .page{ position:absolute; top:0; }
+  .bk-face::after{ content:""; position:absolute; inset:0; background:linear-gradient(to right, rgba(0,0,0,var(--sa,0)), rgba(0,0,0,var(--sb,0))); pointer-events:none; }
+  .bk-face.rear::after{ background:linear-gradient(to left, rgba(0,0,0,var(--sa,0)), rgba(0,0,0,var(--sb,0))); }
+  .bk-inner::after{ content:""; position:absolute; top:0; bottom:0; left:calc(210mm - 14px); width:28px; background:linear-gradient(to right, rgba(0,0,0,0), rgba(0,0,0,.09), rgba(0,0,0,0)); pointer-events:none; z-index:3; }
+  .bk-inner.single::after{ display:none; }
+  @media print{ #book{ display:none !important; } }
+
+
+  /* 시공 사례 */
+  .sg .cgrid{ flex:1; display:grid; gap:5mm 5mm; padding-top:6mm; min-height:0; }
+  .sg .cgrid figure{ display:flex; flex-direction:column; min-height:0; min-width:0; }
+  .sg .cgrid img{ flex:1; min-height:0; width:100%; object-fit:cover; display:block; }
+  .sg .cgrid figcaption{ flex:none; margin-top:1.6mm; font-size:7.5pt; color:#8C8C8C; letter-spacing:-.01em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .sg .cgrid figcaption b{ color:#1A1A1A; font-weight:700; letter-spacing:0; }
+  .sg .cgrid figcaption i{ font-style:normal; font-size:6.5pt; letter-spacing:.14em; margin-left:1mm; }
+  /* 빼곡한 색상표 */
+  .sg .igroups{ flex:1; display:flex; flex-direction:column; gap:4mm; padding-top:5mm; }
+  .sg .ihead{ display:flex; align-items:baseline; gap:2mm; padding-bottom:1.6mm; border-bottom:1px solid #DCDCDC; margin-bottom:2mm; }
+  .sg .ihead .lab{ color:#1A1A1A; font-weight:700; }
+  .sg .icount{ font-size:7pt; color:#8C8C8C; font-variant-numeric:tabular-nums; }
+  .sg .igrid{ display:grid; grid-template-columns:repeat(8,1fr); gap:2.2mm 2.4mm; }
+  .sg .igrid img{ width:100%; aspect-ratio:2/1; object-fit:cover; display:block; }
+  .sg .igrid figcaption{ margin-top:.8mm; line-height:1.25; }
+  .sg .igrid figcaption b{ display:block; font-size:6.6pt; font-weight:700; letter-spacing:0; }
+  .sg .igrid figcaption span{ display:block; font-size:5.8pt; color:#8C8C8C; letter-spacing:-.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+  /* ── 패턴 고르기 (옆 메뉴) ── */
+  .picker{ margin:2px 0 18px; padding-bottom:16px; border-bottom:1px solid #E6E6E6; }
+  .pk-head{ display:flex; justify-content:space-between; align-items:baseline; }
+  .pk-head b{ font-size:15px; font-weight:800; }
+  .pk-count{ font-size:12px; font-weight:700; color:#E4641E; font-variant-numeric:tabular-nums; }
+  .pk-actions{ display:flex; gap:6px; margin:8px 0 4px; }
+  .btn.sm{ height:30px; font-size:12px; border-radius:8px; }
+  .pk-ser{ margin:12px 0 6px; font-size:10.5px; font-weight:700; letter-spacing:.15em; color:#8C8C8C; }
+  .pk-grid{ display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  .pk-tile{ position:relative; display:flex; flex-direction:column; text-align:left; border:1px solid #E6E6E6; border-radius:8px; padding:4px; background:#fff; font:inherit; cursor:pointer; }
+  .pk-tile img{ width:100%; aspect-ratio:600/251; object-fit:cover; border-radius:4px; display:block; }
+  .pk-tile b{ margin-top:4px; font-size:11px; font-weight:700; letter-spacing:0; }
+  .pk-tile span{ font-size:10.5px; color:#6A6A6A; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .pk-tile[aria-pressed="false"]{ opacity:.45; }
+  .pk-tile[aria-pressed="true"]{ border:2px solid #E4641E; padding:3px; }
+  .pk-tile[aria-pressed="true"]::after{ content:"✓"; position:absolute; top:7px; right:7px; width:18px; height:18px; border-radius:50%; background:#E4641E; color:#fff; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; }
+  .pk-tile:focus-visible{ outline:2px solid #E4641E; outline-offset:2px; }
+  .pl-head{ margin:0 0 8px; font-size:15px; font-weight:800; }
+  /* ── 자동 생성 패턴 페이지 ── */
+  .sg .pcolors{ display:grid; grid-template-columns:repeat(var(--c,3),1fr); gap:5mm 5mm; padding-top:6mm; flex:none; }
+  .sg .pcolors img{ width:100%; aspect-ratio:600/251; object-fit:cover; display:block; }
+  .sg .pcolors figcaption{ margin-top:1.6mm; display:flex; gap:2mm; align-items:baseline; }
+  .sg .pcolors figcaption b{ font-size:9.5pt; font-weight:700; letter-spacing:0; }
+  .sg .pcolors figcaption span{ font-size:8pt; color:#8C8C8C; }
+  .sg .pcases{ flex:1; min-height:0; display:grid; gap:5mm 4mm; padding-top:7mm; }
+  .sg .pcases.n1{ grid-template-columns:1fr; }
+  .sg .pcases.n2{ grid-template-columns:1fr 1fr; }
+  .sg .pcases.n3{ grid-template-columns:1fr 1fr; grid-template-rows:1.3fr 1fr; }
+  .sg .pcases.n3 figure:first-child{ grid-column:1 / -1; }
+  .sg .pcases.n4{ grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; }
+  .sg .pcases.n2.rows{ grid-template-columns:1fr; grid-template-rows:1fr 1fr; }
+  .sg .pcases.n3.pl{ grid-template-rows:1fr 1fr; }
+  .sg .pcases.n3.pl figure:first-child{ grid-column:auto; grid-row:1 / span 2; }
+  .sg .pcases figure{ min-height:0; min-width:0; display:flex; flex-direction:column; }
+  .sg .pcases .ph{ flex:1; min-height:0; position:relative; overflow:hidden; }
+  .sg .pcases img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; }
+  .sg .pcases figcaption{ margin-top:1.6mm; font-size:7.5pt; color:#8C8C8C; letter-spacing:-.01em; line-height:1.3; }
+  .sg .pcases figcaption b{ font-weight:600; color:#1A1A1A; letter-spacing:0; margin-right:1.5mm; }
+  .sg .pnocase{ flex:1; }
+  /* 표지 편집 도구 */
+  .ctools{ margin-top:10px; padding:10px; border-radius:10px; background:#F7F7F7; display:grid; gap:8px; font-size:12px; }
+  .ct-row{ display:flex; flex-wrap:wrap; gap:6px; }
+  .ct-sl{ display:grid; grid-template-columns:58px 1fr 46px; align-items:center; gap:8px; color:#4A4A4A; }
+  .ct-sl input{ width:100%; accent-color:#E4641E; }
+  .ct-sl output{ text-align:right; font-variant-numeric:tabular-nums; color:#1A1A1A; }
+  .ct-hint{ color:#6A6A6A; line-height:1.5; }
+  .ct-now{ font-weight:700; color:#1A1A1A; }
+  .ct-ups{ display:flex; flex-wrap:wrap; gap:6px; }
+  .ct-ups button{ font:inherit; font-size:11.5px; border:1px solid #DCDCDC; background:#fff; border-radius:999px; padding:4px 10px; cursor:pointer; }
+  .ct-edit[aria-pressed="true"]{ background:#E4641E; border-color:#E4641E; color:#fff; }
+  body.cover-edit .preview .page.cover{ cursor:grab; touch-action:none; outline:3px dashed #E4641E; outline-offset:-3px; }
+  body.cover-edit .preview .page.cover .logo{ cursor:move; outline:1.5px dashed rgba(255,255,255,.9); outline-offset:2mm; }
+  .cover .photo{ overflow:hidden; }
+  .cover .photo::before, .cover .photo::after{ z-index:1; }
+  @media print{ body.cover-edit .preview .page.cover, body.cover-edit .preview .page.cover .logo{ outline:none; } }
+  .mtabs, .mbook{ display:none; }
+  .preview{ min-width:0; }
+  @media (max-width:900px){
+    .app{ grid-template-columns:minmax(0,1fr); }
+    .side{ position:static; height:auto; border-right:0; border-bottom:1px solid #E6E6E6; }
+    .preview{ padding-inline:16px; gap:12px; padding-bottom:96px; }
+    /* 폰: 미리보기 / 패턴 고르기 / 페이지 구성 을 탭으로 나눔 */
+    .mtabs{ display:flex; position:sticky; top:0; z-index:20; gap:6px; padding:10px 16px; background:rgba(255,255,255,.96); border-bottom:1px solid #E6E6E6; }
+    .mtabs button{ flex:1; font:inherit; font-size:13px; font-weight:700; padding:9px 0; border-radius:999px; border:1px solid #E6E6E6; background:#fff; color:#1A1A1A; cursor:pointer; }
+    .mtabs button[aria-pressed="true"]{ background:#1A1A1A; border-color:#1A1A1A; color:#fff; }
+    .side .btns{ flex-wrap:wrap; }
+    .side .btns .btn{ flex:1 1 auto; }
+    body[data-mtab="preview"] .side{ display:none; }
+    body[data-mtab="patterns"] .preview, body[data-mtab="pages"] .preview{ display:none; }
+    body[data-mtab="patterns"] .side .pl-head, body[data-mtab="patterns"] .side .plist, body[data-mtab="patterns"] .side .count{ display:none; }
+    body[data-mtab="pages"] .side .picker{ display:none; }
+    .pk-grid{ grid-template-columns:repeat(3,minmax(0,1fr)); }
+    body[data-mtab="preview"] .mbook{ display:block; position:fixed; left:50%; bottom:16px; transform:translateX(-50%); z-index:30; padding:12px 22px; border-radius:999px; border:0; background:#1A1A1A; color:#fff; font:inherit; font-size:14px; font-weight:700; box-shadow:0 6px 20px rgba(0,0,0,.25); cursor:pointer; }
+  }
+  @media print{ .mtabs, .mbook{ display:none !important; } }
+  button:focus-visible, input:focus-visible{ outline:2px solid #E4641E; outline-offset:2px; }
+  @media print{
+    html,body{ background:#fff; }
+    .side{ display:none; }
+    .app{ display:block; }
+    .preview{ padding:0; gap:0; display:block; }
+    .preview .page{ box-shadow:none; }
+  }
+</style>
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <symbol id="i-drop" viewBox="0 0 24 24"><path d="M12 3c3.5 4.2 6 7.6 6 10.6A6 6 0 0 1 6 13.6C6 10.6 8.5 7.2 12 3z" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M9.5 14.5a2.6 2.6 0 0 0 2.5 2.3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+    <symbol id="i-award" viewBox="0 0 24 24"><circle cx="12" cy="9" r="5.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8.6 13.5 7 21l5-2.6 5 2.6-1.6-7.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></symbol>
+    <symbol id="i-fire" viewBox="0 0 24 24"><path d="M12 3c1 3.2 4.5 4.6 4.5 9a4.5 4.5 0 0 1-9 0c0-2 1-3.4 2-4.4.2 1.6 1 2.4 2 2.6C11 7.8 11.4 5.4 12 3z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M4 20 20 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 5 6v5.5c0 4.4 3 8 7 9.5 4-1.5 7-5.1 7-9.5V6z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="m9 12 2.2 2.2L15.5 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-thermo" viewBox="0 0 24 24"><path d="M10 14.5V5a2 2 0 0 1 4 0v9.5a3.8 3.8 0 1 1-4 0z" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 9v7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+    <symbol id="i-wind" viewBox="0 0 24 24"><path d="M3 9h11a3 3 0 1 0-3-3M3 15h15a3 3 0 1 1-3 3M3 12h7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+    <symbol id="i-leaf" viewBox="0 0 24 24"><path d="M5 19c0-8 5-14 14-14 0 9-6 14-14 14z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M5 19 13 11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+    <symbol id="i-quake" viewBox="0 0 24 24"><path d="M4 11 12 4l8 7v9H4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M2 21h3M19 21h3M9 14h6M9 17h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+  </defs>
+</svg>
+
+
+<div class="app">
+  <nav class="mtabs" aria-label="보기 전환"><button type="button" data-mtab="preview" aria-pressed="true">미리보기</button><button type="button" data-mtab="patterns" aria-pressed="false">패턴 고르기</button><button type="button" data-mtab="pages" aria-pressed="false">페이지 구성</button></nav>
+  <aside class="side">
+    <h1>내 카탈로그 만들기</h1>
+    <p class="sub">페이지를 넣고 빼고, 순서와 디자인을 고르세요.</p>
+    <div class="btns"><button class="btn primary" id="print">PDF 저장 · 인쇄</button><button class="btn" id="reset">처음으로</button></div>
+    <section class="picker" aria-label="패턴 고르기"><div class="pk-head"><b>패턴 고르기</b><span class="pk-count" id="pk-count"></span></div><div class="pk-actions"><button class="btn sm" id="pk-all">전체 선택</button><button class="btn sm" id="pk-none">전체 해제</button></div><div id="pk-list"></div></section>
+    <div class="pl-head">페이지 구성</div>
+    <ul class="plist" id="plist"></ul>
+    <p class="count" id="count"></p>
+  </aside>
+  <main class="preview">
+<section class="page cover" data-page="cover">
+  <div class="photo"><img src="nh/hero/584.jpg" alt=""></div>
+  <img class="logo" src="img/logo_white.png" alt="HOME TRADERS">
+  <div class="edition label" style="color:rgba(255,255,255,.85)">Exterior Siding Collection<br>2026 · Vol.01</div>
+  <div class="title">
+    <div class="rule"></div>
+    <div class="en">i-CUBE</div>
+    <div class="ko">아이큐브 세라믹 사이딩 컬렉션</div>
+    <div class="sub">니치하가 만든 16mm 섬유강화 시멘트 외장재</div>
+  </div>
+  <div class="bottom"><span>주식회사 홈트레이더스</span><span>Manufactured by NICHIHA, Japan</span></div>
+</section>
+<section class="page perf" data-page="features" data-variant="A">
+  <div class="phead"><div><div class="label">Performance</div><h2>기능 상세</h2></div><div class="side">단열 · 셀프클리닝 · 내후성 · 통기공법</div></div>
+  <div class="grid4">
+
+    <div class="cell">
+      <div class="no2">01 · Thermal</div>
+      <h3>단열성능</h3>
+      <p class="d">모르타르 벽보다 열을 훨씬 덜 전해 실내를 쾌적하게 지킵니다.</p>
+      <svg viewBox="0 0 860 470">
+        <defs><linearGradient id="ha" x1="0" x2="1"><stop offset="0" stop-color="#DC6D27" stop-opacity=".15"/><stop offset="1" stop-color="#DC6D27" stop-opacity=".9"/></linearGradient>
+        <pattern id="swp" patternUnits="userSpaceOnUse" width="130" height="36"><image href="sw16/EFX3451.jpg" width="130" height="36" preserveAspectRatio="xMidYMid slice"/></pattern></defs>
+        <text x="30" y="34" font-size="26" font-weight="700" fill="#1A1A1A">일반 모르타르 벽</text>
+        <path d="M150 90 L190 60 L190 300 L150 330Z" fill="#D8D8D8"/><rect x="118" y="90" width="32" height="240" fill="#EDEDED" stroke="#CFCFCF" stroke-width="2"/>
+        <path d="M20 180 H110 V150 L150 205 L110 260 V230 H20Z" fill="url(#ha)"/>
+        <path d="M192 185 H300 V150 L350 205 L300 260 V225 H192Z" fill="#DC6D27" opacity=".85"/>
+        <rect x="250" y="80" width="140" height="56" rx="28" fill="#1A1A1A"/><text x="320" y="117" text-anchor="middle" font-size="28" font-weight="800" fill="#fff">1.26</text>
+        <text x="460" y="34" font-size="26" font-weight="700" fill="#1A1A1A">아이큐브 16mm</text>
+        <path d="M580 90 L620 60 L620 300 L580 330Z" fill="#CFC6B8"/><rect x="548" y="90" width="32" height="240" fill="url(#swp)" stroke="#BDB3A3" stroke-width="2"/>
+        <path d="M450 180 H540 V150 L580 205 L540 260 V230 H450Z" fill="url(#ha)"/>
+        <path d="M622 199 H690 V188 L712 205 L690 222 V211 H622Z" fill="#DC6D27" opacity=".85"/>
+        <rect x="690" y="80" width="140" height="56" rx="28" fill="#DC6D27"/><text x="760" y="117" text-anchor="middle" font-size="28" font-weight="800" fill="#fff">0.26</text>
+        <text x="200" y="360" font-size="22" font-weight="700" fill="#4A4A4A">열전도율 (W/mK)</text>
+        <rect x="200" y="376" width="600" height="22" fill="#D8D8D8"/><text x="812" y="395" font-size="22" font-weight="700" fill="#1A1A1A">1.26</text>
+        <rect x="200" y="420" width="124" height="22" fill="#DC6D27"/><text x="336" y="439" font-size="22" font-weight="700" fill="#DC6D27">0.26 · 약 1/5</text>
+        <text x="190" y="395" text-anchor="end" font-size="20" fill="#8A8A8A">모르타르</text><text x="190" y="439" text-anchor="end" font-size="20" fill="#8A8A8A">아이큐브</text>
+      </svg>
+      <p class="fn">JIS A 1412(열절연재의 열저항 및 열전도율 측정방법)에 의한 평균값 · 니치하 세라믹사이딩 카탈로그(2023)</p>
+    </div>
+
+    <div class="cell">
+      <div class="no2">02 · Micro Guard</div>
+      <h3>셀프클리닝</h3>
+      <p class="d">나노 친수 마이크로가드 코팅이 빗물로 오염을 되풀이해 씻어냅니다.</p>
+      <svg viewBox="0 0 860 330">
+        <defs><marker id="ar" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#1A1A1A"/></marker></defs>
+        <circle cx="140" cy="165" r="105" fill="#F7F7F7"/><circle cx="430" cy="165" r="105" fill="#F7F7F7"/><circle cx="720" cy="165" r="105" fill="#F7F7F7"/>
+        <path d="M250 120 Q285 90 320 120" fill="none" stroke="#1A1A1A" stroke-width="4" marker-end="url(#ar)"/>
+        <path d="M540 120 Q575 90 610 120" fill="none" stroke="#1A1A1A" stroke-width="4" marker-end="url(#ar)"/>
+        <path d="M700 285 Q430 360 160 285" fill="none" stroke="#1A1A1A" stroke-width="4" stroke-dasharray="10 8" marker-end="url(#ar)"/>
+        <rect x="80" y="95" width="18" height="140" fill="#CFC6B8"/><rect x="98" y="95" width="10" height="140" fill="#8FB4CF"/>
+        <g fill="#8FB4CF"><circle cx="140" cy="120" r="7"/><circle cx="165" cy="150" r="7"/><circle cx="135" cy="180" r="7"/><circle cx="175" cy="205" r="7"/><circle cx="150" cy="230" r="7"/></g>
+        <rect x="370" y="95" width="18" height="140" fill="#CFC6B8"/><rect x="388" y="95" width="10" height="140" fill="#8FB4CF"/>
+        <g fill="#6B5B4B"><circle cx="420" cy="130" r="11"/><circle cx="450" cy="170" r="9"/><circle cx="428" cy="205" r="12"/></g>
+        <rect x="660" y="95" width="18" height="140" fill="#CFC6B8"/><rect x="678" y="95" width="10" height="140" fill="#8FB4CF"/>
+        <g fill="#8FB4CF"><path d="M705 100 q -8 14 0 20 q 8 -6 0 -20z"/><path d="M730 140 q -8 14 0 20 q 8 -6 0 -20z"/><path d="M705 180 q -8 14 0 20 q 8 -6 0 -20z"/></g>
+        <g fill="#6B5B4B"><circle cx="712" cy="225" r="8"/><circle cx="740" cy="245" r="8"/></g>
+        <path d="M760 110 V250" stroke="#8FB4CF" stroke-width="4" marker-end="url(#ar)"/>
+        <text x="140" y="40" text-anchor="middle" font-size="24" font-weight="800" fill="#DC6D27">01</text>
+        <text x="430" y="40" text-anchor="middle" font-size="24" font-weight="800" fill="#DC6D27">02</text>
+        <text x="720" y="40" text-anchor="middle" font-size="24" font-weight="800" fill="#DC6D27">03</text>
+      </svg>
+      <ol>
+        <li><b>01</b><span><b style="color:#1A1A1A;font-size:7pt">수분막 형성</b> — 실리카 입자가 공기 중 물분자를 붙잡아 외벽에 얇은 수막을 만듭니다.</span></li>
+        <li><b>02</b><span><b style="color:#1A1A1A;font-size:7pt">오염물이 떠 있음</b> — 정전기가 없어 오염물이 잘 붙지 않고, 붙어도 수막 위에 떠 있습니다.</span></li>
+        <li><b>03</b><span><b style="color:#1A1A1A;font-size:7pt">빗물과 함께 씻김</b> — 오염물 아래로 빗물이 지나가며 함께 씻겨 내려갑니다.</span></li>
+      </ol>
+      <p class="fn">니치하 나노 친수 마이크로가드 · 아이큐브 전 제품 적용</p>
+    </div>
+
+    <div class="cell">
+      <div class="no2">03 · Weather Resistance</div>
+      <h3>도장 내후성</h3>
+      <p class="d">플래티넘코트는 30년 상당의 촉진 시험 뒤에도 퇴색 기준 안에 머뭅니다.</p>
+      <svg viewBox="0 0 860 430">
+        <rect x="110" y="40" width="700" height="255" fill="#F7F7F7"/>
+        <line x1="110" y1="40" x2="810" y2="40" stroke="#E6E6E6" stroke-width="2"/><text x="92" y="48" text-anchor="end" font-size="22" fill="#8A8A8A">0</text><line x1="110" y1="125" x2="810" y2="125" stroke="#E6E6E6" stroke-width="2"/><text x="92" y="133" text-anchor="end" font-size="22" fill="#8A8A8A">1</text><line x1="110" y1="210" x2="810" y2="210" stroke="#E6E6E6" stroke-width="2"/><text x="92" y="218" text-anchor="end" font-size="22" fill="#8A8A8A">2</text><line x1="110" y1="295" x2="810" y2="295" stroke="#E6E6E6" stroke-width="2"/><text x="92" y="303" text-anchor="end" font-size="22" fill="#8A8A8A">3</text><line x1="110" y1="380" x2="810" y2="380" stroke="#E6E6E6" stroke-width="2"/><text x="92" y="388" text-anchor="end" font-size="22" fill="#8A8A8A">4</text><line x1="310.0" y1="40" x2="310.0" y2="380" stroke="#E6E6E6" stroke-width="2" stroke-dasharray="6 6"/><text x="310.0" y="414" text-anchor="middle" font-size="22" fill="#4A4A4A" font-weight="700">10년</text><line x1="510.0" y1="40" x2="510.0" y2="380" stroke="#E6E6E6" stroke-width="2" stroke-dasharray="6 6"/><text x="510.0" y="414" text-anchor="middle" font-size="22" fill="#4A4A4A" font-weight="700">20년</text><line x1="710.0" y1="40" x2="710.0" y2="380" stroke="#E6E6E6" stroke-width="2" stroke-dasharray="6 6"/><text x="710.0" y="414" text-anchor="middle" font-size="22" fill="#4A4A4A" font-weight="700">30년</text>
+        <line x1="110" y1="295" x2="810" y2="295" stroke="#1A1A1A" stroke-width="3" stroke-dasharray="12 8"/>
+        <text x="805" y="283" text-anchor="end" font-size="22" font-weight="700" fill="#1A1A1A">퇴색 기준</text>
+        <polyline points="110.0,40.0 150.0,133.5 190.0,133.5 230.0,125.0 270.0,82.5 310.0,95.2 350.0,99.5 390.0,95.2 430.0,95.2 470.0,95.2 510.0,95.2 550.0,108.0 590.0,129.2 630.0,159.0 670.0,197.2 710.0,244.0" fill="none" stroke="#DC6D27" stroke-width="5"/><circle cx="110.0" cy="40.0" r="7" fill="#fff" stroke="#DC6D27" stroke-width="4"/><circle cx="150.0" cy="133.5" r="7" fill="#fff" stroke="#DC6D27" stroke-width="4"/><circle cx="190.0" cy="133.5" r="7" fill="#fff" stroke="#DC6D27" stroke-width="4"/><circle cx="230.0" cy="125.0" r="7" fill="#fff" stroke="#DC6D27" stroke-width="4"/><circle cx="270.0" cy="82.5" r="7" fill="#fff" stroke="#DC6D27" stroke-width="4"/><circle cx="310.0" cy="95.2" r="7" fill="#fff" stroke="#DC6D27" stroke-width="4"/><circle cx="350.0" cy="99.5" r="7" fill="#fff" stroke="#DC6D27" stroke-width="4"/><circle cx="390.0" cy="95.2" r="7" fill="#fff" stroke="#DC6D27" stroke-width="4"/><circle cx="430.0" cy="95.2" r="7" fill="#fff" stroke="#DC6D27" stroke-width="4"/><circle cx="470.0" cy="95.2" r="7" fill="#fff" stroke="#DC6D27" stroke-width="4"/><circle cx="510.0" cy="95.2" r="7" fill="#fff" stroke="#DC6D27" stroke-width="4"/><circle cx="550.0" cy="108.0" r="7" fill="#fff" stroke="#DC6D27" stroke-width="4"/><circle cx="590.0" cy="129.2" r="7" fill="#fff" stroke="#DC6D27" stroke-width="4"/><circle cx="630.0" cy="159.0" r="7" fill="#fff" stroke="#DC6D27" stroke-width="4"/><circle cx="670.0" cy="197.2" r="7" fill="#fff" stroke="#DC6D27" stroke-width="4"/><circle cx="710.0" cy="244.0" r="7" fill="#fff" stroke="#DC6D27" stroke-width="4"/>
+        <line x1="710" y1="252" x2="670" y2="318" stroke="#DC6D27" stroke-width="3"/><rect x="520" y="318" width="160" height="44" rx="22" fill="#DC6D27"/><text x="600" y="348" text-anchor="middle" font-size="22" font-weight="800" fill="#fff">30년 상당</text>
+        <text x="120" y="176.0" font-size="22" fill="#4A4A4A">색 변화가 두드러지지 않는 구간</text>
+        <text x="110" y="26" font-size="20" fill="#8A8A8A">변색 등급 (0 = 변화 없음)</text>
+      </svg>
+      <div class="hyper"><b>V16 하이퍼코트</b> — 일반 외벽은 5~7년마다 재도장이 필요하지만, 기대 수명 15~20년에 도장 보증 10년입니다.</div>
+      <p class="fn">플래티넘코트(N16·PREMIUM·FUGE, 도장 보증 15년) SWOM 촉진내후시험 18,000시간 = 약 30년 상당 · 니치하 카탈로그 그래프를 옮긴 근사값</p>
+    </div>
+
+    <div class="cell">
+      <div class="no2">04 · Ventilation</div>
+      <h3>통기공법</h3>
+      <p class="d">클립 시공으로 생긴 통기층이 습기와 열기를 위로 내보냅니다.</p>
+      <svg viewBox="0 0 860 470">
+        <defs><marker id="ab" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#4F8DBA"/></marker>
+        <marker id="ao" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#DC6D27"/></marker></defs>
+        <g>
+          <text x="0" y="28" font-size="26" font-weight="800" fill="#1A1A1A">결로방지</text>
+          <path d="M40 110 q -9 16 0 22 q 9 -6 0 -22z" fill="#8FB4CF"/><path d="M90 150 q -9 16 0 22 q 9 -6 0 -22z" fill="#8FB4CF"/><path d="M55 210 q -9 16 0 22 q 9 -6 0 -22z" fill="#8FB4CF"/><path d="M110 250 q -9 16 0 22 q 9 -6 0 -22z" fill="#8FB4CF"/><path d="M35 300 q -9 16 0 22 q 9 -6 0 -22z" fill="#8FB4CF"/><path d="M95 340 q -9 16 0 22 q 9 -6 0 -22z" fill="#8FB4CF"/><path d="M60 400 q -9 16 0 22 q 9 -6 0 -22z" fill="#8FB4CF"/><path d="M115 430 q -9 16 0 22 q 9 -6 0 -22z" fill="#8FB4CF"/>
+          <rect x="150" y="70" width="34" height="370" fill="url(#swp)" stroke="#BDB3A3" stroke-width="2"/>
+          <line x1="226" y1="70" x2="226" y2="440" stroke="#DC6D27" stroke-width="4" stroke-dasharray="10 6"/>
+          <rect x="230" y="70" width="92" height="370" fill="#F3E3B8"/><rect x="322" y="70" width="18" height="370" fill="#BDBDBD"/>
+          <text x="276" y="262" text-anchor="middle" font-size="22" fill="#4A4A4A" writing-mode="tb">단열재</text>
+          <path d="M400 150 H240" stroke="#4F8DBA" stroke-width="10" marker-end="url(#ab)"/><text x="398" y="132" text-anchor="end" font-size="20" fill="#4A4A4A">수증기</text>
+          <path d="M205 430 V90" stroke="#4F8DBA" stroke-width="10" marker-end="url(#ab)"/>
+          <text x="30" y="468" font-size="20" fill="#8A8A8A">외부</text><text x="400" y="468" text-anchor="end" font-size="20" fill="#8A8A8A">내부</text>
+          <text x="167" y="60" text-anchor="middle" font-size="18" fill="#4A4A4A">사이딩</text>
+          <text x="232" y="60" text-anchor="start" font-size="18" fill="#4A4A4A">투습방수지</text><text x="205" y="464" text-anchor="middle" font-size="18" fill="#4A4A4A">통기층</text>
+        </g>
+        <g transform="translate(450 0)">
+          <text x="0" y="28" font-size="26" font-weight="800" fill="#1A1A1A">차열효과</text>
+          <circle cx="55" cy="120" r="26" fill="#DC6D27"/><line x1="93" y1="120" x2="107" y2="120" stroke="#DC6D27" stroke-width="5" stroke-linecap="round"/><line x1="82" y1="147" x2="91" y2="156" stroke="#DC6D27" stroke-width="5" stroke-linecap="round"/><line x1="55" y1="158" x2="55" y2="172" stroke="#DC6D27" stroke-width="5" stroke-linecap="round"/><line x1="28" y1="147" x2="19" y2="156" stroke="#DC6D27" stroke-width="5" stroke-linecap="round"/><line x1="17" y1="120" x2="3" y2="120" stroke="#DC6D27" stroke-width="5" stroke-linecap="round"/><line x1="28" y1="93" x2="19" y2="84" stroke="#DC6D27" stroke-width="5" stroke-linecap="round"/><line x1="55" y1="82" x2="55" y2="68" stroke="#DC6D27" stroke-width="5" stroke-linecap="round"/><line x1="82" y1="93" x2="91" y2="84" stroke="#DC6D27" stroke-width="5" stroke-linecap="round"/>
+          <path d="M70 175 Q100 200 90 230 T140 290" fill="none" stroke="#DC6D27" stroke-width="10" marker-end="url(#ao)"/>
+          <path d="M140 320 Q110 350 80 360 T20 410" fill="none" stroke="#DC6D27" stroke-width="8" opacity=".55" marker-end="url(#ao)"/>
+          <rect x="150" y="70" width="34" height="370" fill="url(#swp)" stroke="#BDB3A3" stroke-width="2"/>
+          <line x1="226" y1="70" x2="226" y2="440" stroke="#DC6D27" stroke-width="4" stroke-dasharray="10 6"/>
+          <rect x="230" y="70" width="92" height="370" fill="#F3E3B8"/><rect x="322" y="70" width="18" height="370" fill="#BDBDBD"/>
+          <text x="276" y="262" text-anchor="middle" font-size="22" fill="#4A4A4A" writing-mode="tb">단열재</text>
+          <path d="M205 440 V300" stroke="#4F8DBA" stroke-width="10" marker-end="url(#ab)"/><text x="205" y="464" text-anchor="middle" font-size="20" fill="#4A4A4A">통기</text>
+          <path d="M205 290 V90" stroke="#DC6D27" stroke-width="10" marker-end="url(#ao)"/><text x="205" y="58" text-anchor="middle" font-size="20" fill="#4A4A4A">열기</text>
+          <text x="30" y="468" font-size="20" fill="#8A8A8A">외부</text><text x="400" y="468" text-anchor="end" font-size="20" fill="#8A8A8A">내부</text>
+        </g>
+      </svg>
+      <p class="fn">15mm 클립 시공 · 통기층과 투습방수지로 결로를 막고, 뜨거워진 공기를 위로 배출합니다.</p>
+    </div>
+
+  </div>
+  <div class="keys">
+    <div><b>0.26<small>W/mK</small></b><span>열전도율 (모르타르 벽 1.26)</span></div>
+    <div><b>3<small>단계</small></b><span>셀프클리닝 사이클</span></div>
+    <div><b>30<small>년 상당</small></b><span>촉진내후시험 18,000시간</span></div>
+    <div><b>15<small>mm</small></b><span>클립 시공 통기층</span></div>
+  </div>
+  <div class="foot"><span class="label">HOME TRADERS · i-CUBE</span><span class="no">03</span></div>
+</section>
+<section class="page feat" data-page="features" data-variant="B">
+  <div class="phead"><div><div class="label">Features</div><h2>아이큐브 특장점</h2></div><div class="side">JIS A5422 · 일본 니치하 제조</div></div>
+  <div class="lead">
+    <h3>고온·고압으로 양생한<br>고강도 섬유강화 시멘트 사이딩</h3>
+    <p>천연 목질섬유와 시멘트를 주원료로 오토클레이브에서 양생한 패널입니다. 셀프클리닝 도막과 클립 시공으로 오래도록 처음의 모습을 지키고, 시공은 빠르고 간편합니다.</p>
+  </div>
+  <div class="fgrid">
+    <div class="fitem"><div class="ic"><svg><use href="#i-drop"/></svg></div><h4>셀프클리닝</h4><p>나노 친수 마이크로가드가 빗물로 오염을 씻어냅니다.</p></div>
+    <div class="fitem"><div class="ic"><svg><use href="#i-award"/></svg></div><h4>도장 보증 10·15년</h4><p>V16 <b>10년</b>, 플래티넘코트 적용 N16·PREMIUM·FUGE <b>15년</b></p></div>
+    <div class="fitem"><div class="ic"><svg><use href="#i-fire"/></svg></div><h4>준불연재</h4><p>일본 국토교통대신 인증 준불연 외장재입니다.</p></div>
+    <div class="fitem"><div class="ic"><svg><use href="#i-shield"/></svg></div><h4>고강도</h4><p>콘크리트 대비 약 400배의 휨강도를 갖췄습니다.</p></div>
+    <div class="fitem"><div class="ic"><svg><use href="#i-thermo"/></svg></div><h4>단열성능</h4><p>열전도율 <b>0.26 W/mK</b>. 모르타르 벽(1.26)의 약 1/5입니다.</p></div>
+    <div class="fitem"><div class="ic"><svg><use href="#i-wind"/></svg></div><h4>통기공법</h4><p>15mm 클립 시공으로 통기층을 만들어 결로를 막습니다.</p></div>
+    <div class="fitem"><div class="ic"><svg><use href="#i-leaf"/></svg></div><h4>무석면</h4><p>석면이 들어가지 않은 친환경 외장재입니다.</p></div>
+    <div class="fitem"><div class="ic"><svg><use href="#i-quake"/></svg></div><h4>내진설계</h4><p>클립 시공이 진동을 흡수해 균열에 강합니다.</p></div>
+  </div>
+  <div class="dims">
+    <div class="label cap">Panel Size</div>
+    <div class="row">
+      <div class="panel"><img src="sw16/EFX3453.jpg" alt=""><div class="w">3,030mm</div></div>
+      <div class="h">높이 455mm<br>두께 16mm</div>
+    </div>
+    <table class="t">
+      <thead><tr><th>시리즈</th><th>규격 (두께×높이×너비)</th><th>포장</th><th>기준규격</th></tr></thead>
+      <tbody>
+        <tr><td>V16 · N16 · PREMIUM</td><td>16 × 455 × 3,030mm</td><td>2장 / pack</td><td>JIS A5422</td></tr>
+        <tr><td>COOL · FUGE</td><td>16 × 455 × 1,820mm</td><td>2장 / pack</td><td>JIS A5422</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="process">
+    <div class="st"><b>75%</b><span>시멘트</span></div><div class="op">+</div>
+    <div class="st"><b>15%</b><span>천연 목질섬유</span></div><div class="op">+</div>
+    <div class="st"><b>10%</b><span>기타</span></div><div class="op">→</div>
+    <div class="st out"><b>i-CUBE</b><span>고온·고압 양생 패널</span></div>
+  </div>
+  <div class="foot"><span class="label">HOME TRADERS · i-CUBE</span><span class="no">02</span></div>
+</section>
+<section class="page sg" data-page="features" data-variant="C">
+  <div class="lab">FEATURES</div>
+  <h2 class="h1">외장재를 고를 때<br>확인해야 할 <em>네 가지</em></h2>
+  <p class="sub">i-CUBE 세라믹 사이딩은 16mm 섬유강화 시멘트 패널입니다. 단열·오염·내후·결로 네 항목의 성능을 원본 시험 자료로 정리했습니다.</p>
+  <div class="rule"></div>
+  <div class="g22">
+    <div class="cell"><div class="num">01</div><h3 class="h2">단열 성능</h3><p class="body">열전도율이 일반 모르타르 벽의 약 1/5 수준입니다.</p><div class="fig"><svg viewBox="0 0 310 160"><defs><marker id="tg" viewBox="0 0 7 7" refX="6" refY="3.5" markerWidth="7" markerHeight="7" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0 L7,3.5 L0,7 z" fill="#8C8C8C"/></marker><marker id="ta" viewBox="0 0 7 7" refX="6" refY="3.5" markerWidth="7" markerHeight="7" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0 L7,3.5 L0,7 z" fill="#E4641E"/></marker><clipPath id="tclip"><rect x="232" y="26" width="20" height="70"/></clipPath></defs>
+<text x="10" y="14" class="svg-s" fill="#8C8C8C">일반 모르타르 벽</text>
+<rect x="60" y="26" width="26" height="70" fill="none" stroke="#8C8C8C" stroke-width="1.4"/>
+<line x1="12" y1="42" x2="130" y2="42" stroke="#8C8C8C" stroke-width="1.4" marker-end="url(#tg)"/><line x1="12" y1="61" x2="130" y2="61" stroke="#8C8C8C" stroke-width="1.4" marker-end="url(#tg)"/><line x1="12" y1="80" x2="130" y2="80" stroke="#8C8C8C" stroke-width="1.4" marker-end="url(#tg)"/>
+<text x="10" y="138" class="svg-n" fill="#8C8C8C">1.26</text><text x="80" y="138" class="svg-u" fill="#8C8C8C">W/m·K</text>
+<line x1="155" y1="20" x2="155" y2="145" stroke="#DCDCDC" stroke-width="1"/>
+<text x="180" y="14" class="svg-s" fill="#E4641E">i-CUBE 16mm</text>
+<g clip-path="url(#tclip)" opacity=".45"><line x1="228" y1="34" x2="256" y2="20" stroke="#E4641E" stroke-width=".8"/><line x1="228" y1="43" x2="256" y2="29" stroke="#E4641E" stroke-width=".8"/><line x1="228" y1="52" x2="256" y2="38" stroke="#E4641E" stroke-width=".8"/><line x1="228" y1="61" x2="256" y2="47" stroke="#E4641E" stroke-width=".8"/><line x1="228" y1="70" x2="256" y2="56" stroke="#E4641E" stroke-width=".8"/><line x1="228" y1="79" x2="256" y2="65" stroke="#E4641E" stroke-width=".8"/><line x1="228" y1="88" x2="256" y2="74" stroke="#E4641E" stroke-width=".8"/><line x1="228" y1="97" x2="256" y2="83" stroke="#E4641E" stroke-width=".8"/><line x1="228" y1="106" x2="256" y2="92" stroke="#E4641E" stroke-width=".8"/><line x1="228" y1="115" x2="256" y2="101" stroke="#E4641E" stroke-width=".8"/></g>
+<rect x="232" y="26" width="20" height="70" fill="none" stroke="#E4641E" stroke-width="2"/>
+<line x1="184" y1="42" x2="226" y2="42" stroke="#E4641E" stroke-width="2" marker-end="url(#ta)"/><line x1="184" y1="61" x2="226" y2="61" stroke="#E4641E" stroke-width="2" marker-end="url(#ta)"/><line x1="184" y1="80" x2="226" y2="80" stroke="#E4641E" stroke-width="2" marker-end="url(#ta)"/>
+<text x="180" y="138" class="svg-n" fill="#E4641E">0.26</text><text x="250" y="138" class="svg-u" fill="#E4641E">W/m·K</text></svg></div><p class="cap">JIS A 1412 측정 평균값 · 니치하 세라믹사이딩 카탈로그(2023)</p></div>
+    <div class="cell"><div class="num">02</div><h3 class="h2">마이크로가드 셀프클리닝</h3><p class="body">실리카 입자가 만든 얇은 수막 위로 오염물이 떠, 빗물과 함께 씻겨 내려갑니다.</p><div class="fig"><svg viewBox="0 0 310 165"><defs><marker id="ca" viewBox="0 0 7 7" refX="6" refY="3.5" markerWidth="7" markerHeight="7" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0 L7,3.5 L0,7 z" fill="#E4641E"/></marker></defs>
+<circle cx="155" cy="30" r="20" fill="none" stroke="#E4641E" stroke-width="1.8"/>
+<line x1="145" y1="24" x2="165" y2="24" stroke="#E4641E" stroke-width="1.4"/><line x1="145" y1="30" x2="165" y2="30" stroke="#E4641E" stroke-width="1.4"/><line x1="145" y1="36" x2="165" y2="36" stroke="#E4641E" stroke-width="1.4"/>
+<text x="155" y="66" text-anchor="middle" class="svg-t" fill="#1A1A1A">1 수막 형성</text>
+<circle cx="68" cy="112" r="20" fill="none" stroke="#8C8C8C" stroke-width="1.6"/>
+<circle cx="60" cy="108" r="2.6" fill="#8C8C8C"/><circle cx="74" cy="104" r="2" fill="#8C8C8C"/><circle cx="72" cy="118" r="2.6" fill="#8C8C8C"/>
+<text x="68" y="150" text-anchor="middle" class="svg-t" fill="#8C8C8C">2 오염물 부착</text>
+<circle cx="242" cy="112" r="20" fill="none" stroke="#E4641E" stroke-width="1.8"/>
+<path d="M242 99 q-8 12 0 17 q8 -5 0 -17z" fill="none" stroke="#E4641E" stroke-width="1.4"/><line x1="236" y1="122" x2="233" y2="128" stroke="#E4641E" stroke-width="1.4"/><line x1="248" y1="122" x2="245" y2="128" stroke="#E4641E" stroke-width="1.4"/>
+<text x="242" y="150" text-anchor="middle" class="svg-t" fill="#1A1A1A">3 빗물 세정</text>
+<path d="M134 38 Q92 50 78 88" fill="none" stroke="#E4641E" stroke-width="1.4" marker-end="url(#ca)"/>
+<path d="M92 116 Q155 132 216 116" fill="none" stroke="#E4641E" stroke-width="1.4" marker-end="url(#ca)"/>
+<path d="M234 90 Q222 50 177 38" fill="none" stroke="#E4641E" stroke-width="1.4" marker-end="url(#ca)"/></svg></div><p class="cap">니치하 나노 친수 마이크로가드 · 아이큐브 전 제품 적용</p></div>
+    <div class="cell"><div class="num">03</div><h3 class="h2">도장 내후성</h3><p class="body">플래티넘코트는 30년 상당의 촉진시험 뒤에도 퇴색 기준 안에 머뭅니다.</p><div class="fig"><svg viewBox="0 0 310 160">
+<text x="30" y="12" class="svg-s" fill="#8C8C8C">색 변화</text>
+<line x1="30" y1="18" x2="30" y2="134" stroke="#DCDCDC" stroke-width="1"/><line x1="30" y1="134" x2="300" y2="134" stroke="#DCDCDC" stroke-width="1"/>
+<line x1="30" y1="103" x2="300" y2="103" stroke="#8C8C8C" stroke-width="1.2" stroke-dasharray="4 3"/>
+<text x="300" y="97" text-anchor="end" class="svg-s" fill="#8C8C8C">퇴색 기준</text>
+<polyline points="30,22.0 48,51.7 66,51.7 84,49.0 102,35.5 120,39.5 138,40.9 156,39.5 174,39.5 192,39.5 210,39.5 228,43.6 246,50.4 264,59.8 282,72.0 300,86.8" fill="none" stroke="#E4641E" stroke-width="2" stroke-linejoin="round"/>
+<circle cx="300" cy="86.8" r="3.5" fill="#E4641E"/>
+<text x="120" y="32" class="svg-t" fill="#E4641E">플래티넘코트</text>
+<text x="30" y="150" text-anchor="middle" class="svg-s" fill="#8C8C8C">0</text><text x="120" y="150" text-anchor="middle" class="svg-s" fill="#8C8C8C">10년</text><text x="210" y="150" text-anchor="middle" class="svg-s" fill="#8C8C8C">20년</text><text x="300" y="150" text-anchor="middle" class="svg-s" fill="#8C8C8C">30년 상당</text></svg></div><p class="cap">SWOM 촉진내후시험 18,000시간 · 도장 보증 V16 10년, N16·PREMIUM·FUGE 15년</p></div>
+    <div class="cell"><div class="num">04</div><h3 class="h2">통기 공법</h3><p class="body">클립 시공으로 생긴 통기층이 습기를 내보내 결로를 막고, 뜨거워진 공기를 위로 배출합니다.</p><div class="fig"><svg viewBox="0 0 310 165"><defs><marker id="va" viewBox="0 0 7 7" refX="6" refY="3.5" markerWidth="7" markerHeight="7" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0 L7,3.5 L0,7 z" fill="#E4641E"/></marker></defs>
+<text x="10" y="14" class="svg-s" fill="#8C8C8C">외부</text><text x="300" y="14" text-anchor="end" class="svg-s" fill="#8C8C8C">내부</text>
+<circle cx="40" cy="58" r="9" fill="none" stroke="#8C8C8C" stroke-width="1.4"/>
+<line x1="53" y1="58" x2="58" y2="58" stroke="#8C8C8C" stroke-width="1.2"/><line x1="40" y1="71" x2="40" y2="76" stroke="#8C8C8C" stroke-width="1.2"/><line x1="27" y1="58" x2="22" y2="58" stroke="#8C8C8C" stroke-width="1.2"/><line x1="40" y1="45" x2="40" y2="40" stroke="#8C8C8C" stroke-width="1.2"/>
+<circle cx="78" cy="40" r="2.2" fill="#8C8C8C"/><circle cx="90" cy="66" r="2.2" fill="#8C8C8C"/><circle cx="74" cy="92" r="2.2" fill="#8C8C8C"/><circle cx="88" cy="118" r="2.2" fill="#8C8C8C"/>
+<text x="20" y="134" class="svg-s" fill="#8C8C8C">태양열 · 빗물</text>
+<rect x="110" y="26" width="12" height="110" fill="none" stroke="#1A1A1A" stroke-width="1.6"/>
+<line x1="131" y1="130" x2="131" y2="34" stroke="#E4641E" stroke-width="2" marker-end="url(#va)"/>
+<line x1="142" y1="26" x2="142" y2="136" stroke="#8C8C8C" stroke-width="1" stroke-dasharray="3 2"/>
+<rect x="146" y="26" width="50" height="110" fill="#F5F2EE" stroke="#8C8C8C" stroke-width="1.2"/>
+<rect x="196" y="26" width="10" height="110" fill="none" stroke="#8C8C8C" stroke-width="1.2"/>
+<text x="116" y="152" text-anchor="middle" class="svg-s" fill="#1A1A1A">사이딩</text>
+<text x="131" y="164" text-anchor="middle" class="svg-s" fill="#E4641E">통기층</text>
+<text x="171" y="152" text-anchor="middle" class="svg-s" fill="#1A1A1A">단열재</text>
+<text x="142" y="20" text-anchor="middle" class="svg-s" fill="#8C8C8C">투습방수지</text>
+<text x="222" y="74" class="svg-t" fill="#1A1A1A">결로 방지</text><text x="222" y="94" class="svg-t" fill="#1A1A1A">차열 효과</text></svg></div><p class="cap">RC조 5mm 클립 · 목조 15mm 클립 건식 통기공법</p></div>
+  </div>
+  <div class="ft"><span>HOME TRADERS · i-CUBE</span><b class="pno">02</b></div>
+</section>
+<section class="page opener" data-page="v16-opener">
+  <div class="hero"><img src="nh/hero/782.jpg" alt=""><div class="cap">EFX3457 리가스톤 블랙 시공 사례</div></div>
+  <div class="head">
+    <div class="big">V16<small class="label">V Series · 16mm</small></div>
+    <div class="intro">
+      <div class="label">Series 01</div>
+      <h2>돌과 벽돌의 결을 담은<br>가장 기본이 되는 세라믹 사이딩</h2>
+      <p>천연 목질섬유와 시멘트를 고온·고압으로 양생한 16mm 섬유강화 시멘트 패널입니다. 마이크로가드 셀프클리닝 도막이 빗물로 오염을 씻어내 오랫동안 처음의 색을 지킵니다.</p>
+    </div>
+  </div>
+  <dl class="spec">
+    <div><dt class="label">Size</dt><dd>16 × 455 × 3,030mm</dd></div>
+    <div><dt class="label">Weight</dt><dd>약 26kg / 장</dd></div>
+    <div><dt class="label">Packing</dt><dd>2장 / pack<br>80장 / pallet</dd></div>
+    <div><dt class="label">Warranty</dt><dd>도장 보증 10년<br>마이크로가드</dd></div>
+  </dl>
+  <div class="sizechart">
+    <div class="sc-w"><span>3,030</span></div>
+    <div class="sc-body"><div class="panel" style="background-image:url(nh/sw/EFX3457.jpg)"></div><div class="sc-h"><span>455</span></div></div>
+    <div class="sc-cap"><b>EFX3457</b>리가스톤 블랙<i>16 × 455 × 3,030mm</i></div>
+  </div>
+  <div class="foot"><span class="label">HOME TRADERS · i-CUBE</span><span class="no">04</span></div>
+</section>
+<section class="page pc" data-page="v16-colors">
+  <div class="phead"><div><div class="label">V16 · Pattern &amp; Color</div><h2>V16 패턴과 색상</h2></div><div class="side">7개 패턴 · 23가지 색상</div></div>
+  <div class="left">
+    <p>니치하 세라믹 사이딩의 기본형 모델입니다. 다양한 패턴과 단정한 색상으로 모던한 외벽을 완성합니다.</p>
+    <h4>제품 규격</h4>
+    <table class="t">
+      <tr><td>규격</td><td>16 × 455 × 3,030mm</td></tr>
+      <tr><td>무게</td><td>약 26kg / 장</td></tr>
+      <tr><td>포장</td><td>2장/pack · 80장/pallet</td></tr>
+    </table>
+    <h4>제품 특성</h4>
+    <div class="icons4">
+      <div><div class="ic"><svg><use href="#i-fire"/></svg></div><span>준불연</span></div>
+      <div><div class="ic"><svg><use href="#i-shield"/></svg></div><span>고강도</span></div>
+      <div><div class="ic"><svg><use href="#i-drop"/></svg></div><span>셀프클리닝</span></div>
+      <div><div class="ic"><svg><use href="#i-award"/></svg></div><span>도장 보증<br>10년</span></div>
+    </div>
+    <div class="ph"><img src="img/EFX3457X_1.jpg" alt=""></div>
+  </div>
+  <div class="right">
+    <div class="grp"><h5>리가스톤 <span>EFX 345</span></h5><div class="sws c2">
+      <figure><img src="sw16/EFX3451.jpg" alt=""><figcaption><b>EFX3451</b>라떼</figcaption></figure>
+      <figure><img src="sw16/EFX3452.jpg" alt=""><figcaption><b>EFX3452</b>브라운</figcaption></figure>
+      <figure><img src="sw16/EFX3453.jpg" alt=""><figcaption><b>EFX3453</b>화이트</figcaption></figure>
+      <figure><img src="sw16/EFX3457.jpg" alt=""><figcaption><b>EFX3457</b>블랙</figcaption></figure>
+    </div></div>
+    <div class="grp"><h5>코르모스톤 <span>EFX 335</span></h5><div class="sws c2">
+      <figure><img src="sw16/EFX3351.jpg" alt=""><figcaption><b>EFX3351</b>화이트</figcaption></figure>
+      <figure><img src="sw16/EFX3352.jpg" alt=""><figcaption><b>EFX3352</b>라떼</figcaption></figure>
+      <figure><img src="sw16/EFX3353.jpg" alt=""><figcaption><b>EFX3353</b>초콜릿</figcaption></figure>
+      <figure><img src="sw16/EFX3355.jpg" alt=""><figcaption><b>EFX3355</b>다크 그레이</figcaption></figure>
+    </div></div>
+    <div class="grp"><h5>모나비스톤 <span>EFA 525</span></h5><div class="sws c3">
+      <figure><img src="sw16/EFA5251.jpg" alt=""><figcaption><b>EFA5251</b>퓨어 화이트</figcaption></figure>
+      <figure><img src="sw16/EFA5253.jpg" alt=""><figcaption><b>EFA5253</b>크림</figcaption></figure>
+      <figure><img src="sw16/EFA5254.jpg" alt=""><figcaption><b>EFA5254</b>네이비</figcaption></figure>
+    </div></div>
+    <div class="grp"><h5>볼브스톤 <span>EFX 315</span></h5><div class="sws c3">
+      <figure><img src="sw16/EFX3151.jpg" alt=""><figcaption><b>EFX3151</b>화이트</figcaption></figure>
+      <figure><img src="sw16/EFX3152.jpg" alt=""><figcaption><b>EFX3152</b>라떼</figcaption></figure>
+      <figure><img src="sw16/EFX3153.jpg" alt=""><figcaption><b>EFX3153</b>브라운</figcaption></figure>
+    </div></div>
+    <div class="grp"><h5>샤프락 <span>EFA 285</span></h5><div class="sws c3">
+      <figure><img src="sw16/EFA2851.jpg" alt=""><figcaption><b>EFA2851</b>화이트</figcaption></figure>
+      <figure><img src="sw16/EFA2854.jpg" alt=""><figcaption><b>EFA2854</b>브라운</figcaption></figure>
+      <figure><img src="sw16/EFA2855.jpg" alt=""><figcaption><b>EFA2855</b>라이트 그레이</figcaption></figure>
+    </div></div>
+    <div class="grp"><h5>미라주타일 <span>EFX 395</span></h5><div class="sws c3">
+      <figure><img src="sw16/EFX3951.jpg" alt=""><figcaption><b>EFX3951</b>화이트</figcaption></figure>
+      <figure><img src="sw16/EFX3953.jpg" alt=""><figcaption><b>EFX3953</b>초콜릿</figcaption></figure>
+      <figure><img src="sw16/EFX3954.jpg" alt=""><figcaption><b>EFX3954</b>차콜</figcaption></figure>
+    </div></div>
+    <div class="grp"><h5>세리오스타일 <span>EFX 135</span></h5><div class="sws c3">
+      <figure><img src="sw16/EFX1351.jpg" alt=""><figcaption><b>EFX1351</b>퓨어 화이트</figcaption></figure>
+      <figure><img src="sw16/EFX1352.jpg" alt=""><figcaption><b>EFX1352</b>아이보리 (주문)</figcaption></figure>
+      <figure><img src="sw16/EFX1354.jpg" alt=""><figcaption><b>EFX1354</b>블랙</figcaption></figure>
+    </div></div>
+  </div>
+  <div class="foot"><span class="label">HOME TRADERS · i-CUBE</span><span class="no">05</span></div>
+</section>
+<section class="page detail" data-page="pattern-riga">
+  <div class="tex"><img src="img/EFX3453X_1.jpg" alt="" style="object-position:86% 50%"><div class="chip">EFX3453 화이트 · 시공 사진</div></div>
+  <div class="body">
+    <div class="label">V16 · Pattern</div>
+    <div class="title">Riga Stone</div>
+    <div class="title-ko">리가스톤</div>
+    <p class="desc">얇게 쪼갠 석재를 가로로 겹겹이 쌓은 듯한 깊은 음영이 특징입니다. 밝은 색은 모던한 주택에, 어두운 색은 포인트 벽면에 잘 어울립니다.</p>
+    <div class="minispec">규격<b>16×455×3,030</b>보증<b>10년</b>색상<b>4종</b></div>
+    <div class="colors">
+      <div class="color"><div class="sw"><img src="sw16/EFX3451.jpg" alt=""></div><div><div class="code">EFX3451</div><div class="name">라떼</div></div></div>
+      <div class="color"><div class="sw"><img src="sw16/EFX3452.jpg" alt=""></div><div><div class="code">EFX3452</div><div class="name">브라운</div></div></div>
+      <div class="color"><div class="sw"><img src="sw16/EFX3453.jpg" alt=""></div><div><div class="code">EFX3453</div><div class="name">화이트</div></div></div>
+      <div class="color"><div class="sw"><img src="sw16/EFX3457.jpg" alt=""></div><div><div class="code">EFX3457</div><div class="name">블랙</div></div></div>
+    </div>
+    <div class="case"><img src="img/EFX3457X_1.jpg" alt=""><div class="cap">EFX3457 블랙 · 시공 사례</div></div>
+  </div>
+  <div class="foot"><span class="label">HOME TRADERS · i-CUBE</span><span class="no">06</span></div>
+</section>
+<section class="page sg case" data-page="portfolio-1">
+  <div class="lab">PORTFOLIO</div>
+  <h2 class="h1">지어진 집으로 보는 <em>i-CUBE</em></h2>
+  <div class="rule"></div>
+  <div class="cgrid" style="grid-template-columns:1fr 1fr 1fr;grid-template-rows:1.55fr 1fr 1fr;grid-template-areas:'a a a' 'b b c' 'd e c'">
+    <figure style="grid-area:a"><img src="img/EJB8123X_2.jpg" alt="EJB8123 시공 사례" style="object-position:55% 50%"><figcaption><b>EJB8123</b> 에토프 에스프레소 라떼 <i>PREMIUM</i></figcaption></figure><figure style="grid-area:b"><img src="img/EFX3453X_1.jpg" alt="EFX3453 시공 사례" style="object-position:50% 50%"><figcaption><b>EFX3453</b> 리가스톤 화이트 <i>V16</i></figcaption></figure><figure style="grid-area:c"><img src="img/EJB8522X_1.jpg" alt="EJB8522 시공 사례" style="object-position:50% 40%"><figcaption><b>EJB8522</b> 알모니 데저트 <i>PREMIUM</i></figcaption></figure><figure style="grid-area:d"><img src="img/EFA2851X_1.jpg" alt="EFA2851 시공 사례" style="object-position:50% 50%"><figcaption><b>EFA2851</b> 샤프락 화이트 <i>V16</i></figcaption></figure><figure style="grid-area:e"><img src="img/EFX3457X_1.jpg" alt="EFX3457 시공 사례" style="object-position:50% 50%"><figcaption><b>EFX3457</b> 리가스톤 블랙 <i>V16</i></figcaption></figure>
+  </div>
+  <div class="ft"><span>HOME TRADERS · i-CUBE</span><b class="pno">06</b></div>
+</section>
+<section class="page sg case" data-page="portfolio-2">
+  <div class="lab">PORTFOLIO</div>
+  <h2 class="h1">패턴별 <em>시공 사례</em></h2>
+  <div class="rule"></div>
+  <div class="cgrid" style="grid-template-columns:1fr 1fr 1fr;grid-template-rows:1.3fr 1fr 1fr;grid-template-areas:'a a b' 'c d b' 'e f g'">
+    <figure style="grid-area:a"><img src="img/EFX3151X_1.jpg" alt="EFX3151 시공 사례" style="object-position:50% 50%"><figcaption><b>EFX3151</b> 볼브스톤 화이트 <i>V16</i></figcaption></figure><figure style="grid-area:b"><img src="img/EFA4351X_1.jpg" alt="EFA4351 시공 사례" style="object-position:50% 45%"><figcaption><b>EFA4351</b> <i>V16</i></figcaption></figure><figure style="grid-area:c"><img src="img/EFA5254X_1.jpg" alt="EFA5254 시공 사례" style="object-position:50% 50%"><figcaption><b>EFA5254</b> 모나비스톤 네이비 <i>V16</i></figcaption></figure><figure style="grid-area:d"><img src="img/EFA2855X_1.jpg" alt="EFA2855 시공 사례" style="object-position:50% 50%"><figcaption><b>EFA2855</b> 샤프락 라이트 그레이 <i>V16</i></figcaption></figure><figure style="grid-area:e"><img src="img/EFF151X_1.jpg" alt="EFF151 시공 사례" style="object-position:50% 50%"><figcaption><b>EFF151</b> <i>FUGE</i></figcaption></figure><figure style="grid-area:f"><img src="img/EFF151X_2.jpg" alt="EFF151 시공 사례" style="object-position:50% 50%"><figcaption><b>EFF151</b> <i>FUGE</i></figcaption></figure><figure style="grid-area:g"><img src="img/EJB8123X_1.jpg" alt="EJB8123 시공 사례" style="object-position:50% 50%"><figcaption><b>EJB8123</b> 에토프 에스프레소 라떼 <i>PREMIUM</i></figcaption></figure>
+  </div>
+  <div class="ft"><span>HOME TRADERS · i-CUBE</span><b class="pno">07</b></div>
+</section>
+<section class="page index" data-page="color-index" data-variant="A">
+  <div class="phead"><div><div class="label">Color Index</div><h2>전체 색상</h2></div></div>
+  <div class="grid">
+    <figure><img src="sw16/EFX3453.jpg" alt=""><figcaption><span class="code">EFX3453</span><span class="ser">V16</span><span class="nm">리가스톤 화이트</span></figcaption></figure>
+    <figure><img src="sw16/EFX3457.jpg" alt=""><figcaption><span class="code">EFX3457</span><span class="ser">V16</span><span class="nm">리가스톤 블랙</span></figcaption></figure>
+    <figure><img src="sw16/EFA2851.jpg" alt=""><figcaption><span class="code">EFA2851</span><span class="ser">V16</span><span class="nm">샤프락 화이트</span></figcaption></figure>
+    <figure><img src="sw16/EFA2855.jpg" alt=""><figcaption><span class="code">EFA2855</span><span class="ser">V16</span><span class="nm">샤프락 라이트 그레이</span></figcaption></figure>
+    <figure><img src="sw16/EFA5254.jpg" alt=""><figcaption><span class="code">EFA5254</span><span class="ser">V16</span><span class="nm">모나비스톤 네이비</span></figcaption></figure>
+    <figure><img src="sw16/EFX3351.jpg" alt=""><figcaption><span class="code">EFX3351</span><span class="ser">V16</span><span class="nm">코르모스톤 화이트</span></figcaption></figure>
+    <figure><img src="sw/EFF151.jpg" alt=""><figcaption><span class="code">EFF151</span><span class="ser">FUGE</span><span class="nm">화이트</span></figcaption></figure>
+    <figure><img src="sw/EJB8123.jpg" alt=""><figcaption><span class="code">EJB8123</span><span class="ser">PREMIUM</span><span class="nm">에토프 에스프레소 라떼</span></figcaption></figure>
+    <figure><img src="sw/EJB8522.jpg" alt=""><figcaption><span class="code">EJB8522</span><span class="ser">PREMIUM</span><span class="nm">알모니 데저트</span></figcaption></figure>
+  </div>
+  <p class="note">색상은 인쇄 특성상 실물과 다를 수 있습니다. 시공 전 실물 샘플로 확인해 주세요.</p>
+  <div class="foot"><span class="label">HOME TRADERS · i-CUBE</span><span class="no">07</span></div>
+</section>
+<section class="page sg dense" data-page="color-index" data-variant="B">
+  <div class="lab">COLOR INDEX</div>
+  <h2 class="h1">i-CUBE 전체 색상 <em>63</em></h2>
+  <div class="rule"></div>
+  <div class="igroups"><div class="igroup"><div class="ihead"><span class="lab">V16</span><span class="icount">19</span></div><div class="igrid"><figure><img src="swi/EFX3453.jpg" alt="EFX3453"><figcaption><b>EFX3453</b><span>리가스톤 화이트</span></figcaption></figure><figure><img src="swi/EFX3452.jpg" alt="EFX3452"><figcaption><b>EFX3452</b><span>리가스톤 브라운</span></figcaption></figure><figure><img src="swi/EFX3457.jpg" alt="EFX3457"><figcaption><b>EFX3457</b><span>리가스톤 블랙</span></figcaption></figure><figure><img src="swi/EFX3151.jpg" alt="EFX3151"><figcaption><b>EFX3151</b><span>볼브스톤 화이트</span></figcaption></figure><figure><img src="swi/EFX3152.jpg" alt="EFX3152"><figcaption><b>EFX3152</b><span>볼브스톤 라떼</span></figcaption></figure><figure><img src="swi/EFX3153.jpg" alt="EFX3153"><figcaption><b>EFX3153</b><span>볼브스톤 브라운</span></figcaption></figure><figure><img src="swi/EFX3351.jpg" alt="EFX3351"><figcaption><b>EFX3351</b><span>코르모스톤 화이트</span></figcaption></figure><figure><img src="swi/EFX3355.jpg" alt="EFX3355"><figcaption><b>EFX3355</b><span>코르모스톤 다크 그레이</span></figcaption></figure><figure><img src="swi/EFX3951.jpg" alt="EFX3951"><figcaption><b>EFX3951</b><span>미라주타일 화이트</span></figcaption></figure><figure><img src="swi/EFX3954.jpg" alt="EFX3954"><figcaption><b>EFX3954</b><span>미라주타일 챠콜</span></figcaption></figure><figure><img src="swi/EFX1351.jpg" alt="EFX1351"><figcaption><b>EFX1351</b><span>세리오스타일 퓨어 화이트</span></figcaption></figure><figure><img src="swi/EFX1354.jpg" alt="EFX1354"><figcaption><b>EFX1354</b><span>세리오스타일 블랙</span></figcaption></figure><figure><img src="swi/EFA2851.jpg" alt="EFA2851"><figcaption><b>EFA2851</b><span>샤프락 화이트</span></figcaption></figure><figure><img src="swi/EFA2854.jpg" alt="EFA2854"><figcaption><b>EFA2854</b><span>샤프락 초코</span></figcaption></figure><figure><img src="swi/EFA2855.jpg" alt="EFA2855"><figcaption><b>EFA2855</b><span>샤프락 라이트 그레이</span></figcaption></figure><figure><img src="swi/EFA5251.jpg" alt="EFA5251"><figcaption><b>EFA5251</b><span>모나비스톤 퓨어 화이트</span></figcaption></figure><figure><img src="swi/EFA5254.jpg" alt="EFA5254"><figcaption><b>EFA5254</b><span>모나비스톤 네이비</span></figcaption></figure><figure><img src="swi/EFA4351.jpg" alt="EFA4351"><figcaption><b>EFA4351</b><span>&nbsp;</span></figcaption></figure><figure><img src="swi/EF9355.jpg" alt="EF9355"><figcaption><b>EF9355</b><span>마이스터우드 브라운</span></figcaption></figure></div></div><div class="igroup"><div class="ihead"><span class="lab">N16</span><span class="icount">15</span></div><div class="igrid"><figure><img src="swi/EJB3621.jpg" alt="EJB3621"><figcaption><b>EJB3621</b><span>아리에타 화이트</span></figcaption></figure><figure><img src="swi/EJB3624.jpg" alt="EJB3624"><figcaption><b>EJB3624</b><span>아리에타 크롬</span></figcaption></figure><figure><img src="swi/EJB3523.jpg" alt="EJB3523"><figcaption><b>EJB3523</b><span>포레스틱 브라운</span></figcaption></figure><figure><img src="swi/EJB3524.jpg" alt="EJB3524"><figcaption><b>EJB3524</b><span>포레스틱 레드</span></figcaption></figure><figure><img src="swi/EJB4824.jpg" alt="EJB4824"><figcaption><b>EJB4824</b><span>파롬보더 오트밀</span></figcaption></figure><figure><img src="swi/EJB4825.jpg" alt="EJB4825"><figcaption><b>EJB4825</b><span>파롬보더 브라운</span></figcaption></figure><figure><img src="swi/EJB7821.jpg" alt="EJB7821"><figcaption><b>EJB7821</b><span>&nbsp;</span></figcaption></figure><figure><img src="swi/EJB7823.jpg" alt="EJB7823"><figcaption><b>EJB7823</b><span>&nbsp;</span></figcaption></figure><figure><img src="swi/EJB7824.jpg" alt="EJB7824"><figcaption><b>EJB7824</b><span>&nbsp;</span></figcaption></figure><figure><img src="swi/EPC245.jpg" alt="EPC245"><figcaption><b>EPC245</b><span>&nbsp;</span></figcaption></figure><figure><img src="swi/EPC241.jpg" alt="EPC241"><figcaption><b>EPC241</b><span>캐스팅우드 미디엄브라운</span></figcaption></figure><figure><img src="swi/EPC2410.jpg" alt="EPC2410"><figcaption><b>EPC2410</b><span>캐스팅우드 다크브라운</span></figcaption></figure><figure><img src="swi/EPC243.jpg" alt="EPC243"><figcaption><b>EPC243</b><span>&nbsp;</span></figcaption></figure><figure><img src="swi/EPS231.jpg" alt="EPS231"><figcaption><b>EPS231</b><span>리브나인 화이트</span></figcaption></figure><figure><img src="swi/EPS2312.jpg" alt="EPS2312"><figcaption><b>EPS2312</b><span>&nbsp;</span></figcaption></figure></div></div><div class="igroup"><div class="ihead"><span class="lab">PREMIUM</span><span class="icount">4</span></div><div class="igrid"><figure><img src="swi/EJB8123.jpg" alt="EJB8123"><figcaption><b>EJB8123</b><span>에토프 에스프레소 라떼</span></figcaption></figure><figure><img src="swi/EJB8124.jpg" alt="EJB8124"><figcaption><b>EJB8124</b><span>에토프 모노크롬</span></figcaption></figure><figure><img src="swi/EJB8521.jpg" alt="EJB8521"><figcaption><b>EJB8521</b><span>알모니 미스트</span></figcaption></figure><figure><img src="swi/EJB8522.jpg" alt="EJB8522"><figcaption><b>EJB8522</b><span>알모니 데저트</span></figcaption></figure></div></div><div class="igroup"><div class="ihead"><span class="lab">FUGE</span><span class="icount">16</span></div><div class="igrid"><figure><img src="swi/EFF171.jpg" alt="EFF171"><figcaption><b>EFF171</b><span>&nbsp;</span></figcaption></figure><figure><img src="swi/EFF173.jpg" alt="EFF173"><figcaption><b>EFF173</b><span>&nbsp;</span></figcaption></figure><figure><img src="swi/EFF021.jpg" alt="EFF021"><figcaption><b>EFF021</b><span>&nbsp;</span></figcaption></figure><figure><img src="swi/EFF027.jpg" alt="EFF027"><figcaption><b>EFF027</b><span>&nbsp;</span></figcaption></figure><figure><img src="swi/EFF151.jpg" alt="EFF151"><figcaption><b>EFF151</b><span>&nbsp;</span></figcaption></figure><figure><img src="swi/EFF154.jpg" alt="EFF154"><figcaption><b>EFF154</b><span>&nbsp;</span></figcaption></figure><figure><img src="swi/EFF101.jpg" alt="EFF101"><figcaption><b>EFF101</b><span>&nbsp;</span></figcaption></figure><figure><img src="swi/EFF104.jpg" alt="EFF104"><figcaption><b>EFF104</b><span>&nbsp;</span></figcaption></figure><figure><img src="swi/EQS631.jpg" alt="EQS631"><figcaption><b>EQS631</b><span>&nbsp;</span></figcaption></figure><figure><img src="swi/EQS632.jpg" alt="EQS632"><figcaption><b>EQS632</b><span>&nbsp;</span></figcaption></figure><figure><img src="swi/EQS633.jpg" alt="EQS633"><figcaption><b>EQS633</b><span>&nbsp;</span></figcaption></figure><figure><img src="swi/EQS634.jpg" alt="EQS634"><figcaption><b>EQS634</b><span>&nbsp;</span></figcaption></figure><figure><img src="swi/EQS641.jpg" alt="EQS641"><figcaption><b>EQS641</b><span>&nbsp;</span></figcaption></figure><figure><img src="swi/EQS642.jpg" alt="EQS642"><figcaption><b>EQS642</b><span>&nbsp;</span></figcaption></figure><figure><img src="swi/EQS643.jpg" alt="EQS643"><figcaption><b>EQS643</b><span>&nbsp;</span></figcaption></figure><figure><img src="swi/EQS644.jpg" alt="EQS644"><figcaption><b>EQS644</b><span>&nbsp;</span></figcaption></figure></div></div><div class="igroup"><div class="ihead"><span class="lab">COOL</span><span class="icount">9</span></div><div class="igrid"><figure><img src="swi/EFM508.jpg" alt="EFM508"><figcaption><b>EFM508</b><span>&nbsp;</span></figcaption></figure><figure><img src="swi/EFM509.jpg" alt="EFM509"><figcaption><b>EFM509</b><span>&nbsp;</span></figcaption></figure><figure><img src="swi/EFM510.jpg" alt="EFM510"><figcaption><b>EFM510</b><span>&nbsp;</span></figcaption></figure><figure><img src="swi/EFM511.jpg" alt="EFM511"><figcaption><b>EFM511</b><span>&nbsp;</span></figcaption></figure><figure><img src="swi/EFM501.jpg" alt="EFM501"><figcaption><b>EFM501</b><span>&nbsp;</span></figcaption></figure><figure><img src="swi/EFM502.jpg" alt="EFM502"><figcaption><b>EFM502</b><span>&nbsp;</span></figcaption></figure><figure><img src="swi/EFM503.jpg" alt="EFM503"><figcaption><b>EFM503</b><span>&nbsp; (주문)</span></figcaption></figure><figure><img src="swi/EDM504.jpg" alt="EDM504"><figcaption><b>EDM504</b><span>&nbsp; (주문)</span></figcaption></figure><figure><img src="swi/EDM505.jpg" alt="EDM505"><figcaption><b>EDM505</b><span>&nbsp; (주문)</span></figcaption></figure></div></div></div>
+  <p class="cap">칩 색상은 인쇄 특성상 실물과 다를 수 있습니다. 패턴명은 니치하 카탈로그에 같은 품번이 있는 경우에만 적었습니다.</p>
+  <div class="ft"><span>HOME TRADERS · i-CUBE</span><b class="pno">08</b></div>
+</section>
+<section class="page sg acc2" data-page="accessories">
+  <div class="lab">ACCESSORIES</div>
+  <h2 class="h1">부속자재</h2>
+  <p class="sub">아이큐브 16mm 패널 시공용</p>
+  <div class="rule"></div>
+  <div class="agroups">
+    <div class="ag">
+      <div class="ag-name"><b>공용 부속자재</b><span>모든 16mm 패널에 함께 쓰는 자재</span></div>
+      <div class="ag-items">
+        <figure><div class="ag-img"><img src="acc/corner.jpg" alt="코너석"></div><figcaption><b>코너석</b><span>85 × 455 × 16mm</span></figcaption></figure>
+        <figure><div class="ag-img"><img src="acc/top-flashing.jpg" alt="상부 후레싱"></div><figcaption><b>상부 후레싱</b><span>3M</span></figcaption></figure>
+        <figure><div class="ag-img"><img src="acc/base-flashing.jpg" alt="하부 후레싱"></div><figcaption><b>하부 후레싱</b><span>3M</span></figcaption></figure>
+        <figure><div class="ag-img"><img src="acc/sealant.jpg" alt="사이딩용 실란트"></div><figcaption><b>사이딩용 실란트</b></figcaption></figure>
+        <figure><div class="ag-img"><img src="acc/touchup.jpg" alt="터치업 페인트"></div><figcaption><b>터치업 페인트</b><span>보수 도료</span></figcaption></figure>
+      </div>
+    </div>
+    <div class="ag">
+      <div class="ag-name"><b>5mm 클립용</b><span>RC조 하지 · 각관 시공</span></div>
+      <div class="ag-items">
+        <figure><div class="ag-img"><img src="acc/5-clip.jpg" alt="5mm 전용 클립"></div><figcaption><b>5mm 전용 클립</b></figcaption></figure>
+        <figure><div class="ag-img"><img src="acc/5-starter.jpg" alt="스타터"></div><figcaption><b>스타터</b><span>3M</span></figcaption></figure>
+        <figure><div class="ag-img"><img src="acc/5-single.jpg" alt="외날 조이너"></div><figcaption><b>외날 조이너</b><span>3M</span></figcaption></figure>
+        <figure><div class="ag-img"><img src="acc/5-double.jpg" alt="양날 조이너"></div><figcaption><b>양날 조이너</b><span>3M</span></figcaption></figure>
+        <figure><div class="ag-img"><img src="acc/5-spacer.jpg" alt="스페이서"></div><figcaption><b>스페이서</b><span>1줄 / 22조각</span></figcaption></figure>
+      </div>
+    </div>
+    <div class="ag">
+      <div class="ag-name"><b>15mm 클립용</b><span>목조 하지 · 통기층 시공</span></div>
+      <div class="ag-items">
+        <figure><div class="ag-img"><img src="acc/15-clip.jpg" alt="15mm 전용 클립"></div><figcaption><b>15mm 전용 클립</b></figcaption></figure>
+        <figure><div class="ag-img"><img src="acc/15-starter.jpg" alt="스타터"></div><figcaption><b>스타터</b><span>3M</span></figcaption></figure>
+        <figure><div class="ag-img"><img src="acc/15-single.jpg" alt="외날 조이너"></div><figcaption><b>외날 조이너</b><span>3M</span></figcaption></figure>
+        <figure><div class="ag-img"><img src="acc/15-double.jpg" alt="양날 조이너"></div><figcaption><b>양날 조이너</b><span>3M</span></figcaption></figure>
+        <figure><div class="ag-img"><img src="acc/15-spacer.jpg" alt="스페이서"></div><figcaption><b>스페이서</b><span>1줄 / 25조각</span></figcaption></figure>
+      </div>
+    </div>
+    <div class="ag">
+      <div class="ag-name"><b>투습방수지 · 방수테이프</b><span>하지면 방수와 습기 배출용</span></div>
+      <div class="ag-items">
+        <figure><div class="ag-img"><img src="acc/wrap-mdm.jpg" alt="MDM 투습방수지"></div><figcaption><b>MDM 투습방수지</b></figcaption></figure>
+        <figure><div class="ag-img"><img src="acc/wrap-jhvent.jpg" alt="JH-VENT 투습방수지"></div><figcaption><b>JH-VENT 투습방수지</b></figcaption></figure>
+        <figure><div class="ag-img"><img src="acc/tape-3m.jpg" alt="3M 방수테이프"></div><figcaption><b>3M 방수테이프</b></figcaption></figure>
+      </div>
+    </div>
+  </div>
+  <div class="ft"><span>HOME TRADERS · i-CUBE</span><b class="pno"></b></div>
+</section>
+<section class="page sg" data-page="install" data-variant="B">
+  <div class="lab">INSTALLATION</div>
+  <h2 class="h1">클립으로 거는<br><em>건식 시공</em> 네 단계</h2>
+  <p class="sub">아이큐브 프리미엄·V16·N16 기준입니다. 스타터 위에 패널을 얹고 메탈클립으로 하지에 고정해, 시멘트 몰탈 없이 시공합니다.</p>
+  <div class="rule"></div>
+  <div class="g4">
+    <div class="cell"><div class="fig"><svg viewBox="0 0 150 106"><line x1="6" y1="100" x2="144" y2="100" stroke="#DCDCDC" stroke-width="1"/><rect x="27" y="8" width="6" height="88" fill="none" stroke="#8C8C8C" stroke-width="1.2"/><rect x="72" y="8" width="6" height="88" fill="none" stroke="#8C8C8C" stroke-width="1.2"/><rect x="117" y="8" width="6" height="88" fill="none" stroke="#8C8C8C" stroke-width="1.2"/><line x1="16" y1="72" x2="134" y2="72" stroke="#8C8C8C" stroke-width="1" stroke-dasharray="3 2"/><text x="75" y="66" text-anchor="middle" class="svg-s" fill="#8C8C8C">수평</text><path d="M12 82 V88 H138 V82" fill="none" stroke="#E4641E" stroke-width="2.2"/></svg></div><div class="num">01</div><h3 class="h3">스타터 설치</h3><p class="body">바닥으로부터 수평을 맞추어 스타터를 설치합니다.</p></div>
+    <div class="cell"><div class="fig"><svg viewBox="0 0 150 106"><line x1="6" y1="100" x2="144" y2="100" stroke="#DCDCDC" stroke-width="1"/><rect x="27" y="8" width="6" height="88" fill="none" stroke="#8C8C8C" stroke-width="1.2"/><rect x="72" y="8" width="6" height="88" fill="none" stroke="#8C8C8C" stroke-width="1.2"/><rect x="117" y="8" width="6" height="88" fill="none" stroke="#8C8C8C" stroke-width="1.2"/><path d="M12 82 V88 H138 V82" fill="none" stroke="#8C8C8C" stroke-width="1.4"/><rect x="12" y="50" width="126" height="34" fill="#fff" stroke="#1A1A1A" stroke-width="1.6"/><rect x="25" y="44" width="10" height="10" fill="#fff" stroke="#E4641E" stroke-width="1.8"/><circle cx="30" cy="49" r="1.4" fill="#1A1A1A"/><rect x="70" y="44" width="10" height="10" fill="#fff" stroke="#E4641E" stroke-width="1.8"/><circle cx="75" cy="49" r="1.4" fill="#1A1A1A"/><rect x="115" y="44" width="10" height="10" fill="#fff" stroke="#E4641E" stroke-width="1.8"/><circle cx="120" cy="49" r="1.4" fill="#1A1A1A"/></svg></div><div class="num">02</div><h3 class="h3">패널 · 클립 고정</h3><p class="body">패널을 스타터에 끼우고 메탈클립을 각관마다 끼운 뒤 스크류로 고정합니다.</p></div>
+    <div class="cell"><div class="fig"><svg viewBox="0 0 150 106"><line x1="6" y1="100" x2="144" y2="100" stroke="#DCDCDC" stroke-width="1"/><rect x="27" y="8" width="6" height="88" fill="none" stroke="#8C8C8C" stroke-width="1.2"/><rect x="72" y="8" width="6" height="88" fill="none" stroke="#8C8C8C" stroke-width="1.2"/><rect x="117" y="8" width="6" height="88" fill="none" stroke="#8C8C8C" stroke-width="1.2"/><path d="M12 82 V88 H138 V82" fill="none" stroke="#8C8C8C" stroke-width="1.4"/><rect x="12" y="50" width="58" height="34" fill="#fff" stroke="#1A1A1A" stroke-width="1.6"/><rect x="80" y="50" width="58" height="34" fill="#fff" stroke="#1A1A1A" stroke-width="1.6"/><rect x="71" y="46" width="8" height="42" fill="none" stroke="#E4641E" stroke-width="2"/><rect x="25" y="44" width="10" height="10" fill="#fff" stroke="#8C8C8C" stroke-width="1.8"/><circle cx="30" cy="49" r="1.4" fill="#1A1A1A"/><rect x="115" y="44" width="10" height="10" fill="#fff" stroke="#8C8C8C" stroke-width="1.8"/><circle cx="120" cy="49" r="1.4" fill="#1A1A1A"/></svg></div><div class="num">03</div><h3 class="h3">조이너 연결</h3><p class="body">패널 연결부에는 조이너를 스터드와 패널 사이에 끼운 뒤 클립으로 고정합니다.</p></div>
+    <div class="cell"><div class="fig"><svg viewBox="0 0 150 106"><line x1="6" y1="100" x2="144" y2="100" stroke="#DCDCDC" stroke-width="1"/><rect x="27" y="8" width="6" height="88" fill="none" stroke="#8C8C8C" stroke-width="1.2"/><rect x="72" y="8" width="6" height="88" fill="none" stroke="#8C8C8C" stroke-width="1.2"/><rect x="117" y="8" width="6" height="88" fill="none" stroke="#8C8C8C" stroke-width="1.2"/><path d="M12 82 V88 H138 V82" fill="none" stroke="#8C8C8C" stroke-width="1.4"/><rect x="12" y="50" width="58" height="34" fill="#fff" stroke="#1A1A1A" stroke-width="1.6"/><rect x="80" y="50" width="58" height="34" fill="#fff" stroke="#1A1A1A" stroke-width="1.6"/><rect x="71" y="46" width="8" height="42" fill="none" stroke="#8C8C8C" stroke-width="1.2"/><line x1="75" y1="52" x2="75" y2="82" stroke="#E4641E" stroke-width="3" stroke-linecap="round"/><path d="M104 16 L84 44 M84 44 l-2 6 l6 -3" fill="none" stroke="#8C8C8C" stroke-width="1.6" stroke-linejoin="round"/></svg></div><div class="num">04</div><h3 class="h3">실란트 시공</h3><p class="body">패널 설치가 끝나면 실란트를 시공합니다.</p></div>
+  </div>
+  <div class="rule thin"></div>
+  <div class="g2">
+    <div class="cell"><div class="lab">SECTION</div><h3 class="h2">벽체 단면 · RC조</h3><div class="fig"><svg viewBox="0 0 310 215"><defs><clipPath id="rcclip"><rect x="20" y="20" width="46" height="160"/></clipPath></defs>
+<text x="43" y="13" text-anchor="middle" class="svg-s" fill="#8C8C8C">RC 벽체</text>
+<text x="91" y="13" text-anchor="middle" class="svg-s" fill="#8C8C8C">단열재(EPS)</text>
+<g clip-path="url(#rcclip)" opacity=".45"><line x1="14" y1="30" x2="72" y2="0" stroke="#8C8C8C" stroke-width=".8"/><line x1="14" y1="40" x2="72" y2="10" stroke="#8C8C8C" stroke-width=".8"/><line x1="14" y1="50" x2="72" y2="20" stroke="#8C8C8C" stroke-width=".8"/><line x1="14" y1="60" x2="72" y2="30" stroke="#8C8C8C" stroke-width=".8"/><line x1="14" y1="70" x2="72" y2="40" stroke="#8C8C8C" stroke-width=".8"/><line x1="14" y1="80" x2="72" y2="50" stroke="#8C8C8C" stroke-width=".8"/><line x1="14" y1="90" x2="72" y2="60" stroke="#8C8C8C" stroke-width=".8"/><line x1="14" y1="100" x2="72" y2="70" stroke="#8C8C8C" stroke-width=".8"/><line x1="14" y1="110" x2="72" y2="80" stroke="#8C8C8C" stroke-width=".8"/><line x1="14" y1="120" x2="72" y2="90" stroke="#8C8C8C" stroke-width=".8"/><line x1="14" y1="130" x2="72" y2="100" stroke="#8C8C8C" stroke-width=".8"/><line x1="14" y1="140" x2="72" y2="110" stroke="#8C8C8C" stroke-width=".8"/><line x1="14" y1="150" x2="72" y2="120" stroke="#8C8C8C" stroke-width=".8"/><line x1="14" y1="160" x2="72" y2="130" stroke="#8C8C8C" stroke-width=".8"/><line x1="14" y1="170" x2="72" y2="140" stroke="#8C8C8C" stroke-width=".8"/><line x1="14" y1="180" x2="72" y2="150" stroke="#8C8C8C" stroke-width=".8"/><line x1="14" y1="190" x2="72" y2="160" stroke="#8C8C8C" stroke-width=".8"/><line x1="14" y1="200" x2="72" y2="170" stroke="#8C8C8C" stroke-width=".8"/><line x1="14" y1="210" x2="72" y2="180" stroke="#8C8C8C" stroke-width=".8"/><line x1="14" y1="220" x2="72" y2="190" stroke="#8C8C8C" stroke-width=".8"/><line x1="14" y1="230" x2="72" y2="200" stroke="#8C8C8C" stroke-width=".8"/></g>
+<rect x="20" y="20" width="46" height="160" fill="none" stroke="#8C8C8C" stroke-width="1.2"/>
+<rect x="66" y="20" width="50" height="160" fill="#F5F2EE" stroke="#8C8C8C" stroke-width="1.2"/>
+<line x1="34" y1="66" x2="132" y2="66" stroke="#8C8C8C" stroke-width="1.2"/><path d="M116 58 H132 V74" fill="none" stroke="#8C8C8C" stroke-width="1.4"/>
+<rect x="132" y="20" width="28" height="160" fill="#fff" stroke="#1A1A1A" stroke-width="1.4"/>
+<rect x="160" y="92" width="6" height="18" fill="#fff" stroke="#E4641E" stroke-width="2"/><line x1="146" y1="101" x2="163" y2="101" stroke="#1A1A1A" stroke-width="1.2"/>
+<rect x="166" y="20" width="16" height="78" fill="#fff" stroke="#E4641E" stroke-width="2.2"/><rect x="166" y="102" width="16" height="78" fill="#fff" stroke="#E4641E" stroke-width="2.2"/>
+<path d="M164 186 H188 V180" fill="none" stroke="#8C8C8C" stroke-width="1.4"/>
+<g stroke="#8C8C8C" stroke-width=".8"><line x1="182" y1="50" x2="206" y2="50"/><line x1="166" y1="101" x2="206" y2="101"/><line x1="146" y1="146" x2="206" y2="146"/><line x1="188" y1="183" x2="206" y2="183"/><line x1="124" y1="66" x2="124" y2="196"/><line x1="124" y1="196" x2="206" y2="196"/></g>
+<text x="210" y="53" class="svg-t" fill="#1A1A1A">i-cube 패널 16mm</text>
+<text x="210" y="104" class="svg-t" fill="#E4641E">메탈클립</text>
+<text x="210" y="149" class="svg-t" fill="#1A1A1A">각파이프 50×50×1.6</text>
+<text x="210" y="186" class="svg-t" fill="#1A1A1A">스타터</text>
+<text x="210" y="199" class="svg-s" fill="#8C8C8C">앵글 · RC앵커</text>
+<text x="20" y="212" class="svg-s" fill="#8C8C8C">실내 쪽</text><text x="182" y="212" text-anchor="end" class="svg-s" fill="#8C8C8C">외부</text></svg></div></div>
+    <div class="cell"><div class="lab">SPEC</div><h3 class="h2">시공 기준</h3>
+      <dl class="specs">
+        <div><dt>적용</dt><dd>프리미엄 · V16 · N16<br><span>퓨제는 전용 드라이조인트 공법</span></dd></div>
+        <div><dt>패널</dt><dd>16 × 455 × 3,030mm</dd></div>
+        <div><dt>하지</dt><dd>각파이프 50 × 50 × 1.6mm<br><span>간격 500mm 이하</span></dd></div>
+        <div><dt>클립</dt><dd>RC조 5mm · 목조 15mm<br><span>15mm 클립은 통기층 확보</span></dd></div>
+        <div><dt>부속자재</dt><dd>스타터 · 조이너 · 코너석 · 후레싱 · 실란트</dd></div>
+      </dl>
+    </div>
+  </div>
+  <p class="cap">도해는 아이큐브 카탈로그 시공방법 상세도를 단순화한 것입니다. 실제 시공은 시방서를 따르세요.</p>
+  <div class="ft"><span>HOME TRADERS · i-CUBE</span><b class="pno">09</b></div>
+</section>
+<section class="page sg inst2" data-page="install" data-variant="A">
+  <div class="lab">INSTALLATION · DETAIL</div>
+  <h2 class="h1">i-cube V16 기본 구조도</h2>
+  <div class="rule"></div>
+  <div class="iso"><svg class="dw" viewBox="0 0 174 94" role="img" aria-label="i-cube V16 기본 구조도"><polyline class="sb" points="60,12 108,26 126,18 166,30.1"/><polyline class="sb" points="65,8 113,22 131,14 171,26.1"/><line class="sb" x1="60" y1="12" x2="65" y2="8"/><line class="sb" x1="60" y1="12" x2="60" y2="58"/><polyline class="sb" points="60,67 108,81 126,73 170,86"/><rect class="cc" x="166" y="30" width="6" height="56"/><polygon class="tri" points="168.26,46.28 169.06,47.68 167.46,47.68"/><polygon class="tri" points="169.02,78.36 169.82,79.76 168.22,79.76"/><polygon class="tri" points="169.78,58.45 170.58,59.85 168.98,59.85"/><polygon class="tri" points="168.55,38.53 169.35,39.93 167.75,39.93"/><rect class="insb" x="160.5" y="34" width="5.5" height="50"/><polyline class="ins" points="162.3,34.16 162.76,34.37 163.25,34.54 163.74,34.67 164.2,34.75 164.62,34.79 164.97,34.8 165.23,34.78 165.39,34.74 165.45,34.69 165.39,34.64 165.23,34.6 164.97,34.58 164.62,34.58 164.2,34.63 163.74,34.71 163.25,34.83 162.76,35 162.3,35.21 161.88,35.47 161.53,35.76 161.27,36.07 161.11,36.41 161.05,36.75 161.11,37.09 161.27,37.43 161.53,37.74 161.88,38.03 162.3,38.29 162.76,38.5 163.25,38.67 163.74,38.79 164.2,38.87 164.62,38.92 164.97,38.92 165.23,38.9 165.39,38.86 165.45,38.81 165.39,38.76 165.23,38.72 164.97,38.7 164.62,38.71 164.2,38.75 163.74,38.83 163.25,38.96 162.76,39.13 162.3,39.34 161.88,39.59 161.53,39.88 161.27,40.2 161.11,40.53 161.05,40.88 161.11,41.22 161.27,41.55 161.53,41.87 161.88,42.16 162.3,42.41 162.76,42.62 163.25,42.79 163.74,42.92 164.2,43 164.62,43.04 164.97,43.05 165.23,43.03 165.39,42.99 165.45,42.94 165.39,42.89 165.23,42.85 164.97,42.83 164.62,42.83 164.2,42.88 163.74,42.96 163.25,43.08 162.76,43.25 162.3,43.46 161.88,43.72 161.53,44.01 161.27,44.32 161.11,44.66 161.05,45 161.11,45.34 161.27,45.68 161.53,45.99 161.88,46.28 162.3,46.54 162.76,46.75 163.25,46.92 163.74,47.04 164.2,47.12 164.62,47.17 164.97,47.17 165.23,47.15 165.39,47.11 165.45,47.06 165.39,47.01 165.23,46.97 164.97,46.95 164.62,46.96 164.2,47 163.74,47.08 163.25,47.21 162.76,47.38 162.3,47.59 161.88,47.84 161.53,48.13 161.27,48.45 161.11,48.78 161.05,49.12 161.11,49.47 161.27,49.8 161.53,50.12 161.88,50.41 162.3,50.66 162.76,50.87 163.25,51.04 163.74,51.17 164.2,51.25 164.62,51.29 164.97,51.3 165.23,51.28 165.39,51.24 165.45,51.19 165.39,51.14 165.23,51.1 164.97,51.08 164.62,51.08 164.2,51.13 163.74,51.21 163.25,51.33 162.76,51.5 162.3,51.71 161.88,51.97 161.53,52.26 161.27,52.57 161.11,52.91 161.05,53.25 161.11,53.59 161.27,53.93 161.53,54.24 161.88,54.53 162.3,54.79 162.76,55 163.25,55.17 163.74,55.29 164.2,55.37 164.62,55.42 164.97,55.42 165.23,55.4 165.39,55.36 165.45,55.31 165.39,55.26 165.23,55.22 164.97,55.2 164.62,55.21 164.2,55.25 163.74,55.33 163.25,55.46 162.76,55.63 162.3,55.84 161.88,56.09 161.53,56.38 161.27,56.7 161.11,57.03 161.05,57.38 161.11,57.72 161.27,58.05 161.53,58.37 161.88,58.66 162.3,58.91 162.76,59.12 163.25,59.29 163.74,59.42 164.2,59.5 164.62,59.54 164.97,59.55 165.23,59.53 165.39,59.49 165.45,59.44 165.39,59.39 165.23,59.35 164.97,59.33 164.62,59.33 164.2,59.38 163.74,59.46 163.25,59.58 162.76,59.75 162.3,59.96 161.88,60.22 161.53,60.51 161.27,60.82 161.11,61.16 161.05,61.5 161.11,61.84 161.27,62.18 161.53,62.49 161.88,62.78 162.3,63.04 162.76,63.25 163.25,63.42 163.74,63.54 164.2,63.62 164.62,63.67 164.97,63.67 165.23,63.65 165.39,63.61 165.45,63.56 165.39,63.51 165.23,63.47 164.97,63.45 164.62,63.46 164.2,63.5 163.74,63.58 163.25,63.71 162.76,63.88 162.3,64.09 161.88,64.34 161.53,64.63 161.27,64.95 161.11,65.28 161.05,65.62 161.11,65.97 161.27,66.3 161.53,66.62 161.88,66.91 162.3,67.16 162.76,67.37 163.25,67.54 163.74,67.67 164.2,67.75 164.62,67.79 164.97,67.8 165.23,67.78 165.39,67.74 165.45,67.69 165.39,67.64 165.23,67.6 164.97,67.58 164.62,67.58 164.2,67.63 163.74,67.71 163.25,67.83 162.76,68 162.3,68.21 161.88,68.47 161.53,68.76 161.27,69.07 161.11,69.41 161.05,69.75 161.11,70.09 161.27,70.43 161.53,70.74 161.88,71.03 162.3,71.29 162.76,71.5 163.25,71.67 163.74,71.79 164.2,71.87 164.62,71.92 164.97,71.92 165.23,71.9 165.39,71.86 165.45,71.81 165.39,71.76 165.23,71.72 164.97,71.7 164.62,71.71 164.2,71.75 163.74,71.83 163.25,71.96 162.76,72.13 162.3,72.34 161.88,72.59 161.53,72.88 161.27,73.2 161.11,73.53 161.05,73.87 161.11,74.22 161.27,74.55 161.53,74.87 161.88,75.16 162.3,75.41 162.76,75.62 163.25,75.79 163.74,75.92 164.2,76 164.62,76.04 164.97,76.05 165.23,76.03 165.39,75.99 165.45,75.94 165.39,75.89 165.23,75.85 164.97,75.83 164.62,75.83 164.2,75.88 163.74,75.96 163.25,76.08 162.76,76.25 162.3,76.46 161.88,76.72 161.53,77.01 161.27,77.32 161.11,77.66 161.05,78 161.11,78.34 161.27,78.68 161.53,78.99 161.88,79.28 162.3,79.54 162.76,79.75 163.25,79.92 163.74,80.04 164.2,80.12 164.62,80.17 164.97,80.17 165.23,80.15 165.39,80.11 165.45,80.06 165.39,80.01 165.23,79.97 164.97,79.95 164.62,79.96 164.2,80 163.74,80.08 163.25,80.21 162.76,80.38 162.3,80.59 161.88,80.84 161.53,81.13 161.27,81.45 161.11,81.78 161.05,82.12 161.11,82.47 161.27,82.8 161.53,83.12 161.88,83.41 162.3,83.66 162.76,83.87"/><line class="ln" x1="65.76" y1="15.68" x2="65.76" y2="45.68"/><line class="ln" x1="67.16" y1="16.08" x2="67.16" y2="45.68"/><line class="ln" x1="65.76" y1="15.68" x2="67.16" y2="16.08"/><rect class="st" x="67.16" y="19.68" width="1.4" height="1.6"/><rect class="st" x="67.16" y="38.68" width="1.4" height="1.6"/><line class="ln" x1="80.16" y1="19.88" x2="80.16" y2="49.88"/><line class="ln" x1="81.56" y1="20.28" x2="81.56" y2="49.88"/><line class="ln" x1="80.16" y1="19.88" x2="81.56" y2="20.28"/><rect class="st" x="81.56" y="23.88" width="1.4" height="1.6"/><rect class="st" x="81.56" y="42.88" width="1.4" height="1.6"/><line class="ln" x1="94.56" y1="24.08" x2="94.56" y2="54.08"/><line class="ln" x1="95.96" y1="24.48" x2="95.96" y2="54.08"/><line class="ln" x1="94.56" y1="24.08" x2="95.96" y2="24.48"/><rect class="st" x="95.96" y="28.08" width="1.4" height="1.6"/><rect class="st" x="95.96" y="47.08" width="1.4" height="1.6"/><line class="ln" x1="117" y1="24" x2="117" y2="54"/><line class="ln" x1="118.4" y1="24.4" x2="118.4" y2="54"/><line class="ln" x1="117" y1="24" x2="118.4" y2="24.4"/><rect class="st" x="118.4" y="28" width="1.4" height="1.6"/><rect class="st" x="118.4" y="47" width="1.4" height="1.6"/><line class="ln" x1="131.28" y1="21.56" x2="131.28" y2="51.56"/><line class="ln" x1="132.68" y1="21.96" x2="132.68" y2="51.56"/><line class="ln" x1="131.28" y1="21.56" x2="132.68" y2="21.96"/><rect class="st" x="132.68" y="25.56" width="1.4" height="1.6"/><rect class="st" x="132.68" y="44.56" width="1.4" height="1.6"/><line class="ln" x1="141.84" y1="24.68" x2="141.84" y2="54.68"/><line class="ln" x1="143.24" y1="25.08" x2="143.24" y2="54.68"/><line class="ln" x1="141.84" y1="24.68" x2="143.24" y2="25.08"/><rect class="st" x="143.24" y="28.68" width="1.4" height="1.6"/><rect class="st" x="143.24" y="47.68" width="1.4" height="1.6"/><line class="ln" x1="157.68" y1="29.36" x2="157.68" y2="73.36"/><line class="ln" x1="159.08" y1="29.76" x2="159.08" y2="73.36"/><line class="ln" x1="157.68" y1="29.36" x2="159.08" y2="29.76"/><rect class="st" x="159.08" y="33.36" width="1.4" height="1.6"/><rect class="st" x="159.08" y="52.36" width="1.4" height="1.6"/><polyline class="sb" points="60,59.5 108,73.5 126,65.5 170,78.5"/><polyline class="ln" points="60,61 108,75 126,67 170,80"/><polyline class="ln" points="150.2,71.15 170,77"/><polyline class="ln" points="170,77 171.2,78.2 171.2,80"/><polygon class="pn" points="60,58 108,72 108,58 60,44"/><polygon class="pn" points="108,72 126,64 126,50 108,58"/><polygon class="pn" points="126,64 150.2,71.15 151.4,66.15 149,62.15 150.2,57.15 126,50"/><line class="grv" x1="60" y1="53.3" x2="108" y2="67.3"/><line class="grv" x1="108" y1="67.3" x2="126" y2="59.3"/><line class="grv" x1="126" y1="59.3" x2="147.78" y2="65.73"/><line class="grv" x1="60" y1="48.6" x2="108" y2="62.6"/><line class="grv" x1="108" y1="62.6" x2="126" y2="54.6"/><line class="grv" x1="126" y1="54.6" x2="145.36" y2="60.32"/><rect class="st" x="65.26" y="44.38" width="2.4" height="1.3"/><rect class="st" x="79.66" y="48.58" width="2.4" height="1.3"/><rect class="st" x="94.06" y="52.78" width="2.4" height="1.3"/><rect class="st" x="116.5" y="52.7" width="2.4" height="1.3"/><rect class="st" x="130.78" y="50.26" width="2.4" height="1.3"/><rect class="st" x="141.34" y="53.38" width="2.4" height="1.3"/><rect class="st" x="80.26" y="44.88" width="1.2" height="5"/><line class="seal" x1="80.86" y1="49.88" x2="80.86" y2="63.88"/><rect class="st" x="125.3" y="42" width="1.4" height="8"/><line class="ln" x1="126" y1="50" x2="126" y2="64"/><rect class="st" x="131.38" y="46.56" width="1.2" height="5"/><line class="pnl" x1="106.8" y1="58" x2="106.8" y2="71.6"/><line class="pnl" x1="109.2" y1="57.7" x2="109.2" y2="71.4"/><line class="sb" x1="66.46" y1="15.08" x2="66.46" y2="10.68"/><line class="sb" x1="80.86" y1="19.28" x2="80.86" y2="14.88"/><line class="sb" x1="66.46" y1="11.68" x2="80.86" y2="15.88"/><line class="sb" x1="65.86" y1="12.28" x2="67.06" y2="11.08"/><line class="sb" x1="80.26" y1="16.48" x2="81.46" y2="15.28"/><line class="sb" x1="80.86" y1="19.28" x2="80.86" y2="9.88"/><line class="sb" x1="95.26" y1="23.48" x2="95.26" y2="14.08"/><line class="sb" x1="80.86" y1="10.88" x2="95.26" y2="15.08"/><line class="sb" x1="80.26" y1="11.48" x2="81.46" y2="10.28"/><line class="sb" x1="94.66" y1="15.68" x2="95.86" y2="14.48"/><line class="ld" x1="52.7" y1="21.25" x2="67.86" y2="20.48"/><circle class="dot" cx="67.86" cy="20.48" r=".38"/><line class="ld" x1="52.7" y1="27.25" x2="66.46" y2="29.68"/><circle class="dot" cx="66.46" cy="29.68" r=".38"/><line class="ld" x1="52.7" y1="33.25" x2="95.26" y2="40.08"/><circle class="dot" cx="95.26" cy="40.08" r=".38"/><line class="ld" x1="52.7" y1="40.25" x2="80.86" y2="46.88"/><circle class="dot" cx="80.86" cy="46.88" r=".38"/><line class="ld" x1="52.7" y1="46.25" x2="66.46" y2="45.08"/><circle class="dot" cx="66.46" cy="45.08" r=".38"/><line class="ld" x1="52.7" y1="53.25" x2="72" y2="54.5"/><circle class="dot" cx="72" cy="54.5" r=".38"/><line class="ld" x1="52.7" y1="59.25" x2="80.86" y2="57.88"/><circle class="dot" cx="80.86" cy="57.88" r=".38"/><line class="ld" x1="119.5" y1="8.7" x2="119.5" y2="20"/><circle class="dot" cx="119.5" cy="20" r=".38"/><line class="ld" x1="158.7" y1="21.25" x2="163.2" y2="40"/><circle class="dot" cx="163.2" cy="40" r=".38"/><line class="ld" x1="135.3" y1="39.25" x2="126" y2="45"/><circle class="dot" cx="126" cy="45" r=".38"/><line class="ld" x1="135.3" y1="45.25" x2="131.98" y2="48.56"/><circle class="dot" cx="131.98" cy="48.56" r=".38"/><line class="ld" x1="104.7" y1="85.25" x2="108" y2="69"/><circle class="dot" cx="108" cy="69" r=".38"/><line class="ld" x1="150.7" y1="85.25" x2="160.1" y2="74.08"/><circle class="dot" cx="160.1" cy="74.08" r=".38"/><line class="ld" x1="161.2" y1="88.6" x2="161.2" y2="77.4"/><circle class="dot" cx="161.2" cy="77.4" r=".38"/><text class="lb" x="73.66" y="12.58" text-anchor="middle">500mm 이하</text><text class="lb" x="88.06" y="11.78" text-anchor="middle">500mm 이하</text><text class="lb" x="52" y="22" text-anchor="end">스틸브라켓+RC용 앵커</text><text class="lb" x="52" y="28" text-anchor="end"><tspan class="sq">□</tspan>100x50x2.0T 각관</text><text class="lb" x="52" y="34" text-anchor="end"><tspan class="sq">□</tspan>50x50x2.0T 각관</text><text class="lb" x="52" y="41" text-anchor="end">5mm클립용 양날 조이너</text><text class="lb" x="52" y="47" text-anchor="end">5mm 고정클립</text><text class="lb" x="52" y="54" text-anchor="end">아이큐브 16mm 패널</text><text class="lb" x="52" y="60" text-anchor="end">아이큐브 전용 실란트</text><text class="lb" x="118" y="8" text-anchor="start">콘크리트 구조체</text><text class="lb" x="158" y="22" text-anchor="end">단열재(설계치수)</text><text class="lb" x="136" y="40" text-anchor="start">공용 인코너후레쉬</text><text class="lb" x="136" y="46" text-anchor="start">5mm클립용 외날 조이너</text><text class="lb" x="104" y="86" text-anchor="end">아이큐브 16mm 코너석</text><text class="lb" x="150" y="86" text-anchor="end">5mm클립용 스타터</text><text class="lb" x="148" y="91" text-anchor="start">5mm클립용 기단부 후레쉬</text></svg></div>
+  <div class="i2">
+    <div class="cell"><h3 class="h3">하지재 시공시 주의사항</h3><ul class="notes"><li>하지 외벽재에 균열 등이 없는지 확인 후 필요시 보수하여 주십시오.</li><li>하지는 도면과 같이 500mm 이하의 간격으로 각관을 설치하여 주십시오.</li><li>좌우 접합부, 꺾임부, 개구부 주변은 필요시 100 x 50 규격의 각관을 사용하여 주십시오.</li><li>각관은 단차가 생기지 않도록 충분히 주의하여 시공해 주십시오.</li><li>클립을 설치할 때는 마감면의 단차가 3mm 이내가 되도록 스페이서로 세밀하게 조정해 주십시오.</li></ul></div>
+    <div class="cell"><h3 class="h3">하지 접합부 부분 상세도</h3><div class="fig"><svg class="dw" viewBox="0 0 102 80" role="img" aria-label="하지 접합부 부분 상세도"><rect class="st" x="10" y="8" width="6" height="66"/><rect class="st" x="14" y="34" width="12" height="14"/><polyline class="sb" points="13.3,34 14.7,35 13.3,36 14.7,37 13.3,38 14.7,39 13.3,40 14.7,41 13.3,42 14.7,43 13.3,44 14.7,45 13.3,46 14.7,47 13.3,48"/><circle class="st" cx="20" cy="41" r="3"/><circle class="st" cx="20" cy="41" r="1.3"/><line class="sb" x1="5" y1="34" x2="5" y2="48"/><line class="sb" x1="4" y1="34" x2="6" y2="34"/><line class="sb" x1="4" y1="48" x2="6" y2="48"/><rect class="insb" x="62" y="31.5" width="34" height="9.5"/><polyline class="ins" points="62.28,34.6 62.64,35.4 62.94,36.25 63.15,37.1 63.29,37.9 63.37,38.62 63.38,39.22 63.34,39.67 63.27,39.95 63.19,40.05 63.1,39.95 63.03,39.67 63,39.22 63.01,38.62 63.08,37.9 63.22,37.1 63.44,36.25 63.73,35.4 64.1,34.6 64.54,33.88 65.03,33.28 65.58,32.83 66.15,32.55 66.75,32.45 67.35,32.55 67.92,32.83 68.47,33.28 68.96,33.88 69.4,34.6 69.77,35.4 70.06,36.25 70.28,37.1 70.42,37.9 70.49,38.62 70.5,39.22 70.47,39.67 70.4,39.95 70.31,40.05 70.23,39.95 70.16,39.67 70.12,39.22 70.13,38.62 70.21,37.9 70.35,37.1 70.56,36.25 70.86,35.4 71.22,34.6 71.66,33.88 72.16,33.28 72.7,32.83 73.28,32.55 73.88,32.45 74.47,32.55 75.05,32.83 75.59,33.28 76.09,33.88 76.53,34.6 76.89,35.4 77.19,36.25 77.4,37.1 77.54,37.9 77.62,38.62 77.63,39.22 77.59,39.67 77.52,39.95 77.44,40.05 77.35,39.95 77.28,39.67 77.25,39.22 77.26,38.62 77.33,37.9 77.47,37.1 77.69,36.25 77.98,35.4 78.35,34.6 78.79,33.88 79.28,33.28 79.83,32.83 80.4,32.55 81,32.45 81.6,32.55 82.17,32.83 82.72,33.28 83.21,33.88 83.65,34.6 84.02,35.4 84.31,36.25 84.53,37.1 84.67,37.9 84.74,38.62 84.75,39.22 84.72,39.67 84.65,39.95 84.56,40.05 84.48,39.95 84.41,39.67 84.37,39.22 84.38,38.62 84.46,37.9 84.6,37.1 84.81,36.25 85.11,35.4 85.47,34.6 85.91,33.88 86.41,33.28 86.95,32.83 87.53,32.55 88.12,32.45 88.72,32.55 89.3,32.83 89.84,33.28 90.34,33.88 90.78,34.6 91.14,35.4 91.44,36.25 91.65,37.1 91.79,37.9 91.87,38.62 91.88,39.22 91.84,39.67 91.77,39.95 91.69,40.05 91.6,39.95 91.53,39.67 91.5,39.22 91.51,38.62 91.58,37.9 91.72,37.1 91.94,36.25 92.23,35.4 92.6,34.6 93.04,33.88 93.53,33.28 94.08,32.83 94.65,32.55 95.25,32.45 95.85,32.55"/><rect class="cc" x="62" y="41" width="34" height="21"/><polygon class="tri" points="67.9,47.13 68.7,48.53 67.1,48.53"/><polygon class="tri" points="79.33,57.62 80.13,59.02 78.53,59.02"/><polygon class="tri" points="90.76,51.11 91.56,52.51 89.96,52.51"/><polygon class="tri" points="72.19,44.6 72.99,46 71.39,46"/><polygon class="tri" points="83.62,55.09 84.42,56.49 82.82,56.49"/><polygon class="tri" points="65.05,48.58 65.85,49.98 64.25,49.98"/><polygon class="tri" points="76.48,59.06 77.28,60.46 75.68,60.46"/><polygon class="tri" points="87.91,52.55 88.71,53.95 87.11,53.95"/><polygon class="tri" points="69.34,46.04 70.14,47.44 68.54,47.44"/><polygon class="tri" points="80.77,56.53 81.57,57.93 79.97,57.93"/><rect class="pn" x="62" y="12" width="34" height="4"/><rect class="st" x="71" y="16" width="14" height="1.3"/><rect class="st" x="72" y="17.3" width="12.5" height="12.5"/><line class="ln" x1="75" y1="14.6" x2="75" y2="21"/><line class="ln" x1="81" y1="14.6" x2="81" y2="21"/><rect class="st" x="84.5" y="18" width="1.4" height="21.6"/><rect class="st" x="84.5" y="39.6" width="9.5" height="1.4"/><rect class="st" x="88.5" y="37.8" width="3" height="1.8"/><line class="ln" x1="90" y1="39.6" x2="90" y2="52"/><polygon class="st" points="88.6,46.5 91.4,46.5 92,53 88,53"/><line class="sb" x1="98" y1="12" x2="98" y2="41"/><line class="sb" x1="97.3" y1="12" x2="98.7" y2="12"/><line class="sb" x1="97.3" y1="16" x2="98.7" y2="16"/><line class="sb" x1="97.3" y1="17.3" x2="98.7" y2="17.3"/><line class="sb" x1="97.3" y1="29.8" x2="98.7" y2="29.8"/><line class="sb" x1="97.3" y1="41" x2="98.7" y2="41"/><line class="ld" x1="26.3" y1="5.25" x2="16" y2="12"/><circle class="dot" cx="16" cy="12" r=".38"/><line class="ld" x1="26.3" y1="30.25" x2="14.7" y2="37"/><circle class="dot" cx="14.7" cy="37" r=".38"/><line class="ld" x1="26.3" y1="41.05" x2="23" y2="41"/><circle class="dot" cx="23" cy="41" r=".38"/><line class="ld" x1="26.3" y1="51.25" x2="25" y2="47"/><circle class="dot" cx="25" cy="47" r=".38"/><line class="ld" x1="60.7" y1="10.25" x2="72" y2="16.6"/><circle class="dot" cx="72" cy="16.6" r=".38"/><line class="ld" x1="60.7" y1="15.85" x2="63" y2="14"/><circle class="dot" cx="63" cy="14" r=".38"/><line class="ld" x1="60.7" y1="22.25" x2="73" y2="23.5"/><circle class="dot" cx="73" cy="23.5" r=".38"/><line class="ld" x1="60.7" y1="28.75" x2="85.2" y2="27"/><circle class="dot" cx="85.2" cy="27" r=".38"/><line class="ld" x1="60.7" y1="35.25" x2="68" y2="36"/><circle class="dot" cx="68" cy="36" r=".38"/><line class="ld" x1="60.7" y1="46.25" x2="90" y2="45"/><circle class="dot" cx="90" cy="45" r=".38"/><line class="ld" x1="60.7" y1="55.25" x2="68" y2="56"/><circle class="dot" cx="68" cy="56" r=".38"/><line class="ld" x1="81" y1="7.2" x2="81" y2="16"/><circle class="dot" cx="81" cy="16" r=".38"/><line class="ld" x1="90.05" y1="70.25" x2="90" y2="50"/><circle class="dot" cx="90" cy="50" r=".38"/><line class="ld" x1="91.8" y1="59.25" x2="90.5" y2="52.5"/><circle class="dot" cx="90.5" cy="52.5" r=".38"/><text class="dm" x="3.2" y="41" text-anchor="middle" transform="rotate(-90 3.2 41)">100mm 이상</text><text class="lb" x="27" y="6" text-anchor="start">각관 <tspan class="sq">□</tspan>-50x50x2.0T</text><text class="lb" x="27" y="31" text-anchor="start">용접 접합</text><text class="lb" x="27" y="41.8" text-anchor="start">RC용 앵커</text><text class="lb" x="27" y="52" text-anchor="start">스틸브라켓</text><text class="dm" x="99.4" y="14.9" text-anchor="start">16</text><text class="dm" x="99.4" y="18.6" text-anchor="start">5</text><text class="dm" x="99.4" y="24.4" text-anchor="start">50</text><text class="dm" x="99.4" y="36.4" text-anchor="start">var.</text><text class="lb" x="60" y="11" text-anchor="end">5mm 고정클립</text><text class="lb" x="60" y="16.6" text-anchor="end">아이큐브 16mm 패널</text><text class="lb" x="60" y="23" text-anchor="end">각관 <tspan class="sq">□</tspan>-50x50x2.0T</text><text class="lb" x="60" y="29.5" text-anchor="end">스틸 브라켓</text><text class="lb" x="60" y="36" text-anchor="end">단열재(설계치수)</text><text class="lb" x="60" y="47" text-anchor="end">볼트 M10 이상</text><text class="lb" x="60" y="56" text-anchor="end">콘크리트 구조체</text><text class="lb" x="76" y="6.5" text-anchor="start">고정클립 피스고정</text><text class="lb" x="50" y="71" text-anchor="start">앵커 매입깊이 이상 (M10의 경우 40mm)</text><text class="lb" x="92.5" y="60" text-anchor="start">RC 앵커</text></svg></div><p class="dnote">각파이프 하지를 고정하는 앵글은 RC용 앵커로 벽체에 고정하며 간격 @1,000mm이하로 시공하여야 한다.</p></div>
+  </div>
+  <div class="ft"><span>HOME TRADERS · i-CUBE</span><b class="pno"></b></div>
+</section>
+<section class="page sg inst2" data-page="install" data-variant="A">
+  <div class="lab">INSTALLATION · DETAIL</div>
+  <div class="rule"></div>
+  <div class="g22 d4"><div class="cell"><h3 class="h2">기단부 및 스타터 상세도</h3><div class="fig"><svg class="dw" viewBox="0 0 82 80" role="img" aria-label="기단부 및 스타터 상세도"><polygon class="cc" points="65,0 82,0 82,78 40,78 40,64 65,64"/><polygon class="tri" points="68.69,18.6 69.49,20 67.89,20"/><polygon class="tri" points="73.64,55.62 74.44,57.02 72.84,57.02"/><polygon class="tri" points="78.6,32.64 79.4,34.04 77.8,34.04"/><polygon class="tri" points="70.55,9.66 71.35,11.06 69.75,11.06"/><polygon class="tri" points="75.5,46.68 76.3,48.08 74.7,48.08"/><polygon class="tri" points="67.45,23.7 68.25,25.1 66.66,25.1"/><polygon class="tri" points="72.41,60.72 73.21,62.12 71.61,62.12"/><polygon class="tri" points="77.36,37.74 78.16,39.14 76.56,39.14"/><polygon class="tri" points="69.31,14.76 70.11,16.16 68.51,16.16"/><polygon class="tri" points="74.27,51.78 75.07,53.18 73.47,53.18"/><polygon class="tri" points="79.22,28.8 80.02,30.2 78.42,30.2"/><polygon class="tri" points="71.17,5.82 71.97,7.22 70.37,7.22"/><polygon class="tri" points="76.13,42.84 76.93,44.24 75.33,44.24"/><polygon class="tri" points="68.08,19.86 68.88,21.26 67.28,21.26"/><polygon class="tri" points="73.03,56.88 73.83,58.28 72.23,58.28"/><polygon class="tri" points="46.94,68.1 47.74,69.5 46.14,69.5"/><polygon class="tri" points="61.42,74.27 62.22,75.67 60.62,75.67"/><polygon class="tri" points="75.9,70.44 76.7,71.84 75.1,71.84"/><polygon class="tri" points="52.37,66.61 53.17,68.01 51.57,68.01"/><polygon class="tri" points="66.85,72.78 67.65,74.18 66.05,74.18"/><polygon class="tri" points="43.33,68.95 44.13,70.35 42.53,70.35"/><polygon class="tri" points="57.81,75.12 58.61,76.52 57.01,76.52"/><polygon class="tri" points="72.29,71.29 73.09,72.69 71.49,72.69"/><rect class="insb" x="57.5" y="0" width="7.5" height="62"/><polyline class="ins" points="59.95,0.22 60.58,0.51 61.25,0.74 61.92,0.91 62.55,1.02 63.12,1.08 63.6,1.09 63.95,1.06 64.17,1.01 64.25,0.94 64.17,0.87 63.95,0.81 63.6,0.79 63.12,0.8 62.55,0.85 61.92,0.96 61.25,1.14 60.58,1.37 59.95,1.66 59.38,2 58.9,2.39 58.55,2.82 58.33,3.28 58.25,3.75 58.33,4.22 58.55,4.68 58.9,5.11 59.38,5.5 59.95,5.84 60.58,6.13 61.25,6.36 61.92,6.54 62.55,6.65 63.12,6.7 63.6,6.71 63.95,6.69 64.17,6.63 64.25,6.56 64.17,6.49 63.95,6.44 63.6,6.41 63.12,6.42 62.55,6.48 61.92,6.59 61.25,6.76 60.58,6.99 59.95,7.28 59.38,7.63 58.9,8.02 58.55,8.45 58.33,8.91 58.25,9.38 58.33,9.84 58.55,10.3 58.9,10.73 59.38,11.12 59.95,11.47 60.58,11.76 61.25,11.99 61.92,12.16 62.55,12.27 63.12,12.33 63.6,12.34 63.95,12.31 64.17,12.26 64.25,12.19 64.17,12.12 63.95,12.06 63.6,12.04 63.12,12.05 62.55,12.1 61.92,12.21 61.25,12.39 60.58,12.62 59.95,12.91 59.38,13.25 58.9,13.64 58.55,14.07 58.33,14.53 58.25,15 58.33,15.47 58.55,15.93 58.9,16.36 59.38,16.75 59.95,17.09 60.58,17.38 61.25,17.61 61.92,17.79 62.55,17.9 63.12,17.95 63.6,17.96 63.95,17.94 64.17,17.88 64.25,17.81 64.17,17.74 63.95,17.69 63.6,17.66 63.12,17.67 62.55,17.73 61.92,17.84 61.25,18.01 60.58,18.24 59.95,18.53 59.38,18.88 58.9,19.27 58.55,19.7 58.33,20.16 58.25,20.62 58.33,21.09 58.55,21.55 58.9,21.98 59.38,22.37 59.95,22.72 60.58,23.01 61.25,23.24 61.92,23.41 62.55,23.52 63.12,23.58 63.6,23.59 63.95,23.56 64.17,23.51 64.25,23.44 64.17,23.37 63.95,23.31 63.6,23.29 63.12,23.3 62.55,23.35 61.92,23.46 61.25,23.64 60.58,23.87 59.95,24.16 59.38,24.5 58.9,24.89 58.55,25.32 58.33,25.78 58.25,26.25 58.33,26.72 58.55,27.18 58.9,27.61 59.38,28 59.95,28.34 60.58,28.63 61.25,28.86 61.92,29.04 62.55,29.15 63.12,29.2 63.6,29.21 63.95,29.19 64.17,29.13 64.25,29.06 64.17,28.99 63.95,28.94 63.6,28.91 63.12,28.92 62.55,28.98 61.92,29.09 61.25,29.26 60.58,29.49 59.95,29.78 59.38,30.13 58.9,30.52 58.55,30.95 58.33,31.41 58.25,31.87 58.33,32.34 58.55,32.8 58.9,33.23 59.38,33.62 59.95,33.97 60.58,34.26 61.25,34.49 61.92,34.66 62.55,34.77 63.12,34.83 63.6,34.84 63.95,34.81 64.17,34.76 64.25,34.69 64.17,34.62 63.95,34.56 63.6,34.54 63.12,34.55 62.55,34.6 61.92,34.71 61.25,34.89 60.58,35.12 59.95,35.41 59.38,35.75 58.9,36.14 58.55,36.57 58.33,37.03 58.25,37.5 58.33,37.97 58.55,38.43 58.9,38.86 59.38,39.25 59.95,39.59 60.58,39.88 61.25,40.11 61.92,40.29 62.55,40.4 63.12,40.45 63.6,40.46 63.95,40.44 64.17,40.38 64.25,40.31 64.17,40.24 63.95,40.19 63.6,40.16 63.12,40.17 62.55,40.23 61.92,40.34 61.25,40.51 60.58,40.74 59.95,41.03 59.38,41.38 58.9,41.77 58.55,42.2 58.33,42.66 58.25,43.12 58.33,43.59 58.55,44.05 58.9,44.48 59.38,44.87 59.95,45.22 60.58,45.51 61.25,45.74 61.92,45.91 62.55,46.02 63.12,46.08 63.6,46.09 63.95,46.06 64.17,46.01 64.25,45.94 64.17,45.87 63.95,45.81 63.6,45.79 63.12,45.8 62.55,45.85 61.92,45.96 61.25,46.14 60.58,46.37 59.95,46.66 59.38,47 58.9,47.39 58.55,47.82 58.33,48.28 58.25,48.75 58.33,49.22 58.55,49.68 58.9,50.11 59.38,50.5 59.95,50.84 60.58,51.13 61.25,51.36 61.92,51.54 62.55,51.65 63.12,51.7 63.6,51.71 63.95,51.69 64.17,51.63 64.25,51.56 64.17,51.49 63.95,51.44 63.6,51.41 63.12,51.42 62.55,51.48 61.92,51.59 61.25,51.76 60.58,51.99 59.95,52.28 59.38,52.63 58.9,53.02 58.55,53.45 58.33,53.91 58.25,54.37 58.33,54.84 58.55,55.3 58.9,55.73 59.38,56.12 59.95,56.47 60.58,56.76 61.25,56.99 61.92,57.16 62.55,57.27 63.12,57.33 63.6,57.34 63.95,57.31 64.17,57.26 64.25,57.19 64.17,57.12 63.95,57.06 63.6,57.04 63.12,57.05 62.55,57.1 61.92,57.21 61.25,57.39 60.58,57.62 59.95,57.91 59.38,58.25 58.9,58.64 58.55,59.07 58.33,59.53 58.25,60 58.33,60.47 58.55,60.93 58.9,61.36 59.38,61.75"/><rect class="st" x="41" y="0" width="5" height="62"/><rect class="st" x="46" y="23" width="10" height="13"/><polyline class="sb" points="46.7,23 45.5,24 46.7,25 45.5,26 46.7,27 45.5,28 46.7,29 45.5,30 46.7,31 45.5,32 46.7,33 45.5,34 46.7,35 45.5,36"/><rect class="st" x="56" y="21" width="1.5" height="17"/><rect class="st" x="54.2" y="28" width="1.8" height="3.4"/><line class="ln" x1="56" y1="29.7" x2="74" y2="29.7"/><polygon class="st" points="69,28.4 69,31 75,32 75,27.4"/><rect class="pn" x="36" y="4" width="3" height="54"/><polyline class="ln" points="39,46 40.8,46 40.8,54.5 39.3,56"/><line class="ln" x1="40.8" y1="48.5" x2="44" y2="48.5"/><line class="ln" x1="40.8" y1="51.5" x2="44" y2="51.5"/><polyline class="flash" points="33,68 33,63.5 46,63.5"/><line class="sb" x1="31" y1="58" x2="31" y2="63.5"/><line class="sb" x1="30.3" y1="58" x2="31.7" y2="58"/><line class="sb" x1="30.3" y1="63.5" x2="31.7" y2="63.5"/><line class="ld" x1="28.7" y1="6.25" x2="37.5" y2="9"/><circle class="dot" cx="37.5" cy="9" r=".38"/><line class="ld" x1="28.7" y1="12.25" x2="43.5" y2="13"/><circle class="dot" cx="43.5" cy="13" r=".38"/><line class="ld" x1="28.7" y1="18.25" x2="48" y2="24"/><circle class="dot" cx="48" cy="24" r=".38"/><line class="ld" x1="28.7" y1="24.25" x2="55.1" y2="29.7"/><circle class="dot" cx="55.1" cy="29.7" r=".38"/><line class="ld" x1="28.7" y1="30.25" x2="46.3" y2="33"/><circle class="dot" cx="46.3" cy="33" r=".38"/><line class="ld" x1="28.7" y1="39.25" x2="61.2" y2="40"/><circle class="dot" cx="61.2" cy="40" r=".38"/><line class="ld" x1="28.7" y1="50.25" x2="40.4" y2="51"/><circle class="dot" cx="40.4" cy="51" r=".38"/><line class="ld" x1="28.7" y1="69.25" x2="34" y2="64.8"/><circle class="dot" cx="34" cy="64.8" r=".38"/><line class="ld" x1="28.7" y1="75.25" x2="52" y2="72"/><circle class="dot" cx="52" cy="72" r=".38"/><line class="ld" x1="70" y1="9.1" x2="70" y2="28.6"/><circle class="dot" cx="70" cy="28.6" r=".38"/><line class="ld" x1="74" y1="19.7" x2="74" y2="29.2"/><circle class="dot" cx="74" cy="29.2" r=".38"/><line class="ld" x1="77.2" y1="45.25" x2="57.5" y2="36"/><circle class="dot" cx="57.5" cy="36" r=".38"/><line class="ld" x1="71.9" y1="51.25" x2="56.6" y2="22"/><circle class="dot" cx="56.6" cy="22" r=".38"/><text class="dm" x="30" y="61.6" text-anchor="end">10</text><text class="lb" x="28" y="7" text-anchor="end">아이큐브 16mm 패널</text><text class="lb" x="28" y="13" text-anchor="end">각관 <tspan class="sq">□</tspan>-50x50x2.0T</text><text class="lb" x="28" y="19" text-anchor="end">스틸 브라켓</text><text class="lb" x="28" y="25" text-anchor="end">RC용 앵커</text><text class="lb" x="28" y="31" text-anchor="end">용접접합</text><text class="lb" x="28" y="40" text-anchor="end">단열재(설계 치수)</text><text class="lb" x="28" y="51" text-anchor="end">5mm클립용 스타터</text><text class="lb" x="28" y="70" text-anchor="end">5mm클립용 기단부 후레쉬</text><text class="lb" x="28" y="76" text-anchor="end">콘크리트 구조체</text><text class="lb" x="82" y="4.6" text-anchor="end">앵커 매입깊이 이상</text><text class="lb" x="82" y="8.4" text-anchor="end">(M10의 경우 40mm)</text><text class="lb" x="82" y="19" text-anchor="end">RC용 앵커</text><text class="lb" x="82" y="46" text-anchor="end">앵글</text><text class="lb" x="82" y="52" text-anchor="end">용접 접합</text></svg></div><p class="dnote">기단부 후레싱을 먼저 고정하고 5mm 전용 스타터를 스터드에 고정시켜 주십시오.<br>i-cube Panel 하단과 후레싱 사이는 통기 및 배수를 위해 10mm 간격을 확보해 주십시오.</p></div><div class="cell"><h3 class="h2">i-cube V16 패널 접합부</h3><div class="fig"><svg class="dw" viewBox="0 0 82 62" role="img" aria-label="i-cube V16 패널 접합부"><rect class="insb" x="4" y="28.9" width="52" height="9.1"/><polyline class="ins" points="4.26,31.87 4.62,32.64 4.9,33.45 5.1,34.26 5.24,35.03 5.31,35.72 5.32,36.3 5.29,36.73 5.22,37 5.14,37.09 5.05,37 4.99,36.73 4.95,36.3 4.97,35.72 5.04,35.03 5.17,34.26 5.38,33.45 5.66,32.64 6.01,31.87 6.43,31.18 6.9,30.6 7.43,30.17 7.98,29.9 8.55,29.81 9.12,29.9 9.67,30.17 10.2,30.6 10.67,31.18 11.09,31.87 11.44,32.64 11.72,33.45 11.93,34.26 12.06,35.03 12.13,35.72 12.15,36.3 12.11,36.73 12.05,37 11.96,37.09 11.88,37 11.81,36.73 11.78,36.3 11.79,35.72 11.86,35.03 12,34.26 12.2,33.45 12.48,32.64 12.84,31.87 13.25,31.18 13.73,30.6 14.25,30.17 14.8,29.9 15.37,29.81 15.95,29.9 16.5,30.17 17.02,30.6 17.5,31.18 17.91,31.87 18.27,32.64 18.55,33.45 18.75,34.26 18.89,35.03 18.96,35.72 18.97,36.3 18.94,36.73 18.87,37 18.79,37.09 18.7,37 18.64,36.73 18.6,36.3 18.62,35.72 18.69,35.03 18.82,34.26 19.03,33.45 19.31,32.64 19.66,31.87 20.08,31.18 20.55,30.6 21.08,30.17 21.63,29.9 22.2,29.81 22.77,29.9 23.32,30.17 23.85,30.6 24.32,31.18 24.74,31.87 25.09,32.64 25.37,33.45 25.58,34.26 25.71,35.03 25.78,35.72 25.8,36.3 25.76,36.73 25.7,37 25.61,37.09 25.53,37 25.46,36.73 25.43,36.3 25.44,35.72 25.51,35.03 25.65,34.26 25.85,33.45 26.13,32.64 26.49,31.87 26.9,31.18 27.38,30.6 27.9,30.17 28.45,29.9 29.02,29.81 29.6,29.9 30.15,30.17 30.67,30.6 31.15,31.18 31.56,31.87 31.92,32.64 32.2,33.45 32.4,34.26 32.54,35.03 32.61,35.72 32.62,36.3 32.59,36.73 32.52,37 32.44,37.09 32.35,37 32.29,36.73 32.25,36.3 32.27,35.72 32.34,35.03 32.47,34.26 32.68,33.45 32.96,32.64 33.31,31.87 33.73,31.18 34.2,30.6 34.73,30.17 35.28,29.9 35.85,29.81 36.42,29.9 36.97,30.17 37.5,30.6 37.97,31.18 38.39,31.87 38.74,32.64 39.02,33.45 39.23,34.26 39.36,35.03 39.43,35.72 39.45,36.3 39.41,36.73 39.35,37 39.26,37.09 39.18,37 39.11,36.73 39.08,36.3 39.09,35.72 39.16,35.03 39.3,34.26 39.5,33.45 39.78,32.64 40.14,31.87 40.55,31.18 41.03,30.6 41.55,30.17 42.1,29.9 42.67,29.81 43.25,29.9 43.8,30.17 44.32,30.6 44.8,31.18 45.21,31.87 45.57,32.64 45.85,33.45 46.05,34.26 46.19,35.03 46.26,35.72 46.27,36.3 46.24,36.73 46.17,37 46.09,37.09 46,37 45.94,36.73 45.9,36.3 45.92,35.72 45.99,35.03 46.12,34.26 46.33,33.45 46.61,32.64 46.96,31.87 47.38,31.18 47.85,30.6 48.38,30.17 48.93,29.9 49.5,29.81 50.07,29.9 50.62,30.17 51.15,30.6 51.62,31.18 52.04,31.87 52.39,32.64 52.67,33.45 52.88,34.26 53.01,35.03 53.08,35.72 53.1,36.3 53.06,36.73 53,37 52.91,37.09 52.83,37 52.76,36.73 52.73,36.3 52.74,35.72 52.81,35.03 52.95,34.26 53.15,33.45 53.43,32.64 53.79,31.87 54.2,31.18 54.68,30.6 55.2,30.17 55.75,29.9"/><rect class="cc" x="4" y="38" width="52" height="20"/><polygon class="tri" points="12.24,43.84 13.04,45.24 11.44,45.24"/><polygon class="tri" points="30.53,53.71 31.33,55.11 29.73,55.11"/><polygon class="tri" points="48.82,47.58 49.62,48.98 48.02,48.98"/><polygon class="tri" points="19.1,41.46 19.9,42.86 18.3,42.86"/><polygon class="tri" points="37.39,51.33 38.19,52.73 36.59,52.73"/><polygon class="tri" points="7.68,45.2 8.48,46.6 6.88,46.6"/><polygon class="tri" points="25.97,55.07 26.77,56.47 25.17,56.47"/><polygon class="tri" points="44.26,48.94 45.06,50.34 43.46,50.34"/><polygon class="tri" points="14.54,42.82 15.34,44.22 13.74,44.22"/><polygon class="tri" points="32.83,52.69 33.63,54.09 32.03,54.09"/><polygon class="tri" points="51.12,46.56 51.92,47.96 50.32,47.96"/><polygon class="tri" points="21.41,40.43 22.21,41.83 20.61,41.83"/><polygon class="tri" points="39.7,50.3 40.5,51.7 38.9,51.7"/><polygon class="tri" points="9.98,44.18 10.78,45.58 9.18,45.58"/><rect class="st" x="15" y="27.3" width="30" height="1.6"/><rect class="st" x="15" y="27.3" width="1.4" height="10.7"/><rect class="st" x="43.6" y="27.3" width="1.4" height="10.7"/><rect class="st" x="10.5" y="36.3" width="3" height="1.7"/><line class="ln" x1="12" y1="38" x2="12" y2="49"/><polygon class="st" points="10.6,45 13.4,45 14,51 10,51"/><rect class="st" x="46.5" y="36.3" width="3" height="1.7"/><line class="ln" x1="48" y1="38" x2="48" y2="49"/><polygon class="st" points="46.6,45 49.4,45 50,51 46,51"/><rect class="st" x="18" y="17.3" width="11.4" height="10"/><rect class="st" x="30.6" y="17.3" width="11.4" height="10"/><rect class="st" x="18" y="16" width="11" height="1.3"/><rect class="st" x="31" y="16" width="11" height="1.3"/><line class="ln" x1="21" y1="14.6" x2="21" y2="22"/><line class="ln" x1="26.5" y1="14.6" x2="26.5" y2="22"/><line class="ln" x1="34" y1="14.6" x2="34" y2="22"/><line class="ln" x1="39" y1="14.6" x2="39" y2="22"/><rect class="pn" x="4" y="12" width="25.4" height="4"/><rect class="pn" x="30.6" y="12" width="25.4" height="4"/><rect class="fillk" x="29.4" y="12" width="1.2" height="2.2"/><polyline class="ln" points="27,16.7 29.4,16.7 29.4,14.4 30.6,14.4 30.6,16.7 33,16.7"/><line class="ld" x1="33.3" y1="3.25" x2="30" y2="13"/><circle class="dot" cx="30" cy="13" r=".38"/><line class="ld" x1="33.3" y1="7.65" x2="30" y2="15.8"/><circle class="dot" cx="30" cy="15.8" r=".38"/><line class="ld" x1="16.7" y1="8.25" x2="22" y2="16.6"/><circle class="dot" cx="22" cy="16.6" r=".38"/><line class="ld" x1="58.3" y1="14.05" x2="55" y2="14"/><circle class="dot" cx="55" cy="14" r=".38"/><line class="ld" x1="58.3" y1="21.75" x2="41" y2="22"/><circle class="dot" cx="41" cy="22" r=".38"/><line class="ld" x1="58.3" y1="28.25" x2="44.3" y2="28.1"/><circle class="dot" cx="44.3" cy="28.1" r=".38"/><line class="ld" x1="58.3" y1="34.75" x2="49.5" y2="37"/><circle class="dot" cx="49.5" cy="37" r=".38"/><line class="ld" x1="58.3" y1="43.25" x2="49.6" y2="47"/><circle class="dot" cx="49.6" cy="47" r=".38"/><line class="ld" x1="58.3" y1="49.75" x2="30" y2="33.5"/><circle class="dot" cx="30" cy="33.5" r=".38"/><line class="ld" x1="58.3" y1="56.25" x2="35" y2="53"/><circle class="dot" cx="35" cy="53" r=".38"/><text class="lb" x="34" y="4" text-anchor="start">아이큐브 16mm 전용 실란트</text><text class="lb" x="34" y="8.4" text-anchor="start">5mm 클립용 양날조이너</text><text class="lb" x="16" y="9" text-anchor="end">5mm 고정클립</text><text class="lb" x="59" y="14.8" text-anchor="start">아이큐브 16mm 패널</text><text class="lb" x="59" y="22.5" text-anchor="start">각관 <tspan class="sq">□</tspan>-50x50x2.0T</text><text class="lb" x="59" y="29" text-anchor="start">스틸 브라켓</text><text class="lb" x="59" y="35.5" text-anchor="start">볼트 (M10이상)</text><text class="lb" x="59" y="44" text-anchor="start">RC용 앵커</text><text class="lb" x="59" y="50.5" text-anchor="start">단열재(설계 치수)</text><text class="lb" x="59" y="57" text-anchor="start">콘크리트 구조체</text></svg></div></div><div class="cell"><h3 class="h2">코너 마감부 (아웃코너)</h3><div class="fig"><svg class="dw" viewBox="0 0 82 66" role="img" aria-label="코너 마감부 (아웃코너)"><rect class="cc" x="4" y="4" width="30" height="38"/><polygon class="tri" points="9.38,15.06 10.18,16.46 8.58,16.46"/><polygon class="tri" points="19.29,36.04 20.09,37.44 18.49,37.44"/><polygon class="tri" points="29.19,23.02 29.99,24.42 28.39,24.42"/><polygon class="tri" points="13.1,9.99 13.9,11.39 12.3,11.39"/><polygon class="tri" points="23,30.97 23.8,32.37 22.2,32.37"/><polygon class="tri" points="6.91,17.95 7.71,19.35 6.11,19.35"/><polygon class="tri" points="16.82,38.93 17.62,40.33 16.02,40.33"/><polygon class="tri" points="26.72,25.91 27.52,27.31 25.92,27.31"/><polygon class="tri" points="10.63,12.88 11.43,14.28 9.83,14.28"/><polygon class="tri" points="20.53,33.86 21.33,35.26 19.73,35.26"/><polygon class="tri" points="30.44,20.84 31.24,22.24 29.64,22.24"/><polygon class="tri" points="14.35,7.82 15.15,9.22 13.55,9.22"/><polygon class="tri" points="24.25,28.8 25.05,30.2 23.45,30.2"/><polygon class="tri" points="8.16,15.77 8.96,17.17 7.36,17.17"/><polygon class="tri" points="18.06,36.75 18.86,38.15 17.26,38.15"/><polygon class="tri" points="27.97,23.73 28.77,25.13 27.17,25.13"/><rect class="insb" x="34" y="4" width="6" height="38"/><polyline class="ins" points="35.96,4.17 36.47,4.41 37,4.59 37.53,4.73 38.04,4.82 38.5,4.86 38.88,4.87 39.16,4.85 39.34,4.8 39.4,4.75 39.34,4.7 39.16,4.65 38.88,4.63 38.5,4.64 38.04,4.68 37.53,4.77 37,4.91 36.47,5.09 35.96,5.33 35.5,5.6 35.12,5.92 34.84,6.26 34.66,6.62 34.6,7 34.66,7.38 34.84,7.74 35.12,8.08 35.5,8.4 35.96,8.67 36.47,8.91 37,9.09 37.53,9.23 38.04,9.32 38.5,9.36 38.88,9.37 39.16,9.35 39.34,9.3 39.4,9.25 39.34,9.2 39.16,9.15 38.88,9.13 38.5,9.14 38.04,9.18 37.53,9.27 37,9.41 36.47,9.59 35.96,9.83 35.5,10.1 35.12,10.42 34.84,10.76 34.66,11.12 34.6,11.5 34.66,11.88 34.84,12.24 35.12,12.58 35.5,12.9 35.96,13.17 36.47,13.41 37,13.59 37.53,13.73 38.04,13.82 38.5,13.86 38.88,13.87 39.16,13.85 39.34,13.8 39.4,13.75 39.34,13.7 39.16,13.65 38.88,13.63 38.5,13.64 38.04,13.68 37.53,13.77 37,13.91 36.47,14.09 35.96,14.33 35.5,14.6 35.12,14.92 34.84,15.26 34.66,15.62 34.6,16 34.66,16.38 34.84,16.74 35.12,17.08 35.5,17.4 35.96,17.67 36.47,17.91 37,18.09 37.53,18.23 38.04,18.32 38.5,18.36 38.88,18.37 39.16,18.35 39.34,18.3 39.4,18.25 39.34,18.2 39.16,18.15 38.88,18.13 38.5,18.14 38.04,18.18 37.53,18.27 37,18.41 36.47,18.59 35.96,18.83 35.5,19.1 35.12,19.42 34.84,19.76 34.66,20.12 34.6,20.5 34.66,20.88 34.84,21.24 35.12,21.58 35.5,21.9 35.96,22.17 36.47,22.41 37,22.59 37.53,22.73 38.04,22.82 38.5,22.86 38.88,22.87 39.16,22.85 39.34,22.8 39.4,22.75 39.34,22.7 39.16,22.65 38.88,22.63 38.5,22.64 38.04,22.68 37.53,22.77 37,22.91 36.47,23.09 35.96,23.33 35.5,23.6 35.12,23.92 34.84,24.26 34.66,24.62 34.6,25 34.66,25.38 34.84,25.74 35.12,26.08 35.5,26.4 35.96,26.67 36.47,26.91 37,27.09 37.53,27.23 38.04,27.32 38.5,27.36 38.88,27.37 39.16,27.35 39.34,27.3 39.4,27.25 39.34,27.2 39.16,27.15 38.88,27.13 38.5,27.14 38.04,27.18 37.53,27.27 37,27.41 36.47,27.59 35.96,27.83 35.5,28.1 35.12,28.42 34.84,28.76 34.66,29.12 34.6,29.5 34.66,29.88 34.84,30.24 35.12,30.58 35.5,30.9 35.96,31.17 36.47,31.41 37,31.59 37.53,31.73 38.04,31.82 38.5,31.86 38.88,31.87 39.16,31.85 39.34,31.8 39.4,31.75 39.34,31.7 39.16,31.65 38.88,31.63 38.5,31.64 38.04,31.68 37.53,31.77 37,31.91 36.47,32.09 35.96,32.33 35.5,32.6 35.12,32.92 34.84,33.26 34.66,33.62 34.6,34 34.66,34.38 34.84,34.74 35.12,35.08 35.5,35.4 35.96,35.67 36.47,35.91 37,36.09 37.53,36.23 38.04,36.32 38.5,36.36 38.88,36.37 39.16,36.35 39.34,36.3 39.4,36.25 39.34,36.2 39.16,36.15 38.88,36.13 38.5,36.14 38.04,36.18 37.53,36.27 37,36.41 36.47,36.59 35.96,36.83 35.5,37.1 35.12,37.42 34.84,37.76 34.66,38.12 34.6,38.5 34.66,38.88 34.84,39.24 35.12,39.58 35.5,39.9 35.96,40.17 36.47,40.41 37,40.59 37.53,40.73 38.04,40.82 38.5,40.86 38.88,40.87 39.16,40.85 39.34,40.8 39.4,40.75 39.34,40.7 39.16,40.65 38.88,40.63 38.5,40.64 38.04,40.68 37.53,40.77 37,40.91 36.47,41.09 35.96,41.33 35.5,41.6 35.12,41.92"/><rect class="insb" x="4" y="42" width="36" height="6"/><polyline class="ins" points="4.17,43.96 4.41,44.47 4.59,45 4.73,45.53 4.82,46.04 4.86,46.5 4.87,46.88 4.85,47.16 4.8,47.34 4.75,47.4 4.7,47.34 4.65,47.16 4.63,46.88 4.64,46.5 4.68,46.04 4.77,45.53 4.91,45 5.09,44.47 5.33,43.96 5.6,43.5 5.92,43.12 6.26,42.84 6.62,42.66 7,42.6 7.38,42.66 7.74,42.84 8.08,43.12 8.4,43.5 8.67,43.96 8.91,44.47 9.09,45 9.23,45.53 9.32,46.04 9.36,46.5 9.37,46.88 9.35,47.16 9.3,47.34 9.25,47.4 9.2,47.34 9.15,47.16 9.13,46.88 9.14,46.5 9.18,46.04 9.27,45.53 9.41,45 9.59,44.47 9.83,43.96 10.1,43.5 10.42,43.12 10.76,42.84 11.12,42.66 11.5,42.6 11.88,42.66 12.24,42.84 12.58,43.12 12.9,43.5 13.17,43.96 13.41,44.47 13.59,45 13.73,45.53 13.82,46.04 13.86,46.5 13.87,46.88 13.85,47.16 13.8,47.34 13.75,47.4 13.7,47.34 13.65,47.16 13.63,46.88 13.64,46.5 13.68,46.04 13.77,45.53 13.91,45 14.09,44.47 14.33,43.96 14.6,43.5 14.92,43.12 15.26,42.84 15.62,42.66 16,42.6 16.38,42.66 16.74,42.84 17.08,43.12 17.4,43.5 17.67,43.96 17.91,44.47 18.09,45 18.23,45.53 18.32,46.04 18.36,46.5 18.37,46.88 18.35,47.16 18.3,47.34 18.25,47.4 18.2,47.34 18.15,47.16 18.13,46.88 18.14,46.5 18.18,46.04 18.27,45.53 18.41,45 18.59,44.47 18.83,43.96 19.1,43.5 19.42,43.12 19.76,42.84 20.12,42.66 20.5,42.6 20.88,42.66 21.24,42.84 21.58,43.12 21.9,43.5 22.17,43.96 22.41,44.47 22.59,45 22.73,45.53 22.82,46.04 22.86,46.5 22.87,46.88 22.85,47.16 22.8,47.34 22.75,47.4 22.7,47.34 22.65,47.16 22.63,46.88 22.64,46.5 22.68,46.04 22.77,45.53 22.91,45 23.09,44.47 23.33,43.96 23.6,43.5 23.92,43.12 24.26,42.84 24.62,42.66 25,42.6 25.38,42.66 25.74,42.84 26.08,43.12 26.4,43.5 26.67,43.96 26.91,44.47 27.09,45 27.23,45.53 27.32,46.04 27.36,46.5 27.37,46.88 27.35,47.16 27.3,47.34 27.25,47.4 27.2,47.34 27.15,47.16 27.13,46.88 27.14,46.5 27.18,46.04 27.27,45.53 27.41,45 27.59,44.47 27.83,43.96 28.1,43.5 28.42,43.12 28.76,42.84 29.12,42.66 29.5,42.6 29.88,42.66 30.24,42.84 30.58,43.12 30.9,43.5 31.17,43.96 31.41,44.47 31.59,45 31.73,45.53 31.82,46.04 31.86,46.5 31.87,46.88 31.85,47.16 31.8,47.34 31.75,47.4 31.7,47.34 31.65,47.16 31.63,46.88 31.64,46.5 31.68,46.04 31.77,45.53 31.91,45 32.09,44.47 32.33,43.96 32.6,43.5 32.92,43.12 33.26,42.84 33.62,42.66 34,42.6 34.38,42.66 34.74,42.84 35.08,43.12 35.4,43.5 35.67,43.96 35.91,44.47 36.09,45 36.23,45.53 36.32,46.04 36.36,46.5 36.37,46.88 36.35,47.16 36.3,47.34 36.25,47.4 36.2,47.34 36.15,47.16 36.13,46.88 36.14,46.5 36.18,46.04 36.27,45.53 36.41,45 36.59,44.47 36.83,43.96 37.1,43.5 37.42,43.12 37.76,42.84 38.12,42.66 38.5,42.6 38.88,42.66 39.24,42.84 39.58,43.12 39.9,43.5"/><rect class="st" x="41" y="10" width="6" height="6"/><rect class="st" x="41" y="34" width="6" height="12"/><rect class="st" x="26" y="49" width="12" height="6"/><rect class="st" x="47" y="9" width="1.2" height="8"/><rect class="st" x="47" y="35" width="1.2" height="8"/><rect class="st" x="28" y="55" width="8" height="1.2"/><line class="ln" x1="45" y1="11" x2="49" y2="11"/><line class="ln" x1="45" y1="14" x2="49" y2="14"/><line class="ln" x1="45" y1="37" x2="49" y2="37"/><line class="ln" x1="45" y1="41" x2="49" y2="41"/><line class="ln" x1="30" y1="53" x2="30" y2="57"/><line class="ln" x1="34" y1="53" x2="34" y2="57"/><rect class="pn" x="48.2" y="4" width="3.2" height="40"/><rect class="pn" x="4" y="56.2" width="33.6" height="3.2"/><polygon class="pn" points="48.2,46 51.4,46 51.4,59.4 38.8,59.4 38.8,56.2 48.2,56.2"/><rect class="st" x="47.6" y="44" width="4.4" height="2"/><rect class="st" x="37.6" y="55.6" width="1.2" height="4.4"/><line class="ld" x1="57.3" y1="11.25" x2="44" y2="13"/><circle class="dot" cx="44" cy="13" r=".38"/><line class="ld" x1="57.3" y1="19.25" x2="49.8" y2="22"/><circle class="dot" cx="49.8" cy="22" r=".38"/><line class="ld" x1="57.3" y1="31.25" x2="44" y2="40"/><circle class="dot" cx="44" cy="40" r=".38"/><line class="ld" x1="57.3" y1="37.85" x2="47.6" y2="39.5"/><circle class="dot" cx="47.6" cy="39.5" r=".38"/><line class="ld" x1="57.3" y1="46.25" x2="30" y2="57.8"/><circle class="dot" cx="30" cy="57.8" r=".38"/><line class="ld" x1="57.3" y1="52.25" x2="49.8" y2="45"/><circle class="dot" cx="49.8" cy="45" r=".38"/><line class="ld" x1="57.3" y1="61.25" x2="50" y2="58"/><circle class="dot" cx="50" cy="58" r=".38"/><text class="lb" x="58" y="12" text-anchor="start">각관 <tspan class="sq">□</tspan>-50x50x2.0T</text><text class="lb" x="58" y="20" text-anchor="start">아이큐브 16mm 패널</text><text class="lb" x="58" y="32" text-anchor="start">각관 <tspan class="sq">□</tspan>-100x50x2.0T</text><text class="lb" x="58" y="38.6" text-anchor="start">5mm 고정클립</text><text class="lb" x="58" y="47" text-anchor="start">아이큐브 16mm 패널</text><text class="lb" x="58" y="53" text-anchor="start">5mm 클립용 양날조이너</text><text class="lb" x="58" y="62" text-anchor="start">아이큐브 16mm 코너석</text></svg></div></div><div class="cell"><h3 class="h2">코너 마감부 (인코너)</h3><div class="fig"><svg class="dw" viewBox="0 0 82 78" role="img" aria-label="코너 마감부 (인코너)"><polygon class="cc" points="0,0 82,0 82,10 10,10 10,76 0,76"/><polygon class="tri" points="12.14,2.94 12.94,4.34 11.34,4.34"/><polygon class="tri" points="41.86,6.64 42.66,8.04 41.06,8.04"/><polygon class="tri" points="71.58,4.34 72.38,5.74 70.78,5.74"/><polygon class="tri" points="23.29,2.05 24.09,3.45 22.49,3.45"/><polygon class="tri" points="53.01,5.75 53.81,7.15 52.21,7.15"/><polygon class="tri" points="4.73,3.45 5.53,4.85 3.93,4.85"/><polygon class="tri" points="34.45,7.15 35.25,8.55 33.65,8.55"/><polygon class="tri" points="64.17,4.85 64.97,6.25 63.37,6.25"/><polygon class="tri" points="15.88,2.56 16.68,3.96 15.08,3.96"/><polygon class="tri" points="45.6,6.26 46.4,7.66 44.8,7.66"/><polygon class="tri" points="75.32,3.96 76.12,5.36 74.52,5.36"/><polygon class="tri" points="2.78,29.18 3.58,30.58 1.98,30.58"/><polygon class="tri" points="5.07,67.43 5.87,68.83 4.27,68.83"/><polygon class="tri" points="7.35,43.69 8.15,45.09 6.55,45.09"/><polygon class="tri" points="3.64,19.94 4.44,21.34 2.84,21.34"/><polygon class="tri" points="5.92,58.2 6.72,59.6 5.12,59.6"/><polygon class="tri" points="2.21,34.45 3.01,35.85 1.41,35.85"/><polygon class="tri" points="4.5,72.7 5.3,74.1 3.7,74.1"/><polygon class="tri" points="6.78,48.96 7.58,50.36 5.98,50.36"/><polygon class="tri" points="3.07,25.21 3.87,26.61 2.27,26.61"/><rect class="insb" x="10" y="10" width="72" height="8"/><polyline class="ins" points="10.23,12.61 10.54,13.29 10.79,14 10.97,14.71 11.09,15.39 11.15,16 11.16,16.5 11.13,16.88 11.07,17.12 11,17.2 10.93,17.12 10.87,16.88 10.84,16.5 10.85,16 10.91,15.39 11.03,14.71 11.21,14 11.46,13.29 11.77,12.61 12.13,12 12.55,11.5 13.01,11.12 13.5,10.88 14,10.8 14.5,10.88 14.99,11.12 15.45,11.5 15.87,12 16.23,12.61 16.54,13.29 16.79,14 16.97,14.71 17.09,15.39 17.15,16 17.16,16.5 17.13,16.88 17.07,17.12 17,17.2 16.93,17.12 16.87,16.88 16.84,16.5 16.85,16 16.91,15.39 17.03,14.71 17.21,14 17.46,13.29 17.77,12.61 18.13,12 18.55,11.5 19.01,11.12 19.5,10.88 20,10.8 20.5,10.88 20.99,11.12 21.45,11.5 21.87,12 22.23,12.61 22.54,13.29 22.79,14 22.97,14.71 23.09,15.39 23.15,16 23.16,16.5 23.13,16.88 23.07,17.12 23,17.2 22.93,17.12 22.87,16.88 22.84,16.5 22.85,16 22.91,15.39 23.03,14.71 23.21,14 23.46,13.29 23.77,12.61 24.13,12 24.55,11.5 25.01,11.12 25.5,10.88 26,10.8 26.5,10.88 26.99,11.12 27.45,11.5 27.87,12 28.23,12.61 28.54,13.29 28.79,14 28.97,14.71 29.09,15.39 29.15,16 29.16,16.5 29.13,16.88 29.07,17.12 29,17.2 28.93,17.12 28.87,16.88 28.84,16.5 28.85,16 28.91,15.39 29.03,14.71 29.21,14 29.46,13.29 29.77,12.61 30.13,12 30.55,11.5 31.01,11.12 31.5,10.88 32,10.8 32.5,10.88 32.99,11.12 33.45,11.5 33.87,12 34.23,12.61 34.54,13.29 34.79,14 34.97,14.71 35.09,15.39 35.15,16 35.16,16.5 35.13,16.88 35.07,17.12 35,17.2 34.93,17.12 34.87,16.88 34.84,16.5 34.85,16 34.91,15.39 35.03,14.71 35.21,14 35.46,13.29 35.77,12.61 36.13,12 36.55,11.5 37.01,11.12 37.5,10.88 38,10.8 38.5,10.88 38.99,11.12 39.45,11.5 39.87,12 40.23,12.61 40.54,13.29 40.79,14 40.97,14.71 41.09,15.39 41.15,16 41.16,16.5 41.13,16.88 41.07,17.12 41,17.2 40.93,17.12 40.87,16.88 40.84,16.5 40.85,16 40.91,15.39 41.03,14.71 41.21,14 41.46,13.29 41.77,12.61 42.13,12 42.55,11.5 43.01,11.12 43.5,10.88 44,10.8 44.5,10.88 44.99,11.12 45.45,11.5 45.87,12 46.23,12.61 46.54,13.29 46.79,14 46.97,14.71 47.09,15.39 47.15,16 47.16,16.5 47.13,16.88 47.07,17.12 47,17.2 46.93,17.12 46.87,16.88 46.84,16.5 46.85,16 46.91,15.39 47.03,14.71 47.21,14 47.46,13.29 47.77,12.61 48.13,12 48.55,11.5 49.01,11.12 49.5,10.88 50,10.8 50.5,10.88 50.99,11.12 51.45,11.5 51.87,12 52.23,12.61 52.54,13.29 52.79,14 52.97,14.71 53.09,15.39 53.15,16 53.16,16.5 53.13,16.88 53.07,17.12 53,17.2 52.93,17.12 52.87,16.88 52.84,16.5 52.85,16 52.91,15.39 53.03,14.71 53.21,14 53.46,13.29 53.77,12.61 54.13,12 54.55,11.5 55.01,11.12 55.5,10.88 56,10.8 56.5,10.88 56.99,11.12 57.45,11.5 57.87,12 58.23,12.61 58.54,13.29 58.79,14 58.97,14.71 59.09,15.39 59.15,16 59.16,16.5 59.13,16.88 59.07,17.12 59,17.2 58.93,17.12 58.87,16.88 58.84,16.5 58.85,16 58.91,15.39 59.03,14.71 59.21,14 59.46,13.29 59.77,12.61 60.13,12 60.55,11.5 61.01,11.12 61.5,10.88 62,10.8 62.5,10.88 62.99,11.12 63.45,11.5 63.87,12 64.23,12.61 64.54,13.29 64.79,14 64.97,14.71 65.09,15.39 65.15,16 65.16,16.5 65.13,16.88 65.07,17.12 65,17.2 64.93,17.12 64.87,16.88 64.84,16.5 64.85,16 64.91,15.39 65.03,14.71 65.21,14 65.46,13.29 65.77,12.61 66.13,12 66.55,11.5 67.01,11.12 67.5,10.88 68,10.8 68.5,10.88 68.99,11.12 69.45,11.5 69.87,12 70.23,12.61 70.54,13.29 70.79,14 70.97,14.71 71.09,15.39 71.15,16 71.16,16.5 71.13,16.88 71.07,17.12 71,17.2 70.93,17.12 70.87,16.88 70.84,16.5 70.85,16 70.91,15.39 71.03,14.71 71.21,14 71.46,13.29 71.77,12.61 72.13,12 72.55,11.5 73.01,11.12 73.5,10.88 74,10.8 74.5,10.88 74.99,11.12 75.45,11.5 75.87,12 76.23,12.61 76.54,13.29 76.79,14 76.97,14.71 77.09,15.39 77.15,16 77.16,16.5 77.13,16.88 77.07,17.12 77,17.2 76.93,17.12 76.87,16.88 76.84,16.5 76.85,16 76.91,15.39 77.03,14.71 77.21,14 77.46,13.29 77.77,12.61 78.13,12 78.55,11.5 79.01,11.12 79.5,10.88 80,10.8 80.5,10.88 80.99,11.12 81.45,11.5 81.87,12"/><rect class="insb" x="10" y="18" width="8" height="58"/><polyline class="ins" points="12.61,18.23 13.29,18.54 14,18.79 14.71,18.97 15.39,19.09 16,19.15 16.5,19.16 16.88,19.13 17.12,19.07 17.2,19 17.12,18.93 16.88,18.87 16.5,18.84 16,18.85 15.39,18.91 14.71,19.03 14,19.21 13.29,19.46 12.61,19.77 12,20.13 11.5,20.55 11.12,21.01 10.88,21.5 10.8,22 10.88,22.5 11.12,22.99 11.5,23.45 12,23.87 12.61,24.23 13.29,24.54 14,24.79 14.71,24.97 15.39,25.09 16,25.15 16.5,25.16 16.88,25.13 17.12,25.07 17.2,25 17.12,24.93 16.88,24.87 16.5,24.84 16,24.85 15.39,24.91 14.71,25.03 14,25.21 13.29,25.46 12.61,25.77 12,26.13 11.5,26.55 11.12,27.01 10.88,27.5 10.8,28 10.88,28.5 11.12,28.99 11.5,29.45 12,29.87 12.61,30.23 13.29,30.54 14,30.79 14.71,30.97 15.39,31.09 16,31.15 16.5,31.16 16.88,31.13 17.12,31.07 17.2,31 17.12,30.93 16.88,30.87 16.5,30.84 16,30.85 15.39,30.91 14.71,31.03 14,31.21 13.29,31.46 12.61,31.77 12,32.13 11.5,32.55 11.12,33.01 10.88,33.5 10.8,34 10.88,34.5 11.12,34.99 11.5,35.45 12,35.87 12.61,36.23 13.29,36.54 14,36.79 14.71,36.97 15.39,37.09 16,37.15 16.5,37.16 16.88,37.13 17.12,37.07 17.2,37 17.12,36.93 16.88,36.87 16.5,36.84 16,36.85 15.39,36.91 14.71,37.03 14,37.21 13.29,37.46 12.61,37.77 12,38.13 11.5,38.55 11.12,39.01 10.88,39.5 10.8,40 10.88,40.5 11.12,40.99 11.5,41.45 12,41.87 12.61,42.23 13.29,42.54 14,42.79 14.71,42.97 15.39,43.09 16,43.15 16.5,43.16 16.88,43.13 17.12,43.07 17.2,43 17.12,42.93 16.88,42.87 16.5,42.84 16,42.85 15.39,42.91 14.71,43.03 14,43.21 13.29,43.46 12.61,43.77 12,44.13 11.5,44.55 11.12,45.01 10.88,45.5 10.8,46 10.88,46.5 11.12,46.99 11.5,47.45 12,47.87 12.61,48.23 13.29,48.54 14,48.79 14.71,48.97 15.39,49.09 16,49.15 16.5,49.16 16.88,49.13 17.12,49.07 17.2,49 17.12,48.93 16.88,48.87 16.5,48.84 16,48.85 15.39,48.91 14.71,49.03 14,49.21 13.29,49.46 12.61,49.77 12,50.13 11.5,50.55 11.12,51.01 10.88,51.5 10.8,52 10.88,52.5 11.12,52.99 11.5,53.45 12,53.87 12.61,54.23 13.29,54.54 14,54.79 14.71,54.97 15.39,55.09 16,55.15 16.5,55.16 16.88,55.13 17.12,55.07 17.2,55 17.12,54.93 16.88,54.87 16.5,54.84 16,54.85 15.39,54.91 14.71,55.03 14,55.21 13.29,55.46 12.61,55.77 12,56.13 11.5,56.55 11.12,57.01 10.88,57.5 10.8,58 10.88,58.5 11.12,58.99 11.5,59.45 12,59.87 12.61,60.23 13.29,60.54 14,60.79 14.71,60.97 15.39,61.09 16,61.15 16.5,61.16 16.88,61.13 17.12,61.07 17.2,61 17.12,60.93 16.88,60.87 16.5,60.84 16,60.85 15.39,60.91 14.71,61.03 14,61.21 13.29,61.46 12.61,61.77 12,62.13 11.5,62.55 11.12,63.01 10.88,63.5 10.8,64 10.88,64.5 11.12,64.99 11.5,65.45 12,65.87 12.61,66.23 13.29,66.54 14,66.79 14.71,66.97 15.39,67.09 16,67.15 16.5,67.16 16.88,67.13 17.12,67.07 17.2,67 17.12,66.93 16.88,66.87 16.5,66.84 16,66.85 15.39,66.91 14.71,67.03 14,67.21 13.29,67.46 12.61,67.77 12,68.13 11.5,68.55 11.12,69.01 10.88,69.5 10.8,70 10.88,70.5 11.12,70.99 11.5,71.45 12,71.87 12.61,72.23 13.29,72.54 14,72.79 14.71,72.97 15.39,73.09 16,73.15 16.5,73.16 16.88,73.13 17.12,73.07 17.2,73 17.12,72.93 16.88,72.87 16.5,72.84 16,72.85 15.39,72.91 14.71,73.03 14,73.21 13.29,73.46 12.61,73.77 12,74.13 11.5,74.55 11.12,75.01 10.88,75.5 10.8,76"/><line class="ln" x1="60" y1="3" x2="60" y2="17"/><polygon class="st" points="58.6,2 61.4,2 62,8 58,8"/><rect class="st" x="58.5" y="16.2" width="3" height="1.8"/><rect class="st" x="20" y="18" width="14" height="7"/><rect class="st" x="18" y="30" width="7" height="14"/><rect class="st" x="40" y="25.8" width="12" height="1.2"/><rect class="st" x="25" y="48" width="1.2" height="12"/><line class="ln" x1="43" y1="22" x2="43" y2="28"/><line class="ln" x1="49" y1="22" x2="49" y2="28"/><line class="ln" x1="22" y1="51" x2="28" y2="51"/><line class="ln" x1="22" y1="57" x2="28" y2="57"/><polyline class="flash" points="36,26.4 25.6,26.4 25.6,38"/><rect class="pn" x="30.6" y="27" width="51.4" height="3.4"/><rect class="pn" x="26.2" y="31.8" width="3.4" height="44.2"/><polyline class="ln" points="30.2,34 30.2,31 34,31"/><line class="ld" x1="70" y1="37.6" x2="70" y2="28.7"/><circle class="dot" cx="70" cy="28.7" r=".38"/><line class="ld" x1="57.3" y1="45.25" x2="46" y2="26.4"/><circle class="dot" cx="46" cy="26.4" r=".38"/><line class="ld" x1="35.3" y1="51.25" x2="30" y2="21.5"/><circle class="dot" cx="30" cy="21.5" r=".38"/><line class="ld" x1="35.3" y1="57.25" x2="21.5" y2="37"/><circle class="dot" cx="21.5" cy="37" r=".38"/><line class="ld" x1="35.3" y1="63.25" x2="32" y2="31"/><circle class="dot" cx="32" cy="31" r=".38"/><line class="ld" x1="35.3" y1="69.25" x2="27.9" y2="66"/><circle class="dot" cx="27.9" cy="66" r=".38"/><line class="ld" x1="35.3" y1="75.25" x2="25.6" y2="31"/><circle class="dot" cx="25.6" cy="31" r=".38"/><text class="lb" x="58" y="40" text-anchor="start">아이큐브 16mm 패널</text><text class="lb" x="58" y="46" text-anchor="start">5mm 고정클립</text><text class="lb" x="36" y="52" text-anchor="start">각관 <tspan class="sq">□</tspan>-100x50x2.0T</text><text class="lb" x="36" y="58" text-anchor="start">각관 <tspan class="sq">□</tspan>-100x50x2.0T</text><text class="lb" x="36" y="64" text-anchor="start">5mm 클립용 외날조이너</text><text class="lb" x="36" y="70" text-anchor="start">아이큐브 16mm 패널</text><text class="lb" x="36" y="76" text-anchor="start">아이큐브 16mm 공용 인코너 후레싱</text></svg></div></div></div>
+  <p class="cap">도면 출처: 아이큐브 카탈로그 26.01</p>
+  <div class="ft"><span>HOME TRADERS · i-CUBE</span><b class="pno"></b></div>
+</section>
+<section class="page stock-page" data-page="stock">
+  <div class="phead">
+    <div><div class="label">Stock Status</div><h2>재고 현황</h2></div>
+    <div><div class="legend"><span class="dot">재고 있음</span><span class="dot no">재고 없음</span></div><div class="side" style="margin-top:2mm">2026년 9월 기준</div></div>
+  </div>
+  <table class="stock">
+    <thead><tr><th></th><th><span class="label">Code</span></th><th>색상</th><th><span class="label">Series</span></th><th>재고</th></tr></thead>
+    <tbody>
+      <tr><td class="sw"><img src="sw16/EFX3453.jpg" alt=""></td><td class="code">EFX3453</td><td>리가스톤 화이트</td><td class="ser">V16</td><td><span class="dot">재고 있음</span></td></tr>
+      <tr><td class="sw"><img src="sw16/EFX3457.jpg" alt=""></td><td class="code">EFX3457</td><td>리가스톤 블랙</td><td class="ser">V16</td><td><span class="dot">재고 있음</span></td></tr>
+      <tr><td class="sw"><img src="sw16/EFA2851.jpg" alt=""></td><td class="code">EFA2851</td><td>샤프락 화이트</td><td class="ser">V16</td><td><span class="dot">재고 있음</span></td></tr>
+      <tr><td class="sw"><img src="sw16/EFA2855.jpg" alt=""></td><td class="code">EFA2855</td><td>샤프락 라이트 그레이</td><td class="ser">V16</td><td><span class="dot">재고 있음</span></td></tr>
+      <tr><td class="sw"><img src="sw16/EFA5254.jpg" alt=""></td><td class="code">EFA5254</td><td>모나비스톤 네이비</td><td class="ser">V16</td><td><span class="dot">재고 있음</span></td></tr>
+      <tr><td class="sw"><img src="sw16/EFX3351.jpg" alt=""></td><td class="code">EFX3351</td><td>코르모스톤 화이트</td><td class="ser">V16</td><td><span class="dot">재고 있음</span></td></tr>
+      <tr><td class="sw"><img src="sw/EFF151.jpg" alt=""></td><td class="code">EFF151</td><td>화이트</td><td class="ser">FUGE</td><td><span class="dot no">재고 없음</span></td></tr>
+      <tr><td class="sw"><img src="sw/EJB8123.jpg" alt=""></td><td class="code">EJB8123</td><td>에토프 에스프레소 라떼</td><td class="ser">PREMIUM</td><td><span class="dot">재고 있음</span></td></tr>
+      <tr><td class="sw"><img src="sw/EJB8522.jpg" alt=""></td><td class="code">EJB8522</td><td>알모니 데저트</td><td class="ser">PREMIUM</td><td><span class="dot no">재고 없음</span></td></tr>
+    </tbody>
+  </table>
+  <p class="note">재고는 발행 시점 기준이며 수시로 바뀝니다. 주문 전 홈트레이더스로 확인해 주세요.</p>
+  <div class="foot"><span class="label">HOME TRADERS · i-CUBE</span><span class="no">10</span></div>
+</section>
+<section class="page back" data-page="back" data-variant="A">
+  <img class="logo" src="brand/logo_dark.png" alt="HOME TRADERS">
+  <div class="tag"><div class="rule"></div><p>What we build,<br>time keeps</p></div>
+  <div class="contact">
+    <div class="who"><b>Lee,Choi Won</b><span>CEO</span></div>
+    <div class="lines">(+82)10 6207 8478<br>chris@hometraders.co.kr<br>872, Yeongcheon-dong,Hwaseong-si,<br>Republic of Korea</div>
+  </div>
+  <img class="qr" src="brand/qr.png" alt="홈트레이더스 QR 코드">
+  <div class="bottom"><span>주식회사 홈트레이더스</span><span class="en">HOME TRADERS · i-CUBE</span></div>
+</section>
+<section class="page back solo" data-page="back" data-variant="B">
+  <img class="logo" src="brand/logo_dark.png" alt="HOME TRADERS">
+</section>
+<section class="page back solo" data-page="back" data-variant="C">
+  <img class="qr" src="brand/qr.png" alt="홈트레이더스 QR 코드">
+</section>
+  </main>
+  <div id="book" hidden role="dialog" aria-modal="true" aria-label="책처럼 넘겨보기">
+    <div class="bk-bar"><span class="bk-no"></span><button type="button" class="bk-close">닫기</button></div>
+    <div class="bk-stage"><div class="bk-inner"></div></div>
+    <div class="bk-nav"><button type="button" class="bk-prev" aria-label="이전 쪽">←</button><button type="button" class="bk-next" aria-label="다음 쪽">→</button></div>
+  </div>
+</div>
+<script>
+const PAGES=[
+ {id:'cover', name:'표지', fixed:true},
+ {id:'features', name:'기능 상세', variants:[['A','A · 도식형 (단열·셀프클리닝·내후성·통기)'],['B','B · 아이콘형 (특장점 8가지)'],['C','C · 스타일 가이드형 (네 가지)']]},
+ {id:'v16-opener', name:'V16 시리즈 소개'},
+ {id:'v16-colors', name:'V16 패턴과 색상'},
+ {id:'pattern-riga', name:'패턴 상세 · 리가스톤'},
+ {id:'patterns', name:'선택 패턴 상세 (자동)'},
+ {id:'picked-index', name:'선택 패턴 색상표 (자동)'},
+ {id:'portfolio-1', name:'시공 사례 1'},
+ {id:'portfolio-2', name:'시공 사례 2'},
+ {id:'color-index', name:'전체 색상', variants:[['A','A · 큰 칩 (대표 9색)'],['B','B · 빼곡형 (전 품번 63색)']]},
+ {id:'accessories', name:'부속자재'},
+ {id:'install', name:'시공방법', variants:[['B','B · 스타일 가이드형 (네 단계)'],['A','A · 기본 구조도 (입체도·상세도 2쪽)']]},
+ {id:'stock', name:'재고 현황 (별지)'},
+ {id:'back', name:'뒷표지', variants:[['A','A · 명함형 (연락처·QR)'],['B','B · 로고형'],['C','C · QR형']]},
+];
+const PATS=[{"series":"V16","pattern":"볼브스톤","colors":[{"code":"EFX3151","color":"화이트","order":false,"swatch":"nh/sw/EFX3151.jpg"},{"code":"EFX3152","color":"라떼","order":false,"swatch":"nh/sw/EFX3152.jpg"},{"code":"EFX3153","color":"브라운","order":false,"swatch":"nh/sw/EFX3153.jpg"}],"cases":[{"f":"nh/case2/691.webp","w":1600,"h":1067,"codes":["EFX3151"],"lo":false},{"f":"nh/case2/765.webp","w":1600,"h":1067,"codes":["EFX3151"],"lo":false},{"f":"nh/case2/887.webp","w":1600,"h":1067,"codes":["EFX3153"],"lo":false}],"key":"p1"},{"series":"V16","pattern":"리가스톤","colors":[{"code":"EFX3453","color":"화이트","order":false,"swatch":"nh/sw/EFX3453.jpg"},{"code":"EFX3457","color":"블랙","order":false,"swatch":"nh/sw/EFX3457.jpg"}],"cases":[{"f":"nh/case2/475.webp","w":1600,"h":1067,"codes":["EFX3453"],"lo":false},{"f":"nh/case2/617.webp","w":1600,"h":1067,"codes":["EFX3457"],"lo":false},{"f":"nh/case2/637.webp","w":1600,"h":1067,"codes":["EFX3457"],"lo":false},{"f":"nh/case2/650.webp","w":1600,"h":1067,"codes":["EFX3457"],"lo":false},{"f":"nh/case2/673.webp","w":1600,"h":1067,"codes":["EFX3457"],"lo":false},{"f":"nh/case2/770.webp","w":1600,"h":1067,"codes":["EFX3457"],"lo":false}],"key":"p2"},{"series":"V16","pattern":"모나비스톤","colors":[{"code":"EFA5251","color":"퓨어 화이트","order":false,"swatch":"nh/sw/EFA5251.jpg"},{"code":"EFA5254","color":"네이비","order":false,"swatch":"nh/sw/EFA5254.jpg"}],"cases":[{"f":"nh/case2/588.webp","w":1600,"h":1067,"codes":["EFA5254"],"lo":false},{"f":"nh/case2/672.webp","w":1600,"h":1067,"codes":["EFA5254"],"lo":false},{"f":"nh/case2/698.webp","w":1600,"h":1067,"codes":["EFA5254"],"lo":false},{"f":"nh/case2/930.webp","w":1600,"h":1067,"codes":["EFA5254"],"lo":false},{"f":"nh/case2/553.webp","w":1600,"h":1067,"codes":[],"lo":false},{"f":"nh/case2/628.webp","w":876,"h":1200,"codes":[],"lo":false}],"key":"p3"},{"series":"V16","pattern":"코르모스톤","colors":[{"code":"EFX3351","color":"화이트","order":false,"swatch":"nh/sw/EFX3351.jpg"},{"code":"EFX3355","color":"다크 그레이","order":false,"swatch":"nh/sw/EFX3355.jpg"}],"cases":[{"f":"nh/case2/803.webp","w":1600,"h":1067,"codes":["EFX3351"],"lo":false},{"f":"nh/case2/714.webp","w":1600,"h":1067,"codes":["EFX3355"],"lo":false},{"f":"nh/case2/851.webp","w":1600,"h":1067,"codes":["EFX3355"],"lo":false},{"f":"nh/case2/264.webp","w":1067,"h":1600,"codes":[],"lo":false}],"key":"p4"},{"series":"V16","pattern":"샤프락","colors":[{"code":"EFA2851","color":"화이트","order":false,"swatch":"nh/sw/EFA2851.jpg"},{"code":"EFA2854","color":"초코","order":false,"swatch":"nh/sw/EFA2854.jpg"},{"code":"EFA2855","color":"라이트 그레이","order":false,"swatch":"nh/sw/EFA2855.jpg"}],"cases":[{"f":"nh/case2/721.webp","w":1600,"h":1067,"codes":["EFA2851"],"lo":false},{"f":"nh/case2/836.webp","w":1600,"h":1067,"codes":["EFA2855"],"lo":false},{"f":"nh/case2/572.webp","w":1067,"h":1600,"codes":["EFA2851"],"lo":false}],"key":"p5"},{"series":"V16","pattern":"미라주타일","colors":[{"code":"EFX3951","color":"화이트","order":false,"swatch":"nh/sw/EFX3951.jpg"},{"code":"EFX3954","color":"챠콜","order":false,"swatch":"nh/sw/EFX3954.jpg"}],"cases":[{"f":"nh/case2/616.webp","w":1600,"h":1067,"codes":["EFX3951"],"lo":false},{"f":"nh/case2/904.webp","w":1600,"h":1067,"codes":["EFX3951"],"lo":false}],"key":"p6"},{"series":"V16","pattern":"세리오스타일","colors":[{"code":"EFX1351","color":"퓨어 화이트","order":false,"swatch":"nh/sw/EFX1351.jpg"},{"code":"EFX1354","color":"블랙","order":false,"swatch":"nh/sw/EFX1354.jpg"}],"cases":[{"f":"nh/case2/785.webp","w":1600,"h":1150,"codes":[],"lo":false},{"f":"nh/case2/591.webp","w":1067,"h":1600,"codes":[],"lo":false}],"key":"p7"},{"series":"N16","pattern":"비브릭","colors":[{"code":"EJB4922","color":"레드","order":false,"swatch":"nh/sw/EJB4922.jpg"}],"cases":[{"f":"nh/case2/393.webp","w":1600,"h":1067,"codes":["EJB4922"],"lo":false},{"f":"nh/case2/614.webp","w":1600,"h":1067,"codes":["EJB4922"],"lo":false},{"f":"nh/case2/592.webp","w":1600,"h":1067,"codes":[],"lo":false},{"f":"nh/case2/656.webp","w":1600,"h":1067,"codes":[],"lo":false},{"f":"nh/case2/810.webp","w":1600,"h":1067,"codes":[],"lo":false},{"f":"nh/case2/865.webp","w":971,"h":1200,"codes":[],"lo":false}],"key":"p8"},{"series":"N16","pattern":"아리에타","colors":[{"code":"EJB3621","color":"화이트","order":false,"swatch":"nh/sw/EJB3621.jpg"},{"code":"EJB3624","color":"크롬","order":false,"swatch":"nh/sw/EJB3624.jpg"}],"cases":[{"f":"nh/case2/559.webp","w":1600,"h":1067,"codes":["EJB3624"],"lo":false},{"f":"nh/case2/647.webp","w":1600,"h":1067,"codes":["EJB3624"],"lo":false},{"f":"nh/case2/875.webp","w":1600,"h":1067,"codes":["EJB3624"],"lo":false},{"f":"nh/case2/898.webp","w":1600,"h":1067,"codes":["EJB3624"],"lo":false},{"f":"nh/case2/793.webp","w":1022,"h":1200,"codes":["EJB3624"],"lo":false},{"f":"nh/case2/609.webp","w":1600,"h":1067,"codes":[],"lo":false}],"key":"p9"},{"series":"N16","pattern":"포레스틱","colors":[{"code":"EJB3523","color":"브라운","order":false,"swatch":"nh/sw/EJB3523.jpg"},{"code":"EJB3524","color":"레드","order":false,"swatch":"nh/sw/EJB3524.jpg"}],"cases":[{"f":"nh/case2/344.webp","w":494,"h":404,"codes":["EJB3523"],"lo":true},{"f":"nh/case2/421.webp","w":494,"h":404,"codes":[],"lo":true}],"key":"p10"},{"series":"N16","pattern":"파롬보더","colors":[{"code":"EJB4824","color":"오트밀","order":false,"swatch":"nh/sw/EJB4824.jpg"},{"code":"EJB4825","color":"브라운","order":false,"swatch":"nh/sw/EJB4825.jpg"}],"cases":[{"f":"nh/case2/801.webp","w":1600,"h":1067,"codes":["EJB4825"],"lo":false},{"f":"nh/case2/804.webp","w":1600,"h":1067,"codes":["EJB4825"],"lo":false},{"f":"nh/case2/327.webp","w":1600,"h":1067,"codes":[],"lo":false}],"key":"p11"},{"series":"N16","pattern":"","colors":[{"code":"EJB7823","color":"","order":false,"swatch":"nh/sw/EJB7823.jpg"}],"cases":[],"key":"p12"},{"series":"N16","pattern":"","colors":[{"code":"EJB7821","color":"","order":false,"swatch":"nh/sw/EJB7821.jpg"}],"cases":[],"key":"p13"},{"series":"PREMIUM","pattern":"에토프","colors":[{"code":"EJB8123","color":"에스프레소 라떼","order":false,"swatch":"nh/sw/EJB8123.jpg"},{"code":"EJB8124","color":"모노크롬","order":false,"swatch":"nh/sw/EJB8124.jpg"}],"cases":[{"f":"nh/case2/602.webp","w":1067,"h":1600,"codes":[],"lo":false},{"f":"nh/case2/166.webp","w":494,"h":404,"codes":["EJB8124"],"lo":true}],"key":"p14"},{"series":"FUGE","pattern":"","colors":[{"code":"EFF101","color":"","order":false,"swatch":"nh/sw/EFF101.jpg"},{"code":"EFF104","color":"","order":false,"swatch":"nh/sw/EFF104.jpg"}],"cases":[{"f":"nh/case2/665.webp","w":1600,"h":1067,"codes":["EFF104"],"lo":false},{"f":"nh/case2/858.webp","w":1600,"h":1067,"codes":["EFF104"],"lo":false},{"f":"nh/case2/550.webp","w":1600,"h":1067,"codes":[],"lo":false},{"f":"nh/case2/632.webp","w":1600,"h":1067,"codes":[],"lo":false},{"f":"nh/case2/679.webp","w":1600,"h":1067,"codes":[],"lo":false},{"f":"nh/case2/689.webp","w":1600,"h":1067,"codes":[],"lo":false}],"key":"p15"},{"series":"FUGE","pattern":"","colors":[{"code":"EFF154","color":"","order":false,"swatch":"nh/sw/EFF154.jpg"}],"cases":[{"f":"nh/case2/549.webp","w":1600,"h":1067,"codes":["EFF154"],"lo":false},{"f":"nh/case2/658.webp","w":1600,"h":1067,"codes":["EFF154"],"lo":false},{"f":"nh/case2/880.webp","w":1600,"h":1067,"codes":["EFF154"],"lo":false},{"f":"nh/case2/594.webp","w":1600,"h":1067,"codes":[],"lo":false},{"f":"nh/case2/605.webp","w":1600,"h":1067,"codes":[],"lo":false},{"f":"nh/case2/663.webp","w":1600,"h":1067,"codes":[],"lo":false}],"key":"p16"}];
+const SPEC={V16:['16 × 455 × 3,030mm','도장 보증 10년'],N16:['16 × 455 × 3,030mm','도장 보증 15년'],PREMIUM:['16 × 455 × 3,030mm','도장 보증 15년'],FUGE:['16 × 455 × 1,820mm','도장 보증 15년']};
+// 표지·V16 대표 사진 후보 (니치하 시공 사례) — 여러 장 고르면 한 장당 한 쪽씩 인쇄
+const COVER_IMGS=[['584','EFX3457 리가스톤 블랙'],['591','EFA5254 모나비스톤 네이비'],['840','다른 품번 사례'],['599','다른 품번 사례'],['602','다른 품번 사례']]
+  .map(([k,l])=>[k,'nh/hero/'+k+'.jpg',l]);
+const HERO_IMGS=[['782','EFX3457 리가스톤 블랙'],['809','EFX3457 리가스톤 블랙'],['475','EFX3453 리가스톤 화이트'],['930','EFA5254 모나비스톤 네이비'],['765','EFX3151 볼브스톤 화이트'],['836','EFA2855 샤프락 라이트 그레이'],['616','EFX3951 미라주타일 화이트'],['803','EFX3351 코르모스톤 화이트']]
+  .map(([k,l])=>[k,'nh/hero/'+k+'.jpg',l+' 시공 사례',l]);
+PAGES.find(p=>p.id==='cover').variants=COVER_IMGS.map(([k,,l])=>[k,k+' · '+l]);
+PAGES.find(p=>p.id==='v16-opener').variants=HERO_IMGS.map(([k,,,l])=>[k,k+' · '+l]);
+const DEFAULT_VARIANT={features:'A', install:['B','A'], 'color-index':'B', back:'A', cover:'584', 'v16-opener':'782'};
+const LOGO_DEFAULT={x:162, y:14, w:32};   // 표지 로고 위치·폭 (mm)
+const ALL_CODES=PATS.flatMap(p=>p.colors.map(c=>c.code));
+const OFF_BY_DEFAULT=['v16-colors','pattern-riga','picked-index','portfolio-1','portfolio-2','color-index','stock'];
+function defaults(){ return {order:PAGES.map(p=>p.id), on:Object.fromEntries(PAGES.map(p=>[p.id,!OFF_BY_DEFAULT.includes(p.id)])), variant:Object.fromEntries(Object.entries(DEFAULT_VARIANT).map(([k,v])=>[k,[].concat(v)])), picked:ALL_CODES.slice(), coverLogo:{...LOGO_DEFAULT}, coverCrop:{}}; }
+const esc=t=>String(t??'').replace(/[&<>"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
+function patTitle(p){ return p.pattern || p.colors.map(c=>c.code).join(' · '); }
+function buildGenerated(){
+  let anchor=document.querySelector('.preview [data-page="pattern-riga"]');
+  let lastSeries=null;
+  for(const p of PATS){
+    if(p.series!==lastSeries){
+      // 시리즈 첫 패턴 바로 앞 = 그 시리즈에서 고른 색상 목록
+      const sc=document.createElement('section'); sc.className='page sg scol'; sc.dataset.page='patterns'; sc.dataset.scol=p.series;
+      anchor.after(sc); anchor=sc; lastSeries=p.series;
+    }
+    const sec=document.createElement('section'); sec.className='page sg pat'; sec.dataset.page='patterns'; sec.dataset.pat=p.key;
+    anchor.after(sec); anchor=sec;
+  }
+  const idx=document.createElement('section'); idx.className='page sg dense'; idx.dataset.page='picked-index'; anchor.after(idx);
+}
+// 고른 색이 실제로 쓰인 사진을 앞에, 같은 패턴 다른 색 사진은 뒤에
+// 패턴 페이지에 쓰이는 순서 그대로 전체 목록 (앞 4장이 패턴 페이지에 들어감)
+function rankedCases(p,picked){
+  const rank=c=>c.codes.some(k=>picked.has(k))?0:1, lo=c=>c.lo?1:0;
+  return p.cases.map((c,i)=>[c,i]).sort((a,b)=>rank(a[0])-rank(b[0])||lo(a[0])-lo(b[0])||a[1]-b[1]).map(x=>x[0]);
+}
+function pickCases(p,picked){
+  const rank=c=>c.codes.some(k=>picked.has(k))?0:1, lo=c=>c.lo?1:0, land=c=>c.w>=c.h?0:1;
+  const sel=p.cases.map((c,i)=>[c,i]).sort((a,b)=>rank(a[0])-rank(b[0])||lo(a[0])-lo(b[0])||a[1]-b[1]).slice(0,4);
+  // 큰 칸에는 고해상도 가로 사진이 오도록
+  return sel.sort((a,b)=>lo(a[0])-lo(b[0])||land(a[0])-land(b[0])||a[1]-b[1]).map(x=>x[0]);
+}
+function caseGrid(cases){
+  const land=c=>c.w>=c.h;
+  if(cases.length===2) return land(cases[0])&&land(cases[1])?['n2 rows','']:['n2',`grid-template-columns:${cases.map(c=>(c.w/c.h).toFixed(3)+'fr').join(' ')}`];
+  if(cases.length===3&&!land(cases[0])) return ['n3 pl',''];
+  return ['n'+cases.length,''];
+}
+function caseLabel(p,c,picked){
+  const hit=p.colors.filter(k=>c.codes.includes(k.code)&&picked.has(k.code));
+  return hit.length?hit.map(k=>`<b>${k.code}</b>${esc(k.color)}`).join(' '):'같은 패턴 · 다른 색상';
+}
+function updateGenerated(){
+  const picked=new Set(st.picked||[]);
+  for(const p of PATS){
+    const sec=document.querySelector(`.preview [data-pat="${p.key}"]`);
+    const cols=p.colors.filter(c=>picked.has(c.code));
+    // 고른 색이 없거나 시공 사진이 한 장도 없으면 패턴 페이지 생략 (색상은 시리즈 색상 페이지에 남음)
+    const pageOn=cols.length>0 && p.cases.length>0;
+    sec.dataset.empty=pageOn?'0':'1';
+    if(!pageOn){ sec.innerHTML=''; continue; }
+    const [size,warr]=SPEC[p.series]||['',''];
+    const cases=pickCases(p,picked), [gcls,gsty]=caseGrid(cases);
+    sec.innerHTML=`<div class="lab">${esc(p.series)} · PATTERN</div>
+      <h2 class="h1">${esc(patTitle(p))}</h2>
+      <p class="sub">${esc(size)} · ${esc(warr)} · 색상 ${cols.length}종</p>
+      <div class="rule"></div>
+      <div class="pcolors" style="--c:${Math.max(2,Math.min(3,cols.length))}">${cols.map(c=>`<figure><img src="${c.swatch}" alt="${c.code} 견본"><figcaption><b>${c.code}</b><span>${esc(c.color)}${c.order?' (주문)':''}</span></figcaption></figure>`).join('')}</div>
+      ${cases.length?`<div class="pcases ${gcls}" style="${gsty}">${cases.map(c=>`<figure><div class="ph"><img src="${c.f}" alt="${esc(patTitle(p))} 시공 사례"></div><figcaption>${caseLabel(p,c,picked)}</figcaption></figure>`).join('')}</div>
+      <p class="cap">니치하 시공 사례 · 사진 속 색상은 촬영·인쇄 환경에 따라 실물과 다를 수 있습니다.</p>`:'<div class="pnocase"></div>'}
+      <div class="ft"><span>HOME TRADERS · i-CUBE</span><b class="pno"></b></div>`;
+  }
+  for(const sc of document.querySelectorAll('.preview [data-scol]')){
+    const sr=sc.dataset.scol;
+    const rows=PATS.filter(p=>p.series===sr).map(p=>({p,cols:p.colors.filter(c=>picked.has(c.code))})).filter(r=>r.cols.length);
+    const n=rows.reduce((a,r)=>a+r.cols.length,0);
+    // 패턴이 하나뿐이면 바로 뒤 패턴 페이지에 같은 칩·사진이 있으므로 색상 페이지는 생략
+    const solo=rows.length===1 && rows[0].p.cases.length>0;
+    sc.dataset.empty=(n&&!solo)?'0':'1';
+    if(!n||solo){ sc.innerHTML=''; continue; }
+    const [size,warr]=SPEC[sr]||['',''];
+    // 패턴 줄이 적어 아래가 많이 비면 그 시리즈 시공 사례 사진으로 채움 (패턴 페이지에 안 쓰인 사진 먼저)
+    const rowMM=rows.length<=2?45:28.5, freeMM=210-rows.length*rowMM;
+    let photos='';
+    if(freeMM>=60){
+      const want=freeMM>=120?3:2, seen=new Set(), pool=[];
+      const lists=rows.map(({p})=>({p,rk:rankedCases(p,picked)}));
+      for(const from of [4,0]){
+        for(let i=0;i<6;i++) for(const {p,rk} of lists){
+          const c=(from===4?rk.slice(4):rk.slice(0,4))[i];
+          if(c&&!seen.has(c.f)){ seen.add(c.f); pool.push({c,p}); }
+        }
+      }
+      const sel=pool.slice(0,want).sort((a,b)=>(a.c.lo?1:0)-(b.c.lo?1:0)||(a.c.w>=a.c.h?0:1)-(b.c.w>=b.c.h?0:1));
+      if(sel.length){
+        const [gcls,gsty]=caseGrid(sel.map(x=>x.c));
+        photos=`<div class="pcases ${gcls}" style="${gsty}">${sel.map(({c,p})=>`<figure><div class="ph"><img src="${c.f}" alt="${esc(patTitle(p))} 시공 사례"></div><figcaption>${caseLabel(p,c,picked)}</figcaption></figure>`).join('')}</div>
+      <p class="cap">니치하 시공 사례 · 사진 속 색상은 촬영·인쇄 환경에 따라 실물과 다를 수 있습니다.</p>`;
+      }
+    }
+    sc.innerHTML=`<div class="lab">${esc(sr)} · COLORS</div>
+      <h2 class="h1">${esc(sr)} 선택한 색상 <em>${n}</em></h2>
+      <p class="sub">${esc(size)} · ${esc(warr)} · 패턴 ${rows.length}종</p>
+      <div class="rule"></div>
+      <div class="srows${rows.length<=2?' big':''}${photos?' fit':''}">${rows.map(({p,cols})=>`<div class="srow"><div class="sname"><b>${esc(patTitle(p))}</b><span>색상 ${cols.length}종</span></div><div class="sgrid">${cols.map(c=>`<figure><img src="${c.swatch}" alt="${c.code} 견본"><figcaption><b>${c.code}</b>${esc(c.color)}</figcaption></figure>`).join('')}</div></div>`).join('')}</div>
+      ${photos}
+      <div class="ft"><span>HOME TRADERS · i-CUBE</span><b class="pno"></b></div>`;
+  }
+  const idx=document.querySelector('.preview [data-page="picked-index"]');
+  const groups=['V16','N16','PREMIUM','FUGE'].map(sr=>{
+    const items=PATS.filter(p=>p.series===sr).flatMap(p=>p.colors.filter(c=>picked.has(c.code)).map(c=>({...c,pattern:p.pattern})));
+    return items.length?`<div class="igroup"><div class="ihead"><span class="lab">${sr}</span><span class="icount">${items.length}</span></div><div class="igrid">${items.map(c=>`<figure><img src="${c.swatch}" alt="${c.code}"><figcaption><b>${c.code}</b><span>${esc([c.pattern,c.color].filter(Boolean).join(' '))||'&nbsp;'}${c.order?' (주문)':''}</span></figcaption></figure>`).join('')}</div></div>`:'';
+  }).join('');
+  idx.dataset.empty=picked.size?'0':'1';
+  idx.innerHTML=`<div class="lab">COLOR INDEX</div><h2 class="h1">선택한 색상 <em>${picked.size}</em></h2><div class="rule"></div><div class="igroups">${groups}</div>
+    <p class="cap">칩 색상은 인쇄 특성상 실물과 다를 수 있습니다.</p><div class="ft"><span>HOME TRADERS · i-CUBE</span><b class="pno"></b></div>`;
+}
+function renderPicker(){
+  const picked=new Set(st.picked||[]);
+  $('#pk-count').textContent=`${picked.size} / ${ALL_CODES.length}`;
+  const box=$('#pk-list'); box.replaceChildren();
+  for(const sr of ['V16','N16','PREMIUM','FUGE']){
+    const pats=PATS.filter(p=>p.series===sr); if(!pats.length) continue;
+    const h=document.createElement('div'); h.className='pk-ser'; h.textContent=sr; box.appendChild(h);
+    const g=document.createElement('div'); g.className='pk-grid';
+    for(const p of pats) for(const c of p.colors){
+      const b=document.createElement('button'); b.type='button'; b.className='pk-tile'; b.id='pk-'+c.code;
+      b.setAttribute('aria-pressed', picked.has(c.code)?'true':'false');
+      b.innerHTML=`<img src="${c.swatch}" alt=""><b>${c.code}</b><span>${esc([p.pattern,c.color].filter(Boolean).join(' '))||'&nbsp;'}</span>`;
+      b.onclick=()=>{ const set=new Set(st.picked||[]); set.has(c.code)?set.delete(c.code):set.add(c.code); st.picked=ALL_CODES.filter(x=>set.has(x)); apply(); };
+      g.appendChild(b);
+    }
+    box.appendChild(g);
+  }
+}
+const KEY='homt-catalog-editor-v4';
+let st=defaults();
+try{ const saved=JSON.parse(localStorage.getItem(KEY)||'null'); if(saved&&saved.order&&saved.order.length===PAGES.length) st=saved; }catch(e){}
+const q=new URLSearchParams(location.search); for(const k of ['features','install','color-index']) if(q.get(k)) st.variant[k]=q.get(k).split(',');
+// 올린 표지 사진은 비동기로 불러오므로, 처음 적용 전에 고른 표지 목록을 기억해 둠
+const SAVED_COVER=(st.variant&&Array.isArray(st.variant.cover))?st.variant.cover.slice():[];
+const byId=Object.fromEntries(PAGES.map(p=>[p.id,p]));
+const $=s=>document.querySelector(s);
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(st)); }catch(e){} }
+function apply(){
+  if(!st.picked) st.picked=ALL_CODES.slice();
+  // 예전 기본 자리(왼쪽 위)에 그대로 있던 로고는 새 기본 자리(오른쪽 위)로
+  if(!st.coverLogo || (st.coverLogo.x===16&&st.coverLogo.y===14&&st.coverLogo.w===32)) st.coverLogo={...LOGO_DEFAULT};
+  if(!st.coverCrop) st.coverCrop={};
+  // 예전에 저장된 구성에 새 페이지·새 선택지가 없으면 기본값으로 채움
+  for(const p of PAGES){
+    if(!st.order.includes(p.id)){ st.order.push(p.id); st.on[p.id]=!OFF_BY_DEFAULT.includes(p.id); }
+    if(p.variants){
+      // 디자인 선택은 여러 개 가능 — 예전 저장값(문자 하나)도 목록으로 바꿔 둠
+      const cur=st.variant[p.id], ok=p.variants.map(x=>x[0]);
+      let arr=(Array.isArray(cur)?cur:(cur?[cur]:[])).filter(v=>ok.includes(v));
+      if(!arr.length) arr=[].concat(DEFAULT_VARIANT[p.id]||ok[0]);
+      st.variant[p.id]=arr;
+    }
+  }
+  updateGenerated();
+  const prev=$('.preview'); let n=0;
+  for(const id of st.order){
+    for(const el of document.querySelectorAll(`.preview [data-page="${id}"]`)){
+      const v=el.dataset.variant; const show=st.on[id] && (!v || st.variant[id].includes(v)) && el.dataset.empty!=='1';
+      el.hidden=!show; prev.appendChild(el);
+      if(show){ n++; const no=el.querySelector('.foot .no, .ft .pno'); if(no) no.textContent=String(n).padStart(2,'0'); }
+    }
+  }
+  $('#count').textContent=`인쇄 ${n}쪽 (A4)`;
+  render(); paintCover(); save();
+}
+const THUMBS={};
+// 썸네일 복제본의 SVG 화살표·그라데이션 id 가 원본과 겹치면, 인쇄 때 숨겨지는 사이드바 쪽을 참조해 화살표가 사라짐 → 복제본 id 를 바꿈
+function uniqIds(root,suffix){
+  const map={};
+  root.querySelectorAll('[id]').forEach(el=>{ map[el.id]=el.id+suffix; el.id=map[el.id]; });
+  if(!Object.keys(map).length) return;
+  root.querySelectorAll('*').forEach(el=>{
+    for(const a of [...el.attributes]){
+      let v=a.value;
+      if(!v.includes('#')) continue;
+      for(const [o,n] of Object.entries(map)){ v=v.split('url(#'+o+')').join('url(#'+n+')'); if(v==='#'+o) v='#'+n; }
+      if(v!==a.value) el.setAttribute(a.name,v);
+    }
+  });
+}
+function thumbOf(id,v){
+  const key=id+'|'+v;
+  if(!THUMBS[key]){
+    const src=document.querySelector(`.preview [data-page="${id}"][data-variant="${v}"]`);
+    const c=src.cloneNode(true); c.removeAttribute('hidden'); c.removeAttribute('data-page'); c.setAttribute('aria-hidden','true');
+    uniqIds(c,'-t'+Object.keys(THUMBS).length);
+    THUMBS[key]=c;
+  }
+  return THUMBS[key];
+}
+const PAGE_PX=210*96/25.4;
+function scaleThumbs(){ document.querySelectorAll('.vthumb').forEach(t=>{ const pg=t.firstElementChild; if(pg) pg.style.transform=`scale(${t.clientWidth/PAGE_PX})`; }); }
+function fit(){ const pv=$('.preview'); const cs=getComputedStyle(pv); const avail=pv.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight); if(avail<=0) return; /* 폰에서 미리보기 탭이 숨겨진 동안은 계산 안 함 */ pv.style.setProperty('--z', Math.min(1, avail/PAGE_PX).toFixed(4)); }
+function render(){
+  renderPicker();
+  const ul=$('#plist'); ul.replaceChildren(); let n=0;
+  st.order.forEach((id,i)=>{
+    const p=byId[id]; const on=st.on[id]; if(on) n++;
+    const li=document.createElement('li'); li.className='pitem'+(on?'':' off');
+    li.innerHTML=`<div class="prow"><span class="no">${on?String(n).padStart(2,'0'):'–'}</span>
+      <input type="checkbox" ${on?'checked':''} ${p.fixed?'disabled':''} aria-label="${p.name} 포함">
+      <span class="nm">${p.name}</span>
+      <button class="mv up" ${i===0||p.fixed||byId[st.order[i-1]].fixed?'disabled':''} aria-label="위로">↑</button>
+      <button class="mv dn" ${i===st.order.length-1||p.fixed?'disabled':''} aria-label="아래로">↓</button></div>`;
+    li.querySelector('input').onchange=e=>{ st.on[id]=e.target.checked; apply(); };
+    li.querySelector('.up').onclick=()=>{ [st.order[i-1],st.order[i]]=[st.order[i],st.order[i-1]]; apply(); };
+    li.querySelector('.dn').onclick=()=>{ [st.order[i+1],st.order[i]]=[st.order[i],st.order[i+1]]; apply(); };
+    if(p.variants){
+      // 디자인 선택 = 실제 페이지를 줄인 썸네일
+      // 여러 개 고르면 고른 디자인이 모두 인쇄됨 (마지막 하나는 해제 안 됨)
+      const box=document.createElement('div'); box.className='vars'; box.style.setProperty('--n', Math.min(p.variants.length,3));
+      for(const [v,label] of p.variants){
+        const sel=st.variant[id].includes(v);
+        const lab=document.createElement('label'); lab.className='vopt'+(sel?' on':'');
+        const inp=document.createElement('input'); inp.type='checkbox'; inp.name='var-'+id; inp.id='var-'+id+'-'+v; inp.checked=sel;
+        inp.onchange=()=>{
+          const cur=st.variant[id];
+          const next=inp.checked ? p.variants.map(x=>x[0]).filter(x=>x===v||cur.includes(x)) : cur.filter(x=>x!==v);
+          if(next.length) st.variant[id]=next;
+          if(id==='cover'&&inp.checked) COVER_ACTIVE=v;
+          apply();
+        };
+        const th=document.createElement('span'); th.className='vthumb'; th.appendChild(thumbOf(id,v));
+        const tx=document.createElement('span'); tx.textContent=label.replace(/^[A-Z] · /,'');
+        lab.append(inp, th, tx); box.appendChild(lab);
+      }
+      li.appendChild(box);
+      if(id==='cover') li.appendChild(coverTools());
+    }
+    ul.appendChild(li);
+  });
+  requestAnimationFrame(scaleThumbs);
+}
+// 사진 후보마다 표지·V16 소개 페이지를 복제해 선택지로 만듦
+function buildImageVariants(){
+  const make=(id,list,set)=>{
+    const base=document.querySelector(`.preview [data-page="${id}"]`); let prev=base;
+    list.forEach((it,i)=>{ const el=i?base.cloneNode(true):base; el.dataset.variant=it[0]; set(el,it); if(i){ prev.after(el); prev=el; } });
+  };
+  make('cover',COVER_IMGS,(el,it)=>{ el.querySelector('.photo img').src=it[1]; });
+  make('v16-opener',HERO_IMGS,(el,it)=>{
+    el.querySelector('.hero img').src=it[1]; el.querySelector('.hero .cap').textContent=it[2];
+    // 사이즈표 패턴 = 대표 사진에 쓰인 품번
+    const code=it[3].split(' ')[0];
+    const pc=PATS.flatMap(p=>p.colors.map(c=>({...c,pattern:p.pattern}))).find(c=>c.code===code);
+    if(pc){
+      el.querySelector('.sizechart .panel').style.backgroundImage=`url(${pc.swatch})`;
+      el.querySelector('.sizechart .sc-cap').innerHTML=`<b>${code}</b>${esc(pc.pattern+' '+pc.color)}<i>16 × 455 × 3,030mm</i>`;
+    }
+  });
+}
+// ── 책처럼 넘겨보기: 두 쪽 펼침(표지는 오른쪽 혼자), 좁은 화면은 한 쪽씩
+const BOOK={i:0, pages:[], busy:false};
+const PH_PX=297*96/25.4;
+const bookSingle=()=>innerWidth<900;
+const bookMax=()=>bookSingle()? BOOK.pages.length-1 : Math.floor(BOOK.pages.length/2);
+const bookSlots=s=>bookSingle()? [null,s] : [s===0?null:2*s-1, 2*s];
+function bookClone(k){
+  const el=BOOK.pages[k]; if(!el) return null;
+  const c=el.cloneNode(true); c.removeAttribute('hidden'); c.removeAttribute('data-page'); return c;
+}
+function bookSlot(side,k){
+  const d=document.createElement('div'); d.className='bk-slot '+side;
+  const c=k==null?null:bookClone(k); if(c) d.appendChild(c); else d.classList.add('blank');
+  d.onclick=()=>bookTurn(side==='left'&&!bookSingle()?-1:1);
+  return d;
+}
+function bookDraw(){
+  const book=$('#book'), inner=book.querySelector('.bk-inner'), single=bookSingle();
+  BOOK.i=Math.min(BOOK.i,bookMax());
+  const W=single?PAGE_PX:PAGE_PX*2;
+  const vw=Math.min(innerWidth, document.documentElement.clientWidth||innerWidth), vh=Math.min(innerHeight, document.documentElement.clientHeight||innerHeight);
+  const sc=Math.min((vw-(single?24:96))/W, (vh-130)/PH_PX);
+  const stage=book.querySelector('.bk-stage'); stage.style.width=W*sc+'px'; stage.style.height=PH_PX*sc+'px';
+  inner.style.width=W+'px'; inner.style.height=PH_PX+'px'; inner.style.transform=`scale(${sc})`;
+  inner.classList.toggle('single',single);
+  const [l,r]=bookSlots(BOOK.i);
+  inner.replaceChildren(...(single?[]:[bookSlot('left',l)]), bookSlot('right',r));
+  const N=BOOK.pages.length, shown=[l,r].filter(k=>k!=null&&k<N).map(k=>k+1);
+  book.querySelector('.bk-no').textContent=`${shown.join('–')} / ${N}`;
+  book.querySelector('.bk-prev').disabled=BOOK.i<=0;
+  book.querySelector('.bk-next').disabled=BOOK.i>=bookMax();
+}
+const STRIPS=14, BEND=46;   // 띠 개수, 가장 많이 휠 때 전체 휨 각도
+// 넘기는 쪽: 앞면 fk, 뒷면 rk. 띠를 부모-자식으로 이어 붙여 각 띠가 조금씩 더 꺾이게 함
+function bookFlip(fk,rk){
+  const w=PAGE_PX/STRIPS, root=document.createElement('div'); root.className='bk-flip';
+  const strips=[]; let parent=root;
+  for(let i=0;i<STRIPS;i++){
+    const s=document.createElement('div'); s.className='bk-strip';
+    s.style.width=(w+.6)+'px'; s.style.left=(i?w:0)+'px';
+    const f=document.createElement('div'); f.className='bk-face front';
+    const fc=bookClone(fk); if(fc){ fc.style.left=(-i*w)+'px'; f.appendChild(fc); }
+    const r=document.createElement('div'); r.className='bk-face rear';
+    const rc=rk==null?null:bookClone(rk); if(rc){ rc.style.left=(-(PAGE_PX-(i+1)*w))+'px'; r.appendChild(rc); }
+    s.append(f,r); parent.appendChild(s); parent=s; strips.push(s);
+  }
+  return {root,strips};
+}
+function bookRun(fk,rk,from,to,done){
+  const {root,strips}=bookFlip(fk,rk); $('#book .bk-inner').appendChild(root);
+  const sign=to>from?1:-1, dur=950, t0=performance.now();
+  const ease=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+  const paint=now=>{
+    const p=Math.min(1,(now-t0)/dur), e=ease(p), th=from+(to-from)*e;
+    const c=Math.sin(Math.PI*e)*BEND;   // 넘기는 중간에 가장 많이 휨, 시작·끝은 평평
+    strips.forEach((s,i)=>{
+      s.style.transform=`rotateY(${i===0 ? -th+sign*c/2 : -sign*c/STRIPS}deg)`;
+      // 휜 쪽일수록 조금 어둡게 — 띠 안에서 이어지는 그라데이션이라 줄무늬가 안 생김
+      const k=Math.sin(Math.PI*e)*0.2;
+      s.style.setProperty('--sa',(k*i/STRIPS).toFixed(3)); s.style.setProperty('--sb',(k*(i+1)/STRIPS).toFixed(3));
+    });
+    return p;
+  };
+  const loop=now=>{ if(paint(now)<1) requestAnimationFrame(loop); else done(); };
+  paint(t0);
+  requestAnimationFrame(loop);
+}
+function bookTurn(dir){
+  const to=BOOK.i+dir;
+  if(BOOK.busy||to<0||to>bookMax()) return;
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches){ BOOK.i=to; bookDraw(); return; }
+  BOOK.busy=true;
+  const inner=$('#book .bk-inner'), single=bookSingle();
+  const [l0,r0]=bookSlots(BOOK.i), [l1,r1]=bookSlots(to);
+  const fin=()=>{ BOOK.busy=false; BOOK.i=to; bookDraw(); };
+  if(dir>0){
+    // 오른쪽 쪽이 휘면서 왼쪽으로: 앞면=지금 오른쪽, 뒷면=다음 왼쪽
+    inner.querySelector('.bk-slot.right').replaceWith(bookSlot('right',r1));
+    bookRun(r0, single?null:l1, 0, 180, fin);
+  }else{
+    // 왼쪽 쪽이 휘면서 오른쪽으로 돌아옴 (앞으로 넘기기를 거꾸로 재생)
+    if(!single) inner.querySelector('.bk-slot.left').replaceWith(bookSlot('left',l1));
+    bookRun(r1, single?null:l0, 180, 0, fin);
+  }
+}
+function bookOpen(){
+  BOOK.pages=[...document.querySelectorAll('.preview > .page')].filter(el=>!el.hidden);
+  BOOK.i=0; $('#book').hidden=false; document.body.style.overflow='hidden';
+  bookDraw(); $('#book .bk-next').focus();
+}
+function bookClose(){ $('#book').hidden=true; document.body.style.overflow=''; $('#book .bk-inner').replaceChildren(); $('#bookbtn').focus(); }
+{
+  const b=document.createElement('button'); b.type='button'; b.id='bookbtn'; b.className=$('#print').className; b.textContent='책처럼 넘겨보기';
+  $('#print').after(b); b.onclick=bookOpen;
+  $('#book .bk-prev').onclick=()=>bookTurn(-1);
+  $('#book .bk-next').onclick=()=>bookTurn(1);
+  $('#book .bk-close').onclick=bookClose;
+  addEventListener('keydown',e=>{
+    if($('#book').hidden) return;
+    if(e.key==='ArrowRight') bookTurn(1); else if(e.key==='ArrowLeft') bookTurn(-1); else if(e.key==='Escape') bookClose();
+  });
+  let sx=null;
+  $('#book .bk-stage').addEventListener('pointerdown',e=>{ sx=e.clientX; });
+  $('#book .bk-stage').addEventListener('pointerup',e=>{ if(sx!=null&&Math.abs(e.clientX-sx)>50) bookTurn(e.clientX<sx?1:-1); sx=null; });
+  addEventListener('resize',()=>{ if(!$('#book').hidden&&!BOOK.busy) bookDraw(); });
+}
+// ── 표지 편집: 사진 올리기 · 크롭(확대·위치) · 로고 크기·위치
+let COVER_ACTIVE=null;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+function cropOf(key){ if(!st.coverCrop[key]) st.coverCrop[key]={x:50,y:50,z:1}; return st.coverCrop[key]; }
+function paintCover(){
+  const L=st.coverLogo||LOGO_DEFAULT;
+  document.querySelectorAll('.page.cover').forEach(cov=>{
+    const c=cropOf(cov.dataset.variant), img=cov.querySelector('.photo img');
+    if(img){ img.style.objectPosition=`${c.x}% ${c.y}%`; img.style.transformOrigin=`${c.x}% ${c.y}%`; img.style.transform=c.z>1?`scale(${c.z})`:''; }
+    const lg=cov.querySelector('.logo'); if(lg){ lg.style.left=L.x+'mm'; lg.style.top=L.y+'mm'; lg.style.width=L.w+'mm'; }
+  });
+}
+const IDB={
+  open(){ return new Promise((res,rej)=>{ let r; try{ r=indexedDB.open('homt-catalog',1); }catch(e){ return rej(e); } r.onupgradeneeded=()=>r.result.createObjectStore('covers'); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); },
+  async put(k,v){ const db=await IDB.open(); return new Promise((res,rej)=>{ const t=db.transaction('covers','readwrite'); t.objectStore('covers').put(v,k); t.oncomplete=res; t.onerror=()=>rej(t.error); }); },
+  async del(k){ const db=await IDB.open(); return new Promise((res,rej)=>{ const t=db.transaction('covers','readwrite'); t.objectStore('covers').delete(k); t.oncomplete=res; t.onerror=()=>rej(t.error); }); },
+  async all(){ const db=await IDB.open(); return new Promise((res,rej)=>{ const out=[]; const cur=db.transaction('covers').objectStore('covers').openCursor(); cur.onsuccess=()=>{ const c=cur.result; if(c){ out.push([c.key,c.value]); c.continue(); } else res(out); }; cur.onerror=()=>rej(cur.error); }); },
+};
+function readImage(file,max){
+  return new Promise((res,rej)=>{
+    const fr=new FileReader();
+    fr.onload=()=>{ const img=new Image(); img.onload=()=>{
+      const s=Math.min(1,max/Math.max(img.width,img.height)), cv=document.createElement('canvas');
+      cv.width=Math.round(img.width*s); cv.height=Math.round(img.height*s); cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
+      res(cv.toDataURL('image/jpeg',0.9));
+    }; img.onerror=rej; img.src=fr.result; };
+    fr.onerror=rej; fr.readAsDataURL(file);
+  });
+}
+function addCoverImage(key,url){
+  if(COVER_IMGS.some(c=>c[0]===key)) return;
+  const n=COVER_IMGS.filter(c=>c[0].startsWith('u')).length+1, label='내 사진 '+n;
+  COVER_IMGS.push([key,url,label]);
+  PAGES.find(p=>p.id==='cover').variants.push([key,label]);
+  const covers=document.querySelectorAll('.preview [data-page="cover"]');
+  const el=covers[0].cloneNode(true); el.dataset.variant=key; el.hidden=true; el.querySelector('.photo img').src=url;
+  covers[covers.length-1].after(el);
+}
+async function coverUpload(files){
+  for(const f of files){
+    let url; try{ url=await readImage(f,2400); }catch(e){ alert('사진을 읽지 못했습니다. JPG·PNG 파일인지 확인해 주세요.'); continue; }
+    const key='u'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+    try{ await IDB.put(key,url); }catch(e){ /* 저장소를 못 쓰면 이번 화면에서만 유지 */ }
+    addCoverImage(key,url);
+    st.variant.cover=[...st.variant.cover,key]; COVER_ACTIVE=key;
+  }
+  apply();
+}
+function coverDelete(key){
+  IDB.del(key).catch(()=>{});
+  const i=COVER_IMGS.findIndex(c=>c[0]===key); if(i>=0) COVER_IMGS.splice(i,1);
+  const vs=PAGES.find(p=>p.id==='cover').variants, j=vs.findIndex(v=>v[0]===key); if(j>=0) vs.splice(j,1);
+  document.querySelectorAll(`.preview [data-page="cover"][data-variant="${key}"]`).forEach(el=>el.remove());
+  st.variant.cover=st.variant.cover.filter(k=>k!==key); delete st.coverCrop[key]; delete THUMBS['cover|'+key];
+  apply();
+}
+function coverTools(){
+  const sel=st.variant.cover; if(!sel.includes(COVER_ACTIVE)) COVER_ACTIVE=sel[0];
+  const c=cropOf(COVER_ACTIVE), L=st.coverLogo, label=(COVER_IMGS.find(x=>x[0]===COVER_ACTIVE)||[])[2]||'';
+  const ups=COVER_IMGS.filter(x=>x[0].startsWith('u'));
+  const d=document.createElement('div'); d.className='ctools';
+  d.innerHTML=`<div class="ct-row"><label class="btn sm ct-up">사진 올리기<input type="file" accept="image/*" multiple hidden></label><button type="button" class="btn sm ct-edit" aria-pressed="${document.body.classList.contains('cover-edit')}">표지에서 직접 옮기기</button><button type="button" class="btn sm ct-reset">원래대로</button></div>
+    <p class="ct-hint">직접 옮기기를 켜고 미리보기 표지에서 <b>사진</b>을 끌면 보이는 부분이, <b>로고</b>를 끌면 로고 자리가 바뀝니다.</p>
+    <div class="ct-now">편집 중: ${esc(label.startsWith('내 사진')?label:COVER_ACTIVE+' · '+label)}</div>
+    <label class="ct-sl"><span>사진 확대</span><input type="range" id="ct-zoom" min="100" max="250" step="1" value="${Math.round(c.z*100)}"><output>${Math.round(c.z*100)}%</output></label>
+    <label class="ct-sl"><span>로고 크기</span><input type="range" id="ct-logo" min="16" max="90" step="1" value="${Math.round(L.w)}"><output>${Math.round(L.w)}mm</output></label>
+    ${ups.length?`<div class="ct-ups">${ups.map(u=>`<button type="button" data-del="${u[0]}" aria-label="${esc(u[2])} 지우기">${esc(u[2])} ✕</button>`).join('')}</div>`:''}`;
+  d.querySelector('.ct-up input').onchange=e=>{ const fs=[...e.target.files]; e.target.value=''; if(fs.length) coverUpload(fs); };
+  d.querySelector('.ct-edit').onclick=e=>{ const on=document.body.classList.toggle('cover-edit'); e.currentTarget.setAttribute('aria-pressed',String(on)); };
+  d.querySelector('.ct-reset').onclick=()=>{ st.coverLogo={...LOGO_DEFAULT}; st.coverCrop={}; apply(); };
+  const z=d.querySelector('#ct-zoom'), lg=d.querySelector('#ct-logo');
+  z.oninput=()=>{ cropOf(COVER_ACTIVE).z=z.value/100; z.nextElementSibling.textContent=z.value+'%'; paintCover(); };
+  lg.oninput=()=>{ st.coverLogo.w=+lg.value; lg.nextElementSibling.textContent=lg.value+'mm'; paintCover(); };
+  z.onchange=lg.onchange=()=>save();
+  d.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>coverDelete(b.dataset.del));
+  return d;
+}
+$('#print').onclick=()=>window.print();
+$('#reset').onclick=()=>{ try{ localStorage.removeItem(KEY); }catch(e){} st=defaults(); apply(); };
+$('#pk-all').onclick=()=>{ st.picked=ALL_CODES.slice(); apply(); };
+$('#pk-none').onclick=()=>{ st.picked=[]; apply(); };
+buildImageVariants();
+buildGenerated();
+apply();
+fit(); addEventListener('resize', ()=>{ fit(); scaleThumbs(); });
+// 폰: 탭 전환 (넓은 화면에서는 탭이 숨겨져 영향 없음)
+document.body.dataset.mtab='preview';
+document.querySelectorAll('.mtabs button').forEach(b=>b.onclick=()=>{
+  document.body.dataset.mtab=b.dataset.mtab;
+  document.querySelectorAll('.mtabs button').forEach(x=>x.setAttribute('aria-pressed', String(x===b)));
+  scrollTo(0,0); requestAnimationFrame(()=>{ fit(); scaleThumbs(); });
+});
+{ const m=document.createElement('button'); m.type='button'; m.className='mbook'; m.textContent='책처럼 넘겨보기'; m.onclick=bookOpen; document.body.appendChild(m); }
+// 표지 직접 옮기기: 사진을 끌면 크롭 위치, 로고를 끌면 로고 위치
+$('.preview').addEventListener('pointerdown',e=>{
+  if(!document.body.classList.contains('cover-edit')) return;
+  const cov=e.target.closest('.page.cover'); if(!cov) return;
+  e.preventDefault();
+  const key=cov.dataset.variant, onLogo=!!e.target.closest('.logo'), r=cov.getBoundingClientRect(), pxmm=r.width/210;
+  COVER_ACTIVE=key;
+  const s={x:e.clientX, y:e.clientY, L:{...st.coverLogo}, C:{...cropOf(key)}};
+  try{ cov.setPointerCapture(e.pointerId); }catch(err){}
+  const move=ev=>{
+    const dx=ev.clientX-s.x, dy=ev.clientY-s.y;
+    if(onLogo){
+      st.coverLogo.x=clamp(s.L.x+dx/pxmm, 0, 210-st.coverLogo.w);
+      st.coverLogo.y=clamp(s.L.y+dy/pxmm, 0, 280);
+    }else{
+      const c=cropOf(key), k=Math.max(c.z-1,0.25);   // 확대할수록 조금만 움직여도 따라옴
+      c.x=clamp(s.C.x-dx/r.width*100/k, 0, 100); c.y=clamp(s.C.y-dy/r.height*100/k, 0, 100);
+    }
+    paintCover();
+  };
+  const up=()=>{ cov.removeEventListener('pointermove',move); cov.removeEventListener('pointerup',up); cov.removeEventListener('pointercancel',up); render(); paintCover(); save(); };
+  cov.addEventListener('pointermove',move); cov.addEventListener('pointerup',up); cov.addEventListener('pointercancel',up);
+});
+// 이 브라우저에 올려 둔 표지 사진 불러오기
+IDB.all().then(list=>{
+  if(!list.length) return;
+  list.forEach(([k,v])=>addCoverImage(k,v));
+  const ok=COVER_IMGS.map(c=>c[0]), keep=SAVED_COVER.filter(k=>ok.includes(k));
+  if(keep.length) st.variant.cover=keep;
+  apply();
+}).catch(()=>{});
+</script>
