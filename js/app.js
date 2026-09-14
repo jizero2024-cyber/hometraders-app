@@ -2805,7 +2805,7 @@ function deskDocRead() {
     <table class="e-ftbl"><colgroup><col style="width:80px"><col><col style="width:80px"><col><col style="width:80px"><col></colgroup>
       <tr><th>문서</th><td>${esc(d.doc_type || '')}${dr.usage ? ` <span class="muted">AI ${dr.usage.in + dr.usage.out}토큰 · 약 ${Math.round(dr.usage.usd * 1400).toLocaleString()}원</span>` : ' <span class="muted">AI 미사용</span>'}</td>
         <th>거래처</th><td><input class="e-in" data-drh="partner" value="${esc(d.partner || '')}"></td><th>담당자</th><td><input class="e-in" data-drh="manager" value="${esc(d.manager || '')}"></td></tr>
-      <tr><th>건축주</th><td><input class="e-in" data-drh="owner" value="${esc(d.owner || '')}"></td><th>납품장소</th><td><input class="e-in" data-drh="site" value="${esc(d.site || '')}"></td><th>일자</th><td><input class="e-in" data-drh="doc_date" value="${esc(d.doc_date || '')}"></td></tr>
+      <tr><th>현장명</th><td><input class="e-in" data-drh="owner" value="${esc(d.owner || '')}"></td><th>납품장소</th><td><input class="e-in" data-drh="site" value="${esc(d.site || '')}"></td><th>일자</th><td><input class="e-in" data-drh="doc_date" value="${esc(d.doc_date || '')}"></td></tr>
       ${d.remarks ? `<tr><th>메모</th><td colspan="5">${esc(d.remarks)}</td></tr>` : ''}
     </table>
     <div class="e-lines-hd"><b>품목 ${d.lines.length}</b>
@@ -3097,7 +3097,7 @@ function drToShip() {
   const nm = (s) => (s || '').replace(/\(주\)|주식회사|\s/g, '');
   const pt = S.getPartners().find((p) => nm(p.name) === nm(dr.doc.partner)) || S.getPartners().find((p) => nm(dr.doc.partner).includes(nm(p.name)) && nm(p.name));
   shipPrefill = { client: pt ? pt.name : (dr.doc.partner || ''), unloadAddr: dr.doc.site || '', status: '출고예정', matched: true,
-    note: [dr.doc.owner && `건축주 ${dr.doc.owner}`].filter(Boolean).join(' '), warehouse: S.warehouseNames()[0] || '' };
+    note: [dr.doc.owner && `현장명 ${dr.doc.owner}`].filter(Boolean).join(' '), warehouse: S.warehouseNames()[0] || '' };
   sfExtra = dr.doc.lines.map((l) => ({ name: l.ours || l.raw_name, qty: l.qty || '', unit: l.unit || '', price: l.price || '' }));
   openSheet(sheetShipForm());
 }
