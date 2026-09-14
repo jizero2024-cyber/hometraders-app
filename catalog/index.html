@@ -100,11 +100,11 @@
   .opener .hero img{ width:100%; height:100%; object-fit:cover; object-position:50% 45%; }
   .opener .hero::after{ content:""; position:absolute; left:0; right:0; bottom:0; height:30mm; background:linear-gradient(to top, rgba(0,0,0,.42), rgba(0,0,0,0)); }
   .opener .hero .cap{ position:absolute; right:16mm; bottom:5mm; z-index:1; font-size:7pt; color:#fff; }
-  .opener .head{ position:absolute; left:16mm; right:16mm; top:163mm; display:grid; grid-template-columns:56mm 1fr; column-gap:10mm; }
+  .opener .head{ position:absolute; left:16mm; right:16mm; top:163mm; display:grid; grid-template-columns:50mm 1fr; column-gap:8mm; }
   .opener .big{ font-size:64pt; font-weight:800; line-height:.9; }
   .opener .big small{ display:block; margin-top:3mm; }
   .opener .intro h2{ font-size:15pt; font-weight:700; line-height:1.45; margin:2mm 0 4mm; }
-  .opener .intro p{ font-size:8.2pt; line-height:1.8; color:var(--ink2); }
+  .opener .intro p{ font-size:8pt; line-height:1.8; color:var(--ink2); letter-spacing:-.02em; white-space:nowrap; }
   .spec{ position:absolute; left:16mm; right:16mm; top:208mm; display:grid; grid-template-columns:repeat(4,1fr); background:var(--soft); padding:4mm 5mm; }
   .spec dd{ margin-top:1.8mm; font-size:8.6pt; color:var(--ink); line-height:1.45; }
   .lineup{ position:absolute; left:16mm; right:16mm; top:236mm; display:grid; grid-template-columns:repeat(6,1fr); gap:3mm; }
@@ -283,7 +283,7 @@
   .back .qr{ position:absolute; right:18mm; bottom:38mm; width:26mm; }
   .back .bottom{ position:absolute; left:18mm; right:18mm; bottom:14mm; display:flex; justify-content:space-between; border-top:1px solid #DCDCDC; padding-top:3mm; font-size:7.5pt; color:#8C8C8C; }
   .back .bottom .en{ letter-spacing:.16em; }
-  .back.solo .logo{ left:50%; top:50%; width:92mm; transform:translate(-50%,-50%); }
+  .back.solo .logo{ left:105mm; top:148.5mm; width:52mm; transform:translate(-50%,-50%); }
   .back.solo .qr{ right:auto; bottom:auto; left:50%; top:50%; width:46mm; transform:translate(-50%,-50%); }
   /* 시공방법 A — 기본 구조도 다시 그림 */
   .inst2 .iso{ margin-top:7mm; flex:none; }
@@ -450,6 +450,8 @@
   .ct-ups{ display:flex; flex-wrap:wrap; gap:6px; }
   .ct-ups button{ font:inherit; font-size:11.5px; border:1px solid #DCDCDC; background:#fff; border-radius:999px; padding:4px 10px; cursor:pointer; }
   .ct-edit[aria-pressed="true"]{ background:#E4641E; border-color:#E4641E; color:#fff; }
+  body.back-edit .preview .page.back.solo{ cursor:grab; touch-action:none; outline:3px dashed #E4641E; outline-offset:-3px; }
+  @media print{ body.back-edit .preview .page.back.solo{ outline:none; } }
   body.cover-edit .preview .page.cover{ cursor:grab; touch-action:none; outline:3px dashed #E4641E; outline-offset:-3px; }
   body.cover-edit .preview .page.cover .logo{ cursor:move; outline:1.5px dashed rgba(255,255,255,.9); outline-offset:2mm; }
   .cover .photo{ overflow:hidden; }
@@ -748,7 +750,7 @@
     <div class="intro">
       <div class="label">Series 01</div>
       <h2>돌과 벽돌의 결을 담은<br>가장 기본이 되는 세라믹 사이딩</h2>
-      <p>천연 목질섬유와 시멘트를 고온·고압으로 양생한 16mm 섬유강화 시멘트 패널입니다. 마이크로가드 셀프클리닝 도막이 빗물로 오염을 씻어내 오랫동안 처음의 색을 지킵니다.</p>
+      <p>천연 목질섬유와 시멘트를 고온·고압으로 양생한 16mm 섬유강화 시멘트 패널입니다.<br>마이크로가드 셀프클리닝 도막이 빗물로 오염을 씻어내 오랫동안 처음의 색을 지킵니다.</p>
     </div>
   </div>
   <dl class="spec">
@@ -1066,9 +1068,10 @@ PAGES.find(p=>p.id==='cover').variants=COVER_IMGS.map(([k,,l])=>[k,k+' · '+l]);
 PAGES.find(p=>p.id==='v16-opener').variants=HERO_IMGS.map(([k,,,l])=>[k,k+' · '+l]);
 const DEFAULT_VARIANT={features:'A', install:['B','A'], 'color-index':'B', back:'A', cover:'584', 'v16-opener':'782'};
 const LOGO_DEFAULT={x:162, y:14, w:32};   // 표지 로고 위치·폭 (mm)
+const BACK_LOGO_DEFAULT={cx:105, cy:148.5, w:52};   // 뒷표지 로고형: 로고 가운데 좌표·폭 (mm)
 const ALL_CODES=PATS.flatMap(p=>p.colors.map(c=>c.code));
 const OFF_BY_DEFAULT=['v16-colors','pattern-riga','picked-index','portfolio-1','portfolio-2','color-index','stock'];
-function defaults(){ return {order:PAGES.map(p=>p.id), on:Object.fromEntries(PAGES.map(p=>[p.id,!OFF_BY_DEFAULT.includes(p.id)])), variant:Object.fromEntries(Object.entries(DEFAULT_VARIANT).map(([k,v])=>[k,[].concat(v)])), picked:ALL_CODES.slice(), coverLogo:{...LOGO_DEFAULT}, coverCrop:{}}; }
+function defaults(){ return {order:PAGES.map(p=>p.id), on:Object.fromEntries(PAGES.map(p=>[p.id,!OFF_BY_DEFAULT.includes(p.id)])), variant:Object.fromEntries(Object.entries(DEFAULT_VARIANT).map(([k,v])=>[k,[].concat(v)])), picked:ALL_CODES.slice(), coverLogo:{...LOGO_DEFAULT}, coverCrop:{}, backLogo:{...BACK_LOGO_DEFAULT}}; }
 const esc=t=>String(t??'').replace(/[&<>"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
 function patTitle(p){ return p.pattern || p.colors.map(c=>c.code).join(' · '); }
 function buildGenerated(){
@@ -1204,6 +1207,7 @@ function apply(){
   // 예전 기본 자리(왼쪽 위)에 그대로 있던 로고는 새 기본 자리(오른쪽 위)로
   if(!st.coverLogo || (st.coverLogo.x===16&&st.coverLogo.y===14&&st.coverLogo.w===32)) st.coverLogo={...LOGO_DEFAULT};
   if(!st.coverCrop) st.coverCrop={};
+  if(!st.backLogo) st.backLogo={...BACK_LOGO_DEFAULT};
   // 예전에 저장된 구성에 새 페이지·새 선택지가 없으면 기본값으로 채움
   for(const p of PAGES){
     if(!st.order.includes(p.id)){ st.order.push(p.id); st.on[p.id]=!OFF_BY_DEFAULT.includes(p.id); }
@@ -1225,7 +1229,7 @@ function apply(){
     }
   }
   $('#count').textContent=`인쇄 ${n}쪽 (A4)`;
-  render(); paintCover(); save();
+  render(); paintCover(); paintBack(); save();
 }
 const THUMBS={};
 // 썸네일 복제본의 SVG 화살표·그라데이션 id 가 원본과 겹치면, 인쇄 때 숨겨지는 사이드바 쪽을 참조해 화살표가 사라짐 → 복제본 id 를 바꿈
@@ -1290,6 +1294,7 @@ function render(){
       }
       li.appendChild(box);
       if(id==='cover') li.appendChild(coverTools());
+      if(id==='back') li.appendChild(backTools());
     }
     ul.appendChild(li);
   });
@@ -1496,6 +1501,24 @@ function coverTools(){
   d.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>coverDelete(b.dataset.del));
   return d;
 }
+// ── 뒷표지 로고형(B): 로고 크기·위치
+function paintBack(){
+  const B=st.backLogo||BACK_LOGO_DEFAULT;
+  document.querySelectorAll('.page.back.solo .logo').forEach(lg=>{ lg.style.left=B.cx+'mm'; lg.style.top=B.cy+'mm'; lg.style.width=B.w+'mm'; });
+}
+function backTools(){
+  const B=st.backLogo, d=document.createElement('div'); d.className='ctools';
+  d.innerHTML=`<div class="ct-now">로고형(B) 편집</div>
+    <div class="ct-row"><button type="button" class="btn sm ct-edit bt-edit" aria-pressed="${document.body.classList.contains('back-edit')}">뒷표지에서 로고 옮기기</button><button type="button" class="btn sm bt-reset">원래대로</button></div>
+    <p class="ct-hint">옮기기를 켜고 미리보기 뒷표지(로고형)를 끌면 로고 자리가 바뀝니다.</p>
+    <label class="ct-sl"><span>로고 크기</span><input type="range" id="bt-logo" min="20" max="120" step="1" value="${Math.round(B.w)}"><output>${Math.round(B.w)}mm</output></label>`;
+  d.querySelector('.bt-edit').onclick=e=>{ const on=document.body.classList.toggle('back-edit'); e.currentTarget.setAttribute('aria-pressed',String(on)); };
+  d.querySelector('.bt-reset').onclick=()=>{ st.backLogo={...BACK_LOGO_DEFAULT}; apply(); };
+  const r=d.querySelector('#bt-logo');
+  r.oninput=()=>{ st.backLogo.w=+r.value; r.nextElementSibling.textContent=r.value+'mm'; paintBack(); };
+  r.onchange=()=>save();
+  return d;
+}
 $('#print').onclick=()=>window.print();
 $('#reset').onclick=()=>{ try{ localStorage.removeItem(KEY); }catch(e){} st=defaults(); apply(); };
 $('#pk-all').onclick=()=>{ st.picked=ALL_CODES.slice(); apply(); };
@@ -1534,6 +1557,17 @@ $('.preview').addEventListener('pointerdown',e=>{
   };
   const up=()=>{ cov.removeEventListener('pointermove',move); cov.removeEventListener('pointerup',up); cov.removeEventListener('pointercancel',up); render(); paintCover(); save(); };
   cov.addEventListener('pointermove',move); cov.addEventListener('pointerup',up); cov.addEventListener('pointercancel',up);
+});
+// 뒷표지 로고형 직접 옮기기
+$('.preview').addEventListener('pointerdown',e=>{
+  if(!document.body.classList.contains('back-edit')) return;
+  const pg=e.target.closest('.page.back.solo'); if(!pg||!pg.querySelector('.logo')) return;
+  e.preventDefault();
+  const r=pg.getBoundingClientRect(), pxmm=r.width/210, s={x:e.clientX, y:e.clientY, B:{...st.backLogo}};
+  try{ pg.setPointerCapture(e.pointerId); }catch(err){}
+  const move=ev=>{ st.backLogo.cx=clamp(s.B.cx+(ev.clientX-s.x)/pxmm, 0, 210); st.backLogo.cy=clamp(s.B.cy+(ev.clientY-s.y)/pxmm, 0, 297); paintBack(); };
+  const up=()=>{ pg.removeEventListener('pointermove',move); pg.removeEventListener('pointerup',up); pg.removeEventListener('pointercancel',up); render(); paintCover(); paintBack(); save(); };
+  pg.addEventListener('pointermove',move); pg.addEventListener('pointerup',up); pg.addEventListener('pointercancel',up);
 });
 // 이 브라우저에 올려 둔 표지 사진 불러오기
 IDB.all().then(list=>{
