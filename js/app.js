@@ -2821,7 +2821,8 @@ function deskDocRead() {
         <td class="n" id="dr-amt-${i}">${eN((Number(l.qty) || 0) * (Number(l.price) || 0))}</td></tr>`; }).join('')}</tbody>
       <tfoot><tr><td></td><td colspan="4" style="padding-left:6px;font-weight:700">합계 <span class="muted" id="dr-noprice">${t.noPrice ? `단가 없음 ${t.noPrice}` : ''}</span></td><td class="n muted" colspan="2">부가세 <b id="dr-vat">${eN(t.vat)}</b></td><td class="n muted">포함 <b id="dr-tot">${eN(t.tot)}</b></td><td class="n"><b id="dr-sup">${eN(t.sup)}</b></td></tr></tfoot></table></div>
     <datalist id="dr-ec">${ECOUNT_ITEMS.map(([c, n]) => `<option value="${esc(n)}">${esc(c)}</option>`).join('')}</datalist>
-    <div class="e-tools">${eBtn('매핑 저장 (다음부터 자동)', 'erp-dr-learn')}${eBtn('출고 입력으로 보내기', 'erp-dr-ship')}${eBtn('구매전표 만들기', 'erp-dr-buy')}<span class="sp"></span>
+    <div class="e-tools">${eBtn('매핑 저장 (다음부터 자동)', 'erp-dr-learn')}${eBtn('출고 입력으로 보내기', 'erp-dr-ship')}${eBtn('구매전표 만들기', 'erp-dr-buy')}${eBtn('납품확인서 만들기', 'erp-dr-deliv')}<span class="sp"></span>
+      ${dr.deliv ? `<a class="e-btn" href="${HELPER}/api/file?path=${encodeURIComponent(dr.deliv.out)}">납품확인서 받기 · ${esc(dr.deliv.out.split('/').pop())}</a>` : ''}
       ${dr.quote ? `<a class="e-btn" href="${HELPER}/api/file?path=${encodeURIComponent(dr.quote.out)}">견적서 받기 · ${esc(dr.quote.out.split('/').pop())}</a>` : ''}
       ${eBtn('견적서 만들기 (거래처 양식)', 'erp-dr-quote', '', 'pri')}</div>
     ${dr.note ? `<div class="e-sum"><span>${esc(dr.note)}</span></div>` : ''}
@@ -2982,7 +2983,7 @@ function drRead() {
   helperFetch('/api/doc/read', { name: dr.name, data: dr.b64 }).then((j) => {
     const doc = j.doc;
     doc.lines = doc.lines.map((l) => ({ ...l, ours: l.match.ours, code: l.match.code, conf: l.match.conf, cands: l.match.cands, price: l.prev ? l.prev.price : '' }));
-    dr.doc = doc; dr.orig = JSON.parse(JSON.stringify(doc.lines || [])); dr.usage = j.usage; if (j.usage && helperState.info) helperState.info.ai = true; dr.quote = null; dr.buy = null; dr.buyFile = ''; dr.pushed = null; dr.buyCopied = false; dr.buyTag = undefined; dr.buyAll = false;
+    dr.doc = doc; dr.orig = JSON.parse(JSON.stringify(doc.lines || [])); dr.usage = j.usage; if (j.usage && helperState.info) helperState.info.ai = true; dr.quote = null; dr.deliv = null; dr.buy = null; dr.buyFile = ''; dr.pushed = null; dr.buyCopied = false; dr.buyTag = undefined; dr.buyAll = false;
   }).catch((e) => { dr.err = e.message; }).finally(() => { dr.busy = false; render(); });
 }
 function drLearn() {
@@ -3079,6 +3080,15 @@ function drQuote() {
   drSaveFixes();
   helperFetch('/api/quote', { doc: dr.doc, lines: dr.doc.lines.map((l) => ({ raw_name: l.raw_name, spec: l.spec, unit: l.unit, qty: l.qty, price: Number(l.price) || 0 })) })
     .then((j) => { dr.quote = j; dr.note = `견적서 저장: ${j.out} · 합계 ${Math.round(j.total_incl).toLocaleString()}원(부가세 포함)`; })
+    .catch((e) => { dr.err = e.message; }).finally(() => { dr.busy = false; render(); });
+}
+// 수동 납품확인서 — 인식한 거래명세서를 필터 없이 그대로 확인서로 (거래처·품목 제한 없음)
+function drDeliv() {
+  if (!dr.doc) return;
+  dr.busy = true; render();
+  drSaveFixes();
+  helperFetch('/api/delivery/make', { doc: dr.doc, lines: dr.doc.lines.map((l) => ({ ours: l.ours, raw_name: l.raw_name, name: l.name, unit: l.unit, qty: l.qty })) })
+    .then((j) => { dr.deliv = j; dr.note = `납품확인서 저장: ${j.out}`; })
     .catch((e) => { dr.err = e.message; }).finally(() => { dr.busy = false; render(); });
 }
 function drToShip() {
@@ -3209,6 +3219,7 @@ function erpAct(act, t) {
   else if (act === 'erp-dr-read') drRead();
   else if (act === 'erp-dr-learn') drLearn();
   else if (act === 'erp-dr-quote') drQuote();
+  else if (act === 'erp-dr-deliv') drDeliv();
   else if (act === 'erp-dr-buy') drBuy();
   else if (act === 'erp-dr-buyfile') drBuyFile();
   else if (act === 'erp-dr-buypush') drBuyPush();
