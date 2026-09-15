@@ -459,8 +459,8 @@
   .ct-ups{ display:flex; flex-wrap:wrap; gap:6px; }
   .ct-ups button{ font:inherit; font-size:11.5px; border:1px solid #DCDCDC; background:#fff; border-radius:999px; padding:4px 10px; cursor:pointer; }
   .ct-edit[aria-pressed="true"]{ background:#E4641E; border-color:#E4641E; color:#fff; }
-  body.back-edit .preview .page.back.solo{ cursor:grab; touch-action:none; outline:3px dashed #E4641E; outline-offset:-3px; }
-  @media print{ body.back-edit .preview .page.back.solo{ outline:none; } }
+  body.back-edit .preview .page.back{ cursor:grab; touch-action:none; outline:3px dashed #E4641E; outline-offset:-3px; }
+  @media print{ body.back-edit .preview .page.back{ outline:none; } }
   body.cover-edit .preview .page.cover{ cursor:grab; touch-action:none; outline:3px dashed #E4641E; outline-offset:-3px; }
   body.cover-edit .preview .page.cover .logo{ cursor:move; outline:1.5px dashed rgba(255,255,255,.9); outline-offset:2mm; }
   .cover .photo{ overflow:hidden; }
@@ -1077,9 +1077,10 @@ PAGES.find(p=>p.id==='v16-opener').variants=HERO_IMGS.map(([k,,,l])=>[k,k+' · '
 const DEFAULT_VARIANT={features:'A', install:['B','A'], 'color-index':'B', back:'A', cover:'584', 'v16-opener':'782'};
 const LOGO_DEFAULT={x:162, y:14, w:32};   // 표지 로고 위치·폭 (mm)
 const BACK_LOGO_DEFAULT={cx:105, cy:148.5, w:52};   // 뒷표지 로고형: 로고 가운데 좌표·폭 (mm)
+const BACK_A_LOGO_DEFAULT={x:154, y:18, w:38};   // 뒷표지 명함형: 로고 왼쪽 위 좌표·폭 (mm)
 const ALL_CODES=PATS.flatMap(p=>p.colors.map(c=>c.code));
 const OFF_BY_DEFAULT=['v16-colors','pattern-riga','picked-index','portfolio-1','portfolio-2','color-index','stock'];
-function defaults(){ return {order:PAGES.map(p=>p.id), on:Object.fromEntries(PAGES.map(p=>[p.id,!OFF_BY_DEFAULT.includes(p.id)])), variant:Object.fromEntries(Object.entries(DEFAULT_VARIANT).map(([k,v])=>[k,[].concat(v)])), picked:ALL_CODES.slice(), coverLogo:{...LOGO_DEFAULT}, coverCrop:{}, backLogo:{...BACK_LOGO_DEFAULT}}; }
+function defaults(){ return {order:PAGES.map(p=>p.id), on:Object.fromEntries(PAGES.map(p=>[p.id,!OFF_BY_DEFAULT.includes(p.id)])), variant:Object.fromEntries(Object.entries(DEFAULT_VARIANT).map(([k,v])=>[k,[].concat(v)])), picked:ALL_CODES.slice(), coverLogo:{...LOGO_DEFAULT}, coverCrop:{}, backLogo:{...BACK_LOGO_DEFAULT}, backALogo:{...BACK_A_LOGO_DEFAULT}}; }
 const esc=t=>String(t??'').replace(/[&<>"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
 function patTitle(p){ return p.pattern || p.colors.map(c=>c.code).join(' · '); }
 function buildGenerated(){
@@ -1200,6 +1201,7 @@ function apply(){
   if(!st.coverLogo || (st.coverLogo.x===16&&st.coverLogo.y===14&&st.coverLogo.w===32)) st.coverLogo={...LOGO_DEFAULT};
   if(!st.coverCrop) st.coverCrop={};
   if(!st.backLogo) st.backLogo={...BACK_LOGO_DEFAULT};
+  if(!st.backALogo) st.backALogo={...BACK_A_LOGO_DEFAULT};
   // 예전에 저장된 구성에 새 페이지·새 선택지가 없으면 기본값으로 채움
   for(const p of PAGES){
     if(!st.order.includes(p.id)){ st.order.push(p.id); st.on[p.id]=!OFF_BY_DEFAULT.includes(p.id); }
@@ -1495,20 +1497,22 @@ function coverTools(){
 }
 // ── 뒷표지 로고형(B): 로고 크기·위치
 function paintBack(){
-  const B=st.backLogo||BACK_LOGO_DEFAULT;
+  const B=st.backLogo||BACK_LOGO_DEFAULT, A=st.backALogo||BACK_A_LOGO_DEFAULT;
   document.querySelectorAll('.page.back.solo .logo').forEach(lg=>{ lg.style.left=B.cx+'mm'; lg.style.top=B.cy+'mm'; lg.style.width=B.w+'mm'; });
+  document.querySelectorAll('.page.back:not(.solo) .logo').forEach(lg=>{ lg.style.right='auto'; lg.style.left=A.x+'mm'; lg.style.top=A.y+'mm'; lg.style.width=A.w+'mm'; });
 }
 function backTools(){
-  const B=st.backLogo, d=document.createElement('div'); d.className='ctools';
-  d.innerHTML=`<div class="ct-now">로고형(B) 편집</div>
-    <div class="ct-row"><button type="button" class="btn sm ct-edit bt-edit" aria-pressed="${document.body.classList.contains('back-edit')}">뒷표지에서 로고 옮기기</button><button type="button" class="btn sm bt-reset">원래대로</button></div>
-    <p class="ct-hint">옮기기를 켜고 미리보기 뒷표지(로고형)를 끌면 로고 자리가 바뀝니다.</p>
-    <label class="ct-sl"><span>로고 크기</span><input type="range" id="bt-logo" min="20" max="120" step="1" value="${Math.round(B.w)}"><output>${Math.round(B.w)}mm</output></label>`;
+  const B=st.backLogo, A=st.backALogo, d=document.createElement('div'); d.className='ctools';
+  d.innerHTML=`<div class="ct-row"><button type="button" class="btn sm ct-edit bt-edit" aria-pressed="${document.body.classList.contains('back-edit')}">뒷표지에서 로고 옮기기</button><button type="button" class="btn sm bt-reset">원래대로</button></div>
+    <p class="ct-hint">옮기기를 켜고 미리보기 뒷표지(명함형·로고형)를 끌면 로고 자리가 바뀝니다.</p>
+    <label class="ct-sl"><span>명함형 로고</span><input type="range" id="bt-logo-a" min="16" max="90" step="1" value="${Math.round(A.w)}"><output>${Math.round(A.w)}mm</output></label>
+    <label class="ct-sl"><span>로고형 로고</span><input type="range" id="bt-logo" min="20" max="120" step="1" value="${Math.round(B.w)}"><output>${Math.round(B.w)}mm</output></label>`;
   d.querySelector('.bt-edit').onclick=e=>{ const on=document.body.classList.toggle('back-edit'); e.currentTarget.setAttribute('aria-pressed',String(on)); };
-  d.querySelector('.bt-reset').onclick=()=>{ st.backLogo={...BACK_LOGO_DEFAULT}; apply(); };
-  const r=d.querySelector('#bt-logo');
+  d.querySelector('.bt-reset').onclick=()=>{ st.backLogo={...BACK_LOGO_DEFAULT}; st.backALogo={...BACK_A_LOGO_DEFAULT}; apply(); };
+  const r=d.querySelector('#bt-logo'), ra=d.querySelector('#bt-logo-a');
   r.oninput=()=>{ st.backLogo.w=+r.value; r.nextElementSibling.textContent=r.value+'mm'; paintBack(); };
-  r.onchange=()=>save();
+  ra.oninput=()=>{ const A=st.backALogo, right=A.x+A.w; A.w=+ra.value; A.x=clamp(right-A.w,0,210-A.w); ra.nextElementSibling.textContent=ra.value+'mm'; paintBack(); };
+  r.onchange=ra.onchange=()=>save();
   return d;
 }
 $('#print').onclick=()=>window.print();
@@ -1550,14 +1554,20 @@ $('.preview').addEventListener('pointerdown',e=>{
   const up=()=>{ cov.removeEventListener('pointermove',move); cov.removeEventListener('pointerup',up); cov.removeEventListener('pointercancel',up); render(); paintCover(); save(); };
   cov.addEventListener('pointermove',move); cov.addEventListener('pointerup',up); cov.addEventListener('pointercancel',up);
 });
-// 뒷표지 로고형 직접 옮기기
+// 뒷표지(명함형·로고형) 로고 직접 옮기기
 $('.preview').addEventListener('pointerdown',e=>{
   if(!document.body.classList.contains('back-edit')) return;
-  const pg=e.target.closest('.page.back.solo'); if(!pg||!pg.querySelector('.logo')) return;
+  const pg=e.target.closest('.page.back'); if(!pg||!pg.querySelector('.logo')) return;
   e.preventDefault();
-  const r=pg.getBoundingClientRect(), pxmm=r.width/210, s={x:e.clientX, y:e.clientY, B:{...st.backLogo}};
+  const solo=pg.classList.contains('solo'), r=pg.getBoundingClientRect(), pxmm=r.width/210;
+  const s={x:e.clientX, y:e.clientY, B:{...st.backLogo}, A:{...st.backALogo}};
   try{ pg.setPointerCapture(e.pointerId); }catch(err){}
-  const move=ev=>{ st.backLogo.cx=clamp(s.B.cx+(ev.clientX-s.x)/pxmm, 0, 210); st.backLogo.cy=clamp(s.B.cy+(ev.clientY-s.y)/pxmm, 0, 297); paintBack(); };
+  const move=ev=>{
+    const dx=(ev.clientX-s.x)/pxmm, dy=(ev.clientY-s.y)/pxmm;
+    if(solo){ st.backLogo.cx=clamp(s.B.cx+dx,0,210); st.backLogo.cy=clamp(s.B.cy+dy,0,297); }
+    else{ st.backALogo.x=clamp(s.A.x+dx,0,210-st.backALogo.w); st.backALogo.y=clamp(s.A.y+dy,0,280); }
+    paintBack();
+  };
   const up=()=>{ pg.removeEventListener('pointermove',move); pg.removeEventListener('pointerup',up); pg.removeEventListener('pointercancel',up); render(); paintCover(); paintBack(); save(); };
   pg.addEventListener('pointermove',move); pg.addEventListener('pointerup',up); pg.addEventListener('pointercancel',up);
 });
