@@ -282,6 +282,11 @@
   .back .who b{ display:block; font-size:14pt; font-weight:700; letter-spacing:-.01em; color:#1A1A1A; }
   .back .who span{ display:block; margin-top:1mm; font-size:9pt; color:#8C8C8C; }
   .back .lines{ margin-top:7mm; font-size:9.5pt; line-height:1.8; color:#1A1A1A; }
+  .back .addrs{ position:absolute; left:18mm; right:18mm; top:158mm; display:grid; grid-template-columns:1fr 1fr; gap:0 10mm; border-top:1px solid #DCDCDC; padding-top:5mm; }
+  .back .ad-t{ font-size:9pt; font-weight:700; color:#1A1A1A; margin-bottom:2mm; }
+  .back .addrs ul{ list-style:none; }
+  .back .addrs li{ font-size:8pt; line-height:1.75; color:#4A4A4A; letter-spacing:-.01em; word-break:keep-all; }
+  .back .addrs li b{ display:inline-block; min-width:15mm; font-weight:600; color:#1A1A1A; margin-right:2mm; }
   .back .qr{ position:absolute; right:18mm; bottom:38mm; width:26mm; }
   .back .bottom{ position:absolute; left:18mm; right:18mm; bottom:14mm; display:flex; justify-content:space-between; border-top:1px solid #DCDCDC; padding-top:3mm; font-size:7.5pt; color:#8C8C8C; }
   .back .bottom .en{ letter-spacing:.16em; }
@@ -455,6 +460,10 @@
   .ct-sl input{ width:100%; accent-color:#E4641E; }
   .ct-sl output{ text-align:right; font-variant-numeric:tabular-nums; color:#1A1A1A; }
   .ct-hint{ color:#6A6A6A; line-height:1.5; }
+  .ct-tx{ display:grid; grid-template-columns:58px 1fr; gap:8px; align-items:start; color:#4A4A4A; }
+  .ct-tx span{ padding-top:6px; }
+  .ct-tx textarea{ font:inherit; font-size:12px; line-height:1.45; width:100%; resize:vertical; border:1px solid #DCDCDC; border-radius:6px; padding:5px 7px; background:#fff; color:#1A1A1A; }
+  .ct-tx textarea:focus-visible{ outline:2px solid #E4641E; outline-offset:0; }
   .ct-now{ font-weight:700; color:#1A1A1A; }
   .ct-ups{ display:flex; flex-wrap:wrap; gap:6px; }
   .ct-ups button{ font:inherit; font-size:11.5px; border:1px solid #DCDCDC; background:#fff; border-radius:999px; padding:4px 10px; cursor:pointer; }
@@ -1028,12 +1037,13 @@
 </section>
 <section class="page back" data-page="back" data-variant="A">
   <img class="logo" src="brand/logo_dark.png" alt="HOME TRADERS">
-  <div class="tag"><div class="rule"></div><p>What we build,<br>time keeps</p></div>
+  <div class="tag"><div class="rule"></div><p data-bt="tag">우리가 짓는 것을,<br>시간이 지킵니다</p></div>
+  <div class="addrs" data-bt-addr></div>
   <div class="contact">
-    <div class="who"><b>Lee,Choi Won</b><span>CEO</span></div>
-    <div class="lines">(+82)10 6207 8478<br>chris@hometraders.co.kr<br>872, Yeongcheon-dong,Hwaseong-si,<br>Republic of Korea</div>
+    <div class="who"><b data-bt="name">이최원</b><span data-bt="role">대표</span></div>
+    <div class="lines" data-bt="lines">010-6207-8478<br>chris@hometraders.co.kr<br>경기도 화성시 영천동 872</div>
   </div>
-  <div class="bottom"><span>주식회사 홈트레이더스</span><span class="en">HOME TRADERS · i-CUBE</span></div>
+  <div class="bottom"><span data-bt="company">주식회사 홈트레이더스</span><span data-bt="brand">홈트레이더스 · 아이큐브</span></div>
 </section>
 <section class="page back solo" data-page="back" data-variant="B">
   <img class="logo" src="brand/logo_dark.png" alt="HOME TRADERS">
@@ -1078,9 +1088,24 @@ const DEFAULT_VARIANT={features:'A', install:['B','A'], 'color-index':'B', back:
 const LOGO_DEFAULT={x:162, y:14, w:32};   // 표지 로고 위치·폭 (mm)
 const BACK_LOGO_DEFAULT={cx:105, cy:148.5, w:52};   // 뒷표지 로고형: 로고 가운데 좌표·폭 (mm)
 const BACK_A_LOGO_DEFAULT={x:154, y:18, w:38};   // 뒷표지 명함형: 로고 왼쪽 위 좌표·폭 (mm)
+// 뒷표지 명함형 글자 (줄바꿈은 입력칸에서 엔터)
+const BACK_TEXT_DEFAULT={tag:'우리가 짓는 것을,\n시간이 지킵니다', name:'이최원', role:'대표', lines:'010-6207-8478\nchris@hometraders.co.kr\n경기도 화성시 영천동 872', company:'주식회사 홈트레이더스', brand:'홈트레이더스 · 아이큐브',
+  addr:'* 사무실\n- 화성1: 경기도 화성시 영천동 872\n- 화성2: 경기도 화성시 영천동 824-4\n- 남위례: 경기도 성남시 창곡동 513-3\n\n* 물류센터\n- 경기 광주: 경기도 광주시 직동로 126\n- 경기 화성: 경기도 화성시 영천동 851\n- 천안 직산: 충남 천안시 신갈리 206-6\n- 전북 군산: 군산 서수면 마룡리 93-52'};
+const BACK_TEXT_FIELDS=[['tag','타이틀',2],['addr','주소 목록',10],['name','이름',1],['role','직함',1],['lines','연락처',4],['company','아래 왼쪽',1],['brand','아래 오른쪽',1]];
+// 주소 목록: '* 묶음 이름' 줄 = 제목, '- 이름: 주소' 줄 = 항목
+function addrHTML(t){
+  const groups=[]; let g=null;
+  String(t||'').split('\n').map(s=>s.trim()).filter(Boolean).forEach(s=>{
+    if(s.startsWith('*')){ g={title:s.replace(/^\*\s*/,''), items:[]}; groups.push(g); return; }
+    if(!g){ g={title:'', items:[]}; groups.push(g); }
+    const line=s.replace(/^[-·•]\s*/,''), i=line.indexOf(':');
+    g.items.push(i>0?`<b>${esc(line.slice(0,i).trim())}</b>${esc(line.slice(i+1).trim())}`:esc(line));
+  });
+  return groups.map(x=>`<div class="ad-g">${x.title?`<div class="ad-t">${esc(x.title)}</div>`:''}<ul>${x.items.map(it=>`<li>${it}</li>`).join('')}</ul></div>`).join('');
+}
 const ALL_CODES=PATS.flatMap(p=>p.colors.map(c=>c.code));
 const OFF_BY_DEFAULT=['v16-colors','pattern-riga','picked-index','portfolio-1','portfolio-2','color-index','stock'];
-function defaults(){ return {order:PAGES.map(p=>p.id), on:Object.fromEntries(PAGES.map(p=>[p.id,!OFF_BY_DEFAULT.includes(p.id)])), variant:Object.fromEntries(Object.entries(DEFAULT_VARIANT).map(([k,v])=>[k,[].concat(v)])), picked:ALL_CODES.slice(), coverLogo:{...LOGO_DEFAULT}, coverCrop:{}, backLogo:{...BACK_LOGO_DEFAULT}, backALogo:{...BACK_A_LOGO_DEFAULT}}; }
+function defaults(){ return {order:PAGES.map(p=>p.id), on:Object.fromEntries(PAGES.map(p=>[p.id,!OFF_BY_DEFAULT.includes(p.id)])), variant:Object.fromEntries(Object.entries(DEFAULT_VARIANT).map(([k,v])=>[k,[].concat(v)])), picked:ALL_CODES.slice(), coverLogo:{...LOGO_DEFAULT}, coverCrop:{}, backLogo:{...BACK_LOGO_DEFAULT}, backALogo:{...BACK_A_LOGO_DEFAULT}, backText:{...BACK_TEXT_DEFAULT}}; }
 const esc=t=>String(t??'').replace(/[&<>"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
 function patTitle(p){ return p.pattern || p.colors.map(c=>c.code).join(' · '); }
 function buildGenerated(){
@@ -1154,15 +1179,15 @@ function updateGenerated(){
     const [size,warr]=SPEC[sr]||['',''];
     sc.innerHTML=`<div class="lab">${esc(sr)} · COLORS</div>
       <h2 class="h1">${esc(sr)} 선택한 색상</h2>
-      <p class="sub">${esc(size)} · ${esc(warr)} · 패턴 ${rows.length}종</p>
+      <p class="sub">${esc(size)} · ${esc(warr)}</p>
       <div class="rule"></div>
-      <div class="srows">${rows.map(({p,cols})=>`<div class="srow"><div class="sname"><b>${esc(patTitle(p))}</b><span>색상 ${cols.length}종</span></div><div class="sgrid">${cols.map(c=>`<figure><img src="${c.swatch}" alt="${c.code} 견본"><figcaption><b>${c.code}</b>${esc(c.color)}</figcaption></figure>`).join('')}</div></div>`).join('')}</div>
+      <div class="srows">${rows.map(({p,cols})=>`<div class="srow"><div class="sname"><b>${esc(patTitle(p))}</b></div><div class="sgrid">${cols.map(c=>`<figure><img src="${c.swatch}" alt="${c.code} 견본"><figcaption><b>${c.code}</b>${esc(c.color)}</figcaption></figure>`).join('')}</div></div>`).join('')}</div>
       <div class="ft"><span>HOME TRADERS · i-CUBE</span><b class="pno"></b></div>`;
   }
   const idx=document.querySelector('.preview [data-page="picked-index"]');
   const groups=['V16','N16','PREMIUM','FUGE'].map(sr=>{
     const items=PATS.filter(p=>p.series===sr).flatMap(p=>p.colors.filter(c=>picked.has(c.code)).map(c=>({...c,pattern:p.pattern})));
-    return items.length?`<div class="igroup"><div class="ihead"><span class="lab">${sr}</span><span class="icount">${items.length}</span></div><div class="igrid">${items.map(c=>`<figure><img src="${c.swatch}" alt="${c.code}"><figcaption><b>${c.code}</b><span>${esc([c.pattern,c.color].filter(Boolean).join(' '))||'&nbsp;'}${c.order?' (주문)':''}</span></figcaption></figure>`).join('')}</div></div>`:'';
+    return items.length?`<div class="igroup"><div class="ihead"><span class="lab">${sr}</span></div><div class="igrid">${items.map(c=>`<figure><img src="${c.swatch}" alt="${c.code}"><figcaption><b>${c.code}</b><span>${esc([c.pattern,c.color].filter(Boolean).join(' '))||'&nbsp;'}${c.order?' (주문)':''}</span></figcaption></figure>`).join('')}</div></div>`:'';
   }).join('');
   idx.dataset.empty=picked.size?'0':'1';
   idx.innerHTML=`<div class="lab">COLOR INDEX</div><h2 class="h1">선택한 색상</h2><div class="rule"></div><div class="igroups">${groups}</div>
@@ -1202,6 +1227,7 @@ function apply(){
   if(!st.coverCrop) st.coverCrop={};
   if(!st.backLogo) st.backLogo={...BACK_LOGO_DEFAULT};
   if(!st.backALogo) st.backALogo={...BACK_A_LOGO_DEFAULT};
+  st.backText={...BACK_TEXT_DEFAULT, ...(st.backText||{})};
   // 예전에 저장된 구성에 새 페이지·새 선택지가 없으면 기본값으로 채움
   for(const p of PAGES){
     if(!st.order.includes(p.id)){ st.order.push(p.id); st.on[p.id]=!OFF_BY_DEFAULT.includes(p.id); }
@@ -1499,6 +1525,9 @@ function coverTools(){
 function paintBack(){
   const B=st.backLogo||BACK_LOGO_DEFAULT, A=st.backALogo||BACK_A_LOGO_DEFAULT;
   document.querySelectorAll('.page.back.solo .logo').forEach(lg=>{ lg.style.left=B.cx+'mm'; lg.style.top=B.cy+'mm'; lg.style.width=B.w+'mm'; });
+  const T=st.backText||BACK_TEXT_DEFAULT;
+  document.querySelectorAll('.page.back [data-bt]').forEach(el=>{ el.innerHTML=esc(T[el.dataset.bt]??'').replace(/\n/g,'<br>'); });
+  document.querySelectorAll('.page.back [data-bt-addr]').forEach(el=>{ el.innerHTML=addrHTML(T.addr); });
   document.querySelectorAll('.page.back:not(.solo) .logo').forEach(lg=>{ lg.style.right='auto'; lg.style.left=A.x+'mm'; lg.style.top=A.y+'mm'; lg.style.width=A.w+'mm'; });
 }
 function backTools(){
@@ -1506,7 +1535,16 @@ function backTools(){
   d.innerHTML=`<div class="ct-row"><button type="button" class="btn sm ct-edit bt-edit" aria-pressed="${document.body.classList.contains('back-edit')}">뒷표지에서 로고 옮기기</button><button type="button" class="btn sm bt-reset">원래대로</button></div>
     <p class="ct-hint">옮기기를 켜고 미리보기 뒷표지(명함형·로고형)를 끌면 로고 자리가 바뀝니다.</p>
     <label class="ct-sl"><span>명함형 로고</span><input type="range" id="bt-logo-a" min="16" max="90" step="1" value="${Math.round(A.w)}"><output>${Math.round(A.w)}mm</output></label>
-    <label class="ct-sl"><span>로고형 로고</span><input type="range" id="bt-logo" min="20" max="120" step="1" value="${Math.round(B.w)}"><output>${Math.round(B.w)}mm</output></label>`;
+    <label class="ct-sl"><span>로고형 로고</span><input type="range" id="bt-logo" min="20" max="120" step="1" value="${Math.round(B.w)}"><output>${Math.round(B.w)}mm</output></label>
+    <div class="ct-now">명함형 글자</div>
+    ${BACK_TEXT_FIELDS.map(([k,l,rows])=>`<label class="ct-tx"><span>${l}</span><textarea id="bt-tx-${k}" rows="${rows}" data-k="${k}"></textarea></label>`).join('')}
+    <button type="button" class="btn sm bt-text-reset">글자 원래대로</button>`;
+  d.querySelectorAll('.ct-tx textarea').forEach(t=>{
+    t.value=st.backText[t.dataset.k]??'';   // 입력 중에는 다시 그리지 않음 (한글 입력 끊김 방지)
+    t.addEventListener('input',()=>{ st.backText[t.dataset.k]=t.value; paintBack(); });
+    t.addEventListener('change',()=>{ delete THUMBS['back|A']; save(); });
+  });
+  d.querySelector('.bt-text-reset').onclick=()=>{ st.backText={...BACK_TEXT_DEFAULT}; delete THUMBS['back|A']; apply(); };
   d.querySelector('.bt-edit').onclick=e=>{ const on=document.body.classList.toggle('back-edit'); e.currentTarget.setAttribute('aria-pressed',String(on)); };
   d.querySelector('.bt-reset').onclick=()=>{ st.backLogo={...BACK_LOGO_DEFAULT}; st.backALogo={...BACK_A_LOGO_DEFAULT}; apply(); };
   const r=d.querySelector('#bt-logo'), ra=d.querySelector('#bt-logo-a');
