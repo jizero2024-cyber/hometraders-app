@@ -337,6 +337,7 @@
   .acc2 .ag{ flex:1; display:grid; grid-template-columns:34mm 1fr; gap:0 6mm; align-items:center; padding:4mm 0; border-bottom:1px solid #DCDCDC; min-height:0; }
   .acc2 .ag-name b{ display:block; font-size:11pt; font-weight:700; letter-spacing:-.025em; line-height:1.3; word-break:keep-all; }
   .acc2 .ag-name span{ display:block; margin-top:1.4mm; font-size:7.5pt; color:#8C8C8C; line-height:1.5; word-break:keep-all; }
+  .acc2 .ag:last-child{ border-bottom:none; }
   .acc2 .ag-items{ display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:0 4mm; }
   .acc2 .ag-img{ aspect-ratio:1/1; overflow:hidden; }
   .acc2 .ag-img img{ width:100%; height:100%; object-fit:cover; display:block; }
@@ -1101,7 +1102,7 @@ function addrHTML(t){
 }
 const ALL_CODES=PATS.flatMap(p=>p.colors.map(c=>c.code));
 const OFF_BY_DEFAULT=['v16-colors','pattern-riga','picked-index','portfolio-1','portfolio-2','color-index','stock'];
-function defaults(){ return {order:PAGES.map(p=>p.id), on:Object.fromEntries(PAGES.map(p=>[p.id,!OFF_BY_DEFAULT.includes(p.id)])), variant:Object.fromEntries(Object.entries(DEFAULT_VARIANT).map(([k,v])=>[k,[].concat(v)])), picked:ALL_CODES.slice(), coverLogo:{...LOGO_DEFAULT}, coverCrop:{}, backLogo:{...BACK_LOGO_DEFAULT}, backALogo:{...BACK_A_LOGO_DEFAULT}, backText:{...BACK_TEXT_DEFAULT}}; }
+function defaults(){ return {order:PAGES.map(p=>p.id), on:Object.fromEntries(PAGES.map(p=>[p.id,!OFF_BY_DEFAULT.includes(p.id)])), variant:Object.fromEntries(Object.entries(DEFAULT_VARIANT).map(([k,v])=>[k,[].concat(v)])), picked:ALL_CODES.slice(), coverLogo:{...LOGO_DEFAULT}, coverCrop:{}, backLogo:{...BACK_LOGO_DEFAULT}, backALogo:{...BACK_A_LOGO_DEFAULT}, backText:{...BACK_TEXT_DEFAULT}, backTag:{dx:0,dy:0}}; }
 const esc=t=>String(t??'').replace(/[&<>"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
 function patTitle(p){ return p.pattern || p.colors.map(c=>c.code).join(' · '); }
 function buildGenerated(){
@@ -1223,6 +1224,7 @@ function apply(){
   if(!st.coverCrop) st.coverCrop={};
   if(!st.backLogo) st.backLogo={...BACK_LOGO_DEFAULT};
   if(!st.backALogo) st.backALogo={...BACK_A_LOGO_DEFAULT};
+  if(!st.backTag) st.backTag={dx:0,dy:0};
   st.backText={...BACK_TEXT_DEFAULT, ...(st.backText||{})};
   // 예전에 저장된 구성에 새 페이지·새 선택지가 없으면 기본값으로 채움
   for(const p of PAGES){
@@ -1526,15 +1528,17 @@ function paintBack(){
   document.querySelectorAll('.page.back [data-bt]').forEach(el=>{
     if(el===document.activeElement) return;
     el.innerHTML=esc(T[el.dataset.bt]??'').replace(/\n/g,'<br>');
-    if(el.closest('.preview')) el.contentEditable='true';
+    if(el.closest('.preview')) el.contentEditable=String(!document.body.classList.contains('back-edit'));   // 옮기기 중엔 글자 수정 끔
   });
   document.querySelectorAll('.page.back [data-bt-addr]').forEach(el=>{ el.innerHTML=addrHTML(T.addr); });
+  const G=st.backTag||{dx:0,dy:0};
+  document.querySelectorAll('.page.back:not(.solo) .tag').forEach(t=>{ t.style.transform=`translate(${G.dx}mm,${G.dy}mm)`; });
   document.querySelectorAll('.page.back:not(.solo) .logo').forEach(lg=>{ lg.style.right='auto'; lg.style.left=A.x+'mm'; lg.style.top=A.y+'mm'; lg.style.width=A.w+'mm'; });
 }
 function backTools(){
   const B=st.backLogo, A=st.backALogo, d=document.createElement('div'); d.className='ctools';
-  d.innerHTML=`<div class="ct-row"><button type="button" class="btn sm ct-edit bt-edit" aria-pressed="${document.body.classList.contains('back-edit')}">뒷표지에서 로고 옮기기</button><button type="button" class="btn sm bt-reset">원래대로</button></div>
-    <p class="ct-hint">옮기기를 켜고 미리보기 뒷표지(명함형·로고형)를 끌면 로고 자리가 바뀝니다.</p>
+  d.innerHTML=`<div class="ct-row"><button type="button" class="btn sm ct-edit bt-edit" aria-pressed="${document.body.classList.contains('back-edit')}">뒷표지에서 로고·타이틀 옮기기</button><button type="button" class="btn sm bt-reset">원래대로</button></div>
+    <p class="ct-hint">옮기기를 켜고 미리보기 뒷표지에서 타이틀을 끌면 타이틀이, 그 밖의 곳을 끌면 로고가 움직입니다. 옮기기를 끄면 글자를 눌러 고칠 수 있습니다.</p>
     <label class="ct-sl"><span>명함형 로고</span><input type="range" id="bt-logo-a" min="16" max="90" step="1" value="${Math.round(A.w)}"><output>${Math.round(A.w)}mm</output></label>
     <label class="ct-sl"><span>로고형 로고</span><input type="range" id="bt-logo" min="20" max="120" step="1" value="${Math.round(B.w)}"><output>${Math.round(B.w)}mm</output></label>
     <div class="ct-now">명함형 글자</div>
@@ -1546,8 +1550,8 @@ function backTools(){
     t.addEventListener('change',()=>{ delete THUMBS['back|A']; save(); });
   });
   d.querySelector('.bt-text-reset').onclick=()=>{ st.backText={...BACK_TEXT_DEFAULT}; delete THUMBS['back|A']; apply(); };
-  d.querySelector('.bt-edit').onclick=e=>{ const on=document.body.classList.toggle('back-edit'); e.currentTarget.setAttribute('aria-pressed',String(on)); };
-  d.querySelector('.bt-reset').onclick=()=>{ st.backLogo={...BACK_LOGO_DEFAULT}; st.backALogo={...BACK_A_LOGO_DEFAULT}; apply(); };
+  d.querySelector('.bt-edit').onclick=e=>{ const on=document.body.classList.toggle('back-edit'); e.currentTarget.setAttribute('aria-pressed',String(on)); paintBack(); };
+  d.querySelector('.bt-reset').onclick=()=>{ st.backLogo={...BACK_LOGO_DEFAULT}; st.backALogo={...BACK_A_LOGO_DEFAULT}; st.backTag={dx:0,dy:0}; apply(); };
   const r=d.querySelector('#bt-logo'), ra=d.querySelector('#bt-logo-a');
   r.oninput=()=>{ st.backLogo.w=+r.value; r.nextElementSibling.textContent=r.value+'mm'; paintBack(); };
   ra.oninput=()=>{ const A=st.backALogo, right=A.x+A.w; A.w=+ra.value; A.x=clamp(right-A.w,0,210-A.w); ra.nextElementSibling.textContent=ra.value+'mm'; paintBack(); };
@@ -1607,14 +1611,16 @@ $('.preview').addEventListener('focusout',e=>{
 // 뒷표지(명함형·로고형) 로고 직접 옮기기
 $('.preview').addEventListener('pointerdown',e=>{
   if(!document.body.classList.contains('back-edit')) return;
-  const pg=e.target.closest('.page.back'); if(!pg||!pg.querySelector('.logo')||e.target.closest('[data-bt]')) return;
+  const pg=e.target.closest('.page.back'); if(!pg||!pg.querySelector('.logo')) return;
   e.preventDefault();
   const solo=pg.classList.contains('solo'), r=pg.getBoundingClientRect(), pxmm=r.width/210;
-  const s={x:e.clientX, y:e.clientY, B:{...st.backLogo}, A:{...st.backALogo}};
+  const onTag=!solo && !!e.target.closest('.tag');
+  const s={x:e.clientX, y:e.clientY, B:{...st.backLogo}, A:{...st.backALogo}, G:{...st.backTag}};
   try{ pg.setPointerCapture(e.pointerId); }catch(err){}
   const move=ev=>{
     const dx=(ev.clientX-s.x)/pxmm, dy=(ev.clientY-s.y)/pxmm;
     if(solo){ st.backLogo.cx=clamp(s.B.cx+dx,0,210); st.backLogo.cy=clamp(s.B.cy+dy,0,297); }
+    else if(onTag){ st.backTag.dx=clamp(s.G.dx+dx,-180,180); st.backTag.dy=clamp(s.G.dy+dy,-110,150); }
     else{ st.backALogo.x=clamp(s.A.x+dx,0,210-st.backALogo.w); st.backALogo.y=clamp(s.A.y+dy,0,280); }
     paintBack();
   };
