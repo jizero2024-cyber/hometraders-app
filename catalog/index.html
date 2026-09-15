@@ -278,15 +278,16 @@
   .back .tag{ text-align:right; }
   .back .tag .rule{ width:12mm; height:1mm; background:#E4641E; margin-bottom:7mm; margin-left:auto; }
   .back .tag p{ font-size:30pt; font-weight:800; letter-spacing:-.03em; line-height:1.2; color:#1A1A1A; }
-  .back .contact{ position:absolute; left:18mm; bottom:38mm; }
+  .back .contact{ position:absolute; left:18mm; bottom:64mm; }
   .back .who b{ display:block; font-size:14pt; font-weight:700; letter-spacing:-.01em; color:#1A1A1A; }
   .back .who span{ display:block; margin-top:1mm; font-size:9pt; color:#8C8C8C; }
-  .back .lines{ margin-top:7mm; font-size:9.5pt; line-height:1.8; color:#1A1A1A; }
-  .back .addrs{ position:absolute; left:18mm; right:18mm; top:158mm; display:grid; grid-template-columns:1fr 1fr; gap:0 10mm; border-top:1px solid #DCDCDC; padding-top:5mm; }
-  .back .ad-t{ font-size:9pt; font-weight:700; color:#1A1A1A; margin-bottom:2mm; }
+  .back .lines{ margin-top:6mm; font-size:9pt; line-height:1.8; color:#1A1A1A; }
+  @media screen{ .preview .page.back [data-bt]:hover, .preview .page.back [data-bt]:focus{ outline:1px dashed #E4641E; outline-offset:1mm; cursor:text; } }
+  .back .addrs{ position:absolute; left:18mm; right:18mm; bottom:22mm; display:grid; grid-template-columns:1fr 1fr; gap:0 10mm; }
+  .back .ad-t{ font-size:7.5pt; font-weight:700; color:#8C8C8C; margin-bottom:1.5mm; }
   .back .addrs ul{ list-style:none; }
-  .back .addrs li{ font-size:8pt; line-height:1.75; color:#4A4A4A; letter-spacing:-.01em; word-break:keep-all; }
-  .back .addrs li b{ display:inline-block; min-width:15mm; font-weight:600; color:#1A1A1A; margin-right:2mm; }
+  .back .addrs li{ font-size:7.5pt; line-height:1.7; color:#8C8C8C; letter-spacing:-.01em; word-break:keep-all; }
+  .back .addrs li b{ display:inline-block; min-width:14mm; font-weight:600; color:#4A4A4A; margin-right:2mm; }
   .back .qr{ position:absolute; right:18mm; bottom:38mm; width:26mm; }
   .back .bottom{ position:absolute; left:18mm; right:18mm; bottom:14mm; display:flex; justify-content:space-between; border-top:1px solid #DCDCDC; padding-top:3mm; font-size:7.5pt; color:#8C8C8C; }
   .back .bottom .en{ letter-spacing:.16em; }
@@ -1038,11 +1039,6 @@
 <section class="page back" data-page="back" data-variant="A">
   <img class="logo" src="brand/logo_dark.png" alt="HOME TRADERS">
   <div class="tag"><div class="rule"></div><p data-bt="tag">우리가 짓는 것을,<br>시간이 지킵니다</p></div>
-  <div class="addrs" data-bt-addr></div>
-  <div class="contact">
-    <div class="who"><b data-bt="name">이최원</b><span data-bt="role">대표</span></div>
-    <div class="lines" data-bt="lines">010-6207-8478<br>chris@hometraders.co.kr<br>경기도 화성시 영천동 872</div>
-  </div>
   <div class="bottom"><span data-bt="company">주식회사 홈트레이더스</span><span data-bt="brand">홈트레이더스 · 아이큐브</span></div>
 </section>
 <section class="page back solo" data-page="back" data-variant="B">
@@ -1091,7 +1087,7 @@ const BACK_A_LOGO_DEFAULT={x:154, y:18, w:38};   // 뒷표지 명함형: 로고 
 // 뒷표지 명함형 글자 (줄바꿈은 입력칸에서 엔터)
 const BACK_TEXT_DEFAULT={tag:'우리가 짓는 것을,\n시간이 지킵니다', name:'이최원', role:'대표', lines:'010-6207-8478\nchris@hometraders.co.kr\n경기도 화성시 영천동 872', company:'주식회사 홈트레이더스', brand:'홈트레이더스 · 아이큐브',
   addr:'* 사무실\n- 화성1: 경기도 화성시 영천동 872\n- 화성2: 경기도 화성시 영천동 824-4\n- 남위례: 경기도 성남시 창곡동 513-3\n\n* 물류센터\n- 경기 광주: 경기도 광주시 직동로 126\n- 경기 화성: 경기도 화성시 영천동 851\n- 천안 직산: 충남 천안시 신갈리 206-6\n- 전북 군산: 군산 서수면 마룡리 93-52'};
-const BACK_TEXT_FIELDS=[['tag','타이틀',2],['addr','주소 목록',10],['name','이름',1],['role','직함',1],['lines','연락처',4],['company','아래 왼쪽',1],['brand','아래 오른쪽',1]];
+const BACK_TEXT_FIELDS=[['tag','타이틀',2],['company','아래 왼쪽',1],['brand','아래 오른쪽',1]];
 // 주소 목록: '* 묶음 이름' 줄 = 제목, '- 이름: 주소' 줄 = 항목
 function addrHTML(t){
   const groups=[]; let g=null;
@@ -1271,6 +1267,7 @@ function thumbOf(id,v){
   if(!THUMBS[key]){
     const src=document.querySelector(`.preview [data-page="${id}"][data-variant="${v}"]`);
     const c=src.cloneNode(true); c.removeAttribute('hidden'); c.removeAttribute('data-page'); c.setAttribute('aria-hidden','true');
+    c.querySelectorAll('[contenteditable]').forEach(x=>x.removeAttribute('contenteditable'));
     uniqIds(c,'-t'+Object.keys(THUMBS).length);
     THUMBS[key]=c;
   }
@@ -1346,7 +1343,7 @@ const bookMax=()=>bookSingle()? BOOK.pages.length-1 : Math.floor(BOOK.pages.leng
 const bookSlots=s=>bookSingle()? [null,s] : [s===0?null:2*s-1, 2*s];
 function bookClone(k){
   const el=BOOK.pages[k]; if(!el) return null;
-  const c=el.cloneNode(true); c.removeAttribute('hidden'); c.removeAttribute('data-page'); return c;
+  const c=el.cloneNode(true); c.removeAttribute('hidden'); c.removeAttribute('data-page'); c.querySelectorAll('[contenteditable]').forEach(x=>x.removeAttribute('contenteditable')); return c;
 }
 function bookSlot(side,k){
   const d=document.createElement('div'); d.className='bk-slot '+side;
@@ -1526,7 +1523,11 @@ function paintBack(){
   const B=st.backLogo||BACK_LOGO_DEFAULT, A=st.backALogo||BACK_A_LOGO_DEFAULT;
   document.querySelectorAll('.page.back.solo .logo').forEach(lg=>{ lg.style.left=B.cx+'mm'; lg.style.top=B.cy+'mm'; lg.style.width=B.w+'mm'; });
   const T=st.backText||BACK_TEXT_DEFAULT;
-  document.querySelectorAll('.page.back [data-bt]').forEach(el=>{ el.innerHTML=esc(T[el.dataset.bt]??'').replace(/\n/g,'<br>'); });
+  document.querySelectorAll('.page.back [data-bt]').forEach(el=>{
+    if(el===document.activeElement) return;
+    el.innerHTML=esc(T[el.dataset.bt]??'').replace(/\n/g,'<br>');
+    if(el.closest('.preview')) el.contentEditable='true';
+  });
   document.querySelectorAll('.page.back [data-bt-addr]').forEach(el=>{ el.innerHTML=addrHTML(T.addr); });
   document.querySelectorAll('.page.back:not(.solo) .logo').forEach(lg=>{ lg.style.right='auto'; lg.style.left=A.x+'mm'; lg.style.top=A.y+'mm'; lg.style.width=A.w+'mm'; });
 }
@@ -1592,10 +1593,21 @@ $('.preview').addEventListener('pointerdown',e=>{
   const up=()=>{ cov.removeEventListener('pointermove',move); cov.removeEventListener('pointerup',up); cov.removeEventListener('pointercancel',up); render(); paintCover(); save(); };
   cov.addEventListener('pointermove',move); cov.addEventListener('pointerup',up); cov.addEventListener('pointercancel',up);
 });
+// 뒷표지 글자: 미리보기에서 눌러 바로 고치기
+$('.preview').addEventListener('paste',e=>{
+  if(!e.target.closest('.page.back [data-bt]')) return;
+  e.preventDefault(); document.execCommand('insertText',false,(e.clipboardData||window.clipboardData).getData('text/plain'));
+});
+$('.preview').addEventListener('focusout',e=>{
+  const el=e.target.closest&&e.target.closest('.page.back [data-bt]'); if(!el) return;
+  const k=el.dataset.bt; st.backText[k]=el.innerText.replace(/\n+$/,'');
+  const ta=document.querySelector('#bt-tx-'+k); if(ta) ta.value=st.backText[k];
+  delete THUMBS['back|A']; paintBack(); save();
+});
 // 뒷표지(명함형·로고형) 로고 직접 옮기기
 $('.preview').addEventListener('pointerdown',e=>{
   if(!document.body.classList.contains('back-edit')) return;
-  const pg=e.target.closest('.page.back'); if(!pg||!pg.querySelector('.logo')) return;
+  const pg=e.target.closest('.page.back'); if(!pg||!pg.querySelector('.logo')||e.target.closest('[data-bt]')) return;
   e.preventDefault();
   const solo=pg.classList.contains('solo'), r=pg.getBoundingClientRect(), pxmm=r.width/210;
   const s={x:e.clientX, y:e.clientY, B:{...st.backLogo}, A:{...st.backALogo}};
