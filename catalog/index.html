@@ -273,8 +273,10 @@
   /* 뒷표지 — 명함 내용 */
   .back{ background:#fff; }
   .back .logo{ position:absolute; left:18mm; top:18mm; width:38mm; }
+  .back:not(.solo) .logo{ left:auto; right:18mm; }
   .back .tag{ position:absolute; left:18mm; right:18mm; top:112mm; }
-  .back .tag .rule{ width:12mm; height:1mm; background:#E4641E; margin-bottom:7mm; }
+  .back .tag{ text-align:right; }
+  .back .tag .rule{ width:12mm; height:1mm; background:#E4641E; margin-bottom:7mm; margin-left:auto; }
   .back .tag p{ font-size:30pt; font-weight:800; letter-spacing:-.03em; line-height:1.2; color:#1A1A1A; }
   .back .contact{ position:absolute; left:18mm; bottom:38mm; }
   .back .who b{ display:block; font-size:14pt; font-weight:700; letter-spacing:-.01em; color:#1A1A1A; }
@@ -1031,7 +1033,6 @@
     <div class="who"><b>Lee,Choi Won</b><span>CEO</span></div>
     <div class="lines">(+82)10 6207 8478<br>chris@hometraders.co.kr<br>872, Yeongcheon-dong,Hwaseong-si,<br>Republic of Korea</div>
   </div>
-  <img class="qr" src="brand/qr.png" alt="홈트레이더스 QR 코드">
   <div class="bottom"><span>주식회사 홈트레이더스</span><span class="en">HOME TRADERS · i-CUBE</span></div>
 </section>
 <section class="page back solo" data-page="back" data-variant="B">
@@ -1150,32 +1151,11 @@ function updateGenerated(){
     sc.dataset.empty=(n&&!solo)?'0':'1';
     if(!n||solo){ sc.innerHTML=''; continue; }
     const [size,warr]=SPEC[sr]||['',''];
-    // 패턴 줄이 적어 아래가 많이 비면 그 시리즈 시공 사례 사진으로 채움 (패턴 페이지에 안 쓰인 사진 먼저)
-    const rowMM=rows.length<=2?45:28.5, freeMM=210-rows.length*rowMM;
-    let photos='';
-    if(freeMM>=60){
-      const want=freeMM>=120?3:2, seen=new Set(), pool=[];
-      const lists=rows.map(({p})=>({p,rk:rankedCases(p,picked)}));
-      for(const from of [4,0]){
-        if(from===0 && pool.length) break;   // 안 쓴 사진이 한 장이라도 있으면 패턴 페이지 사진은 다시 쓰지 않음
-        for(let i=0;i<6;i++) for(const {p,rk} of lists){
-          const c=(from===4?rk.slice(4):rk.slice(0,4))[i];
-          if(c&&!seen.has(c.f)){ seen.add(c.f); pool.push({c,p}); }
-        }
-      }
-      const sel=pool.slice(0,want).sort((a,b)=>(a.c.lo?1:0)-(b.c.lo?1:0)||(a.c.w>=a.c.h?0:1)-(b.c.w>=b.c.h?0:1));
-      if(sel.length){
-        const [gcls,gsty]=caseGrid(sel.map(x=>x.c));
-        photos=`<div class="pcases ${gcls}" style="${gsty}">${sel.map(({c,p})=>`<figure><div class="ph"><img src="${c.f}" alt="${esc(patTitle(p))} 시공 사례"></div><figcaption>${caseLabel(p,c,picked)}</figcaption></figure>`).join('')}</div>
-      <p class="cap">니치하 시공 사례 · 사진 속 색상은 촬영·인쇄 환경에 따라 실물과 다를 수 있습니다.</p>`;
-      }
-    }
     sc.innerHTML=`<div class="lab">${esc(sr)} · COLORS</div>
-      <h2 class="h1">${esc(sr)} 선택한 색상 <em>${n}</em></h2>
+      <h2 class="h1">${esc(sr)} 선택한 색상</h2>
       <p class="sub">${esc(size)} · ${esc(warr)} · 패턴 ${rows.length}종</p>
       <div class="rule"></div>
-      <div class="srows${rows.length<=2?' big':''}${photos?' fit':''}">${rows.map(({p,cols})=>`<div class="srow"><div class="sname"><b>${esc(patTitle(p))}</b><span>색상 ${cols.length}종</span></div><div class="sgrid">${cols.map(c=>`<figure><img src="${c.swatch}" alt="${c.code} 견본"><figcaption><b>${c.code}</b>${esc(c.color)}</figcaption></figure>`).join('')}</div></div>`).join('')}</div>
-      ${photos}
+      <div class="srows">${rows.map(({p,cols})=>`<div class="srow"><div class="sname"><b>${esc(patTitle(p))}</b><span>색상 ${cols.length}종</span></div><div class="sgrid">${cols.map(c=>`<figure><img src="${c.swatch}" alt="${c.code} 견본"><figcaption><b>${c.code}</b>${esc(c.color)}</figcaption></figure>`).join('')}</div></div>`).join('')}</div>
       <div class="ft"><span>HOME TRADERS · i-CUBE</span><b class="pno"></b></div>`;
   }
   const idx=document.querySelector('.preview [data-page="picked-index"]');
@@ -1184,7 +1164,7 @@ function updateGenerated(){
     return items.length?`<div class="igroup"><div class="ihead"><span class="lab">${sr}</span><span class="icount">${items.length}</span></div><div class="igrid">${items.map(c=>`<figure><img src="${c.swatch}" alt="${c.code}"><figcaption><b>${c.code}</b><span>${esc([c.pattern,c.color].filter(Boolean).join(' '))||'&nbsp;'}${c.order?' (주문)':''}</span></figcaption></figure>`).join('')}</div></div>`:'';
   }).join('');
   idx.dataset.empty=picked.size?'0':'1';
-  idx.innerHTML=`<div class="lab">COLOR INDEX</div><h2 class="h1">선택한 색상 <em>${picked.size}</em></h2><div class="rule"></div><div class="igroups">${groups}</div>
+  idx.innerHTML=`<div class="lab">COLOR INDEX</div><h2 class="h1">선택한 색상</h2><div class="rule"></div><div class="igroups">${groups}</div>
     <p class="cap">칩 색상은 인쇄 특성상 실물과 다를 수 있습니다.</p><div class="ft"><span>HOME TRADERS · i-CUBE</span><b class="pno"></b></div>`;
 }
 function renderPicker(){
