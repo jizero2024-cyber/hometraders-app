@@ -206,11 +206,11 @@
 
   html,body{ background:#ECECEC; }
   .app{ display:grid; grid-template-columns:320px minmax(0,1fr); min-height:100vh; }
-  .side{ position:sticky; top:0; height:100vh; overflow:auto; background:#fff; border-right:1px solid #E6E6E6; padding:22px 18px; font-size:13px; letter-spacing:-0.02em; }
-  .side h1{ font-size:18px; font-weight:800; }
-  .side .sub{ margin-top:4px; color:#6A6A6A; font-size:12px; }
-  .side .btns{ display:flex; gap:8px; margin:16px 0 14px; }
-  .side button{ font:inherit; cursor:pointer; }
+  aside.side{ position:sticky; top:0; height:100vh; overflow:auto; background:#fff; border-right:1px solid #E6E6E6; padding:22px 18px; font-size:13px; letter-spacing:-0.02em; }
+  aside.side h1{ font-size:18px; font-weight:800; }
+  aside.side .sub{ margin-top:4px; color:#6A6A6A; font-size:12px; }
+  aside.side .btns{ display:flex; gap:8px; margin:16px 0 14px; }
+  aside.side button{ font:inherit; cursor:pointer; }
   .btn{ flex:1; height:38px; border-radius:10px; border:1px solid #D9D9D9; background:#fff; font-weight:700; }
   .btn.primary{ background:#1A1A1A; color:#fff; border-color:#1A1A1A; }
   .plist{ list-style:none; display:grid; gap:6px; }
@@ -487,18 +487,18 @@
   .preview{ min-width:0; }
   @media (max-width:900px){
     .app{ grid-template-columns:minmax(0,1fr); }
-    .side{ position:static; height:auto; border-right:0; border-bottom:1px solid #E6E6E6; }
+    aside.side{ position:static; height:auto; border-right:0; border-bottom:1px solid #E6E6E6; }
     .preview{ padding-inline:16px; gap:12px; padding-bottom:96px; }
     /* 폰: 미리보기 / 패턴 고르기 / 페이지 구성 을 탭으로 나눔 */
     .mtabs{ display:flex; position:sticky; top:0; z-index:20; gap:6px; padding:10px 16px; background:rgba(255,255,255,.96); border-bottom:1px solid #E6E6E6; }
     .mtabs button{ flex:1; font:inherit; font-size:13px; font-weight:700; padding:9px 0; border-radius:999px; border:1px solid #E6E6E6; background:#fff; color:#1A1A1A; cursor:pointer; }
     .mtabs button[aria-pressed="true"]{ background:#1A1A1A; border-color:#1A1A1A; color:#fff; }
-    .side .btns{ flex-wrap:wrap; }
-    .side .btns .btn{ flex:1 1 auto; }
-    body[data-mtab="preview"] .side{ display:none; }
+    aside.side .btns{ flex-wrap:wrap; }
+    aside.side .btns .btn{ flex:1 1 auto; }
+    body[data-mtab="preview"] aside.side{ display:none; }
     body[data-mtab="patterns"] .preview, body[data-mtab="pages"] .preview{ display:none; }
-    body[data-mtab="patterns"] .side .pl-head, body[data-mtab="patterns"] .side .plist, body[data-mtab="patterns"] .side .count{ display:none; }
-    body[data-mtab="pages"] .side .picker{ display:none; }
+    body[data-mtab="patterns"] aside.side .pl-head, body[data-mtab="patterns"] aside.side .plist, body[data-mtab="patterns"] aside.side .count{ display:none; }
+    body[data-mtab="pages"] aside.side .picker{ display:none; }
     .pk-grid{ grid-template-columns:repeat(3,minmax(0,1fr)); }
     body[data-mtab="preview"] .mbook{ display:block; position:fixed; left:50%; bottom:16px; transform:translateX(-50%); z-index:30; padding:12px 22px; border-radius:999px; border:0; background:#1A1A1A; color:#fff; font:inherit; font-size:14px; font-weight:700; box-shadow:0 6px 20px rgba(0,0,0,.25); cursor:pointer; }
   }
@@ -506,7 +506,7 @@
   button:focus-visible, input:focus-visible{ outline:2px solid #E4641E; outline-offset:2px; }
   @media print{
     html,body{ background:#fff; }
-    .side{ display:none; }
+    aside.side{ display:none; }
     .app{ display:block; }
     .preview{ padding:0; gap:0; display:block; }
     .preview .page{ box-shadow:none; }
@@ -1109,7 +1109,7 @@ function addrHTML(t){
 }
 const ALL_CODES=PATS.flatMap(p=>p.colors.map(c=>c.code));
 const OFF_BY_DEFAULT=['v16-colors','pattern-riga','picked-index','portfolio-1','portfolio-2','color-index','stock'];
-function defaults(){ return {order:PAGES.map(p=>p.id), on:Object.fromEntries(PAGES.map(p=>[p.id,!OFF_BY_DEFAULT.includes(p.id)])), variant:Object.fromEntries(Object.entries(DEFAULT_VARIANT).map(([k,v])=>[k,[].concat(v)])), picked:ALL_CODES.slice(), coverLogo:{...LOGO_DEFAULT}, coverCrop:{}, backLogo:{...BACK_LOGO_DEFAULT}, backALogo:{...BACK_A_LOGO_DEFAULT}, backText:{...BACK_TEXT_DEFAULT}, backTag:{dx:0,dy:0}, backAddrOn:false, backAddr:{dx:0,dy:0}, backAddrLine:'long'}; }
+function defaults(){ return {order:PAGES.map(p=>p.id), on:Object.fromEntries(PAGES.map(p=>[p.id,!OFF_BY_DEFAULT.includes(p.id)])), variant:Object.fromEntries(Object.entries(DEFAULT_VARIANT).map(([k,v])=>[k,[].concat(v)])), picked:ALL_CODES.slice(), coverLogo:{...LOGO_DEFAULT}, coverCrop:{}, backLogo:{...BACK_LOGO_DEFAULT}, backALogo:{...BACK_A_LOGO_DEFAULT}, backText:{...BACK_TEXT_DEFAULT}, backTag:{dx:0,dy:0}, backAddrOn:false, backAddr:{dx:0,dy:0}, backAddrLine:'long', dv:2}; }
 const esc=t=>String(t??'').replace(/[&<>"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
 function patTitle(p){ return p.pattern || p.colors.map(c=>c.code).join(' · '); }
 function buildGenerated(){
@@ -1227,6 +1227,14 @@ function save(){ try{ localStorage.setItem(KEY, JSON.stringify(st)); }catch(e){}
 function apply(){
   if(!st.picked) st.picked=ALL_CODES.slice();
   // 예전 기본 자리(왼쪽 위)에 그대로 있던 로고는 새 기본 자리(오른쪽 위)로
+  // 기본값이 바뀐 뒤: 예전 기본 선택을 그대로 쓰던 사람만 새 기본으로 올림 (직접 고른 건 유지)
+  if(!(st.dv>=2)){
+    const same=(a,b)=>Array.isArray(a)&&a.length===b.length&&a.every((x,i)=>x===b[i]);
+    const f=[].concat(st.variant.features||[]), ins=[].concat(st.variant.install||[]);
+    if(!f.length || same(f,['C'])) st.variant.features=['A'];
+    if(!ins.length || same(ins,['B'])) st.variant.install=['B','A'];
+    st.dv=2;
+  }
   if(!st.coverLogo || (st.coverLogo.x===16&&st.coverLogo.y===14&&st.coverLogo.w===32)) st.coverLogo={...LOGO_DEFAULT};
   if(!st.coverCrop) st.coverCrop={};
   if(!st.backLogo) st.backLogo={...BACK_LOGO_DEFAULT};
