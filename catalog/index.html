@@ -284,6 +284,8 @@
   .back .lines{ margin-top:6mm; font-size:9pt; line-height:1.8; color:#1A1A1A; }
   @media screen{ .preview .page.back [data-bt]:hover, .preview .page.back [data-bt]:focus{ outline:1px dashed #E4641E; outline-offset:1mm; cursor:text; } }
   .back .addrs{ position:absolute; left:18mm; right:18mm; bottom:22mm; display:grid; grid-template-columns:1fr 1fr; gap:0 10mm; }
+  .back .addrs[data-line="long"]{ border-top:1px solid #DCDCDC; padding-top:4mm; }
+  .back .addrs[data-line="each"] .ad-g{ border-top:1px solid #DCDCDC; padding-top:3mm; }
   .back .ad-t{ font-size:7.5pt; font-weight:700; color:#8C8C8C; margin-bottom:1.5mm; }
   .back .addrs ul{ list-style:none; }
   .back .addrs li{ font-size:7.5pt; line-height:1.7; color:#8C8C8C; letter-spacing:-.01em; word-break:keep-all; }
@@ -464,6 +466,7 @@
   .ct-hint{ color:#6A6A6A; line-height:1.5; }
   .ct-chk{ display:flex; align-items:center; gap:6px; color:#1A1A1A; cursor:pointer; }
   .ct-chk input{ accent-color:#E4641E; }
+  .ct-chk select{ font:inherit; font-size:12px; border:1px solid #DCDCDC; border-radius:6px; padding:2px 4px; background:#fff; }
   .ct-tx{ display:grid; grid-template-columns:58px 1fr; gap:8px; align-items:start; color:#4A4A4A; }
   .ct-tx span{ padding-top:6px; }
   .ct-tx textarea{ font:inherit; font-size:12px; line-height:1.45; width:100%; resize:vertical; border:1px solid #DCDCDC; border-radius:6px; padding:5px 7px; background:#fff; color:#1A1A1A; }
@@ -1105,7 +1108,7 @@ function addrHTML(t){
 }
 const ALL_CODES=PATS.flatMap(p=>p.colors.map(c=>c.code));
 const OFF_BY_DEFAULT=['v16-colors','pattern-riga','picked-index','portfolio-1','portfolio-2','color-index','stock'];
-function defaults(){ return {order:PAGES.map(p=>p.id), on:Object.fromEntries(PAGES.map(p=>[p.id,!OFF_BY_DEFAULT.includes(p.id)])), variant:Object.fromEntries(Object.entries(DEFAULT_VARIANT).map(([k,v])=>[k,[].concat(v)])), picked:ALL_CODES.slice(), coverLogo:{...LOGO_DEFAULT}, coverCrop:{}, backLogo:{...BACK_LOGO_DEFAULT}, backALogo:{...BACK_A_LOGO_DEFAULT}, backText:{...BACK_TEXT_DEFAULT}, backTag:{dx:0,dy:0}, backAddrOn:false, backAddr:{dx:0,dy:0}}; }
+function defaults(){ return {order:PAGES.map(p=>p.id), on:Object.fromEntries(PAGES.map(p=>[p.id,!OFF_BY_DEFAULT.includes(p.id)])), variant:Object.fromEntries(Object.entries(DEFAULT_VARIANT).map(([k,v])=>[k,[].concat(v)])), picked:ALL_CODES.slice(), coverLogo:{...LOGO_DEFAULT}, coverCrop:{}, backLogo:{...BACK_LOGO_DEFAULT}, backALogo:{...BACK_A_LOGO_DEFAULT}, backText:{...BACK_TEXT_DEFAULT}, backTag:{dx:0,dy:0}, backAddrOn:false, backAddr:{dx:0,dy:0}, backAddrLine:'long'}; }
 const esc=t=>String(t??'').replace(/[&<>"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
 function patTitle(p){ return p.pattern || p.colors.map(c=>c.code).join(' · '); }
 function buildGenerated(){
@@ -1230,6 +1233,7 @@ function apply(){
   if(!st.backTag) st.backTag={dx:0,dy:0};
   if(typeof st.backAddrOn!=='boolean') st.backAddrOn=false;
   if(!st.backAddr) st.backAddr={dx:0,dy:0};
+  if(!['long','each','none'].includes(st.backAddrLine)) st.backAddrLine='long';
   st.backText={...BACK_TEXT_DEFAULT, ...(st.backText||{})};
   // 예전에 저장된 구성에 새 페이지·새 선택지가 없으면 기본값으로 채움
   for(const p of PAGES){
@@ -1535,7 +1539,7 @@ function paintBack(){
     el.innerHTML=esc(T[el.dataset.bt]??'').replace(/\n/g,'<br>');
     if(el.closest('.preview')) el.contentEditable=String(!document.body.classList.contains('back-edit'));   // 옮기기 중엔 글자 수정 끔
   });
-  document.querySelectorAll('.page.back [data-bt-addr]').forEach(el=>{ el.innerHTML=addrHTML(T.addr); el.hidden=!st.backAddrOn; const D=st.backAddr||{dx:0,dy:0}; el.style.transform=`translate(${D.dx}mm,${D.dy}mm)`; });
+  document.querySelectorAll('.page.back [data-bt-addr]').forEach(el=>{ el.innerHTML=addrHTML(T.addr); el.hidden=!st.backAddrOn; el.dataset.line=st.backAddrLine||'long'; const D=st.backAddr||{dx:0,dy:0}; el.style.transform=`translate(${D.dx}mm,${D.dy}mm)`; });
   const G=st.backTag||{dx:0,dy:0};
   document.querySelectorAll('.page.back:not(.solo) .tag').forEach(t=>{ t.style.transform=`translate(${G.dx}mm,${G.dy}mm)`; });
   document.querySelectorAll('.page.back:not(.solo) .logo').forEach(lg=>{ lg.style.right='auto'; lg.style.left=A.x+'mm'; lg.style.top=A.y+'mm'; lg.style.width=A.w+'mm'; });
@@ -1547,7 +1551,7 @@ function backTools(){
     <label class="ct-sl"><span>명함형 로고</span><input type="range" id="bt-logo-a" min="16" max="90" step="1" value="${Math.round(A.w)}"><output>${Math.round(A.w)}mm</output></label>
     <label class="ct-sl"><span>로고형 로고</span><input type="range" id="bt-logo" min="20" max="120" step="1" value="${Math.round(B.w)}"><output>${Math.round(B.w)}mm</output></label>
     <div class="ct-now">명함형 글자</div>
-    <label class="ct-chk"><input type="checkbox" id="bt-addr-on" ${st.backAddrOn?'checked':''}> 주소 넣기</label>
+    <div class="ct-row"><label class="ct-chk"><input type="checkbox" id="bt-addr-on" ${st.backAddrOn?'checked':''}> 주소 넣기</label><label class="ct-chk">구분선 <select id="bt-addr-line"><option value="long" ${st.backAddrLine==='long'?'selected':''}>위에 길게</option><option value="each" ${st.backAddrLine==='each'?'selected':''}>묶음마다</option><option value="none" ${st.backAddrLine==='none'?'selected':''}>없음</option></select></label></div>
     <p class="ct-hint">주소 목록: <b>* 사무실</b> 같은 줄은 묶음 제목, <b>- 화성1: 경기도 …</b> 줄은 이름과 주소가 됩니다.</p>
     ${BACK_TEXT_FIELDS.map(([k,l,rows])=>`<label class="ct-tx"><span>${l}</span><textarea id="bt-tx-${k}" rows="${rows}" data-k="${k}"></textarea></label>`).join('')}
     <button type="button" class="btn sm bt-text-reset">글자 원래대로</button>`;
@@ -1556,6 +1560,7 @@ function backTools(){
     t.addEventListener('input',()=>{ st.backText[t.dataset.k]=t.value; paintBack(); });
     t.addEventListener('change',()=>{ delete THUMBS['back|A']; save(); });
   });
+  d.querySelector('#bt-addr-line').onchange=e=>{ st.backAddrLine=e.target.value; delete THUMBS['back|A']; apply(); };
   d.querySelector('#bt-addr-on').onchange=e=>{ st.backAddrOn=e.target.checked; delete THUMBS['back|A']; apply(); };
   d.querySelector('.bt-text-reset').onclick=()=>{ st.backText={...BACK_TEXT_DEFAULT}; delete THUMBS['back|A']; apply(); };
   d.querySelector('.bt-edit').onclick=e=>{ const on=document.body.classList.toggle('back-edit'); e.currentTarget.setAttribute('aria-pressed',String(on)); paintBack(); };
