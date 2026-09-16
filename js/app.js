@@ -2771,8 +2771,9 @@ async function helperFetch(path, body) {
   return j;
 }
 function helperCheck() {
-  helperFetch('/api/health').then((j) => { helperState = { checked: true, up: true, info: j }; })
-    .catch(() => { helperState = { checked: true, up: false, info: null }; }).finally(() => { if (['docread', 'delivdocs'].includes(state.route)) render(); });
+  helperState.at = Date.now();  // 재확인 주기 기준 — 재조회 전에 찍어 무한 렌더 루프 방지
+  helperFetch('/api/health').then((j) => { helperState = { checked: true, up: true, info: j, at: Date.now() }; })
+    .catch(() => { helperState = { checked: true, up: false, info: null, at: Date.now() }; }).finally(() => { if (['docread', 'delivdocs'].includes(state.route)) render(); });
 }
 const helperBadge = () => !helperState.checked ? '<span class="e-b gray">도우미 확인 중…</span>'
   : !helperState.up ? '<span class="e-b red">로컬 도우미 꺼짐</span>'
@@ -4000,5 +4001,8 @@ boot();
 
 // PWA 서비스워커
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js').catch(() => {});
+  navigator.serviceWorker.register('./sw.js').then((reg) => {
+    try { reg.update(); } catch (_) {}
+    setInterval(() => { try { reg.update(); } catch (_) {} }, 60000);
+  }).catch(() => {});
 }
