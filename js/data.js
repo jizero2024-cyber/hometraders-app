@@ -6,7 +6,7 @@ export const WH_ICON_KEYS = ['warehouse', 'building', 'home', 'boxes', 'pin', 't
 
 export function seedWarehouses() {
   return [
-    { name: '천안창고', icon: 'warehouse', address: '천안시 서북구 직산읍 신갈리 206-6', phone: '010-6207-8478' },
+    { name: '천안창고', icon: 'warehouse', address: '', phone: '' },   // 주소·전화는 공유 DB(warehouses)에만 — 공개 코드에 두지 않음
     { name: 'NS로지스', icon: 'building', address: '', phone: '' },
     { name: '매입창고', icon: 'boxes', address: '', phone: '' },
   ];

@@ -89,6 +89,73 @@ async function _init() {
 
   setupRealtime();
   notify();
+  loadPrevPrices();   // 종전가 표는 따로 — 표가 아직 없어도 로그인·화면은 그대로
+  loadItemMap();      // 품목 매핑 사전도 따로 (공개 코드에서 뺀 거래처 표기)
+}
+// ── 품목 매핑 사전 (item_map) — [거래처, 거래처표기, 우리품목명] ──
+let itemMap = [];
+let itemMapState = { ready: false, missing: false, err: '' };
+async function loadItemMap() {
+  try {
+    const all = [];
+    for (let from = 0; ; from += 1000) {
+      const { data, error } = await sb.from('item_map').select('*').range(from, from + 999);
+      if (error) {
+        itemMapState = { ready: false, missing: /does not exist|relation|schema cache|could not find/i.test(error.message), err: error.message };
+        notify(); return;
+      }
+      all.push(...(data || []));
+      if (!data || data.length < 1000) break;
+    }
+    all.sort((a, b) => String(a.partner).localeCompare(String(b.partner)) || String(a.raw).localeCompare(String(b.raw)));
+    itemMap = all.map((r) => [r.partner || '', r.raw || '', r.ours || '']);
+    itemMapState = { ready: true, missing: false, err: '' };
+  } catch (e) {
+    itemMapState = { ready: false, missing: false, err: String((e && e.message) || e) };
+  }
+  notify();
+}
+export const getItemMap = () => itemMap;
+export const getItemMapState = () => ({ ...itemMapState, count: itemMap.length });
+// ── 종전가 표 (prev_prices) — 도우미가 켜진 맥이 견적서 종전가를 올리고, 다른 PC는 읽기만 ──
+let prevPrices = [];
+let prevState = { ready: false, missing: false, err: '' };
+async function loadPrevPrices() {
+  try {
+    const all = [];
+    for (let from = 0; ; from += 1000) {   // 한 번에 최대 1000줄이라 나눠 받음
+      const { data, error } = await sb.from('prev_prices').select('*').range(from, from + 999);
+      if (error) {
+        prevState = { ready: false, missing: /does not exist|relation|schema cache|could not find/i.test(error.message), err: error.message };
+        notify(); return;
+      }
+      all.push(...(data || []));
+      if (!data || data.length < 1000) break;
+    }
+    prevPrices = all; prevState = { ready: true, missing: false, err: '' };
+  } catch (e) {
+    prevState = { ready: false, missing: false, err: String((e && e.message) || e) };
+  }
+  notify();
+}
+export const getPrevPrices = () => prevPrices;
+export const getPrevState = () => ({ ...prevState, count: prevPrices.length });
+export async function savePrevPrices(rows) {   // 견적서 원래 줄 → 바뀐 줄만 올리고 견적서에서 없어진 줄은 지움 → 다시 읽음
+  const cur = new Map(prevPrices.map((r) => [r.id, r]));
+  const same = (a, b) => ['partner', 'raw', 'spec', 'unit', 'date', 'file'].every((k) => String(a[k] ?? '') === String(b[k] ?? '')) && Number(a.price) === Number(b.price) && Number(a.saved) === Number(b.saved);
+  const changed = rows.filter((r) => !cur.has(r.id) || !same(cur.get(r.id), r));
+  const keep = new Set(rows.map((r) => r.id));
+  const gone = prevPrices.filter((r) => !keep.has(r.id)).map((r) => r.id);
+  for (let i = 0; i < changed.length; i += 500) {
+    const { error } = await put('prev_prices', changed.slice(i, i + 500).map((r) => ({ ...r, updated_at: new Date().toISOString() })));
+    if (error) return { error, changed: 0, removed: 0 };
+  }
+  for (let i = 0; i < gone.length; i += 100) {
+    const { error } = await sb.from('prev_prices').delete().in('id', gone.slice(i, i + 100));
+    if (error) return { error, changed: changed.length, removed: 0 };
+  }
+  if (changed.length || gone.length) await loadPrevPrices();
+  return { error: null, changed: changed.length, removed: gone.length };
 }
 // 실시간 구독은 딱 1회만. 이미 붙은 채널이 있으면 제거 후 재구독(재진입 안전) →
 // "cannot add postgres_changes callbacks after subscribe()" 방지.

@@ -3,7 +3,7 @@ import {
 } from './data.js?v=2';
 import * as S from './store-supabase.js';
 import { ECOUNT_ITEMS } from './ecount-items.js';
-import { ITEM_MAP } from './item-map.js';
+import { makeMatcher, readPastedText, quotePrev } from './textread.js';
 
 // 창고 아이콘 세트 (무채색)
 const WH_ICONS = {
@@ -1049,12 +1049,19 @@ function ecountBody() {
     <div id="ecount-results">${ecountResultsHTML('')}</div>`;
 }
 // 품목사전 검색 결과 (거래처 표기 → 우리 품목). 재렌더 없이 결과칸만 (IME 안전)
+function mapMissingNote() {   // 매핑 사전은 공유 DB(item_map) — 표가 없거나 못 읽었을 때 안내
+  const st = S.getItemMapState();
+  if (st.missing) return '<p class="hint" style="margin:6px 0">매핑 사전 표가 아직 없어요 — 관리자가 Supabase에서 item_map SQL을 한 번 실행해야 해요.</p>';
+  if (st.err) return `<p class="hint" style="margin:6px 0">매핑 사전을 못 읽었어요: ${esc(st.err)}</p>`;
+  return '';
+}
 function mapResultsHTML(q) {
   q = (q || '').trim();
+  const ITEM_MAP = S.getItemMap();
   let list = ITEM_MAP;
   if (q) { const qq = q.toLowerCase(); list = list.filter(([p, ext, ours]) => ext.toLowerCase().includes(qq) || ours.includes(q) || p.includes(q)); }
   const shown = list.slice(0, 200);
-  return `<div class="quickbar" style="cursor:default;margin:4px 0"><span class="tx">${q ? `검색 <b>${list.length}</b>개` : `사전 <b>${ITEM_MAP.length}</b>개`}</span></div>
+  return `${mapMissingNote()}<div class="quickbar" style="cursor:default;margin:4px 0"><span class="tx">${q ? `검색 <b>${list.length}</b>개` : `사전 <b>${ITEM_MAP.length}</b>개`}</span></div>
     ${shown.length ? `<div class="rows">${shown.map(([p, ext, ours]) => `<div class="ship"><div class="body"><b>${esc(ours)}</b><div class="meta">${esc(p)} 표기: ${esc(ext)}</div></div></div>`).join('')}</div>`
       : `<div class="empty" style="padding:24px">사전에 없어요. 거래처 표기를 다르게 넣어보거나, 이카운트 품목 탭에서 직접 찾아보세요.</div>`}
     ${list.length > 200 ? `<p class="hint" style="margin-top:12px">${list.length - 200}개 더 있어요 — 검색어를 더 입력하면 좁혀져요.</p>` : ''}`;
@@ -2729,9 +2736,10 @@ function deskEcountTable(q) {
 }
 function deskMapTable(q) {
   q = (q || '').trim();
+  const ITEM_MAP = S.getItemMap();
   let list = ITEM_MAP;
   if (q) { const qq = q.toLowerCase(); list = list.filter(([p, ext, ours]) => ext.toLowerCase().includes(qq) || ours.includes(q) || p.includes(q)); }
-  return `<div class="e-sum">${q ? `검색 <b>${list.length}</b>건` : `사전 <b>${ITEM_MAP.length}</b>건`}</div>
+  return `${mapMissingNote()}<div class="e-sum">${q ? `검색 <b>${list.length}</b>건` : `사전 <b>${ITEM_MAP.length}</b>건`}</div>
     <div class="e-tw"><table class="e-tbl"><colgroup><col style="width:44px"><col style="width:140px"><col><col></colgroup>
     <thead><tr><th>No</th><th>거래처</th><th>거래처 표기</th><th>우리 품목명 (이카운트)</th></tr></thead>
     <tbody>${list.length ? list.slice(0, 500).map(([p, ext, ours], i) => `<tr><td class="no">${i + 1}</td><td>${esc(p)}</td><td>${esc(ext)}</td><td>${esc(ours)}</td></tr>`).join('')
@@ -2789,14 +2797,15 @@ function drTotals() {
 }
 function deskDocRead() {
   if (!helperState.checked || !helperState.at || Date.now() - helperState.at > 60000) { helperState.at = Date.now(); helperCheck(); }
+  if (helperState.up) syncPrevPrices();
   if (drq.files.length > 1 && dr.fromBatch === undefined) return drqPanel();
   const d = dr.doc;
   const left = dr.url || dr.name ? (dr.mime.startsWith('image/') ? `<img src="${dr.url}" alt="원본">`
     : dr.mime === 'application/pdf' ? `<iframe src="${dr.url}" title="원본 PDF"></iframe>`
       : `<div class="dr-file"><b>${esc(dr.name)}</b><span>엑셀 파일은 미리보기 없이 바로 인식합니다</span></div>`)
-    : '<div class="dr-empty">발주서·거래명세표 파일을 여기로 끌어다 놓거나<br><b>[파일 선택]</b>을 누르세요<br>캡처·카톡 사진은 복사해서 <b>Cmd+V</b>로 붙여넣어도 돼요<br><span>사진(JPG·PNG·HEIC) · PDF · 엑셀 · 여러 장 가능</span></div>';
+    : '<div style="display:flex;flex-direction:column;align-items:center;width:100%;padding:0 16px 24px"><div class="dr-empty">발주서·거래명세표 파일을 여기로 끌어다 놓거나<br><b>[파일 선택]</b>을 누르세요<br>캡처·카톡 사진은 복사해서 <b>Cmd+V</b>로 붙여넣어도 돼요<br><span>사진(JPG·PNG·HEIC) · PDF · 엑셀 · 여러 장 가능</span></div>' + drTextBox() + '</div>';
   let right;
-  if (!helperState.up && helperState.checked) right = helperOff();
+  if (!helperState.up && helperState.checked && !d && !dr.busy) right = helperOff() + '<div class="e-empty"><b>붙여넣은 글</b>은 도우미 없이도 인식돼요 — 왼쪽 아래 칸에 붙여넣고 <b>[글자로 인식]</b>을 누르세요.</div>';
   else if (dr.busy) right = '<div class="e-empty">문서를 읽는 중이에요… (사진·PDF는 20~60초)</div>';
   else if (!d) right = `${dr.err ? `<div class="dr-err">${esc(dr.err)}</div>` : ''}<div class="e-empty">왼쪽에 문서를 올린 뒤 <b>[인식 시작]</b>을 누르세요.</div>`;
   else {
@@ -2834,6 +2843,66 @@ function deskDocRead() {
       <span class="sp"></span>${helperBadge()}</div>
     <div class="e-dr"><div class="e-panel dr-drop"><div class="e-panel-hd"><b>원본 문서</b></div><div class="dr-view">${left}</div></div>
       <div class="e-panel"><div class="e-panel-hd"><b>인식 결과</b><span class="sp"></span></div><div class="dr-res">${right}</div></div></div>`);
+}
+// 붙여넣은 글(카톡·문자 품목 목록) — 파일과 같은 인식·매칭 (도우미 /api/doc/read {text})
+function drTextBox() {
+  return `<div class="dr-text" style="display:flex;flex-direction:column;gap:6px;width:100%;max-width:460px;margin:14px auto 0">
+    <b style="font-size:13px">또는 카톡·문자 품목 목록 붙여넣기</b>
+    <textarea id="dr-text" data-drt="text" rows="9" style="width:100%;font:inherit;padding:8px;border:1px solid var(--line,#ccc);border-radius:6px;resize:vertical" placeholder="한 줄에 한 품목&#10;예) 합판 9t 40장 - 12300&#10;    시멘트보드 3*6 8700원&#10;    아연각파이프 X">${esc(dr.text || '')}</textarea>
+    <div style="display:flex;gap:6px"><input class="e-in" data-drt="partner" style="flex:1" placeholder="거래처 (알면 적기 — 그 거래처 품목으로 먼저 찾음)" value="${esc(dr.textPartner || '')}">
+    ${eBtn(dr.busy ? '읽는 중…' : '글자로 인식', 'erp-dr-text', dr.busy ? 'disabled' : '', 'pri')}</div>${prevSyncLine()}</div>`;
+}
+let textMatch = null, textMatchMap = null;   // 도우미 없을 때 쓰는 품목 매칭 (매핑 사전이 바뀌면 다시 만듦)
+function drSetDoc(doc, usage) {
+  doc.lines = doc.lines.map((l) => ({ ...l, ours: l.match.ours, code: l.match.code, conf: l.match.conf, cands: l.match.cands, price: l.prev ? l.prev.price : '' }));
+  dr.doc = doc; dr.orig = JSON.parse(JSON.stringify(doc.lines || [])); dr.usage = usage; dr.quote = null; dr.deliv = null; dr.buy = null; dr.buyFile = ''; dr.pushed = null; dr.buyCopied = false; dr.buyTag = undefined; dr.buyAll = false;
+}
+// 종전가 (도우미 없을 때): 공유 DB 견적서 종전가(prev_prices) vs 이 앱 출고 단가 — 더 최근 것 (도우미와 같은 규칙)
+function prevForHere(partner, raw, spec, ours) {
+  const q = quotePrev(S.getPrevPrices(), partner, raw, spec);
+  const sale = ours && partner ? lastSalePrice(ours, partner) : null;
+  if (q && (!sale || String(q.date) >= String(sale.date || ''))) return q;
+  if (sale && Number(sale.price) > 0) return { price: sale.price, src: `출고 ${sale.date || ''}`.trim(), date: sale.date || '' };
+  return null;
+}
+function drReadTextHere() {   // 도우미 없이 이 화면에서 — 사전·품목마스터·추정 매칭 + 공유 DB 종전가
+  if (!textMatch || textMatchMap !== S.getItemMap()) { textMatchMap = S.getItemMap(); textMatch = makeMatcher(ECOUNT_ITEMS, textMatchMap); }
+  drSetDoc(readPastedText(dr.text, dr.textPartner || '', textMatch, prevForHere), null);
+}
+// 도우미가 켜진 맥에서 문서 인식을 열면 견적서 종전가를 공유 DB 로 올림 (10분에 한 번, 바뀐 줄만) → 다른 PC 도 같은 종전가
+let prevSync = { busy: false, at: 0, msg: '' };
+async function syncPrevPrices(force) {
+  if (prevSync.busy || !helperState.up || S.getPrevState().missing) return;
+  if (!force && Date.now() - prevSync.at < 10 * 60 * 1000) return;
+  prevSync.busy = true; prevSync.at = Date.now();
+  try {
+    const r = await fetch(`${HELPER}/api/prev-prices`);
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || '도우미 응답 오류');
+    const res = await S.savePrevPrices(j.rows || []);
+    prevSync.msg = res.error ? `종전가 올리기 실패: ${res.error.message}` : (res.changed || res.removed ? `견적서 종전가 ${res.changed}줄 올림${res.removed ? ` · ${res.removed}줄 지움` : ''}` : '');
+  } catch (e) { prevSync.msg = `종전가 가져오기 실패: ${e.message}`; }
+  finally { prevSync.busy = false; render(); }
+}
+function prevSyncLine() {
+  const st = S.getPrevState();
+  if (st.missing) return '<span class="muted" style="font-size:12px">종전가 표가 아직 없어요 — 관리자가 Supabase에서 prev_prices SQL을 한 번 실행해야 해요</span>';
+  if (!st.ready) return '';
+  return `<span class="muted" style="font-size:12px">견적서 종전가 ${st.count.toLocaleString()}줄 공유됨${prevSync.busy ? ' · 올리는 중…' : ''}${prevSync.msg ? ` · ${esc(prevSync.msg)}` : ''}</span>`;
+}
+function drReadText() {
+  const el = document.getElementById('dr-text'); if (el) dr.text = el.value;
+  if (!(dr.text || '').trim() || dr.busy) return;
+  dr.err = '';
+  if (!helperState.up) {
+    try { drReadTextHere(); } catch (e) { dr.err = e.message; }
+    render(); return;
+  }
+  dr.busy = true; render();
+  helperFetch('/api/doc/read', { text: dr.text, partner: dr.textPartner || '' })
+    .then((j) => drSetDoc(j.doc, j.usage))
+    .catch(() => { try { drReadTextHere(); } catch (e) { dr.err = e.message; } })   // 도우미 연결이 끊기면 이 화면에서라도
+    .finally(() => { dr.busy = false; render(); });
 }
 // 명세서 여러 개 — 한 번에 인식해서 구매전표 모음으로 (한 개면 기존 화면 그대로)
 let drq = { files: [], docs: [], busy: false, idx: -1, batch: null, batchFile: '', copied: '', tags: {}, tagAll: {} };
@@ -3218,6 +3287,7 @@ function erpAct(act, t) {
   } else if (act === 'erp-bulk') { eBulk(t.dataset.b); }
   else if (act === 'erp-ledger') { openSheet(sheetStockLedger(t.dataset.name)); }
   else if (act === 'erp-dr-read') drRead();
+  else if (act === 'erp-dr-text') drReadText();
   else if (act === 'erp-dr-learn') drLearn();
   else if (act === 'erp-dr-quote') drQuote();
   else if (act === 'erp-dr-deliv') drDeliv();
@@ -3267,6 +3337,7 @@ app.addEventListener('change', (e) => {
   }
 });
 app.addEventListener('input', (e) => {
+  if (e.target.dataset && e.target.dataset.drt) { if (e.target.dataset.drt === 'text') dr.text = e.target.value; else dr.textPartner = e.target.value; return; }   // 다시 그리지 않음 (한글 입력 안전)
   if (dr.doc && e.target.dataset && e.target.dataset.drf === 'price') { const i = Number(e.target.dataset.i); dr.doc.lines[i].price = e.target.value; drUpdateTotals(i); }
 });
 app.addEventListener('dragover', (e) => { if (e.target.closest && e.target.closest('.dr-drop')) { e.preventDefault(); e.target.closest('.dr-drop').classList.add('over'); } });
