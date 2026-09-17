@@ -3370,22 +3370,32 @@ function drEcOpen(input) {
   _drPop = document.createElement('div');
   _drPop.className = 'dr-ecpop';
   _drPop._i = input.dataset.i;
+  _drPop._input = input;
   _drPop.innerHTML = list.length
     ? list.map(([c, n]) => `<div class="opt" data-n="${esc(n)}"><div class="nm">${esc(n)}</div><div class="cd">${esc(c)}</div></div>`).join('')
     : '<div class="none">일치하는 품목이 없어요 — 이름을 조금 더 정확히</div>';
   document.body.appendChild(_drPop);
+  drEcPlace();
+  // 목록 안 어디를 눌러도(스크롤바 포함) 입력칸 포커스를 뺏지 않게 — 포커스가 빠지면 목록이 닫히므로
+  _drPop.addEventListener('mousedown', (ev) => {
+    ev.preventDefault();
+    const opt = ev.target.closest('.opt'); if (!opt) return;
+    drEcPick(Number(_drPop._i), opt.dataset.n);
+  });
+}
+// 입력칸 바로 아래에 붙인다. 입력칸이 화면 밖으로 나가면 닫는다.
+function drEcPlace() {
+  if (!_drPop) return;
+  const input = _drPop._input;
+  if (!input || !input.isConnected) { drEcClose(); return; }
   const r = input.getBoundingClientRect();
+  if (r.bottom < 0 || r.top > window.innerHeight) { drEcClose(); return; }
   const w = Math.max(r.width, 320);
   let left = r.left;
   if (left + w > window.innerWidth - 8) left = window.innerWidth - 8 - w;
   _drPop.style.left = Math.max(8, left) + 'px';
   _drPop.style.top = (r.bottom + 2) + 'px';
   _drPop.style.width = w + 'px';
-  _drPop.addEventListener('mousedown', (ev) => {
-    const opt = ev.target.closest('.opt'); if (!opt) return;
-    ev.preventDefault();
-    drEcPick(Number(_drPop._i), opt.dataset.n);
-  });
 }
 function drEcPick(i, name) {
   const l = dr.doc && dr.doc.lines[i]; if (!l) { drEcClose(); return; }
@@ -3402,8 +3412,9 @@ app.addEventListener('focusin', (e) => { if (e.target.classList && e.target.clas
 app.addEventListener('input', (e) => { if (e.target.classList && e.target.classList.contains('dr-ours')) drEcOpen(e.target); });
 app.addEventListener('focusout', (e) => { if (e.target.classList && e.target.classList.contains('dr-ours')) setTimeout(() => { if (_drPop && document.activeElement && !document.activeElement.classList.contains('dr-ours')) drEcClose(); }, 160); });
 document.addEventListener('mousedown', (e) => { if (_drPop && !_drPop.contains(e.target) && !(e.target.classList && e.target.classList.contains('dr-ours'))) drEcClose(); });
-document.addEventListener('scroll', drEcClose, true);
-window.addEventListener('resize', drEcClose);
+// 목록 자체를 스크롤할 때는 그대로 두고, 바깥(표·페이지)이 스크롤되면 입력칸을 따라 자리만 옮긴다
+document.addEventListener('scroll', (e) => { if (_drPop && !_drPop.contains(e.target)) drEcPlace(); }, true);
+window.addEventListener('resize', drEcPlace);
 
 
 // 화면 폭이 기준(1024px)을 넘나들면 다시 그림
