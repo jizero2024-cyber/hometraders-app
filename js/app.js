@@ -2824,7 +2824,7 @@ function deskDocRead() {
       <thead><tr><th>No</th><th>문서 품명 (원문)</th><th>규격</th><th>단위</th><th>수량</th><th>우리 품목 (이카운트)</th><th>종전가</th><th>견적 단가</th><th>금액(별도)</th></tr></thead>
       <tbody>${d.lines.map((l, i) => { const [cls] = DR_CONF[l.conf] || DR_CONF.none; return `<tr>
         <td class="no">${i + 1}</td><td title="${esc(l.raw_name)}" style="padding-left:6px">${esc(l.raw_name)}${l.unclear ? ' <span class="e-b orange">흐림</span>' : ''}${l.note ? ` <span class="muted">${esc(l.note)}</span>` : ''}</td>
-        <td class="muted" title="${esc(l.spec)}">${esc(l.spec)}</td><td class="c">${esc(l.unit)}</td><td class="n">${esc(l.qty)}</td>
+        <td><input class="e-in" data-drf="spec" data-i="${i}" value="${esc(l.spec)}" style="width:100%"></td><td><input class="e-in" data-drf="unit" data-i="${i}" value="${esc(l.unit)}" style="width:100%;text-align:center"></td><td><input class="num" data-drf="qty" data-i="${i}" type="number" min="0" value="${esc(l.qty)}"></td>
         <td class="${cls}"><input data-drf="ours" data-i="${i}" class="dr-ours" autocomplete="off" value="${esc(l.ours || '')}" placeholder="${l.cands && l.cands.length ? '후보: ' + esc(l.cands[0]) : '우리 품목 검색·선택'}" title="${esc(l.ours || '')}${l.cands && l.cands.length ? '\n후보: ' + l.cands.map(esc).join(' / ') : ''}"></td>
         <td class="n">${l.prev ? `${Number(l.prev.price).toLocaleString()}<br><span class="muted">${esc(l.prev.src)}</span>` : '<span class="muted">-</span>'}</td>
         <td><input class="num" data-drf="price" data-i="${i}" type="number" min="0" value="${esc(l.price || '')}"></td>
@@ -3323,6 +3323,7 @@ app.addEventListener('change', (e) => {
   if (el.id === 'dr-file') { drLoadFiles(el.files); return; }
   if (!dr.doc || !el.dataset) return;
   if (el.dataset.drh) { dr.doc[el.dataset.drh] = el.value.trim(); return; }
+  if (el.dataset.drf === 'spec' || el.dataset.drf === 'unit') { const l = dr.doc.lines[Number(el.dataset.i)]; if (l) l[el.dataset.drf] = el.value; return; }
   if (el.dataset.drf === 'ours') {
     const l = dr.doc.lines[Number(el.dataset.i)]; if (!l) return;
     l.ours = el.value.trim();
@@ -3337,7 +3338,7 @@ app.addEventListener('change', (e) => {
 });
 app.addEventListener('input', (e) => {
   if (e.target.dataset && e.target.dataset.drt) { if (e.target.dataset.drt === 'text') dr.text = e.target.value; else dr.textPartner = e.target.value; return; }   // 다시 그리지 않음 (한글 입력 안전)
-  if (dr.doc && e.target.dataset && e.target.dataset.drf === 'price') { const i = Number(e.target.dataset.i); dr.doc.lines[i].price = e.target.value; drUpdateTotals(i); }
+  if (dr.doc && e.target.dataset && (e.target.dataset.drf === 'price' || e.target.dataset.drf === 'qty')) { const i = Number(e.target.dataset.i); dr.doc.lines[i][e.target.dataset.drf] = e.target.value; drUpdateTotals(i); }
 });
 app.addEventListener('dragover', (e) => { if (e.target.closest && e.target.closest('.dr-drop')) { e.preventDefault(); e.target.closest('.dr-drop').classList.add('over'); } });
 app.addEventListener('dragleave', (e) => { const z = e.target.closest && e.target.closest('.dr-drop'); if (z) z.classList.remove('over'); });
