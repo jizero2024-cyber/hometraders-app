@@ -57,10 +57,33 @@ function priceIn(text) {
   return [null, text];
 }
 
+const LEAD_DATE = /^\s*((?:20\d\d\s*[.\-/]\s*)?\d{1,2}\s*[./]\s*\d{1,2}|\d{1,2}\s*월\s*\d{1,2}\s*일)(?=\s)/;   // 줄 맨 앞 출고일 '08/06'
+function leadDate(t, today = new Date()) {
+  const m = String(t).trim().match(/^(?:(20\d\d)\s*[.\-/]\s*)?(\d{1,2})\s*[./월]\s*(\d{1,2})\s*일?$/);
+  if (!m) return '';
+  return normDate(`${m[1] || today.getFullYear()}-${m[2]}-${m[3]}`, today);
+}
+// 규격 떼기 — 단, 밑줄로 이어 붙인 우리 품번(인슐레이션_크나우프_가등급_지붕_R37-15) 안은 건드리지 않음
+function cutSpecs(left) {
+  const specs = [];
+  const out = left.split(/(\s+)/).map((tok) => {
+    if (tok.includes('_')) return tok;
+    for (const rx of SPEC) {
+      for (const m of tok.matchAll(rx)) specs.push(m[0].trim());
+      tok = tok.replace(rx, ' ');
+    }
+    return tok;
+  }).join('');
+  return [out, specs];
+}
+
 export function parseLine(line) {
   const raw = line.trim();
   let s = raw.replace(BULLET, '').trim();
   if (!s) return null;
+  let lineDate = '';
+  const ld = s.match(LEAD_DATE);
+  if (ld && leadDate(ld[1])) { lineDate = leadDate(ld[1]); s = s.slice(ld[0].length).trim(); }
   const note = [];
   let price = null;
   const na = s.match(NA);
@@ -91,11 +114,8 @@ export function parseLine(line) {
       left = (left.slice(0, mx.index) + ' ' + left.slice(mx.index + mx[0].length)).trim();
     }
   }
-  const specs = [];
-  for (const rx of SPEC) {
-    for (const m of left.matchAll(rx)) specs.push(m[0].trim());
-    left = left.replace(rx, ' ');
-  }
+  const [cut, specs] = cutSpecs(left);
+  left = cut;
   let name = left.replace(/\(\s*\)|\[\s*\]/g, ' ').replace(/\s{2,}/g, ' ').trim().replace(/^[\s\-–—:=,/]+|[\s\-–—:=,/]+$/g, '');
   const cnt = (c) => name.split(c).length - 1;
   while (name && ('([,/'.includes(name.slice(-1)) || (name.slice(-1) === ')' && cnt('(') < cnt(')')) || (name.slice(-1) === ']' && cnt('[') < cnt(']')))) {
@@ -107,7 +127,7 @@ export function parseLine(line) {
   return {
     raw_name: name || raw, spec: specs.join(' '), unit, qty, unit_price: price || 0,
     amount: qty && price ? qty * price : 0, vat: 0, note: note.join(' · '),
-    unclear: !name || (!qty && price === null && !na), source_line: raw,
+    unclear: !name || (!qty && price === null && !na), source_line: raw, date: lineDate,
   };
 }
 
