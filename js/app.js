@@ -2815,7 +2815,7 @@ function deskDocRead() {
     <table class="e-ftbl"><colgroup><col style="width:80px"><col><col style="width:80px"><col><col style="width:80px"><col></colgroup>
       <tr><th>문서</th><td>${esc(d.doc_type || '')}${dr.usage ? ` <span class="muted">AI ${dr.usage.in + dr.usage.out}토큰 · 약 ${Math.round(dr.usage.usd * 1400).toLocaleString()}원</span>` : ' <span class="muted">AI 미사용</span>'}</td>
         <th>거래처</th><td><input class="e-in" data-drh="partner" value="${esc(d.partner || '')}"></td><th>담당자</th><td><input class="e-in" data-drh="manager" value="${esc(d.manager || '')}"></td></tr>
-      <tr><th>현장명</th><td><input class="e-in" data-drh="owner" value="${esc(d.owner || '')}"></td><th>납품장소</th><td><input class="e-in" data-drh="site" value="${esc(d.site || '')}"></td><th>일자</th><td><input class="e-in" data-drh="doc_date" value="${esc(d.doc_date || '')}"></td></tr>
+      <tr><th>현장명</th><td style="display:flex;gap:4px"><input class="e-in" data-drh="owner" value="${esc(d.owner || '')}" style="flex:1"><label class="e-btn sm" for="dr-sitedoc" title="건축허가서·신고필증 사진/PDF에서 건축주·현장 주소를 채워요 (서류 날짜는 안 씀)">${dr.siteBusy ? '읽는 중…' : '현장 서류'}</label><input type="file" id="dr-sitedoc" accept="image/*,.heic,.pdf" hidden></td><th>납품장소</th><td><input class="e-in" data-drh="site" value="${esc(d.site || '')}"></td><th>일자</th><td><input class="e-in" data-drh="doc_date" value="${esc(d.doc_date || '')}"></td></tr>
       ${d.remarks ? `<tr><th>메모</th><td colspan="5">${esc(d.remarks)}</td></tr>` : ''}
     </table>
     <div class="e-lines-hd"><b>품목 ${d.lines.length}</b>
@@ -2831,7 +2831,7 @@ function deskDocRead() {
         <td class="n" id="dr-amt-${i}">${eN((Number(l.qty) || 0) * (Number(l.price) || 0))}</td></tr>`; }).join('')}</tbody>
       <tfoot><tr><td></td><td colspan="4" style="padding-left:6px;font-weight:700">합계 <span class="muted" id="dr-noprice">${t.noPrice ? `단가 없음 ${t.noPrice}` : ''}</span></td><td class="n muted" colspan="2">부가세 <b id="dr-vat">${eN(t.vat)}</b></td><td class="n muted">포함 <b id="dr-tot">${eN(t.tot)}</b></td><td class="n"><b id="dr-sup">${eN(t.sup)}</b></td></tr></tfoot></table></div>
     <div class="e-tools">${eBtn('매핑 저장 (다음부터 자동)', 'erp-dr-learn')}${eBtn('출고 입력으로 보내기', 'erp-dr-ship')}${eBtn('구매전표 만들기', 'erp-dr-buy')}${eBtn('납품확인서 만들기', 'erp-dr-deliv')}<span class="sp"></span>
-      ${dr.deliv ? `<a class="e-btn" href="${HELPER}/api/file?path=${encodeURIComponent(dr.deliv.out)}">납품확인서 받기 · ${esc(dr.deliv.out.split('/').pop())}</a>` : ''}
+      ${dr.deliv ? (dr.deliv.outs || [dr.deliv.out]).map((o) => `<a class="e-btn" href="${HELPER}/api/file?path=${encodeURIComponent(o)}">납품확인서 받기 · ${esc(o.split('/').pop())}</a>`).join('') : ''}
       ${dr.quote ? `<a class="e-btn" href="${HELPER}/api/file?path=${encodeURIComponent(dr.quote.out)}">견적서 받기 · ${esc(dr.quote.out.split('/').pop())}</a>` : ''}
       ${eBtn('견적서 만들기 (거래처 양식)', 'erp-dr-quote', '', 'pri')}</div>
     ${dr.note ? `<div class="e-sum"><span>${esc(dr.note)}</span></div>` : ''}
@@ -3151,14 +3151,26 @@ function drQuote() {
     .then((j) => { dr.quote = j; dr.note = `견적서 저장: ${j.out} · 합계 ${Math.round(j.total_incl).toLocaleString()}원(부가세 포함)`; })
     .catch((e) => { dr.err = e.message; }).finally(() => { dr.busy = false; render(); });
 }
-// 수동 납품확인서 — 인식한 거래명세서를 필터 없이 그대로 확인서로 (거래처·품목 제한 없음)
+// 수동 납품확인서 — 인식한 거래명세서에서 인슐레이션·방수시트·타이벡만, 명세서 줄 일자마다 1장 (공간제작소는 품목군마다 1장)
 function drDeliv() {
   if (!dr.doc) return;
   dr.busy = true; render();
   drSaveFixes();
-  helperFetch('/api/delivery/make', { doc: dr.doc, lines: dr.doc.lines.map((l) => ({ ours: l.ours, raw_name: l.raw_name, name: l.name, unit: l.unit, qty: l.qty })) })
-    .then((j) => { dr.deliv = j; dr.note = `납품확인서 저장: ${j.out}`; })
+  helperFetch('/api/delivery/make', { doc: dr.doc, lines: dr.doc.lines.map((l) => ({ ours: l.ours, raw_name: l.raw_name, name: l.name, unit: l.unit, qty: l.qty, date: l.date || '' })) })
+    .then((j) => { dr.deliv = j; dr.note = `납품확인서 저장: ${(j.outs || [j.out]).join(', ')}`; })
     .catch((e) => { dr.err = e.message; }).finally(() => { dr.busy = false; render(); });
+}
+// 현장 서류(건축허가서 등) → 현장명(건축주)·납품장소 채우기. 서류에 찍힌 날짜는 납품일로 안 씀
+function drSiteDoc(file) {
+  if (!file || !dr.doc) return;
+  dr.siteBusy = true; render();
+  const rd = new FileReader();
+  rd.onload = () => {
+    helperFetch('/api/delivery/sitedoc', { name: file.name, data: String(rd.result).split(',')[1] || '' })
+      .then((j) => { if (j.owner) dr.doc.owner = j.owner; if (j.site) dr.doc.site = j.site; dr.note = `현장 서류에서 채움: ${[j.owner, j.site].filter(Boolean).join(' · ')}`; })
+      .catch((e) => { dr.err = e.message; }).finally(() => { dr.siteBusy = false; render(); });
+  };
+  rd.readAsDataURL(file);
 }
 function drToShip() {
   if (!dr.doc) return;
@@ -3321,6 +3333,7 @@ function drUpdateTotals(i) {
 app.addEventListener('change', (e) => {
   const el = e.target;
   if (el.id === 'dr-file') { drLoadFiles(el.files); return; }
+  if (el.id === 'dr-sitedoc') { drSiteDoc(el.files && el.files[0]); el.value = ''; return; }
   if (!dr.doc || !el.dataset) return;
   if (el.dataset.drh) { dr.doc[el.dataset.drh] = el.value.trim(); return; }
   if (el.dataset.drf === 'spec' || el.dataset.drf === 'unit') { const l = dr.doc.lines[Number(el.dataset.i)]; if (l) l[el.dataset.drf] = el.value; return; }
