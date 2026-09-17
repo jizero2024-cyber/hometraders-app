@@ -379,3 +379,11 @@ body.erp .sheet:has(#ship-form){max-width:1180px}
 code{font-size:11.5px;background:var(--e-lab);padding:1px 5px;border-radius:2px}
 
 .dr-res .e-grid td input{white-space:nowrap;text-overflow:ellipsis}
+
+/* 우리 품목 커스텀 드롭다운 (원본 안 가리게 입력칸 아래에 뜸) */
+.dr-ecpop{position:fixed;z-index:99999;background:var(--surface,#fff);border:1px solid var(--e-line-2,#cbd2dc);border-radius:8px;box-shadow:0 10px 28px rgba(0,0,0,.22);max-height:340px;overflow-y:auto}
+.dr-ecpop .opt{padding:7px 11px;cursor:pointer;border-bottom:1px solid var(--e-line,#eef1f5);line-height:1.35}
+.dr-ecpop .opt:hover{background:var(--e-blue-1,#e8f0fe)}
+.dr-ecpop .opt .nm{font-size:13px;color:var(--ink,#1f2937)}
+.dr-ecpop .opt .cd{font-size:11px;color:var(--muted,#9aa3af);margin-top:1px}
+.dr-ecpop .none{padding:9px 11px;color:var(--muted,#9aa3af);font-size:12px}

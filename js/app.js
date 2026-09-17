@@ -2825,12 +2825,11 @@ function deskDocRead() {
       <tbody>${d.lines.map((l, i) => { const [cls] = DR_CONF[l.conf] || DR_CONF.none; return `<tr>
         <td class="no">${i + 1}</td><td title="${esc(l.raw_name)}" style="padding-left:6px">${esc(l.raw_name)}${l.unclear ? ' <span class="e-b orange">흐림</span>' : ''}${l.note ? ` <span class="muted">${esc(l.note)}</span>` : ''}</td>
         <td class="muted" title="${esc(l.spec)}">${esc(l.spec)}</td><td class="c">${esc(l.unit)}</td><td class="n">${esc(l.qty)}</td>
-        <td class="${cls}"><input data-drf="ours" data-i="${i}" list="dr-ec" value="${esc(l.ours || '')}" placeholder="${l.cands && l.cands.length ? '후보: ' + esc(l.cands[0]) : '우리 품목 검색·선택'}" title="${esc(l.ours || '')}${l.cands && l.cands.length ? '\n후보: ' + l.cands.map(esc).join(' / ') : ''}"></td>
+        <td class="${cls}"><input data-drf="ours" data-i="${i}" class="dr-ours" autocomplete="off" value="${esc(l.ours || '')}" placeholder="${l.cands && l.cands.length ? '후보: ' + esc(l.cands[0]) : '우리 품목 검색·선택'}" title="${esc(l.ours || '')}${l.cands && l.cands.length ? '\n후보: ' + l.cands.map(esc).join(' / ') : ''}"></td>
         <td class="n">${l.prev ? `${Number(l.prev.price).toLocaleString()}<br><span class="muted">${esc(l.prev.src)}</span>` : '<span class="muted">-</span>'}</td>
         <td><input class="num" data-drf="price" data-i="${i}" type="number" min="0" value="${esc(l.price || '')}"></td>
         <td class="n" id="dr-amt-${i}">${eN((Number(l.qty) || 0) * (Number(l.price) || 0))}</td></tr>`; }).join('')}</tbody>
       <tfoot><tr><td></td><td colspan="4" style="padding-left:6px;font-weight:700">합계 <span class="muted" id="dr-noprice">${t.noPrice ? `단가 없음 ${t.noPrice}` : ''}</span></td><td class="n muted" colspan="2">부가세 <b id="dr-vat">${eN(t.vat)}</b></td><td class="n muted">포함 <b id="dr-tot">${eN(t.tot)}</b></td><td class="n"><b id="dr-sup">${eN(t.sup)}</b></td></tr></tfoot></table></div>
-    <datalist id="dr-ec">${ECOUNT_ITEMS.map(([c, n]) => `<option value="${esc(n)}">${esc(c)}</option>`).join('')}</datalist>
     <div class="e-tools">${eBtn('매핑 저장 (다음부터 자동)', 'erp-dr-learn')}${eBtn('출고 입력으로 보내기', 'erp-dr-ship')}${eBtn('구매전표 만들기', 'erp-dr-buy')}${eBtn('납품확인서 만들기', 'erp-dr-deliv')}<span class="sp"></span>
       ${dr.deliv ? `<a class="e-btn" href="${HELPER}/api/file?path=${encodeURIComponent(dr.deliv.out)}">납품확인서 받기 · ${esc(dr.deliv.out.split('/').pop())}</a>` : ''}
       ${dr.quote ? `<a class="e-btn" href="${HELPER}/api/file?path=${encodeURIComponent(dr.quote.out)}">견적서 받기 · ${esc(dr.quote.out.split('/').pop())}</a>` : ''}
@@ -3343,6 +3342,55 @@ app.addEventListener('input', (e) => {
 app.addEventListener('dragover', (e) => { if (e.target.closest && e.target.closest('.dr-drop')) { e.preventDefault(); e.target.closest('.dr-drop').classList.add('over'); } });
 app.addEventListener('dragleave', (e) => { const z = e.target.closest && e.target.closest('.dr-drop'); if (z) z.classList.remove('over'); });
 app.addEventListener('drop', (e) => { if (e.target.closest && e.target.closest('.dr-drop')) { e.preventDefault(); drLoadFiles(e.dataTransfer.files); } });
+
+// ── 우리 품목 커스텀 드롭다운 (기본 datalist 대신 — 입력칸 바로 아래(오른쪽)에 떠서 원본을 안 가림) ──
+let _drPop = null;
+function drEcClose() { if (_drPop) { _drPop.remove(); _drPop = null; } }
+function drEcOpen(input) {
+  if (!dr.doc) return;
+  const q = input.value.trim().toLowerCase().replace(/\s/g, '');
+  let items = ECOUNT_ITEMS;
+  if (q) items = ECOUNT_ITEMS.filter(([c, n]) => n.toLowerCase().replace(/\s/g, '').indexOf(q) >= 0 || String(c).toLowerCase().indexOf(q) >= 0);
+  const list = items.slice(0, 60);
+  drEcClose();
+  _drPop = document.createElement('div');
+  _drPop.className = 'dr-ecpop';
+  _drPop._i = input.dataset.i;
+  _drPop.innerHTML = list.length
+    ? list.map(([c, n]) => `<div class="opt" data-n="${esc(n)}"><div class="nm">${esc(n)}</div><div class="cd">${esc(c)}</div></div>`).join('')
+    : '<div class="none">일치하는 품목이 없어요 — 이름을 조금 더 정확히</div>';
+  document.body.appendChild(_drPop);
+  const r = input.getBoundingClientRect();
+  const w = Math.max(r.width, 320);
+  let left = r.left;
+  if (left + w > window.innerWidth - 8) left = window.innerWidth - 8 - w;
+  _drPop.style.left = Math.max(8, left) + 'px';
+  _drPop.style.top = (r.bottom + 2) + 'px';
+  _drPop.style.width = w + 'px';
+  _drPop.addEventListener('mousedown', (ev) => {
+    const opt = ev.target.closest('.opt'); if (!opt) return;
+    ev.preventDefault();
+    drEcPick(Number(_drPop._i), opt.dataset.n);
+  });
+}
+function drEcPick(i, name) {
+  const l = dr.doc && dr.doc.lines[i]; if (!l) { drEcClose(); return; }
+  l.ours = name;
+  const hit = ECOUNT_ITEMS.find(([, n]) => n === name);
+  l.code = hit ? hit[0] : '';
+  l.conf = !name ? 'none' : (name === l.match.ours && l.match.conf === 'high') ? 'high' : 'edit';
+  const inp = app.querySelector(`input[data-drf="ours"][data-i="${i}"]`);
+  if (inp) { inp.value = name; inp.parentElement.className = (DR_CONF[l.conf] || DR_CONF.none)[0]; inp.title = hit ? `품목코드 ${hit[0]}` : ''; }
+  drEcClose();
+  if (dr.buy) { dr.buy = null; dr.buyFile = ''; render(); }
+}
+app.addEventListener('focusin', (e) => { if (e.target.classList && e.target.classList.contains('dr-ours')) drEcOpen(e.target); });
+app.addEventListener('input', (e) => { if (e.target.classList && e.target.classList.contains('dr-ours')) drEcOpen(e.target); });
+app.addEventListener('focusout', (e) => { if (e.target.classList && e.target.classList.contains('dr-ours')) setTimeout(() => { if (_drPop && document.activeElement && !document.activeElement.classList.contains('dr-ours')) drEcClose(); }, 160); });
+document.addEventListener('mousedown', (e) => { if (_drPop && !_drPop.contains(e.target) && !(e.target.classList && e.target.classList.contains('dr-ours'))) drEcClose(); });
+document.addEventListener('scroll', drEcClose, true);
+window.addEventListener('resize', drEcClose);
+
 
 // 화면 폭이 기준(1024px)을 넘나들면 다시 그림
 DESK_MQ.addEventListener('change', () => { if (!isDesk()) document.body.classList.remove('erp'); render(); });
