@@ -2789,6 +2789,21 @@ const helperBadge = () => !helperState.checked ? '<span class="e-b gray">도우�
 const helperOff = () => `<div class="e-box"><div class="e-box-hd">로컬 도우미가 꺼져 있어요</div><div class="e-box-bd">이 맥의 터미널에서 켜주세요:<br>
   <code>cd ~/claude_workspace/homt-delivery-helper &amp;&amp; python3 server.py</code><br>${eBtn('다시 확인', 'erp-dr-check', '', 'sm')}</div></div>`;
 const DR_CONF = { high: ['dr-high', '확실'], mid: ['dr-mid', '확인 필요'], none: ['dr-none', '못 찾음'], edit: ['dr-edit', '직접 지정'] };
+// 여러 모양의 날짜(2025.9.9 · 2025년 9월 9일 · 20250909 · 25-09-09) → 2025-09-09, 못 읽으면 ''
+function isoDate(v) {
+  const t = String(v || '').trim();
+  let m = t.match(/(20\d\d|\d\d)\s*[.\-/년]\s*(\d{1,2})\s*[.\-/월]\s*(\d{1,2})/) || t.match(/^(20\d\d)(\d\d)(\d\d)$/);
+  if (!m) return '';
+  const y = m[1].length === 2 ? '20' + m[1] : m[1], mo = Number(m[2]), d = Number(m[3]);
+  if (mo < 1 || mo > 12 || d < 1 || d > 31) return '';
+  return `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+function drNormDates(doc) {
+  if (!doc) return doc;
+  doc.doc_date = isoDate(doc.doc_date) || doc.doc_date || '';
+  (doc.lines || []).forEach((l) => { l.date = isoDate(l.date); });
+  return doc;
+}
 function drTotals() {
   const ls = (dr.doc && dr.doc.lines) || [];
   const sup = ls.reduce((a, l) => a + (Number(l.qty) || 0) * (Number(l.price) || 0), 0);
@@ -2815,21 +2830,22 @@ function deskDocRead() {
     <table class="e-ftbl"><colgroup><col style="width:80px"><col><col style="width:80px"><col><col style="width:80px"><col></colgroup>
       <tr><th>문서</th><td>${esc(d.doc_type || '')}${dr.usage ? ` <span class="muted">AI ${dr.usage.in + dr.usage.out}토큰 · 약 ${Math.round(dr.usage.usd * 1400).toLocaleString()}원</span>` : ' <span class="muted">AI 미사용</span>'}</td>
         <th>거래처</th><td><input class="e-in" data-drh="partner" value="${esc(d.partner || '')}"></td><th>담당자</th><td><input class="e-in" data-drh="manager" value="${esc(d.manager || '')}"></td></tr>
-      <tr><th>현장명</th><td style="display:flex;gap:4px"><input class="e-in" data-drh="owner" value="${esc(d.owner || '')}" style="flex:1"><label class="e-btn sm" for="dr-sitedoc" title="건축허가서·신고필증 사진/PDF에서 건축주·현장 주소를 채워요 (서류 날짜는 안 씀)">${dr.siteBusy ? '읽는 중…' : '현장 서류'}</label><input type="file" id="dr-sitedoc" accept="image/*,.heic,.pdf" hidden></td><th>납품장소</th><td><input class="e-in" data-drh="site" value="${esc(d.site || '')}"></td><th>일자</th><td><input class="e-in" data-drh="doc_date" value="${esc(d.doc_date || '')}"></td></tr>
+      <tr><th>현장명</th><td style="display:flex;gap:4px"><input class="e-in" data-drh="owner" value="${esc(d.owner || '')}" style="flex:1"><label class="e-btn sm" for="dr-sitedoc" title="건축허가서·신고필증 사진/PDF에서 건축주·현장 주소를 채워요 (서류 날짜는 안 씀)">${siteDoc.busy ? '읽는 중…' : '현장 서류'}</label><input type="file" id="dr-sitedoc" accept="image/*,.heic,.pdf" hidden></td><th>납품장소</th><td><input class="e-in" data-drh="site" value="${esc(d.site || '')}"></td><th>일자</th><td><input class="e-in" type="date" data-drh="doc_date" value="${esc(isoDate(d.doc_date))}" title="명세서 일자 — 줄마다 출고일이 비어 있으면 이 날짜가 납품일"></td></tr>
       ${d.remarks ? `<tr><th>메모</th><td colspan="5">${esc(d.remarks)}</td></tr>` : ''}
     </table>
     <div class="e-lines-hd"><b>품목 ${d.lines.length}</b>
       <span class="dr-legend"><i class="dr-high"></i>확실 ${cnt.high}<i class="dr-mid"></i>확인 필요 ${cnt.mid}<i class="dr-none"></i>못 찾음 ${cnt.none}${cnt.edit ? `<i class="dr-edit"></i>직접 지정 ${cnt.edit}` : ''}</span><span class="sp"></span></div>
-    <div class="e-tw" style="flex:1;overflow-x:auto"><table class="e-grid" style="min-width:980px"><colgroup><col style="width:30px"><col style="width:22%"><col style="width:84px"><col style="width:44px"><col style="width:48px"><col style="min-width:240px"><col style="width:96px"><col style="width:82px"><col style="width:86px"></colgroup>
-      <thead><tr><th>No</th><th>문서 품명 (원문)</th><th>규격</th><th>단위</th><th>수량</th><th>우리 품목 (이카운트)</th><th>종전가</th><th>견적 단가</th><th>금액(별도)</th></tr></thead>
+    <div class="e-tw" style="flex:1;overflow-x:auto"><table class="e-grid" style="min-width:1110px"><colgroup><col style="width:30px"><col style="width:22%"><col style="width:128px"><col style="width:84px"><col style="width:44px"><col style="width:48px"><col style="min-width:240px"><col style="width:96px"><col style="width:82px"><col style="width:86px"></colgroup>
+      <thead><tr><th>No</th><th>문서 품명 (원문)</th><th title="비우면 위 일자">출고일</th><th>규격</th><th>단위</th><th>수량</th><th>우리 품목 (이카운트)</th><th>종전가</th><th>견적 단가</th><th>금액(별도)</th></tr></thead>
       <tbody>${d.lines.map((l, i) => { const [cls] = DR_CONF[l.conf] || DR_CONF.none; return `<tr>
         <td class="no">${i + 1}</td><td title="${esc(l.raw_name)}" style="padding-left:6px">${esc(l.raw_name)}${l.unclear ? ' <span class="e-b orange">흐림</span>' : ''}${l.note ? ` <span class="muted">${esc(l.note)}</span>` : ''}</td>
+        <td><input class="e-in" type="date" data-drf="date" data-i="${i}" value="${esc(isoDate(l.date))}" title="비우면 위 일자" style="width:100%"></td>
         <td><input class="e-in" data-drf="spec" data-i="${i}" value="${esc(l.spec)}" style="width:100%"></td><td><input class="e-in" data-drf="unit" data-i="${i}" value="${esc(l.unit)}" style="width:100%;text-align:center"></td><td><input class="num" data-drf="qty" data-i="${i}" type="number" min="0" value="${esc(l.qty)}"></td>
         <td class="${cls}"><input data-drf="ours" data-i="${i}" class="dr-ours" autocomplete="off" value="${esc(l.ours || '')}" placeholder="${l.cands && l.cands.length ? '후보: ' + esc(l.cands[0]) : '우리 품목 검색·선택'}" title="${esc(l.ours || '')}${l.cands && l.cands.length ? '\n후보: ' + l.cands.map(esc).join(' / ') : ''}"></td>
         <td class="n">${l.prev ? `${Number(l.prev.price).toLocaleString()}<br><span class="muted">${esc(l.prev.src)}</span>` : '<span class="muted">-</span>'}</td>
         <td><input class="num" data-drf="price" data-i="${i}" type="number" min="0" value="${esc(l.price || '')}"></td>
         <td class="n" id="dr-amt-${i}">${eN((Number(l.qty) || 0) * (Number(l.price) || 0))}</td></tr>`; }).join('')}</tbody>
-      <tfoot><tr><td></td><td colspan="4" style="padding-left:6px;font-weight:700">합계 <span class="muted" id="dr-noprice">${t.noPrice ? `단가 없음 ${t.noPrice}` : ''}</span></td><td class="n muted" colspan="2">부가세 <b id="dr-vat">${eN(t.vat)}</b></td><td class="n muted">포함 <b id="dr-tot">${eN(t.tot)}</b></td><td class="n"><b id="dr-sup">${eN(t.sup)}</b></td></tr></tfoot></table></div>
+      <tfoot><tr><td></td><td colspan="5" style="padding-left:6px;font-weight:700">합계 <span class="muted" id="dr-noprice">${t.noPrice ? `단가 없음 ${t.noPrice}` : ''}</span></td><td class="n muted" colspan="2">부가세 <b id="dr-vat">${eN(t.vat)}</b></td><td class="n muted">포함 <b id="dr-tot">${eN(t.tot)}</b></td><td class="n"><b id="dr-sup">${eN(t.sup)}</b></td></tr></tfoot></table></div>
     <div class="e-tools">${eBtn('매핑 저장 (다음부터 자동)', 'erp-dr-learn')}${eBtn('출고 입력으로 보내기', 'erp-dr-ship')}${eBtn('구매전표 만들기', 'erp-dr-buy')}${eBtn('납품확인서 만들기', 'erp-dr-deliv')}<span class="sp"></span>
       ${dr.deliv ? (dr.deliv.outs || [dr.deliv.out]).map((o) => `<a class="e-btn" href="${HELPER}/api/file?path=${encodeURIComponent(o)}">납품확인서 받기 · ${esc(o.split('/').pop())}</a>`).join('') : ''}
       ${dr.quote ? `<a class="e-btn" href="${HELPER}/api/file?path=${encodeURIComponent(dr.quote.out)}">견적서 받기 · ${esc(dr.quote.out.split('/').pop())}</a>` : ''}
@@ -2960,6 +2976,7 @@ async function drqReadAll() {
       const doc = j.doc;
       doc.lines = doc.lines.map((l) => ({ ...l, ours: l.match.ours, code: l.match.code, conf: l.match.conf, cands: l.match.cands, price: l.prev ? l.prev.price : '' }));
       doc._orig = JSON.parse(JSON.stringify(doc.lines));
+      drNormDates(doc);
       drq.docs[i] = doc;
       if (drq.tags[i] === undefined && /^\d{4}-\d{2}-\d{2}$/.test(doc.doc_date || '')) drq.tags[i] = doc.doc_date.slice(5, 7) + doc.doc_date.slice(8, 10) + '/';
     } catch (e) { drq.docs[i] = { error: e.message }; }
@@ -3034,7 +3051,30 @@ function drqPanel() {
       <div class="e-tools"><span class="sp"></span>
         ${drq.batchFile ? `<a class="e-btn" href="${HELPER}/api/file?path=${encodeURIComponent(drq.batchFile)}">받기 · ${esc(drq.batchFile.split('/').pop())}</a>` : ''}
         ${eBtn('엑셀 만들기', 'erp-drq-file', b && b.passed ? '' : 'disabled')}
-        ${eBtn(drq.copied ? '복사됨 ✓' : `이카운트 붙여넣기용 복사${b && b.passed ? ` (${b.passed}건)` : ''}`, 'erp-drq-copy', b && b.passed ? '' : 'disabled', 'pri')}</div></div>`);
+        ${eBtn(drq.copied ? '복사됨 ✓' : `이카운트 붙여넣기용 복사${b && b.passed ? ` (${b.passed}건)` : ''}`, 'erp-drq-copy', b && b.passed ? '' : 'disabled', 'pri')}</div></div>
+    ${drqDelivPanel(read)}`);
+}
+// 납품확인서 모음 — 인식한 명세서 전부에서 인슐레이션·방수시트·타이벡만, 전표(출고) 날짜마다 1장. 같은 파일·같은 발행번호 수정본은 한 번만
+function drqDelivPanel(read) {
+  const dv = drq.deliv;
+  const made = dv ? dv.made.map((m) => `<tr><td class="c">${esc(m.date)}</td><td>${esc(m.client)}<div class="muted">${esc(m.site)}</div></td><td>${esc(m.what)}</td>
+      <td style="white-space:normal">${esc(m.items)}<div class="muted">${m.from.map(esc).join(', ')}</div></td>
+      <td class="c"><a class="e-btn sm" href="${HELPER}/api/file?path=${encodeURIComponent(m.out)}">받기</a></td></tr>`).join('') : '';
+  const skipped = dv && dv.skipped.length ? `<div class="e-sum" style="white-space:normal"><span class="muted">뺀 파일 — ${dv.skipped.map((x) => `${esc(x.name)} (${esc(x.why)})`).join(' · ')}</span></div>` : '';
+  return `<div class="e-panel" style="margin-top:10px"><div class="e-panel-hd"><b>납품확인서 모음</b><span class="sp"></span>
+      ${eBtn(drq.delivBusy ? '만드는 중…' : '납품확인서 모두 만들기', 'erp-drq-deliv', drq.busy || drq.delivBusy || !read ? 'disabled' : '', 'pri')}</div>
+    ${dv ? (dv.made.length ? `<div class="e-tw" style="overflow-x:auto"><table class="e-grid" style="min-width:760px"><colgroup><col style="width:96px"><col style="width:26%"><col style="width:90px"><col><col style="width:70px"></colgroup>
+      <thead><tr><th>납품일</th><th>거래처 / 현장</th><th>품목</th><th>내용 / 명세서</th><th></th></tr></thead><tbody>${made}</tbody></table></div>`
+      : '<div class="e-empty">인슐레이션·방수시트·타이벡이 든 명세서가 없어요.</div>') + skipped : ''}</div>`;
+}
+function drqDeliv() {
+  drqSyncTags();
+  const items = drq.docs.map((d, i) => (d && d.lines ? { name: drq.files[i].name, doc: d,
+    lines: d.lines.map((l) => ({ ours: l.ours, raw_name: l.raw_name, name: l.name, unit: l.unit, qty: l.qty, date: l.date || '' })) } : null)).filter(Boolean);
+  if (!items.length) return;
+  drq.delivBusy = true; dr.err = ''; render();
+  helperFetch('/api/delivery/make-batch', { items }).then((j) => { drq.deliv = j; })
+    .catch((e) => { dr.err = e.message; }).finally(() => { drq.delivBusy = false; render(); });
 }
 function drLoadFile(file) {
   if (!file) return;
@@ -3052,6 +3092,7 @@ function drRead() {
   helperFetch('/api/doc/read', { name: dr.name, data: dr.b64 }).then((j) => {
     const doc = j.doc;
     doc.lines = doc.lines.map((l) => ({ ...l, ours: l.match.ours, code: l.match.code, conf: l.match.conf, cands: l.match.cands, price: l.prev ? l.prev.price : '' }));
+    drNormDates(doc);
     dr.doc = doc; dr.orig = JSON.parse(JSON.stringify(doc.lines || [])); dr.usage = j.usage; if (j.usage && helperState.info) helperState.info.ai = true; dr.quote = null; dr.deliv = null; dr.buy = null; dr.buyFile = ''; dr.pushed = null; dr.buyCopied = false; dr.buyTag = undefined; dr.buyAll = false;
   }).catch((e) => { dr.err = e.message; }).finally(() => { dr.busy = false; render(); });
 }
@@ -3161,14 +3202,19 @@ function drDeliv() {
     .catch((e) => { dr.err = e.message; }).finally(() => { dr.busy = false; render(); });
 }
 // 현장 서류(건축허가서 등) → 현장명(건축주)·납품장소 채우기. 서류에 찍힌 날짜는 납품일로 안 씀
+// 현장 서류(건축허가서 등) → 지금 열린 문서의 현장명(건축주)·납품장소 채우기. 서류에 찍힌 날짜는 납품일로 안 씀
+let siteDoc = { busy: false };
 function drSiteDoc(file) {
   if (!file || !dr.doc) return;
-  dr.siteBusy = true; render();
+  siteDoc.busy = true; dr.err = ''; render();
   const rd = new FileReader();
   rd.onload = () => {
     helperFetch('/api/delivery/sitedoc', { name: file.name, data: String(rd.result).split(',')[1] || '' })
-      .then((j) => { if (j.owner) dr.doc.owner = j.owner; if (j.site) dr.doc.site = j.site; dr.note = `현장 서류에서 채움: ${[j.owner, j.site].filter(Boolean).join(' · ')}`; })
-      .catch((e) => { dr.err = e.message; }).finally(() => { dr.siteBusy = false; render(); });
+      .then((j) => {
+        if (j.owner) dr.doc.owner = j.owner; if (j.site) dr.doc.site = j.site;
+        dr.note = `현장 서류에서 채움: ${[j.owner, j.site].filter(Boolean).join(' · ')}`;
+      })
+      .catch((e) => { dr.err = e.message; }).finally(() => { siteDoc.busy = false; render(); });
   };
   rd.readAsDataURL(file);
 }
@@ -3302,6 +3348,7 @@ function erpAct(act, t) {
   else if (act === 'erp-dr-learn') drLearn();
   else if (act === 'erp-dr-quote') drQuote();
   else if (act === 'erp-dr-deliv') drDeliv();
+  else if (act === 'erp-drq-deliv') drqDeliv();
   else if (act === 'erp-dr-buy') drBuy();
   else if (act === 'erp-dr-buyfile') drBuyFile();
   else if (act === 'erp-dr-buypush') drBuyPush();
@@ -3336,6 +3383,7 @@ app.addEventListener('change', (e) => {
   if (el.id === 'dr-sitedoc') { drSiteDoc(el.files && el.files[0]); el.value = ''; return; }
   if (!dr.doc || !el.dataset) return;
   if (el.dataset.drh) { dr.doc[el.dataset.drh] = el.value.trim(); return; }
+  if (el.dataset.drf === 'date') { const l = dr.doc.lines[Number(el.dataset.i)]; if (l) l.date = isoDate(el.value); return; }
   if (el.dataset.drf === 'spec' || el.dataset.drf === 'unit') { const l = dr.doc.lines[Number(el.dataset.i)]; if (l) l[el.dataset.drf] = el.value; return; }
   if (el.dataset.drf === 'ours') {
     const l = dr.doc.lines[Number(el.dataset.i)]; if (!l) return;
