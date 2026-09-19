@@ -4,6 +4,7 @@ import {
 import * as S from './store-supabase.js';
 import { ECOUNT_ITEMS } from './ecount-items.js';
 import { makeMatcher, readPastedText, quotePrev } from './textread.js';
+import * as DL from './delivery.js';
 
 // 창고 아이콘 세트 (무채색)
 const WH_ICONS = {
@@ -2837,7 +2838,7 @@ function deskDocRead() {
       : `<div class="dr-file"><b>${esc(dr.name)}</b><span>엑셀 파일은 미리보기 없이 바로 인식합니다</span></div>`)
     : '<div style="display:flex;flex-direction:column;align-items:center;width:100%;padding:0 16px 24px"><div class="dr-empty">발주서·거래명세표 파일을 여기로 끌어다 놓거나<br><b>[파일 선택]</b>을 누르세요<br>캡처·카톡 사진은 복사해서 <b>Cmd+V</b>로 붙여넣어도 돼요<br><span>사진(JPG·PNG·HEIC) · PDF · 엑셀 · 여러 장 가능</span></div>' + drTextBox() + '</div>';
   let right;
-  if (!helperState.up && helperState.checked && !d && !dr.busy) right = helperOff() + '<div class="e-empty"><b>붙여넣은 글</b>은 도우미 없이도 인식돼요 — 왼쪽 아래 칸에 붙여넣고 <b>[글자로 인식]</b>을 누르세요.</div>';
+  if (!helperState.up && helperState.checked && !d && !dr.busy && drMode !== 'deliv') right = helperOff() + '<div class="e-empty"><b>붙여넣은 글</b>은 도우미 없이도 인식돼요 — 왼쪽 아래 칸에 붙여넣고 <b>[글자로 인식]</b>을 누르세요.</div>';
   else if (dr.busy) right = '<div class="e-empty">문서를 읽는 중이에요… (사진·PDF는 20~60초)</div>';
   else if (!d) right = `${dr.err ? `<div class="dr-err">${esc(dr.err)}</div>` : ''}<div class="e-empty">왼쪽에 문서를 올린 뒤 <b>[인식 시작]</b>을 누르세요.</div>`;
   else {
@@ -2871,7 +2872,7 @@ function deskDocRead() {
   }
   return ePage(`${drModeTabs()}<div class="e-tools">${dr.fromBatch !== undefined ? eBtn(`← ${drMode === 'buy' ? '구매전표' : drMode === 'deliv' ? '납품확인서' : '명세서'} 모음으로`, 'erp-drq-back', '', 'pri') : ''}<label class="e-btn ${dr.fromBatch !== undefined ? '' : 'pri'}" for="dr-file">파일 선택</label><input type="file" id="dr-file" accept="image/*,.heic,.pdf,.xlsx,.xls,.csv" multiple hidden>
       ${eBtn('인식 시작', 'erp-dr-read', dr.b64 && !dr.busy ? '' : 'disabled')}${dr.name ? `<span class="e-selinfo">${esc(dr.name)}</span>${eBtn('비우기', 'erp-dr-clear', '', 'sm')}` : ''}
-      <span class="sp"></span>${helperBadge()}</div>
+      <span class="sp"></span>${drMode === 'deliv' ? `<label class="e-btn sm" for="dr-stamp">${DL.getStamp() ? '도장 ✓' : '도장'}</label><input type="file" id="dr-stamp" accept="image/*" hidden>` : ''}${helperBadge()}</div>
     <div class="e-dr"><div class="e-panel dr-drop"><div class="e-panel-hd"><b>원본 문서</b></div><div class="dr-view">${left}</div></div>
       <div class="e-panel"><div class="e-panel-hd"><b>인식 결과</b><span class="sp"></span></div><div class="dr-res">${right}</div></div></div>`);
 }
@@ -2989,8 +2990,7 @@ async function drqReadAll() {
     drq.idx = i; render();
     try {
       const f = drq.files[i];
-      const j = await helperFetch('/api/doc/read', { name: f.name, data: f.b64 });
-      const doc = j.doc;
+      const doc = helperState.up ? (await helperFetch('/api/doc/read', { name: f.name, data: f.b64 })).doc : await drReadHere(f);
       doc.lines = doc.lines.map((l) => ({ ...l, ours: l.match.ours, code: l.match.code, conf: l.match.conf, cands: l.match.cands, price: l.prev ? l.prev.price : '' }));
       doc._orig = JSON.parse(JSON.stringify(doc.lines));
       drNormDates(doc);
@@ -3098,7 +3098,7 @@ function drqDelivPanel(read) {
   const dv = drq.deliv;
   const made = dv ? dv.made.map((m) => `<tr><td class="c">${esc(m.date)}</td><td>${esc(m.client)}<div class="muted">${esc(m.site)}</div></td><td>${esc(m.what)}</td>
       <td style="white-space:normal">${esc(m.items)}<div class="muted">${m.from.map(esc).join(', ')}</div></td>
-      <td class="c"><a class="e-btn sm" href="${HELPER}/api/file?path=${encodeURIComponent(m.out)}">받기</a></td></tr>`).join('') : '';
+      <td class="c">${m.out ? `<a class="e-btn sm" href="${HELPER}/api/file?path=${encodeURIComponent(m.out)}">받기</a>` : ''}</td></tr>`).join('') : '';
   const skipped = dv && dv.skipped.length ? `<div class="e-sum" style="white-space:normal"><span class="muted">뺀 파일 — ${dv.skipped.map((x) => `${esc(x.name)} (${esc(x.why)})`).join(' · ')}</span></div>` : '';
   return `<div class="e-panel" style="margin-top:10px"><div class="e-panel-hd"><b>납품확인서 모음</b><span class="sp"></span>
       ${eBtn(drq.delivBusy ? '만드는 중…' : '납품확인서 모두 만들기', 'erp-drq-deliv', drq.busy || drq.delivBusy || !read ? 'disabled' : '', 'pri')}</div>
@@ -3111,9 +3111,19 @@ function drqDeliv() {
   const items = drq.docs.map((d, i) => (d && d.lines ? { name: drq.files[i].name, doc: d,
     lines: d.lines.map((l) => ({ ours: l.ours, raw_name: l.raw_name, name: l.name, unit: l.unit, qty: l.qty, date: l.date || '' })) } : null)).filter(Boolean);
   if (!items.length) return;
+  if (!helperState.up) { drqDelivHere(items); return; }
   drq.delivBusy = true; dr.err = ''; render();
   helperFetch('/api/delivery/make-batch', { items }).then((j) => { drq.deliv = j; })
     .catch((e) => { dr.err = e.message; }).finally(() => { drq.delivBusy = false; render(); });
+}
+function drqDelivHere(items) {
+  if (delivNeedStamp(() => drqDelivHere(items))) return;
+  const seen = new Set(), skipped = [];
+  const uniq = items.filter((it, i) => { const k = drq.files[drq.docs.indexOf(it.doc)]?.b64 || it.name + i; if (seen.has(k)) { skipped.push({ name: it.name, why: '같은 파일' }); return false; } seen.add(k); return true; });
+  const made = delivHere(uniq);
+  drq.deliv = { here: true, made, skipped };
+  render();
+  if (made.length) DL.printConfirms(made).catch((e) => { dr.err = e.message; render(); });
 }
 function drLoadFile(file) {
   if (!file) return;
@@ -3125,9 +3135,26 @@ function drLoadFile(file) {
   };
   rd.readAsDataURL(file);
 }
+// 도우미 없이 이 화면에서 — 우리 견적서·명세서 엑셀만 (사진·PDF 는 도우미 필요)
+async function drReadHere(f) {
+  if (!/\.xlsx$/i.test(f.name || '')) throw new Error('사진·PDF 인식은 이 맥의 로컬 도우미가 켜져 있어야 해요. 도우미 없이는 우리 견적서 엑셀(.xlsx)과 붙여넣은 글만 돼요.');
+  const doc = await DL.readQuoteXlsx(f.b64);
+  if (!textMatch || textMatchMap !== S.getItemMap()) { textMatchMap = S.getItemMap(); textMatch = makeMatcher(ECOUNT_ITEMS, textMatchMap); }
+  doc.lines = doc.lines.map((l) => {
+    const m = textMatch(doc.partner, l.raw_name, l.spec);
+    const prev = Number(l.unit_price) > 0 ? { price: l.unit_price, src: '엑셀 단가', date: doc.doc_date } : prevForHere(doc.partner, l.raw_name, l.spec, m.ours);
+    return { ...l, match: m, prev: prev || null };
+  });
+  return doc;
+}
 function drRead() {
   if (!dr.b64 || dr.busy) return;
   dr.busy = true; dr.err = ''; render();
+  if (!helperState.up) {
+    drReadHere({ name: dr.name, b64: dr.b64 }).then((doc) => drSetDoc(doc, null))
+      .catch((e) => { dr.err = e.message; }).finally(() => { dr.busy = false; render(); });
+    return;
+  }
   helperFetch('/api/doc/read', { name: dr.name, data: dr.b64 }).then((j) => {
     const doc = j.doc;
     doc.lines = doc.lines.map((l) => ({ ...l, ours: l.match.ours, code: l.match.code, conf: l.match.conf, cands: l.match.cands, price: l.prev ? l.prev.price : '' }));
@@ -3232,8 +3259,42 @@ function drQuote() {
     .catch((e) => { dr.err = e.message; }).finally(() => { dr.busy = false; render(); });
 }
 // 수동 납품확인서 — 인식한 거래명세서에서 인슐레이션·방수시트·타이벡만, 명세서 줄 일자마다 1장 (공간제작소는 품목군마다 1장)
+// 도우미 없이 — 브라우저에서 같은 양식으로 만들어 인쇄 창(PDF 저장)
+let stampWait = null;   // 도장을 아직 안 골랐으면 고른 뒤 이어서 만듦
+function delivNeedStamp(then) {
+  if (DL.getStamp()) return false;
+  stampWait = then;
+  const el = document.getElementById('dr-stamp'); if (el) el.click();
+  return true;
+}
+function delivHere(docs) {
+  const groups = {};
+  docs.forEach(({ doc, lines, name }) => {
+    const client = (doc.partner || doc.client || '').trim(), owner = (doc.owner || '').trim(), addr = (doc.site || '').trim();
+    const byDate = DL.targetRows(lines, isoDate(doc.doc_date) || DL.isoDate(new Date()));
+    Object.entries(byDate).forEach(([day, rows]) => {
+      const g = (groups[[client, owner, addr].join('\u0001')] = groups[[client, owner, addr].join('\u0001')] || { client, owner, addr, byDate: {}, from: new Set() });
+      const d0 = (g.byDate[day] = g.byDate[day] || {});
+      Object.values(rows).forEach((r) => { if (d0[r.name]) d0[r.name].qty += r.qty; else d0[r.name] = { ...r }; });
+      if (name) g.from.add(name);
+    });
+  });
+  const out = [];
+  Object.values(groups).forEach((g) => DL.planConfirms(g.client, g.owner, g.addr, g.byDate).forEach((c) => out.push({ ...c, site: g.owner || g.addr, from: [...g.from] })));
+  return out;
+}
+function drDelivHere() {
+  if (delivNeedStamp(drDelivHere)) return;
+  const made = delivHere([{ doc: dr.doc, lines: dr.doc.lines }]);
+  if (!made.length) { dr.err = '이 명세서엔 인슐레이션·방수시트·타이벡 품목이 없어서 납품확인서를 만들지 않았어요.'; render(); return; }
+  dr.deliv = null; dr.err = '';
+  dr.note = `납품확인서 ${made.length}장 — 인쇄 창에서 "PDF로 저장"을 고르세요 (${made.map((c) => c.date + ' ' + c.what).join(' · ')})`;
+  render();
+  DL.printConfirms(made).catch((e) => { dr.err = e.message; render(); });
+}
 function drDeliv() {
   if (!dr.doc) return;
+  if (!helperState.up) { drDelivHere(); return; }
   dr.busy = true; render();
   drSaveFixes();
   helperFetch('/api/delivery/make', { doc: dr.doc, lines: dr.doc.lines.map((l) => ({ ours: l.ours, raw_name: l.raw_name, name: l.name, unit: l.unit, qty: l.qty, date: l.date || '' })) })
@@ -3420,6 +3481,12 @@ function drUpdateTotals(i) {
 app.addEventListener('change', (e) => {
   const el = e.target;
   if (el.id === 'dr-file') { if (drMode) drLoadFiles(el.files); return; }
+  if (el.id === 'dr-stamp') {
+    const f = el.files && el.files[0]; el.value = '';
+    if (!f) { stampWait = null; return; }
+    DL.setStamp(f).then(() => { const go = stampWait; stampWait = null; render(); if (go) go(); }).catch((e) => { dr.err = e.message; render(); });
+    return;
+  }
   if (el.id === 'dr-sitedoc') { drSiteDoc(el.files && el.files[0]); el.value = ''; return; }
   if (!dr.doc || !el.dataset) return;
   if (el.dataset.drh) { dr.doc[el.dataset.drh] = el.value.trim(); return; }
