@@ -146,6 +146,15 @@ export function parseLine(line) {
     } else if (/개|EA/i.test(String(unit)) || !unit) {
       const b = qty / 25; silSpec = `${Number.isInteger(b) ? b : Math.round(b * 100) / 100}박스`;
     }
+  } else if (isSil && !qty) {
+    // 실리콘은 색상+숫자만 있으면(단위 없이) 보통 박스. 2자리 이하=박스, 3자리 이상=개.
+    const mnum = left.match(/(?<![\d.])(\d{1,4})(?![\d.])/);
+    if (mnum) {
+      const n = Number(mnum[1]);
+      left = (left.slice(0, mnum.index) + ' ' + left.slice(mnum.index + mnum[0].length)).trim();
+      if (n <= 99) { qty = n * 25; unit = '개'; silSpec = `${n}박스`; note.push(`${n}박스×25개입 = ${qty}개 (단위없음→박스로 봄)`); }
+      else { qty = n; unit = '개'; const b = n / 25; silSpec = `${Number.isInteger(b) ? b : Math.round(b * 100) / 100}박스`; }
+    }
   }
   const [cut, specs] = cutSpecs(left);
   left = cut;
