@@ -1,5 +1,5 @@
 import {
-  CATEGORIES, UNITS, WH_ICON_KEYS, swatchFor,
+  CATEGORIES, UNITS, WH_ICON_KEYS, swatchFor, SILICONE_COLORS,
 } from './data.js?v=2';
 import * as S from './store-supabase.js';
 import { ECOUNT_ITEMS } from './ecount-items.js';
@@ -1979,7 +1979,7 @@ const isDesk = () => DESK_MQ.matches;
 const DESK_MENU = [
   ['현황', [['dash', '업무 현황']]],
   ['기초등록', [['partners', '거래처 등록'], ['items', '품목 등록'], ['whs', '창고 등록'], ['ecount', '이카운트 품목 조회'], ['itemmap', '품목 매핑 사전']]],
-  ['영업관리', [['quotes', '견적서 조회'], ['', '견적서 입력', 'add-quote'], ['', '출고 입력', 'new-ship'], ['ships', '출고 조회'], ['dispatch', '배차 관리'], ['invoices', '거래명세서']]],
+  ['영업관리', [['quotes', '견적서 조회'], ['', '견적서 입력', 'add-quote'], ['', '출고 입력', 'new-ship'], ['ships', '출고 조회'], ['sale', '판매입력 (붙여넣기)'], ['dispatch', '배차 관리'], ['invoices', '거래명세서']]],
   ['구매관리', [['', '입고 입력', 'add-inbound'], ['inbound', '입고 조회'], ['buy', '구매명세서']]],
   ['재고', [['stock', '재고 현황'], ['silicone', '실리콘 재고']]],
   ['문서', [['docread', '문서 인식 (발주서·명세표)'], ['delivdocs', '납품확인서']]],
@@ -3193,15 +3193,57 @@ function drBuy() {
   if (!dr.doc || dr.busy) return;
   drSaveFixes();
   const payload = drBuyPayload();
-  dr.busy = true; dr.buyFile = ''; dr.buyCopied = false; render();
+  dr.busy = true; dr.buyFile = ''; dr.buyCopied = false; dr.stockMsg = null; render();
   helperFetch('/api/purchase', payload).then((j) => { dr.buy = j; })
     .catch((e) => { dr.err = e.message; }).finally(() => { dr.busy = false; render(); });
 }
 function drBuyFile() {
   if (!dr.doc || dr.busy) return;
   dr.busy = true; render();
-  helperFetch('/api/purchase/file', drBuyPayload()).then((j) => { dr.buy = j; dr.buyFile = j.out; })
+  helperFetch('/api/purchase/file', drBuyPayload()).then((j) => { dr.buy = j; dr.buyFile = j.out; drStockFeed(j); })
     .catch((e) => { dr.err = e.message; }).finally(() => { dr.busy = false; render(); });
+}
+// 구매전표 → 운영앱 재고 입고 (실리콘). 입고창고가 재고창고(천안창고·NS로지스 등)일 때만 반영, 매입창고/직송은 미반영. 이카운트 ERP 처럼.
+const SIL_ALIAS = { 징크진회색: '징크그레이', 진회색: '징크그레이', 흰색: '백색' };
+const SIL_COLOR_KEYS = Object.keys(SILICONE_COLORS).sort((a, b) => b.length - a.length); // 긴 색상명 우선(상아색>상아, 초코색>초코)
+function drSilColor(l) {
+  const txt = `${l.ours || ''} ${l.spec || ''} ${l.raw_name || ''}`;
+  for (const c of SIL_COLOR_KEYS) if (txt.includes(c)) return c;
+  for (const [a, c] of Object.entries(SIL_ALIAS)) if (txt.includes(a)) return c;
+  return '';
+}
+function drStockFeed(b) {
+  if (!b || !b.valid || !dr.doc) return;
+  const v = b.voucher || {};
+  const ecWh = (b.warehouses || []).find((w) => w.code === v.wh_code);
+  const whName = ecWh ? ecWh.name : (v.wh_name || '');
+  const sig = `buy:${v.cust_code}|${v.date}|${(v.lines || []).map((x) => `${x.prod_cd || x.prod_des}:${x.qty}`).join(',')}`;
+  if (S.getInbounds().some((r) => (r.note || '').includes(sig))) { dr.stockMsg = { skip: 'dup' }; return; }
+  const stockWH = S.warehouseNames().find((n) => n === whName);
+  if (!stockWH) { dr.stockMsg = { skip: 'direct', wh: whName }; return; }
+  const made = [];
+  (v.lines || []).forEach((x, i) => {
+    const l = (dr.doc.lines || [])[i] || {};
+    if (!(/실리콘/.test(l.ours || '') || l.category === '실리콘')) return;
+    const color = drSilColor(l);
+    if (!color) { made.push({ warn: l.ours || l.raw_name || x.prod_des }); return; }
+    const item = S.getItems().find((it) => it.category === '실리콘' && it.name === color && it.warehouse === stockWH);
+    const perBox = (item && item.perBox) || 25;
+    const isBox = /박스|box|pt|파레트/i.test(`${l.unit || ''} ${x.spec || ''}`);
+    const boxes = isBox ? x.qty : (perBox > 0 ? Math.round((x.qty / perBox) * 100) / 100 : x.qty);
+    S.addInbound({ date: v.date, warehouse: stockWH, category: '실리콘', name: color, qty: boxes, unit: '박스', perBox, unitPrice: l.unit_price || x.price || 0, supplier: v.cust_name || '', note: `구매전표 자동입고 ${sig}` });
+    made.push({ color, boxes });
+  });
+  dr.stockMsg = { wh: stockWH, made };
+}
+function drStockMsgHtml() {
+  const m = dr.stockMsg; if (!m) return '';
+  if (m.skip === 'dup') return '<div class="e-sum"><span class="muted">이 명세서는 이미 재고에 반영됨 — 중복 입고 안 함</span></div>';
+  if (m.skip === 'direct') return `<div class="e-sum"><span class="muted">입고창고 '${esc(m.wh || '')}'는 재고창고가 아니라 재고 미반영(직송). 재고에 넣으려면 입고창고를 천안창고·NS로지스 등 재고창고로 바꿔 [다시 검사] 후 확정하세요.</span></div>`;
+  const ok = (m.made || []).filter((x) => x.color);
+  const warns = (m.made || []).filter((x) => x.warn);
+  if (!ok.length && !warns.length) return '<div class="e-sum"><span class="muted">실리콘 품목이 없어 재고 반영 없음</span></div>';
+  return `<div class="e-sum"><span class="e-b green">${esc(m.wh)} 재고 입고 반영</span> <span>${ok.map((x) => `${esc(x.color)} ${x.boxes}박스`).join(' · ')}</span>${warns.length ? `<br><span class="muted">색상 못 찾아 미반영: ${warns.map((x) => esc(x.warn)).join(', ')}</span>` : ''}</div>`;
 }
 function drBuyPush() {
   const b = dr.buy;
@@ -3212,7 +3254,7 @@ function drBuyPush() {
   const where = e.mode === '실서버' ? '실제 이카운트 ERP' : '이카운트 테스트 서버';
   if (!confirm(`${where}에 구매전표를 등록할까요?\n\n거래처: ${v.cust_name} (${v.cust_code})\n일자: ${v.date}\n품목 ${v.lines.length}줄 · 총액 ${eN(b.sums.total)}원 (공급가액 ${eN(b.sums.supply)} + 부가세 ${eN(b.sums.vat)})`)) return;
   dr.busy = true; render();
-  helperFetch('/api/purchase/push', drBuyPayload()).then((j) => { dr.buy = j; dr.pushed = j.push; dr.err = ''; })
+  helperFetch('/api/purchase/push', drBuyPayload()).then((j) => { dr.buy = j; dr.pushed = j.push; dr.err = ''; drStockFeed(j); })
     .catch((err) => { dr.err = err.message; }).finally(() => { dr.busy = false; render(); });
 }
 function drBuyPanel() {
@@ -3242,6 +3284,7 @@ function drBuyPanel() {
     <table class="e-grid" style="margin-top:6px"><thead><tr><th style="width:110px"></th><th>전표</th><th>명세서</th><th style="width:110px">대조</th></tr></thead>
       <tbody><tr>${cmp('supply', '공급가액 합계')}</tr><tr>${cmp('vat', '부가세 합계')}</tr><tr>${cmp('total', '총액')}</tr></tbody></table>
     ${dr.pushed && dr.pushed.ok ? `<div class="e-sum"><span class="e-b green">이카운트 등록 완료</span> <span>${esc(dr.pushed.mode)} · 전표번호 ${esc((dr.pushed.slip_nos || []).join(', ') || '-')}</span></div>` : ''}
+    ${drStockMsgHtml()}
     <div class="e-tools">${eBtn('다시 검사', 'erp-dr-buy')}<span class="sp"></span>
       ${dr.buyFile ? `<a class="e-btn" href="${HELPER}/api/file?path=${encodeURIComponent(dr.buyFile)}">받기 · ${esc(dr.buyFile.split('/').pop())}</a>` : ''}
       ${eBtn('이카운트 올리기 엑셀 만들기', 'erp-dr-buyfile', b.valid ? '' : 'disabled')}
@@ -3353,8 +3396,162 @@ function deskDelivDocs() {
     ${dd.rows === null ? '<div class="e-empty">불러오는 중…</div>' : eTable({ route: 'delivdocs', cols, rows, title: '납품확인서', empty: '아직 만들어진 납품확인서가 없어요.' })}`);
 }
 
+// ── 판매입력 (붙여넣기) — 거래처마다 '*이름' 머리줄 + 품목. 실리콘 25개입/박스, 색상만이면 ss9000 비오염성 기본. 도우미 /api/sale ──
+let saleS = { text: '', wh: '00123', date: new Date().toISOString().slice(0, 10), results: null, busy: false, err: '', file: '', copied: false, whs: [], paste: '', passed: 0, total: 0, seq: 0 };
+function saleSync() {   // 화면의 모든 편집칸(거래처코드·단가·품목)을 상태에 먼저 반영 — 재검산이 겹쳐도 값이 안 날아감
+  if (!saleS.results) return;
+  document.querySelectorAll('input[data-sf]').forEach((el) => {
+    const r = saleS.results[Number(el.dataset.p)]; if (!r) return;
+    if (el.dataset.sf === 'cust') { r.voucher.cust_code = el.value.trim(); return; }
+    const l = r.doc.lines[Number(el.dataset.i)]; if (!l) return;
+    if (el.dataset.sf === 'price') { l.unit_price = Number(el.value) || 0; l.amount = (Number(l.qty) || 0) * l.unit_price; }
+    else if (el.dataset.sf === 'ours') { l.ours = el.value.trim(); const h = ECOUNT_ITEMS.find(([, n]) => n === l.ours); l.code = h ? h[0] : ''; if (!l.match) l.match = { ours: l.ours, code: l.code, conf: l.ours ? 'edit' : 'none' }; }
+  });
+}
+function saleItems() {
+  saleSync();
+  return (saleS.results || []).map((r) => ({ cust: r.voucher.cust_code || '', wh: saleS.wh, doc: r.doc }));
+}
+const _nkey = (s) => String(s || '').replace(/\(주\)|주식회사|㈜|\s/g, '');
+function salePrevPrice(custName, l) {   // 과거 판매가(운영앱 출고 이력)에서 같은 거래처·같은 색상/품목 최신 단가
+  const color = drSilColor(l);
+  const ours = l.ours || '';
+  const pk = _nkey(custName);
+  let best = null;
+  for (const s of S.getShipments()) {
+    if (pk && pk.length >= 2 && !_nkey(s.client).includes(pk.slice(0, 3))) continue;
+    const lines = (s.lines && s.lines.length) ? s.lines : [{ name: s.name, unitPrice: s.unitPrice, qty: s.qty }];
+    for (const x of lines) {
+      const p = Number(x.unitPrice) || 0; if (p <= 0) continue;
+      const nm = x.name || '';
+      if ((color && nm.includes(color)) || (ours && nm === ours)) {
+        if (!best || (s.date || '') >= best.date) best = { price: p, date: s.date || '' };
+      }
+    }
+  }
+  return best;
+}
+function salePrepPrices(fill) {   // 줄마다 종전가 표시 + (fill 이면) 비어있는 단가를 종전가로 자동 채움
+  let filled = 0;
+  (saleS.results || []).forEach((r) => {
+    const cust = r.voucher.cust_name || r.doc.partner || '';
+    (r.doc.lines || []).forEach((l) => {
+      const pv = salePrevPrice(cust, l);
+      if (pv) l.prev = pv;
+      if (fill && pv && !(Number(l.unit_price) > 0)) { l.unit_price = pv.price; l.amount = (Number(l.qty) || 0) * pv.price; filled++; }
+    });
+  });
+  return filled;
+}
+function saleApply(j, fill) {
+  saleS.results = j.results; saleS.whs = j.warehouses || saleS.whs; saleS.paste = j.paste || '';
+  saleS.passed = j.passed || 0; saleS.total = j.total || 0; saleS.file = ''; saleS.copied = false;
+  return salePrepPrices(fill);
+}
+function saleRead() {
+  const ta = document.getElementById('sale-text'); const dt = document.getElementById('sale-date'); const wh = document.getElementById('sale-wh');
+  if (ta) saleS.text = ta.value; if (dt) saleS.date = dt.value; if (wh) saleS.wh = wh.value;
+  if (!saleS.text.trim() || saleS.busy) return;
+  const my = ++saleS.seq;
+  saleS.busy = true; saleS.err = ''; saleS.stockMsg = null; render();
+  helperFetch('/api/sale', { text: saleS.text, doc_date: saleS.date, wh: saleS.wh })
+    .then((j) => { if (my === saleS.seq) { const filled = saleApply(j, true); if (filled) { saleS.busy = false; saleRebuild(); return; } } })
+    .catch((e) => { if (my === saleS.seq) saleS.err = e.message; }).finally(() => { saleS.busy = false; render(); });
+}
+function saleRebuild() {
+  if (!saleS.results) return;
+  const my = ++saleS.seq;
+  const items = saleItems();
+  helperFetch('/api/sale', { items })
+    .then((j) => { if (my === saleS.seq) { saleApply(j); render(); } })   // 늦게 온 응답(옛 편집)은 버림
+    .catch((e) => { if (my === saleS.seq) { saleS.err = e.message; render(); } });
+}
+function saleWhName() { const w = (saleS.whs || []).find((x) => x.code === saleS.wh); return w ? w.name : ''; }
+// 판매입력 확정 → 운영앱 재고 차감(출고 기록). 출하창고가 재고창고(천안창고·NS로지스)일 때만, 실리콘만. 이카운트 ERP 처럼 직송창고면 미반영. 중복 방지.
+function saleStockFeed() {
+  if (!saleS.results) return;
+  const whName = saleWhName();
+  const stockWH = S.warehouseNames().find((n) => n === whName);
+  if (!stockWH) { saleS.stockMsg = { skip: 'direct', wh: whName }; return; }
+  const made = [];
+  saleS.results.forEach((r) => {
+    if (!r.ok) return;
+    const v = r.voucher;
+    const sig = `sale:${v.cust_code}|${v.date}|${v.lines.map((x) => `${x.prod_cd}:${x.qty}`).join(',')}`;
+    if (S.getShipments().some((s) => (s.note || '').includes(sig))) return;   // 이미 반영
+    const lines = [];
+    (r.doc.lines || []).forEach((l) => {
+      if (!(/실리콘/.test(l.ours || '') || l.category === '실리콘')) return;
+      const color = drSilColor(l); if (!color) return;
+      const item = S.getItems().find((it) => it.category === '실리콘' && it.name === color && it.warehouse === stockWH);
+      const perBox = (item && item.perBox) || 25;
+      const boxes = perBox > 0 ? Math.round((Number(l.qty) || 0) / perBox * 100) / 100 : (Number(l.qty) || 0);
+      lines.push({ name: color, category: '실리콘', unit: '박스', qty: boxes, unitPrice: l.unit_price || 0 });
+    });
+    if (lines.length) { S.addShipment({ date: v.date, warehouse: stockWH, client: v.cust_name, status: '출고완료', note: `판매입력 자동출고 ${sig}`, lines }); made.push(...lines.map((x) => `${x.name} ${x.qty}박스`)); }
+  });
+  saleS.stockMsg = { wh: stockWH, made };
+}
+function saleStockMsgHtml() {
+  const m = saleS.stockMsg; if (!m) return '';
+  if (m.skip === 'direct') return `<div class="e-sum"><span class="muted">출하창고 '${esc(m.wh || '')}'는 재고창고가 아니라 재고 미반영(직송). 재고에서 빼려면 천안창고·NS로지스 등 재고창고로 출하창고를 바꿔 확정하세요.</span></div>`;
+  if (!m.made || !m.made.length) return '<div class="e-sum"><span class="muted">실리콘 재고창고 품목이 없어 재고 반영 없음</span></div>';
+  return `<div class="e-sum"><span class="e-b green">${esc(m.wh)} 재고 차감(출고) 반영</span> <span>${m.made.map(esc).join(' · ')}</span></div>`;
+}
+function saleFile() {
+  if (!saleS.results || saleS.busy) return;
+  const my = ++saleS.seq;
+  const items = saleItems();
+  saleS.busy = true; render();
+  helperFetch('/api/sale/file', { items })
+    .then((j) => { if (my === saleS.seq) { saleApply(j); saleS.file = j.out; saleStockFeed(); } }).catch((e) => { if (my === saleS.seq) saleS.err = e.message; }).finally(() => { saleS.busy = false; render(); });
+}
+function saleCard(r, pi) {
+  const v = r.voucher;
+  const rows = v.lines.map((x, i) => {
+    const l = (r.doc.lines || [])[i] || {};
+    return `<tr>
+      <td>${x.prod_cd ? esc(x.prod_cd) : '<span class="e-b red">코드X</span>'}</td>
+      <td><input class="e-in" data-sf="ours" data-p="${pi}" data-i="${i}" value="${esc(l.ours || x.prod_des || '')}" style="width:100%"></td>
+      <td>${esc(x.spec)}</td><td class="n">${esc(x.qty)}</td>
+      <td><input class="num" data-sf="price" data-p="${pi}" data-i="${i}" type="number" min="0" value="${esc(l.unit_price || '')}" style="width:82px"></td>
+      <td class="n">${eN(x.supply)}</td><td class="n">${eN(x.vat)}</td>
+      <td class="muted">${l.prev && l.prev.price ? eN(l.prev.price) : ''}</td></tr>`;
+  }).join('');
+  return `<div class="e-panel" style="margin-top:8px"><div class="e-panel-hd">
+      <b>${esc(v.cust_name || '(거래처?)')}</b> ${r.ok ? '<span class="e-b green">전표 OK</span>' : '<span class="e-b red">확인 필요</span>'}<span class="sp"></span>
+      거래처코드 <input class="e-in" data-sf="cust" data-p="${pi}" value="${esc(v.cust_code || '')}" placeholder="코드" style="width:120px"> <span class="muted">${esc(v.cust_how || '')}</span></div>
+    ${r.errors.length ? `<div class="dr-err">${r.errors.map(esc).join('<br>')}</div>` : ''}
+    ${r.warnings.length ? `<div class="e-sum"><span class="muted">${r.warnings.map(esc).join('<br>')}</span></div>` : ''}
+    <div class="e-tw"><table class="e-grid" style="min-width:720px"><colgroup><col style="width:120px"><col style="min-width:220px"><col style="width:80px"><col style="width:60px"><col style="width:90px"><col style="width:96px"><col style="width:84px"><col style="width:80px"></colgroup>
+      <thead><tr><th>품목코드</th><th>우리 품목(이카운트)</th><th>규격</th><th>수량</th><th>단가</th><th>공급가액</th><th>부가세</th><th>종전가</th></tr></thead>
+      <tbody>${rows}</tbody></table></div></div>`;
+}
+function deskSale() {
+  const s = saleS;
+  const whs = s.whs.length ? s.whs : [{ code: '00123', name: '천안창고' }, { code: '00120', name: 'NS로지스' }];
+  const whOpts = whs.map((w) => `<option value="${esc(w.code)}"${w.code === s.wh ? ' selected' : ''}>${esc(w.code)} ${esc(w.name)}</option>`).join('');
+  const head = `<div class="e-tools">
+      <label class="muted">일자 <input class="e-in" type="date" id="sale-date" value="${esc(s.date)}"></label>
+      <label class="muted">출하창고 <select class="e-sel" id="sale-wh">${whOpts}</select></label>
+      <span class="sp"></span>${eBtn(s.busy ? '인식 중…' : '판매전표 인식', 'erp-sale-read', s.busy ? 'disabled' : '', 'pri')}${s.results ? eBtn('지우기', 'erp-sale-clear') : ''}</div>`;
+  const paste = `<div class="e-panel"><div class="e-panel-hd"><b>판매 목록 붙여넣기</b> <span class="muted">거래처마다 <b>*이름</b> 머리줄(예: *국제통상), 그 아래 품목. 실리콘은 25개입/박스 → 박스로 적으면 수량 자동 환산, 색상만이면 ss9000 비오염성으로.</span></div>
+      <textarea id="sale-text" class="e-in" style="width:100%;min-height:120px;font-family:inherit" placeholder="*국제통상&#10;베이지 20박스&#10;상아색 20박스&#10;&#10;*테시&#10;베이지 12박스">${esc(s.text)}</textarea></div>`;
+  const err = s.err ? `<div class="dr-err">${esc(s.err)}</div>` : '';
+  let body = '';
+  if (s.results) {
+    body = s.results.map((r, pi) => saleCard(r, pi)).join('')
+      + `<div class="e-tools" style="margin-top:8px">통과 <b>${s.passed}/${s.results.length}</b> · 합계 ${eN(s.total)}원<span class="sp"></span>
+        ${s.file ? `<a class="e-btn" href="${HELPER}/api/file?path=${encodeURIComponent(s.file)}">받기 · ${esc(s.file.split('/').pop())}</a>` : ''}
+        ${eBtn('판매입력 엑셀 만들기', 'erp-sale-file', s.passed ? '' : 'disabled')}
+        ${eBtn(s.copied ? '복사됨 ✓' : '이카운트 붙여넣기용 복사', 'erp-sale-copy', s.passed ? '' : 'disabled')}</div>
+      ${saleStockMsgHtml()}
+      <div class="e-sum"><span class="muted">이카운트: 판매관리 → 판매입력 → 웹자료올리기 → 표 첫 칸 클릭 → 붙여넣기(Cmd+V) → 확인 후 저장. ※ 구매입력 화면에 붙이지 마세요.</span></div>`;
+  }
+  return ePage(`${head}${err}${paste}${body}`, 'scroll');
+}
 const DESK_SCREENS = { dash: deskDash, partners: deskPartners, items: deskItems, whs: deskWhs, ecount: deskEcount, itemmap: deskItemMap,
-  quotes: deskQuotes, ships: deskShips, dispatch: deskDispatch, invoices: deskInvoices, inbound: deskInbound, buy: deskBuy,
+  quotes: deskQuotes, ships: deskShips, dispatch: deskDispatch, invoices: deskInvoices, inbound: deskInbound, buy: deskBuy, sale: deskSale,
   stock: deskStock, silicone: deskSilicone, settings: deskSettings, docread: deskDocRead, delivdocs: deskDelivDocs };
 // 화면별 F2(신규)
 const DESK_NEW = { dash: 'new-ship', ships: 'new-ship', dispatch: 'new-ship', silicone: 'new-ship', quotes: 'add-quote', inbound: 'add-inbound',
@@ -3453,7 +3650,11 @@ function erpAct(act, t) {
   else if (act === 'erp-dr-buy') drBuy();
   else if (act === 'erp-dr-buyfile') drBuyFile();
   else if (act === 'erp-dr-buypush') drBuyPush();
-  else if (act === 'erp-dr-buycopy') { if (dr.buy) drCopyPaste(dr.buy.paste, () => { dr.buyCopied = true; render(); }); }
+  else if (act === 'erp-dr-buycopy') { if (dr.buy) { drCopyPaste(dr.buy.paste, () => { dr.buyCopied = true; render(); }); drStockFeed(dr.buy); render(); } }
+  else if (act === 'erp-sale-read') saleRead();
+  else if (act === 'erp-sale-file') saleFile();
+  else if (act === 'erp-sale-copy') { if (saleS.paste) { drCopyPaste(saleS.paste, () => { saleS.copied = true; render(); }); saleStockFeed(); render(); } }
+  else if (act === 'erp-sale-clear') { saleS.results = null; saleS.text = ''; saleS.err = ''; saleS.file = ''; saleS.stockMsg = null; render(); }
   else if (act === 'erp-drq-read') drqReadAll();
   else if (act === 'erp-drq-check') drqCheck();
   else if (act === 'erp-drq-file') drqFile();
@@ -3488,6 +3689,17 @@ app.addEventListener('change', (e) => {
     return;
   }
   if (el.id === 'dr-sitedoc') { drSiteDoc(el.files && el.files[0]); el.value = ''; return; }
+  if (el.dataset.sf) {   // 판매입력 카드 편집 (거래처코드·단가·품목) → 재검증
+    const p = Number(el.dataset.p); const r = saleS.results && saleS.results[p]; if (!r) return;
+    if (el.dataset.sf === 'cust') { r.voucher.cust_code = el.value.trim(); }
+    else {
+      const l = r.doc.lines[Number(el.dataset.i)]; if (!l) return;
+      if (el.dataset.sf === 'price') { l.unit_price = Number(el.value) || 0; l.amount = (Number(l.qty) || 0) * l.unit_price; }
+      else if (el.dataset.sf === 'ours') { l.ours = el.value.trim(); const hit = ECOUNT_ITEMS.find(([, n]) => n === l.ours); l.code = hit ? hit[0] : ''; l.conf = l.ours ? 'edit' : 'none'; if (!l.match) l.match = { ours: l.ours, code: l.code, conf: l.conf }; }
+    }
+    saleRebuild();
+    return;
+  }
   if (!dr.doc || !el.dataset) return;
   if (el.dataset.drh) { dr.doc[el.dataset.drh] = el.value.trim(); return; }
   if (el.dataset.drf === 'date') { const l = dr.doc.lines[Number(el.dataset.i)]; if (l) l.date = isoDate(el.value); return; }

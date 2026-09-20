@@ -13,6 +13,7 @@ const SPEC = [
   /(?<![\d.])\d+\s*(?:PCS|pcs|Pcs|입)(?![A-Za-z가-힣])/g,
   /(?<![\d.])\d+\s*자(?![가-힣])/g,
 ];
+const SIL_COLORS = ['상아색', '반투명', '백색', '돼지백색변성', '라떼색', '라떼', '베이지', '초코색', '초코', '연밤색', '연혹색', '연흑색', '진회색', '네이비', '아이보리', '미색', '징크그레이', '징크진회색', '상아']; // 실리콘 색상 (긴 것 우선)
 const NA = /(?:^|\s)(X|x|×|없음|없어요|품절|재고\s*없음|안\s*됨|불가)\s*$/;
 const BULLET = /^\s*(?:[-*•·▶▷ㄴ]\s*|\d{1,2}[.)]\s+)/;
 const PRICE_WON = new RegExp(String.raw`@?\s*(${NUMS})\s*(만|천)?\s*원`);
@@ -89,29 +90,57 @@ export function parseLine(line) {
   const na = s.match(NA);
   if (na) { note.push(`없음(${na[1]})`); s = s.slice(0, na.index).trim(); }
   let left = s; let right = '';
-  const d = s.match(DASH);
-  if (d && /\d|원/.test(d[2]) && !/^\d$/.test(d[1].slice(-1))) { left = d[1].trim(); right = d[2].trim(); }
-  if (right) {
-    const [p, rest] = priceIn(right);
-    price = p;
-    if ((rest && rest !== right) || (price !== null && rest)) note.push(right);
-    else if (price === null) note.push(right);
-  }
-  if (price === null && (PRICE_WON.test(left) || PRICE_AT.test(left))) {
-    const [p2, rest] = priceIn(left);
-    if (p2 !== null) { price = p2; left = rest; }
-  }
   let qty = 0; let unit = '';
-  const ms = [...left.matchAll(QTY)];
-  if (ms.length) {
-    const m = ms[ms.length - 1];
-    qty = num(m[1]); unit = m[2];
-    left = (left.slice(0, m.index) + ' ' + left.slice(m.index + m[0].length)).trim();
+  // 슬래시로 칸을 나눈 붙여넣기: '품명(-규격) / 수량 단위 / 단가원'. 품명 속 하이픈에 흔들리지 않게 칸으로 먼저 나눠 읽음
+  const parts = s.split(/\s+\/\s+/);
+  const slash = parts.length >= 2 && parts.slice(1).some((p) => new RegExp(QTY.source).test(p) || QTY_X.test(p) || PRICE_WON.test(p) || PRICE_AT.test(p));
+  if (slash) {
+    left = parts[0];
+    for (const p of parts.slice(1)) {
+      const mq = p.match(new RegExp(QTY.source)) || p.match(QTY_X);
+      if (mq && !qty) { qty = num(mq[1]); unit = mq[2] || ''; continue; }
+      if (price === null) {
+        let pv = null;
+        if (PRICE_WON.test(p) || PRICE_AT.test(p)) { [pv] = priceIn(p); } else { const mo = p.match(PRICE_ONLY); if (mo) pv = num(mo[1], mo[2]); }
+        if (pv !== null) { price = pv; continue; }
+      }
+      if (p.trim()) note.push(p.trim());
+    }
   } else {
-    const mx = left.match(QTY_X);
-    if (mx) {
-      qty = num(mx[1]); unit = mx[2] || '';
-      left = (left.slice(0, mx.index) + ' ' + left.slice(mx.index + mx[0].length)).trim();
+    const d = s.match(DASH);
+    if (d && /\d|원/.test(d[2]) && !/^\d$/.test(d[1].slice(-1))) { left = d[1].trim(); right = d[2].trim(); }
+    if (right) {
+      const [p, rest] = priceIn(right);
+      price = p;
+      if ((rest && rest !== right) || (price !== null && rest)) note.push(right);
+      else if (price === null) note.push(right);
+    }
+    if (price === null && (PRICE_WON.test(left) || PRICE_AT.test(left))) {
+      const [p2, rest] = priceIn(left);
+      if (p2 !== null) { price = p2; left = rest; }
+    }
+    const ms = [...left.matchAll(QTY)];
+    if (ms.length) {
+      const m = ms[ms.length - 1];
+      qty = num(m[1]); unit = m[2];
+      left = (left.slice(0, m.index) + ' ' + left.slice(m.index + m[0].length)).trim();
+    } else {
+      const mx = left.match(QTY_X);
+      if (mx) {
+        qty = num(mx[1]); unit = mx[2] || '';
+        left = (left.slice(0, mx.index) + ' ' + left.slice(mx.index + mx[0].length)).trim();
+      }
+    }
+  }
+  // 실리콘(색상·SS코드·세라믹전용실란트)은 25개입/박스: 박스로 오면 수량×25(개), 개로 오면 그대로 — 규격 칸에 박스수 표시.
+  let silSpec = '';
+  const isSil = raw.includes('실리콘') || /SS\s?\d{3,}|CTG|세라믹전용실란트/i.test(raw) || SIL_COLORS.some((c) => (raw + ' ' + left).includes(c));
+  if (qty && isSil) {
+    if (/박스|box/i.test(String(unit))) {
+      const boxes = qty; qty = Math.round(qty * 25); unit = '개'; silSpec = `${boxes}박스`;
+      note.push(`${boxes}박스×25개입 = ${qty}개`);
+    } else if (/개|EA/i.test(String(unit)) || !unit) {
+      const b = qty / 25; silSpec = `${Number.isInteger(b) ? b : Math.round(b * 100) / 100}박스`;
     }
   }
   const [cut, specs] = cutSpecs(left);
@@ -125,7 +154,7 @@ export function parseLine(line) {
     note.push(raw.match(/부가세\s*(?:별도|포함)|VAT\s*\S*/i)[0]);
   }
   return {
-    raw_name: name || raw, spec: specs.join(' '), unit, qty, unit_price: price || 0,
+    raw_name: name || raw, spec: silSpec || specs.join(' '), unit, qty, unit_price: price || 0,
     amount: qty && price ? qty * price : 0, vat: 0, note: note.join(' · '),
     unclear: !name || (!qty && price === null && !na), source_line: raw, date: lineDate,
   };
