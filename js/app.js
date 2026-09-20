@@ -3403,6 +3403,8 @@ function saleSync() {   // 화면의 모든 편집칸(거래처코드·단가·�
     if (el.dataset.sf === 'cust') { r.voucher.cust_code = el.value.trim(); return; }
     const l = r.doc.lines[Number(el.dataset.i)]; if (!l) return;
     if (el.dataset.sf === 'price') { l.unit_price = Number(el.value) || 0; l.amount = (Number(l.qty) || 0) * l.unit_price; }
+    else if (el.dataset.sf === 'qty') { l.qty = Number(el.value) || 0; l.amount = l.qty * (Number(l.unit_price) || 0); }
+    else if (el.dataset.sf === 'spec') { l.spec = el.value; }
     else if (el.dataset.sf === 'ours') { l.ours = el.value.trim(); const h = ECOUNT_ITEMS.find(([, n]) => n === l.ours); l.code = h ? h[0] : ''; if (!l.match) l.match = { ours: l.ours, code: l.code, conf: l.ours ? 'edit' : 'none' }; }
   });
 }
@@ -3512,8 +3514,9 @@ function saleCard(r, pi) {
     const l = (r.doc.lines || [])[i] || {};
     return `<tr>
       <td>${x.prod_cd ? esc(x.prod_cd) : '<span class="e-b red">코드X</span>'}</td>
-      <td><input class="e-in" data-sf="ours" data-p="${pi}" data-i="${i}" value="${esc(l.ours || x.prod_des || '')}" style="width:100%"></td>
-      <td>${esc(x.spec)}</td><td class="n">${esc(x.qty)}</td>
+      <td><input class="e-in dr-ours" autocomplete="off" data-sf="ours" data-p="${pi}" data-i="${i}" value="${esc(l.ours || x.prod_des || '')}" placeholder="우리 품목 검색·선택" style="width:100%"></td>
+      <td><input class="e-in" data-sf="spec" data-p="${pi}" data-i="${i}" value="${esc(x.spec || '')}" style="width:100%"></td>
+      <td><input class="num" data-sf="qty" data-p="${pi}" data-i="${i}" type="number" min="0" value="${esc(x.qty || '')}" style="width:64px"></td>
       <td><input class="num" data-sf="price" data-p="${pi}" data-i="${i}" type="number" min="0" value="${esc(l.unit_price || '')}" style="width:82px"></td>
       <td class="n">${eN(x.supply)}</td><td class="n">${eN(x.vat)}</td>
       <td class="muted">${l.prev && l.prev.price ? eN(l.prev.price) : ''}</td></tr>`;
@@ -3728,7 +3731,7 @@ app.addEventListener('drop', (e) => { if (e.target.closest && e.target.closest('
 let _drPop = null;
 function drEcClose() { if (_drPop) { _drPop.remove(); _drPop = null; } }
 function drEcOpen(input) {
-  if (!dr.doc) return;
+  if (!dr.doc && !(input.dataset && input.dataset.sf === 'ours')) return;   // 판매입력 카드(data-sf)도 허용
   const q = input.value.trim().toLowerCase().replace(/\s/g, '');
   let items = ECOUNT_ITEMS;
   if (q) items = ECOUNT_ITEMS.filter(([c, n]) => n.toLowerCase().replace(/\s/g, '').indexOf(q) >= 0 || String(c).toLowerCase().indexOf(q) >= 0);
@@ -3765,6 +3768,16 @@ function drEcPlace() {
   _drPop.style.width = w + 'px';
 }
 function drEcPick(i, name) {
+  const inpEl = _drPop && _drPop._input;
+  if (inpEl && inpEl.dataset && inpEl.dataset.sf === 'ours') {   // 판매입력 카드 품목 선택
+    const r = saleS.results && saleS.results[Number(inpEl.dataset.p)];
+    const sl = r && r.doc.lines[Number(inpEl.dataset.i)];
+    if (sl) { sl.ours = name; const h = ECOUNT_ITEMS.find(([, n]) => n === name); sl.code = h ? h[0] : ''; sl.conf = name ? 'edit' : 'none'; if (!sl.match) sl.match = {}; sl.match.ours = name; sl.match.code = sl.code; }
+    inpEl.value = name;
+    drEcClose();
+    saleRebuild();
+    return;
+  }
   const l = dr.doc && dr.doc.lines[i]; if (!l) { drEcClose(); return; }
   l.ours = name;
   const hit = ECOUNT_ITEMS.find(([, n]) => n === name);
