@@ -2,7 +2,7 @@
 // 도우미 textread.py(글 나누기) + matcher.py(품목 매칭 중 사전·품목마스터·추정)를 옮긴 것. AI 는 쓰지 않는다.
 // 도우미가 켜져 있으면 app.js 가 도우미를 먼저 쓰고(학습 매핑·견적서 종전가까지), 꺼져 있을 때만 이 파일로 읽는다.
 
-const UNIT = String.raw`(?:단|장|개|EA|ea|Ea|롤|ROLL|roll|R(?![0-9A-Za-z])|박스|BOX|box|Box|본|매|봉|포|통|말|kg|KG|세트|SET|set|자루|묶음|번들|파레트|빠레트|PT|pt|헤베|㎡|m2|루베|평|개입|권|판|대|각|갑|곽|케이스)`;
+const UNIT = String.raw`(?:단|장|개|EA|ea|Ea|롤|ROLL|roll|R(?![0-9A-Za-z])|박스|BOX|box|Box|본|매|봉|포|통|말|kg|KG|세트|SET|set|자루|묶음|번들|파레트|파렛트|빠레트|파렛|PLT|plt|PT|pt|헤베|㎡|m2|루베|평|개입|권|판|대|각|갑|곽|케이스)`;
 const NUMS = String.raw`\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?`;
 const QTY = new RegExp(String.raw`(?<![\d.*xX×])(${NUMS})\s*(${UNIT})(?![가-힣A-Za-z])`, 'g');
 const QTY_X = new RegExp(String.raw`(?:^|\s)[xX×]\s*(${NUMS})\s*(${UNIT})?(?![\d.*])`);
@@ -85,6 +85,10 @@ export function parseLine(line) {
   let lineDate = '';
   const ld = s.match(LEAD_DATE);
   if (ld && leadDate(ld[1])) { lineDate = leadDate(ld[1]); s = s.slice(ld[0].length).trim(); }
+  // 구조재 규격 축약: '2-6 10자' → 2*6*10 (단면 2*6 + 길이 10자). 길이 '자' 있을 때만.
+  let structSpec = '';
+  const sm = s.match(/(?<!\d)(\d{1,2})\s*[-*xX×]\s*(\d{1,2})\s+(\d{1,3})\s*자(?!\d)/);
+  if (sm) { structSpec = `${sm[1]}*${sm[2]}*${sm[3]}`; s = (s.slice(0, sm.index) + ' ' + s.slice(sm.index + sm[0].length)).trim(); }
   const note = [];
   let price = null;
   const na = s.match(NA);
@@ -145,11 +149,13 @@ export function parseLine(line) {
   }
   const [cut, specs] = cutSpecs(left);
   left = cut;
+  if (structSpec) specs.unshift(structSpec);
   let name = left.replace(/\(\s*\)|\[\s*\]/g, ' ').replace(/\s{2,}/g, ' ').trim().replace(/^[\s\-–—:=,/]+|[\s\-–—:=,/]+$/g, '');
   const cnt = (c) => name.split(c).length - 1;
   while (name && ('([,/'.includes(name.slice(-1)) || (name.slice(-1) === ')' && cnt('(') < cnt(')')) || (name.slice(-1) === ']' && cnt('[') < cnt(']')))) {
     name = name.slice(0, -1).trimEnd();
   }
+  if (!name && structSpec) name = '구조재';   // 품명 없이 규격만 온 구조재 — 거래처+규격으로 매칭·학습
   if (/부가세\s*(별도|포함)|VAT/i.test(raw) && !note.some((n) => n.includes('부가세') || n.toUpperCase().includes('VAT'))) {
     note.push(raw.match(/부가세\s*(?:별도|포함)|VAT\s*\S*/i)[0]);
   }
