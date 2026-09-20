@@ -3411,20 +3411,22 @@ function saleItems() {
   return (saleS.results || []).map((r) => ({ cust: r.voucher.cust_code || '', wh: saleS.wh, doc: r.doc }));
 }
 const _nkey = (s) => String(s || '').replace(/\(주\)|주식회사|㈜|\s/g, '');
-function salePrevPrice(custName, l) {   // 과거 판매가(운영앱 출고 이력)에서 같은 거래처·같은 색상/품목 최신 단가
+function salePrevPrice(custName, l) {   // 과거 판매가(운영앱 출고 이력)에서 같은 거래처·같은 색상/품목 최신 단가 (개당으로 환산)
   const color = drSilColor(l);
   const ours = l.ours || '';
-  const pk = _nkey(custName);
+  const a = _nkey(custName);
+  const perBox = (color && (S.getItems().find((it) => it.category === '실리콘' && it.name === color) || {}).perBox) || 25;
   let best = null;
   for (const s of S.getShipments()) {
-    if (pk && pk.length >= 2 && !_nkey(s.client).includes(pk.slice(0, 3))) continue;
-    const lines = (s.lines && s.lines.length) ? s.lines : [{ name: s.name, unitPrice: s.unitPrice, qty: s.qty }];
+    const b = _nkey(s.client);
+    if (a && b && !(a.includes(b) || b.includes(a) || a.slice(0, 3) === b.slice(0, 3))) continue;   // 정식명↔약칭 양방향
+    const lines = (s.lines && s.lines.length) ? s.lines : [{ name: s.name, unitPrice: s.unitPrice, qty: s.qty, unit: s.unit }];
     for (const x of lines) {
       const p = Number(x.unitPrice) || 0; if (p <= 0) continue;
       const nm = x.name || '';
-      if ((color && nm.includes(color)) || (ours && nm === ours)) {
-        if (!best || (s.date || '') >= best.date) best = { price: p, date: s.date || '' };
-      }
+      if (!((color && nm.includes(color)) || (ours && nm === ours))) continue;
+      const perUnit = (color && /박스/.test(x.unit || '')) ? p / perBox : p;   // 실리콘 박스단가 → 개단가 (판매수량이 개라서)
+      if (!best || (s.date || '') >= best.date) best = { price: Math.round(perUnit), date: s.date || '' };
     }
   }
   return best;
@@ -3484,7 +3486,7 @@ function saleStockFeed() {
       const item = S.getItems().find((it) => it.category === '실리콘' && it.name === color && it.warehouse === stockWH);
       const perBox = (item && item.perBox) || 25;
       const boxes = perBox > 0 ? Math.round((Number(l.qty) || 0) / perBox * 100) / 100 : (Number(l.qty) || 0);
-      lines.push({ name: color, category: '실리콘', unit: '박스', qty: boxes, unitPrice: l.unit_price || 0 });
+      lines.push({ name: color, category: '실리콘', unit: '박스', qty: boxes, unitPrice: (Number(l.unit_price) || 0) * perBox });   // 재고는 박스단위 → 단가도 박스당 저장(종전가 읽을 때 개당으로 되환산)
     });
     if (lines.length) { S.addShipment({ date: v.date, warehouse: stockWH, client: v.cust_name, status: '출고완료', note: `판매입력 자동출고 ${sig}`, lines }); made.push(...lines.map((x) => `${x.name} ${x.qty}박스`)); }
   });
