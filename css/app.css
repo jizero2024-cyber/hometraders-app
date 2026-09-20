@@ -37,6 +37,14 @@ input,select,textarea{font-family:inherit;font-size:16px;border:0;}
 .sf-foot>div.big{font-size:16px;padding-top:6px;margin-top:1px;margin-bottom:0;border-top:1px solid var(--surface-3)}
 .sf-foot>div.big span,.sf-foot>div.big b{color:var(--ink);font-weight:700}
 /* 실리콘 재고 매트릭스 (색상 × 창고) */
+.silsum{display:flex;gap:10px;margin:6px 0 14px}
+.silsum-c{flex:1;background:var(--surface-2);border:1px solid var(--surface-3);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;align-items:center;gap:2px}
+.silsum-c .l{font-size:13px;color:var(--muted);font-weight:600}
+.silsum-c b{font-size:26px;font-weight:800;line-height:1.1}
+.silsum-c .u{font-size:12px;color:var(--muted)}
+.silsum-c.tot{background:var(--ink);}
+.silsum-c.tot .l,.silsum-c.tot .u{color:rgba(255,255,255,.7)}
+.silsum-c.tot b{color:#fff}
 .silmtx-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-top:6px;border:1px solid var(--surface-3);border-radius:12px}
 .silmtx{width:100%;border-collapse:collapse;font-size:15px}
 .silmtx th,.silmtx td{padding:12px 8px;text-align:center;border-bottom:1px solid var(--surface-3);white-space:nowrap}

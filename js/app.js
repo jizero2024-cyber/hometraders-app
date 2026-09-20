@@ -481,6 +481,9 @@ function screenSilicone() {
     (lists[it.name] = lists[it.name] || []).push(it);
     units[it.name] = it.unit || '박스';
   });
+  // 판매용 실리콘 색상(ss9000 비오염성)은 재고 0이어도 칸이 뜨게 — 신규 입고 색상도 바로 보이도록
+  [...new Set(ECOUNT_ITEMS.filter(([, n]) => /^실리콘_ss9000_비오염성_/.test(n)).map(([, n]) => n.replace(/^실리콘_ss9000_비오염성_/, '').replace(/\s*\(.*\)/, '').trim()))]
+    .forEach((c) => { if (!mat[c]) { mat[c] = { 천안: 0, NS: 0, 기타: 0 }; lists[c] = []; units[c] = '박스'; } });
   const hasEtc = allSil.some((it) => whGroup(it.warehouse) === '기타');
   const groups = ['천안', 'NS'].concat(hasEtc ? ['기타'] : []);
   const selWH = (state.silWH && groups.includes(state.silWH)) ? state.silWH : null;
@@ -491,8 +494,8 @@ function screenSilicone() {
     const m = mat[name]; const total = selWH ? m[selWH] : (m['천안'] + m['NS'] + m['기타']);
     const notes = lists[name].filter((it) => (it.note || '').trim())
       .map((it) => (lists[name].length > 1 ? whShort(it.warehouse) + ' ' : '') + it.note.trim());
-    return { name, m, total, unit: units[name], st: colorStatus(total), notes };
-  }).sort((a, b) => rank[a.st] - rank[b.st] || b.total - a.total);
+    return { name, m, total, unit: units[name], st: colorStatus(total), notes, placeholder: lists[name].length === 0 };
+  }).sort((a, b) => (a.placeholder ? 1 : 0) - (b.placeholder ? 1 : 0) || rank[a.st] - rank[b.st] || b.total - a.total);
   if (selWH) rows = rows.filter((r) => lists[r.name].some((it) => whGroup(it.warehouse) === selWH)); // 그 창고에 있는 색상만
   const colTot = (c) => rows.reduce((s, r) => s + r.m[c], 0);
   const grand = rows.reduce((s, r) => s + r.total, 0);
@@ -500,7 +503,14 @@ function screenSilicone() {
     <button data-act="sil-wh" data-w="" class="${!selWH ? 'on' : ''}">전체</button>
     ${groups.map((g) => `<button data-act="sil-wh" data-w="${esc(g)}" class="${selWH === g ? 'on' : ''}">${esc(g)}</button>`).join('')}
   </div>`;
-  const matrix = `${tabs}<div class="sec-title">실리콘 재고 · ${selWH ? esc(selWH) + '창고' : '창고 합산'} · 색상 ${rows.length} · ${grand}</div>
+  const 천안T = rows.reduce((s, r) => s + r.m['천안'], 0);
+  const nsT = rows.reduce((s, r) => s + r.m['NS'], 0);
+  const summary = `<div class="silsum">
+    <div class="silsum-c"><span class="l">천안창고</span><b>${천안T}</b><span class="u">박스</span></div>
+    <div class="silsum-c"><span class="l">NS로지스</span><b>${nsT}</b><span class="u">박스</span></div>
+    <div class="silsum-c tot"><span class="l">합계</span><b>${grand}</b><span class="u">박스</span></div>
+  </div>`;
+  const matrix = `${tabs}${selWH ? '' : summary}<div class="sec-title">색상별 재고 (${selWH ? esc(selWH) + '창고' : '천안 · NS'}) · ${rows.length}색</div>
     <div class="silmtx-wrap"><table class="silmtx">
       <thead><tr><th class="cell-nm">색상</th>${cols.map((c) => `<th>${c}</th>`).join('')}${showTot ? '<th class="cell-tot">합계</th>' : ''}</tr></thead>
       <tbody>${rows.map((r) => `<tr data-act="color" data-c="${esc(r.name)}">
@@ -541,12 +551,13 @@ function screenSilicone() {
     <select id="silout-color" class="minisel"><option value="">색상 전체</option>${colorOpts.map((c) => `<option ${c === fColor ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select>
     <select id="silout-client" class="minisel"><option value="">거래처 전체</option>${clientOpts.map((c) => `<option value="${esc(c)}" ${c === fClient ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select>
   </div>`;
-  const outList = outs.length ? `<div class="sec-title" style="margin-top:26px">월별 출고 내역${(fColor || fClient) ? ` · 합계 <b>${fTotal}</b>` : ''}</div>${filterBar}
-    ${fMonths.length ? fMonths.map(monthBlock).join('') : '<div class="empty" style="padding:22px">해당 내역이 없어요</div>'}` : '';
+  const outOpen = state.silOutOpen;
+  const outList = outs.length ? `<div class="sec-title" style="margin-top:22px;cursor:pointer" data-act="sil-out-toggle">${outOpen ? '▼' : '▶'} 월별 출고 내역 <span class="muted" style="font-weight:400">(${outs.length}건 — 누르면 ${outOpen ? '접기' : '펼치기'})</span></div>
+    ${outOpen ? `${filterBar}${(fColor || fClient) ? `<div class="e-sum"><span class="muted">필터 합계 ${fTotal}</span></div>` : ''}${fMonths.length ? fMonths.map(monthBlock).join('') : '<div class="empty" style="padding:22px">해당 내역이 없어요</div>'}` : ''}` : '';
 
   return `<div class="screen">
     ${matrix}
-    <p class="hint" style="margin-top:8px">색상 줄을 누르면 창고별 상세·비고를 볼 수 있어요</p>
+    <p class="hint" style="margin-top:8px">색상 줄을 누르면 창고별 잔량·수불부(입출고 흐름)를 볼 수 있어요</p>
     ${outList}
   </div>`;
 }
@@ -572,6 +583,7 @@ function sheetColor(name) {
       </div>`;
     }).join('')}
   </div>
+  <button class="btn" type="button" data-act="erp-ledger" data-name="${esc(name)}" style="margin-top:4px">재고 수불부 보기 (입고·출고·잔량이 어떻게 줄었는지)</button>
   ${recent.length ? `<div class="sec-title">이 색 최근 출고</div><div class="rows">${recent.map((s) => {
       const ln = S.shipLines(s).find((l) => l.name === name) || {};
       return `<button class="ship" data-act="ship" data-id="${s.id}">
@@ -4148,6 +4160,7 @@ app.addEventListener('click', (e) => {
   else if (act === 'add-inbound') { openSheet(sheetInboundForm()); }
   else if (act === 'color') { openSheet(sheetColor(t.dataset.c)); }
   else if (act === 'sil-wh') { state.silWH = t.dataset.w || null; render(); }
+  else if (act === 'sil-out-toggle') { state.silOutOpen = !state.silOutOpen; render(); }
   else if (act === 'hometab') { state.homeTab = t.dataset.t; render(); }
   else if (act === 'quotetab') { state.quoteTab = t.dataset.t; render(); }
   else if (act === 'invoicetab') { state.invoiceTab = t.dataset.t; render(); }
