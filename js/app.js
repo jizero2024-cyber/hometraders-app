@@ -3560,7 +3560,7 @@ function deskSale() {
       + `<div class="e-tools" style="margin-top:8px">통과 <b>${s.passed}/${s.results.length}</b> · 합계 ${eN(s.total)}원<span class="sp"></span>
         ${s.file ? `<a class="e-btn" href="${HELPER}/api/file?path=${encodeURIComponent(s.file)}">받기 · ${esc(s.file.split('/').pop())}</a>` : ''}
         ${eBtn('판매입력 엑셀 만들기', 'erp-sale-file', s.passed ? '' : 'disabled')}
-        ${eBtn(s.copied ? '복사됨 ✓' : '이카운트 붙여넣기용 복사', 'erp-sale-copy', s.passed ? '' : 'disabled')}</div>
+        ${eBtn(s.copied ? '복사됨 ✓' : '이카운트 붙여넣기용 복사', 'erp-sale-copy', (s.results && s.results.length) ? '' : 'disabled')}</div>
       ${saleStockMsgHtml()}
       <div class="e-sum"><span class="muted">이카운트: 판매관리 → 판매입력 → 웹자료올리기 → 표 첫 칸 클릭 → 붙여넣기(Cmd+V) → 확인 후 저장. ※ 구매입력 화면에 붙이지 마세요.</span></div>`;
   }
