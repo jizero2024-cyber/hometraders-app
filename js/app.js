@@ -512,6 +512,7 @@ function screenSilicone() {
   </div>`;
   const matrix = `${tabs}${selWH ? '' : summary}<div class="sec-title">색상별 재고 (${selWH ? esc(selWH) + '창고' : '천안 · NS'}) · ${rows.length}색</div>
     <div class="silmtx-wrap"><table class="silmtx">
+      <colgroup><col style="width:220px">${cols.map(() => '<col style="width:96px">').join('')}${showTot ? '<col style="width:104px">' : ''}</colgroup>
       <thead><tr><th class="cell-nm">색상</th>${cols.map((c) => `<th>${c}</th>`).join('')}${showTot ? '<th class="cell-tot">합계</th>' : ''}</tr></thead>
       <tbody>${rows.map((r) => `<tr data-act="color" data-c="${esc(r.name)}">
         <td class="cell-nm"><span class="nmwrap">${swatchHTML(r.name)}${esc(r.name)}</span>${r.notes.length ? `<div class="mtx-note">${esc(r.notes.join(' · '))}</div>` : ''}</td>
