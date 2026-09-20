@@ -2530,7 +2530,7 @@ function sheetStockLedger(name) {
     <tr><th>구분</th><td>${esc(f.category || '')}</td><th>단위</th><td>${esc(f.unit || '')}${Number(f.perBox) > 0 ? ` · ${f.perBox}개입` : ''}</td><th>매입처</th><td>${esc([...new Set(list.map((i) => i.supplier).filter(Boolean))].join(', '))}</td></tr>
   </table>
   <div class="e-lines-hd"><b>창고별 재고</b><span class="hint2">현재고 = 기초 + 입고 − 출고완료</span></div>
-  <table class="e-grid"><colgroup><col><col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:90px"><col style="width:80px"><col style="width:80px"><col style="width:170px"></colgroup>
+  <table class="e-grid" style="width:auto"><colgroup><col style="width:120px"><col style="width:70px"><col style="width:70px"><col style="width:80px"><col style="width:84px"><col style="width:80px"><col style="width:70px"><col style="width:160px"></colgroup>
     <thead><tr><th>창고</th><th>기초</th><th>입고</th><th>출고완료</th><th>현재고</th><th>출고예정</th><th>가용</th><th>처리</th></tr></thead>
     <tbody>${whRows.map((w) => `<tr><td style="padding-left:7px">${esc(w.it.warehouse)}</td><td class="n">${fmt(Number(w.it.initial) || 0)}</td><td class="n">${fmt(w.inb)}</td><td class="n">${fmt(w.out)}</td>
       <td class="n"><b class="${w.cur <= 0 ? 'red' : ''}">${fmt(w.cur)}</b></td><td class="n">${fmt(w.res)}</td><td class="n">${fmt(w.cur - w.res)}</td>
