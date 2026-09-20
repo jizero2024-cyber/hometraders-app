@@ -1978,12 +1978,9 @@ const isDesk = () => DESK_MQ.matches;
 // 메뉴 — 기초등록 → 영업 → 구매 → 재고 → 설정 순. [route, 이름, act] act 있으면 입력 팝업 실행
 const DESK_MENU = [
   ['현황', [['dash', '업무 현황']]],
-  ['기초등록', [['partners', '거래처 등록'], ['items', '품목 등록'], ['whs', '창고 등록'], ['ecount', '이카운트 품목 조회'], ['itemmap', '품목 매핑 사전']]],
-  ['영업관리', [['quotes', '견적서 조회'], ['', '견적서 입력', 'add-quote'], ['', '출고 입력', 'new-ship'], ['ships', '출고 조회'], ['sale', '판매입력 (붙여넣기)'], ['dispatch', '배차 관리'], ['invoices', '거래명세서']]],
-  ['구매관리', [['', '입고 입력', 'add-inbound'], ['inbound', '입고 조회'], ['buy', '구매명세서']]],
-  ['재고', [['stock', '재고 현황'], ['silicone', '실리콘 재고']]],
-  ['문서', [['docread', '문서 인식 (발주서·명세표)'], ['delivdocs', '납품확인서']]],
-  ['설정', [['settings', '환경설정']]],
+  ['판매·재고', [['sale', '판매입력 (붙여넣기)'], ['silicone', '실리콘 재고'], ['stock', '재고 현황'], ['', '출고 입력', 'new-ship'], ['ships', '출고 조회'], ['dispatch', '배차 관리'], ['invoices', '거래명세서']]],
+  ['매입·문서', [['docread', '문서 인식 (발주서·명세표)'], ['buy', '구매명세서'], ['', '입고 입력', 'add-inbound'], ['inbound', '입고 조회']]],
+  ['기타', [['quotes', '견적서 조회'], ['', '견적서 입력', 'add-quote'], ['delivdocs', '납품확인서'], ['partners', '거래처 등록'], ['items', '품목 등록'], ['whs', '창고 등록'], ['ecount', '이카운트 품목 조회'], ['itemmap', '품목 매핑 사전'], ['settings', '환경설정']]],
 ];
 const DESK_TITLES = {};
 DESK_MENU.forEach(([g, items]) => items.forEach(([r, l]) => { if (r) DESK_TITLES[r] = [l, g]; }));
@@ -2049,6 +2046,7 @@ const ecountCode = (name) => { if (!_ecMap) _ecMap = new Map(ECOUNT_ITEMS.map(([
 state.eF = state.eF || {};
 state.eSort = state.eSort || {};
 state.eClosed = state.eClosed || {};
+if (state.eClosed['기타'] === undefined) state.eClosed['기타'] = true;   // 기초·설정은 기본 접힘 (자주 안 씀)
 let eSel = { route: '', ids: new Set() };
 let eLast = null;   // 마지막으로 그린 표 (엑셀 저장용)
 function eFilter(route, defaults) { state.eF[route] = { ...defaults, ...(state.eF[route] || {}) }; return state.eF[route]; }
