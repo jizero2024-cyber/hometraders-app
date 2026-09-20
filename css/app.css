@@ -42,9 +42,8 @@ input,select,textarea{font-family:inherit;font-size:16px;border:0;}
 .silsum-c .l{font-size:13px;color:var(--muted);font-weight:600}
 .silsum-c b{font-size:26px;font-weight:800;line-height:1.1}
 .silsum-c .u{font-size:12px;color:var(--muted)}
-.silsum-c.tot{background:var(--ink);}
-.silsum-c.tot .l,.silsum-c.tot .u{color:rgba(255,255,255,.7)}
-.silsum-c.tot b{color:#fff}
+.silsum-c.tot{background:var(--surface-3);border-color:var(--surface-3)}
+.silsum-c.tot b{color:var(--ink)}
 .silmtx-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-top:6px;border:1px solid var(--surface-3);border-radius:12px}
 .silmtx{width:100%;border-collapse:collapse;font-size:15px}
 .silmtx th,.silmtx td{padding:12px 8px;text-align:center;border-bottom:1px solid var(--surface-3);white-space:nowrap}
