@@ -3436,7 +3436,7 @@ function salePrepPrices(fill) {   // 줄마다 종전가 표시 + (fill 이면) 
   (saleS.results || []).forEach((r) => {
     const cust = r.voucher.cust_name || r.doc.partner || '';
     (r.doc.lines || []).forEach((l) => {
-      const pv = salePrevPrice(cust, l);
+      const pv = (l.prev && l.prev.price) ? l.prev : salePrevPrice(cust, l);   // 도우미 판매마감 종전가 우선, 없으면 출고이력
       if (pv) l.prev = pv;
       if (fill && pv && !(Number(l.unit_price) > 0)) { l.unit_price = pv.price; l.amount = (Number(l.qty) || 0) * pv.price; filled++; }
     });
