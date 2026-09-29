@@ -120,7 +120,7 @@
 </main>
 
 <script type="module">
-import * as SM from './js/stmt.js';
+import * as SM from './js/stmt.js?v=74';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
