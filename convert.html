@@ -90,7 +90,7 @@
     <input type="file" id="file" accept=".xlsx,.xlsm,.xls,image/*" hidden>
   </div>
 
-  <p class="note">공간제작소 거래명세표는 <b>품목 1개당 1장씩</b> 발행됩니다. 다른 거래처는 전표 1건당 1장이에요.</p>
+  <p class="note">공간제작소는 <b>품목 1개당 1장</b>, 뉴하우징홈은 <b>현장별로 1장</b>, 그 밖의 거래처는 <b>전표 1건당 1장</b>으로 나옵니다.</p>
   <ol class="how">
     <li>이카운트에서 <b>판매 자료</b>를 <b>엑셀(.xlsx)</b>로 내려받기</li>
     <li>그 <b>엑셀 파일</b>을 위 칸에 끌어다 놓기 (또는 [파일 선택])</li>
@@ -120,7 +120,7 @@
 </main>
 
 <script type="module">
-import * as SM from './js/stmt.js?v=80';
+import * as SM from './js/stmt.js?v=81';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));

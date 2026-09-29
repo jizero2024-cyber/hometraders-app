@@ -5,7 +5,9 @@ import { LOGO, STAMP } from './stmt-assets.js';
 
 const XLSX_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
 const H2C_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
-const PER_ITEM_PARTNERS = ['공간제작소'];          // 이 거래처만 품목마다 한 장, 나머지는 전표당 한 장
+const PER_ITEM_PARTNERS = ['공간제작소'];          // 이 거래처만 품목마다 한 장
+const PER_SITE_PARTNERS = ['뉴하우징'];            // 이 거래처는 현장(품명 뒤 태그)마다 한 장
+// 그 밖의 거래처는 전표당 한 장
 const SUPPLIER = {
   name: '주식회사 홈트레이더스', ceo: '이 최 원', biz: '876-87-02032',
   addr: '경기도 화성시 동탄대로 595', kind: '도매 및 소매업', item: '건축자재',
@@ -15,6 +17,7 @@ const SUPPLIER = {
 const PLACES = { 공간제작소: '경기 화성시 우정읍 매향리 2-22' };   // 거래처별 인도 장소 (없으면 빈칸)
 
 const nfc = (v) => String(v == null ? '' : v).normalize('NFC').trim();
+const key = (s) => nfc(s).replace(/\(주\)|주식회사|㈜|\s/g, '');
 const num = (v) => {
   if (typeof v === 'number') return v;
   const t = nfc(v).replace(/,/g, '');
@@ -59,6 +62,14 @@ export async function readSheets(file) {
 
 // ── 전표 읽기 (세 가지 모양) ────────────────────────────────
 const stripTag = (s) => nfc(s).replace(/\s*\[[^\]]*\]\s*$/, '').trim();
+const rawTag = (s) => { const m = /\[([^\]]*)\]\s*$/.exec(nfc(s)); return m ? m[1].trim() : ''; };
+// 현장 태그 → 보기 좋은 현장명 (0629/뉴하우징홈/평택/김인숙건축주 → 평택 김인숙건축주)
+const siteOf = (tag, partner) => {
+  const t = nfc(tag);
+  if (!t || !/^\d{4}\//.test(t)) return '';
+  const pk = key(partner);
+  return t.split('/').slice(1).map((x) => x.trim()).filter((x) => x && !(pk && (key(x) === pk || pk.includes(key(x)) || key(x).includes(pk)))).join(' ');
+};
 
 function parseList(rows) {                          // 판매현황내역
   const hi = rows.findIndex((r) => r && r.some((c) => /^일자-?No/i.test(nfc(c).replace(/\s/g, '')))
@@ -76,7 +87,7 @@ function parseList(rows) {                          // 판매현황내역
     if (!name || !qty || supply == null) return;
     const slip = `${ymd}-${m[4]}`;
     if (!by[slip]) { by[slip] = { slip, ymd, partner: cP >= 0 ? nfc(r[cP]) : '', items: [] }; out.push(by[slip]); }
-    by[slip].items.push({ date: new Date(+m[1], +m[2] - 1, +m[3]), name: stripTag(name), qty, supply, vat: (cV >= 0 ? num(r[cV]) : 0) || Math.round(supply * 0.1) });
+    by[slip].items.push({ date: new Date(+m[1], +m[2] - 1, +m[3]), name: stripTag(name), tag: rawTag(name), qty, supply, vat: (cV >= 0 ? num(r[cV]) : 0) || Math.round(supply * 0.1) });
   });
   return out;
 }
@@ -110,7 +121,7 @@ function parseLedger(rows) {                        // 거래처원장 — 머�
     const ymd = `${y}${m[2]}${m[3]}`, slip = `${ymd}-${m[4]}`;
     const supply = Math.round(amount / 1.1);        // 원장 금액은 부가세 포함
     if (!by[slip]) { by[slip] = { slip, ymd, partner: ledgerClient, items: [] }; out.push(by[slip]); }
-    by[slip].items.push({ date: new Date(y, +m[2] - 1, +m[3]), name: stripTag(name), qty, supply, vat: amount - supply });
+    by[slip].items.push({ date: new Date(y, +m[2] - 1, +m[3]), name: stripTag(name), tag: rawTag(name), qty, supply, vat: amount - supply });
   });
   return out.length ? out : null;
 }
@@ -179,7 +190,7 @@ function parseVouchers(rows) {                      // 거래명세서 (전표�
     if (m && cells.length >= 5) {
       const name = nfc(cells[1]), qty = num(cells[2]), supply = num(cells[4]), vat = cells.length > 5 ? num(cells[5]) : 0;
       if (!name || !qty || supply == null) return;
-      cur.items.push({ date: new Date(+cur.ymd.slice(0, 4), +m[1] - 1, +m[2]), name: stripTag(name), qty, supply, vat: vat || Math.round(supply * 0.1) });
+      cur.items.push({ date: new Date(+cur.ymd.slice(0, 4), +m[1] - 1, +m[2]), name: stripTag(name), tag: rawTag(name), qty, supply, vat: vat || Math.round(supply * 0.1) });
     }
   });
   return out.filter((v) => v.items.length);
@@ -212,23 +223,34 @@ export function parseSales(sheets) {
 }
 
 // ── 한 장 단위로 나누기 ─────────────────────────────────────
-const key = (s) => nfc(s).replace(/\(주\)|주식회사|㈜|\s/g, '');
 const perItem = (partner) => PER_ITEM_PARTNERS.some((p) => key(partner).includes(p) || p.includes(key(partner)));
+const perSite = (partner) => PER_SITE_PARTNERS.some((p) => key(partner).includes(p));
 
 export function splitSheets(vouchers) {
   const out = [], seq = {};
   vouchers.forEach((v) => {
     let groups;
-    if (!perItem(v.partner)) groups = [v.items];
-    else {
+    if (perSite(v.partner)) {                       // 현장별 (뉴하우징 등)
+      const by = new Map();
+      v.items.forEach((it) => {
+        const site = siteOf(it.tag, v.partner);
+        const k = site || '현장미상';
+        if (!by.has(k)) by.set(k, []);
+        by.get(k).push(it);
+      });
+      groups = [...by.entries()].map(([site, items]) => ({ items, site: site === '현장미상' ? '' : site }));
+    } else if (perItem(v.partner)) {                // 품목별 (공간제작소)
       const cer = v.items.filter((i) => i.name.replace(/\s/g, '').includes('세라믹사이딩'));
-      groups = (cer.length >= 2 ? [cer] : cer.map((i) => [i])).concat(v.items.filter((i) => !i.name.replace(/\s/g, '').includes('세라믹사이딩')).map((i) => [i]));
+      groups = (cer.length >= 2 ? [{ items: cer }] : cer.map((i) => ({ items: [i] })))
+        .concat(v.items.filter((i) => !i.name.replace(/\s/g, '').includes('세라믹사이딩')).map((i) => ({ items: [i] })));
+    } else {                                        // 전표당 한 장 (그 밖의 거래처)
+      groups = [{ items: v.items }];
     }
-    groups.forEach((items) => {
-      if (!items.length) return;
+    groups.forEach((g) => {
+      if (!g.items.length) return;
       const k = `${v.ymd}|${v.partner}`;
       seq[k] = (seq[k] || 0) + 1;
-      out.push({ slip: v.slip, ymd: v.ymd, partner: v.partner, seq: seq[k], items });
+      out.push({ slip: v.slip, ymd: v.ymd, partner: v.partner, seq: seq[k], items: g.items, site: g.site || '' });
     });
   });
   return out;
@@ -309,7 +331,7 @@ function sheetHtml(doc) {
   const d = doc.items[0].date;
   const sd = new Date(+doc.ymd.slice(0, 4), +doc.ymd.slice(4, 6) - 1, +doc.ymd.slice(6, 8));
   const supply = doc.items.reduce((a, i) => a + i.supply, 0), vat = doc.items.reduce((a, i) => a + i.vat, 0);
-  const place = PLACES[key(doc.partner)] || '';
+  const place = doc.site || PLACES[key(doc.partner)] || '';
   const rows = doc.items.map((it, i) => `<tr>
       <td class="c">${i + 1}</td><td class="c">${it.date.getMonth() + 1}월 ${it.date.getDate()}일</td>
       <td class="nm">${esc2(it.name).replace(/([_*(])/g, '$1&#8203;')}</td><td class="c">개</td><td class="n">${won(it.qty)}</td>
@@ -408,7 +430,7 @@ export const sheetTitle = (doc, style) => {
     return m ? m[1].replace(/\*/g, 'x') : n.split('_').pop();
   };
   const slip = String(doc.slip || '').split('-')[1] || '1';          // 이카운트 전표번호 뒷자리 (20260721-1 → 1)
-  const item = short(doc.items[0].name);
+  const item = doc.site ? doc.site.replace(/\s+/g, '') : short(doc.items[0].name);
   if (style === 'ace') {                                            // 에이스는 다른 회사 문서라 이름 규칙도 따로
     return `제${doc.ymd.slice(2)}-${slip}호_${key(doc.partner)}_${item}_에이스`;
   }
