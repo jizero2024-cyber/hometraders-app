@@ -242,6 +242,10 @@ export function wonHangul(n) {
 // ── 인쇄용 HTML (양식: 거래명세표_기본과 같은 구성) ──────────
 const ITEM_ROWS = 5;
 // ── 에이스목재산업 양식 (에이스 → 거래처) ─────────────────
+const CLIENTS = {                                   // 받는 곳 정보 (알고 있는 거래처)
+  공간제작소: { ceo: '곽동욱', biz: '812-88-00492', addr: '경기도 화성시 우정읍 매향리 2-22' },
+};
+
 const ACE = {
   name: '에이스 목재 산업', ceo: '이혜원', biz: '373-26-00984',
   addr: '인천광역시 서구 고산후로 95번길 24', mail: 'lhw6150@naver.com',
@@ -252,36 +256,41 @@ function aceHtml(doc) {
   const d = doc.items[0].date;
   const supply = doc.items.reduce((a, i) => a + i.supply, 0), vat = doc.items.reduce((a, i) => a + i.vat, 0);
   const no = `제 ${doc.ymd.slice(2)}-${String(doc.slip || '').split('-')[1] || doc.seq}호`;
+  const iso = `${doc.ymd.slice(0, 4)}-${doc.ymd.slice(4, 6)}-${doc.ymd.slice(6, 8)}`;
+  const ck = nfc(doc.partner).replace(/\(주\)|주식회사|㈜|\s/g, '');
+  const cl = CLIENTS[ck] || {};
   const rows = doc.items.map((it, i) => `<tr>
       <td class="c">${i + 1}</td><td class="nm">${esc2(it.name).replace(/([_*(])/g, '$1&#8203;')}</td>
-      <td class="c">${esc2(it.spec || '')}</td><td class="c">${esc2(it.unit || '개')}</td>
+      <td class="c">${esc2(it.spec || '')}</td><td class="c">${esc2(it.unit || '')}</td>
       <td class="n">${won(it.qty)}</td><td class="n">${won(it.supply / it.qty)}</td>
       <td class="n">${won(it.supply)}</td><td class="n">${won(it.vat)}</td></tr>`).join('')
-    + ('<tr>' + '<td></td>'.repeat(8) + '</tr>').repeat(Math.max(0, 10 - doc.items.length));
+    + ('<tr>' + '<td></td>'.repeat(8) + '</tr>').repeat(Math.max(0, 11 - doc.items.length));
   return `<section class="sheet ace">
     <div class="ttl">거 래 명 세 서</div>
-    <table class="top"><colgroup><col style="width:12%"><col style="width:38%"><col style="width:14%"><col style="width:36%"></colgroup>
-      <tr><td class="lb">문서번호</td><td>${no}</td><td class="lb">발행일자</td><td>${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일</td></tr>
-      <tr><td class="lb" rowspan="4">받는 곳<br>(수신)</td><td class="big">${esc2(doc.partner)}</td><td class="lb">상호</td><td>${ACE.name}</td></tr>
-      <tr><td></td><td class="lb">대표자</td><td>${ACE.ceo}</td></tr>
-      <tr><td></td><td class="lb">사업자등록번호</td><td>${ACE.biz}</td></tr>
-      <tr><td></td><td class="lb">소재지</td><td>${ACE.addr}</td></tr>
+    <table class="no"><colgroup><col style="width:18%"><col style="width:35%"><col style="width:20%"><col></colgroup>
+      <tr><td class="lb">문서번호 NO.</td><td class="c b">${no}</td><td class="lb">발행일자</td><td class="c b">${iso}</td></tr></table>
+    <table class="who"><colgroup><col style="width:18%"><col style="width:32%"><col style="width:18%"><col></colgroup>
+      <tr><td class="hd" colspan="2">공 급 받 는 자　(수신)</td><td class="hd" colspan="2">공 급 자　(발신)</td></tr>
+      <tr><td class="lb">상호</td><td>${esc2(doc.partner)}</td><td class="lb">상호</td><td>${ACE.name}</td></tr>
+      <tr><td class="lb">대표자</td><td>${esc2(cl.ceo || '')}</td><td class="lb">대표자</td><td>${ACE.ceo}</td></tr>
+      <tr><td class="lb">사업자등록번호</td><td>${esc2(cl.biz || '')}</td><td class="lb">사업자등록번호</td><td>${ACE.biz}</td></tr>
+      <tr><td class="lb">주소</td><td>${esc2(cl.addr || '')}</td><td class="lb">소재지</td><td>${ACE.addr}</td></tr>
+      <tr><td class="lb"></td><td></td><td class="lb">이메일</td><td>${ACE.mail}</td></tr>
     </table>
     <p class="say">아래와 같이 납품하였음을 확인합니다.</p>
-    <table class="sum2"><colgroup><col style="width:34%"><col></colgroup>
-      <tr><td class="lb">합계금액 (공급가액 + 세액)</td><td class="n big">${won(supply + vat)}</td></tr>
-      <tr><td class="lb">일금</td><td>${wonHangul(supply + vat)}</td></tr></table>
+    <table class="total"><colgroup><col style="width:52%"><col></colgroup>
+      <tr><td class="hd">합계금액 (공급가액 + 세액)</td><td class="hd sum">일금　${won(supply + vat)}　원정</td></tr></table>
     <table class="items ace">
-      <colgroup><col style="width:5%"><col style="width:29%"><col style="width:15%"><col style="width:7%"><col style="width:8%"><col style="width:11%"><col style="width:13%"><col style="width:12%"></colgroup>
-      <thead><tr><th>NO</th><th>품　명</th><th>규　격</th><th>단위</th><th>수량</th><th>단가</th><th>공급가액</th><th>세액</th></tr></thead>
+      <colgroup><col style="width:5%"><col style="width:22%"><col style="width:14%"><col style="width:10%"><col style="width:9%"><col style="width:11%"><col style="width:15%"><col style="width:14%"></colgroup>
+      <thead><tr><th>NO</th><th>품　명</th><th>규　격</th><th>B/D</th><th>수량</th><th>단가</th><th>공급가액</th><th>세액</th></tr></thead>
       <tbody>${rows}</tbody>
       <tfoot><tr><td class="tot" colspan="6">합　　계</td><td class="n">${won(supply)}</td><td class="n">${won(vat)}</td></tr>
-        <tr><td class="tot" colspan="6">총　계 (공급가액 + 세액)</td><td class="n" colspan="2">${won(supply + vat)}</td></tr></tfoot>
+        <tr><td class="tot big" colspan="6">총　계 (공급가액 + 세액)</td><td class="n big" colspan="2">₩${won(supply + vat)}</td></tr></tfoot>
     </table>
     <table class="foot2"><colgroup><col style="width:18%"><col></colgroup>
       <tr><td class="lb">납기 / 납품일</td><td>${d.getMonth() + 1}월 ${d.getDate()}일</td></tr>
       <tr><td class="lb">입금계좌</td><td>${ACE.bank}</td></tr>
-      <tr><td class="lb">이메일</td><td>${ACE.mail}</td></tr></table>
+      <tr><td class="lb">특기사항</td><td></td></tr></table>
   </section>`;
 }
 
@@ -349,17 +358,23 @@ const PRINT_CSS = `
   .items td.c{text-align:center} .items td.n{text-align:right} .items td.nm{white-space:normal;word-break:break-all;line-height:1.3}
   .items tfoot .tot{background:#F0B346;color:#fff;font-weight:700;text-align:center}
   .items tfoot td{font-weight:700;background:#f5f5f5}
-  .sheet.ace .ttl{background:none;color:#111;border-bottom:3px double #111;letter-spacing:.5em;font-size:19pt;padding:0 0 6px;margin-bottom:8mm}
-  .sheet.ace table{border-collapse:collapse;width:100%;margin-bottom:4mm}
-  .sheet.ace td,.sheet.ace th{border:1px solid #999;padding:4px 7px;font-size:8.5pt}
-  .sheet.ace .lb{background:#f2f2f2;font-weight:700;text-align:center;white-space:nowrap}
-  .sheet.ace .big{font-size:11pt;font-weight:800}
-  .sheet.ace .say{margin:0 0 3mm;font-size:8.5pt}
-  .sheet.ace .items th{background:#f2f2f2;color:#111;border:1px solid #999;font-size:8.5pt}
-  .sheet.ace .items td{height:21px}
-  .sheet.ace .items tfoot td{background:#fafafa;font-weight:700}
-  .sheet.ace .items .tot{background:#f2f2f2;color:#111;text-align:center;font-weight:700}
-  .sheet.ace .items td.nm{font-size:8pt;text-align:left}
+  .sheet.ace{--navy:#20365c;--navy2:#2c4470}
+  .sheet.ace .ttl{background:none;color:var(--navy);border:0;border-bottom:2.5px solid var(--navy);letter-spacing:.55em;font-size:19pt;font-weight:800;padding:0 0 7px;margin:0 0 6mm}
+  .sheet.ace table{border-collapse:collapse;width:100%;margin-bottom:3mm;table-layout:fixed}
+  .sheet.ace td,.sheet.ace th{border:1px solid #c9cfda;padding:5px 8px;font-size:8.5pt;color:#1e2430}
+  .sheet.ace .lb{background:#eef1f6;font-weight:700;text-align:center;white-space:nowrap;color:var(--navy)}
+  .sheet.ace .hd{background:var(--navy);color:#fff;font-weight:700;text-align:center;border-color:var(--navy)}
+  .sheet.ace .hd.sum{background:#eef1f6;color:var(--navy);text-align:center;font-weight:800;font-size:10pt}
+  .sheet.ace .c{text-align:center} .sheet.ace .n{text-align:right} .sheet.ace .b{font-weight:700}
+  .sheet.ace .say{margin:4mm 0 2mm;text-align:center;font-size:9pt;font-weight:600}
+  .sheet.ace .items th{background:var(--navy);color:#fff;border-color:var(--navy);font-weight:700;font-size:8.5pt;text-align:center}
+  .sheet.ace .items td{height:22px}
+  .sheet.ace .items td.nm{font-size:8pt;text-align:left;white-space:normal;word-break:keep-all;overflow-wrap:anywhere}
+  .sheet.ace .items tfoot .tot{background:var(--navy2);color:#fff;text-align:center;font-weight:700;border-color:var(--navy2)}
+  .sheet.ace .items tfoot td{background:#f4f6fa;font-weight:700}
+  .sheet.ace .items tfoot .big{font-size:10pt}
+  .sheet.ace .total{margin-bottom:0}
+  .sheet.ace .foot2 td{height:24px}
   @media screen { body{background:#eee;padding:14px} .sheet{background:#fff;box-shadow:0 1px 6px #0002;margin:0 auto 14px;padding:10mm;width:210mm} }
 `;
 
