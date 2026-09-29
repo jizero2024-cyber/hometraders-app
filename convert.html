@@ -69,15 +69,15 @@
   <div id="drop" class="drop">
     <div class="dz-ico">＋</div>
     <b>엑셀 파일을 여기에 끌어다 놓으세요</b>
-    <p class="dz-sub">이카운트에서 내려받은 <em>판매 엑셀 (.xlsx)</em><br><span class="dz-or">또는 이카운트 <b>거래명세서 화면 캡처 사진</b></span></p>
+    <p class="dz-sub">이카운트에서 내려받은 <em>판매 엑셀 (.xlsx)</em></p>
     <div class="dz-tags"><span>판매현황내역 엑셀</span><span>거래처원장 엑셀</span><span>거래명세서 엑셀</span></div>
     <div class="row" style="justify-content:center">
       <button class="btn" id="pick">파일 선택</button>
       <button class="btn ghost" id="printAll" disabled>전부 인쇄 · PDF</button>
       <button class="btn ghost" id="imgAll" disabled>전부 이미지 저장</button>
     </div>
-    <p class="dz-hint"><kbd>Cmd</kbd><kbd>V</kbd> 로 붙여넣어도 됩니다<span id="aiState"></span></p>
-    <input type="file" id="file" accept=".xlsx,.xlsm,.xls,image/*,.pdf" hidden>
+    <p class="dz-hint"><kbd>Cmd</kbd><kbd>V</kbd> 로 붙여넣어도 됩니다</p>
+    <input type="file" id="file" accept=".xlsx,.xlsm,.xls" hidden>
   </div>
 
   <p class="note">공간제작소 거래명세표는 <b>품목 1개당 1장씩</b> 발행됩니다. 다른 거래처는 전표 1건당 1장이에요.</p>
@@ -93,18 +93,12 @@
 <script type="module">
 import * as SM from './js/stmt.js';
 
-const HELPER = 'http://127.0.0.1:4180';
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-let docs = [], helperUp = false;
-
-fetch(HELPER + '/api/health').then((r) => r.json()).then((j) => {
-  helperUp = !!(j.ok && j.ai);
-  if (helperUp) $('aiState').textContent = ' · 이 컴퓨터에서는 캡처 사진도 됩니다';
-}).catch(() => {});
+let docs = [];
 
 document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => {
-  if (t.classList.contains('soon')) { say('info', `${t.querySelector('b').textContent}은 홈트레이더스 관리자 베타사이트에서만 가능합니다. 9월 29일 오후 2시 안까지 이관해두겠습니다.`); return; }
+  if (t.classList.contains('soon')) { say('info', `${t.querySelector('b').textContent}은 홈트레이더스 관리자 베타사이트에서만 가능합니다. 9월 29일 오후 3시 안까지 이관해두겠습니다.`); return; }
   document.querySelectorAll('.tab').forEach((x) => x.classList.toggle('on', x === t));
   say('', ''); $('out').innerHTML = ''; docs = []; $('printAll').disabled = true;
 }));
@@ -152,16 +146,12 @@ async function handle(file) {
   }
 }
 
-// 사진(캡처)은 브라우저 안에서 글자 인식 → 품목 목록 대조 → 숫자 검산
-async function viaOCR(file) {
-  if (/\.pdf$/i.test(file.name || '')) throw new Error('PDF는 아직 안 돼요 — 화면을 캡처한 사진(PNG·JPG)이나 엑셀을 넣어 주세요.');
-  const [OCR, ITEMS] = await Promise.all([import('./js/stmt-ocr.js'), itemNames()]);
-  const lines = await OCR.readImage(file, (t) => say('info', esc(t)));
-  const v = OCR.parseLines(lines, ITEMS);
-  lastWarn = v.warn;
-  return SM.splitSheets([{ slip: `${v.ymd}-${v.seq}`, ymd: v.ymd, partner: v.partner,
-    items: v.items.map((it) => ({ ...it, date: new Date(+v.ymd.slice(0, 4), +v.ymd.slice(4, 6) - 1, +v.ymd.slice(6, 8)) })) }]);
+// 사진(캡처) 인식은 잠시 꺼둠 — 품목이 매번 달라 숫자를 잘못 읽을 수 있어서, 엑셀만 받는다
+//   (js/stmt-ocr.js 는 그대로 두었으니 다시 켜려면 아래 두 줄만 되살리면 됨)
+async function viaOCR() {
+  throw new Error('사진 인식은 잠시 꺼뒀어요 — 이카운트에서 내려받은 엑셀 파일(.xlsx)을 넣어 주세요.');
 }
+
 let lastWarn = [];
 let itemsCache = null;
 async function itemNames() {
