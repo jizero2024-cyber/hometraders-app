@@ -65,14 +65,14 @@
   <div id="drop" class="drop">
     <div class="dz-ico">＋</div>
     <b>파일을 여기에 끌어다 놓으세요</b>
-    <p class="dz-sub">이카운트 <em>판매</em> 엑셀 · 캡처 사진 · PDF</p>
+    <p class="dz-sub">이카운트에서 내려받은 <em>판매</em> 엑셀</p>
     <div class="dz-tags"><span>판매현황내역</span><span>거래처원장</span><span>거래명세서</span></div>
     <div class="row" style="justify-content:center">
       <button class="btn" id="pick">파일 선택</button>
       <button class="btn ghost" id="printAll" disabled>전부 인쇄 · PDF</button>
       <button class="btn ghost" id="imgAll" disabled>전부 이미지 저장</button>
     </div>
-    <p class="dz-hint"><kbd>Cmd</kbd><kbd>V</kbd> 로 붙여넣어도 됩니다 &nbsp;·&nbsp; <span id="aiState">확인 중…</span></p>
+    <p class="dz-hint"><kbd>Cmd</kbd><kbd>V</kbd> 로 붙여넣어도 됩니다<span id="aiState"></span></p>
     <input type="file" id="file" accept=".xlsx,.xlsm,.xls,image/*,.pdf" hidden>
   </div>
 
@@ -94,9 +94,9 @@ const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': 
 let docs = [], helperUp = false;
 
 fetch(HELPER + '/api/health').then((r) => r.json()).then((j) => {
-  helperUp = !!j.ok;
-  $('aiState').textContent = j.ai ? '도우미 연결됨 (이미지 인식 가능)' : '도우미는 연결됐지만 AI 키가 없어요 (엑셀만)';
-}).catch(() => { $('aiState').textContent = '이 맥의 도우미가 꺼져 있어요 — 엑셀만 됩니다'; });
+  helperUp = !!(j.ok && j.ai);
+  if (helperUp) $('aiState').textContent = ' · 이 컴퓨터에서는 캡처 사진도 됩니다';
+}).catch(() => {});
 
 document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => {
   if (t.classList.contains('soon')) { say('info', `${t.querySelector('b').textContent}은 아직 이 화면에 안 붙었어요. ERP 메뉴에서 쓰시거나, 붙여달라고 말씀해 주세요.`); return; }
@@ -149,7 +149,7 @@ async function handle(file) {
 
 // 이미지·PDF 는 이 맥의 도우미(AI)가 읽어 준다 — 엑셀은 도우미 없이 브라우저에서 바로
 async function viaHelper(file) {
-  if (!helperUp) throw new Error('이미지·PDF는 이 맥의 도우미가 켜져 있어야 읽을 수 있어요. 엑셀 파일을 쓰시거나, 터미널에서 도우미를 켜 주세요.');
+  if (!helperUp) throw new Error('사진·PDF는 아직 안 돼요 — 이카운트에서 내려받은 엑셀 파일을 넣어 주세요.');
   const b64 = await new Promise((ok) => { const rd = new FileReader(); rd.onload = () => ok(String(rd.result).split(',')[1] || ''); rd.readAsDataURL(file); });
   const r = await fetch(HELPER + '/api/doc/read', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: file.name || 'capture.png', data: b64 }) });
   const j = await r.json();
