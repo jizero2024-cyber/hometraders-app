@@ -115,6 +115,43 @@ function parseLedger(rows) {                        // 거래처원장 — 머�
   return out.length ? out : null;
 }
 
+
+// 에이스 원장 — 일자 | 적요 | 판매 | 수금 | 잔액
+//   전표 줄: '2026/08/13 -1' + 판매 합계, 그 아래 품목 줄: 적요 '선홈통(브라운) [0826/공간] / 200 * 9,499'
+//   판매 금액은 부가세 포함 → 공급가액 = 금액 ÷ 1.1
+function parseAceLedger(rows) {
+  const title = nfc(rows.find((r) => r && /회사명\s*[:：]/.test(nfc(r[0]))) ? rows.find((r) => r && /회사명\s*[:：]/.test(nfc(r[0])))[0] : '');
+  const hi = rows.findIndex((r) => r && nfc(r[0]) === '일자' && r.some((c) => nfc(c) === '적요') && r.some((c) => nfc(c) === '판매'));
+  if (hi < 0) return null;
+  const H = rows[hi].map((c) => nfc(c));
+  const cD = 0, cN = H.indexOf('적요'), cS = H.indexOf('판매');
+  const parts = title.split('/').map((t) => t.trim());
+  const partner = parts.length > 1 ? nfc(parts[1]) : '';       // 회사명 : 에이스목재산업 / 공간제작소 / 기간
+  const out = [];
+  let cur = null;
+  rows.slice(hi + 1).forEach((r) => {
+    const d = nfc(r && r[cD]);
+    const m = /^(20\d\d)\s*[\/.\-]\s*(\d{1,2})\s*[\/.\-]\s*(\d{1,2})\s*-\s*(\d+)$/.exec(d);
+    if (m) {
+      const ymd = `${m[1]}${String(+m[2]).padStart(2, '0')}${String(+m[3]).padStart(2, '0')}`;
+      cur = { slip: `${ymd}-${m[4]}`, ymd, partner, items: [], date: new Date(+m[1], +m[2] - 1, +m[3]) };
+      out.push(cur);
+      return;
+    }
+    if (!cur) return;
+    const memo = nfc(r && r[cN]);
+    const amount = num(r && r[cS]);
+    if (!memo || !amount) return;
+    const im = /^(.*?)\s*\/\s*([\d,]+)\s*\*\s*([\d,.]+)\s*$/.exec(memo);   // 품명 / 수량 * 단가
+    const name = stripTag(im ? im[1] : memo);
+    const qty = im ? num(im[2]) : null;
+    const supply = Math.round(amount / 1.1);
+    if (!name) return;
+    cur.items.push({ date: cur.date, name, qty: qty || 1, supply, vat: amount - supply });
+  });
+  return out.filter((v) => v.items.length).length ? out.filter((v) => v.items.length) : null;
+}
+
 function parseVouchers(rows) {                      // 거래명세서 (전표번호 · 수신-거래처 · 일자 줄)
   const out = [];
   let cur = null;
@@ -153,6 +190,8 @@ function dropCancelled(vs) {                        // 취소(마이너스) 전�
 export function parseSales(sheets) {
   let got = [];
   sheets.forEach((rows) => { const r = parseList(rows); if (r) got = got.concat(r); });
+  if (got.length) return dropCancelled(got);
+  sheets.forEach((rows) => { const r = parseAceLedger(rows); if (r) got = got.concat(r); });
   if (got.length) return dropCancelled(got);
   sheets.forEach((rows) => { const r = parseLedger(rows); if (r) got = got.concat(r); });
   if (got.length) return dropCancelled(got);
