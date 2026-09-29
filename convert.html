@@ -10,10 +10,14 @@
   :root { --bg:#f4f5f7; --card:#fff; --line:#e6e8eb; --tx:#1c1f23; --dim:#6b7280; --on:#F0B346; --blue:#577DF9; }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent }
   body { margin:0; background:var(--bg); color:var(--tx); font-family:"Pretendard","Apple SD Gothic Neo",sans-serif; }
-  header { background:#fff; border-bottom:1px solid var(--line); padding:18px 20px; display:flex; align-items:center; gap:12px }
+  header { background:#fff; border-bottom:1px solid var(--line); padding:16px 18px; display:flex; align-items:center; gap:10px; flex-wrap:wrap }
   header h1 { margin:0; font-size:19px; font-weight:800; letter-spacing:-.3px }
+  header a, header button { white-space:nowrap }
   header a { color:var(--dim); text-decoration:none; font-size:14px; font-weight:600 }
-  header .link { margin-left:auto; margin-right:14px; background:none; border:0; font:inherit; font-size:14px; font-weight:600; color:var(--dim); cursor:pointer }
+  header a.link { margin-right:14px; cursor:pointer }
+  header #folder { margin-left:auto }
+  @media (max-width:560px){ header h1{width:100%} header #folder{margin-left:0} }
+  header .link { margin-right:14px; background:none; border:0; font:inherit; font-size:14px; font-weight:600; color:var(--dim); cursor:pointer }
   header .link.on { color:#1f8b4c }
   main { max-width:960px; margin:0 auto; padding:22px 16px 60px }
   .tabs { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:12px; margin-bottom:22px }
@@ -58,6 +62,7 @@
 <body>
 <header>
   <h1>서류 전환</h1>
+  <a class="link" id="folder" href="https://drive.google.com/drive/folders/1FZiOCFJFj92nAuSW0-BUPUcD8hE32ih5" target="_blank" rel="noopener">드라이브 폴더 열기</a>
   <button class="link" id="drive">드라이브 연결</button>
   <a href="./">ERP로 →</a>
 </header>
