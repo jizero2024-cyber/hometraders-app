@@ -284,7 +284,8 @@ export const sheetTitle = (doc) => {
     const m = /(\d+\*\d+\*\d+)/.exec(n.replace(/(\d),(?=\d{3})/g, '$1'));
     return m ? m[1].replace(/\*/g, 'x') : n.split('_').pop();
   };
-  return `${doc.ymd.slice(2)}_${key(doc.partner)}_${String(doc.seq).padStart(2, '0')}_${short(doc.items[0].name)}`;
+  const slip = String(doc.slip || '').split('-')[1] || '1';          // 이카운트 전표번호 뒷자리 (20260721-1 → 1)
+  return `${doc.ymd.slice(2)}-${slip}_${key(doc.partner)}_${String(doc.seq).padStart(2, '0')}_${short(doc.items[0].name)}`;
 };
 
 // ── 도우미(AI)가 읽은 문서 → 전표 한 장 (캡처·PDF용) ────────
