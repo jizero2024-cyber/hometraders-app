@@ -209,7 +209,7 @@ function sheetHtml(doc) {
   const place = PLACES[key(doc.partner)] || '';
   const rows = doc.items.map((it, i) => `<tr>
       <td class="c">${i + 1}</td><td class="c">${it.date.getMonth() + 1}월 ${it.date.getDate()}일</td>
-      <td class="nm">${esc2(it.name)}</td><td class="c">개</td><td class="n">${won(it.qty)}</td>
+      <td class="nm">${esc2(it.name).replace(/([_*(])/g, '$1&#8203;')}</td><td class="c">개</td><td class="n">${won(it.qty)}</td>
       <td class="n">${won(it.supply / it.qty)}</td><td class="n">${won(it.supply)}</td><td class="n">${won(it.vat)}</td>
       <td class="n">${won(it.supply + it.vat)}</td><td class="c"></td></tr>`).join('')
     + ('<tr>' + '<td></td>'.repeat(10) + '</tr>').repeat(Math.max(0, ITEM_ROWS - doc.items.length));
@@ -219,19 +219,20 @@ function sheetHtml(doc) {
       <div class="to"><b>${esc2(doc.partner)} 貴下</b><span>${esc2(place)}</span>
         <div class="no">발행번호 : ${doc.ymd}${String(doc.seq).padStart(4, '0')}<br>발행일자 : ${sd.getFullYear()}년 ${sd.getMonth() + 1}월 ${sd.getDate()}일</div>
         <div class="ask">아래와 같이 대금 지급을 요청드립니다.</div></div>
-      <div class="from"><b>${SUPPLIER.name}</b><img class="stamp" src="${STAMP}" alt="">
-        <table><tr><th>대표자</th><td>${SUPPLIER.ceo}</td></tr>
+      <div class="from"><b class="cname">${SUPPLIER.name}</b><img class="stamp" src="${STAMP}" alt="">
+        <table><colgroup><col style="width:58px"><col></colgroup>
+          <tr><th>대표자</th><td>${SUPPLIER.ceo}</td></tr>
           <tr><th>등록번호</th><td>${SUPPLIER.biz}</td></tr><tr><th>소재지</th><td>${SUPPLIER.addr}</td></tr>
           <tr><th>업 태</th><td>${SUPPLIER.kind}　종 목　${SUPPLIER.item}</td></tr>
           <tr><th>담당자</th><td>${SUPPLIER.mgr}　　연락처　${SUPPLIER.tel}</td></tr>
-          <tr><th>이메일</th><td><b>${SUPPLIER.mail}</b></td></tr></table></div>
+          <tr><th>이메일</th><td>${SUPPLIER.mail}</td></tr></table></div>
     </div>
     <div class="sum"><div class="lb">합계금액 (부가세포함)</div><div class="val">${won(supply + vat)}</div></div>
     <div class="hangul">${wonHangul(supply + vat)}</div>
     <div class="terms">* 거래조건<br>1. 납품일자 : ${d.getMonth() + 1}월 ${d.getDate()}일<br>2. 인도조건 및 장소 : ${esc2(place || '담당자 협의')}<br>
       3. 대금 지불조건 : 협의사항<br>4. 결제정보<br>&nbsp;-&nbsp; ${SUPPLIER.bank}<img class="logo" src="${LOGO}"></div>
     <table class="items">
-      <colgroup><col style="width:5%"><col style="width:9%"><col><col style="width:5%"><col style="width:7%"><col style="width:9%"><col style="width:11%"><col style="width:9%"><col style="width:11%"><col style="width:8%"></colgroup>
+      <colgroup><col style="width:4.5%"><col style="width:8.5%"><col style="width:34%"><col style="width:4.5%"><col style="width:6.5%"><col style="width:8.5%"><col style="width:10.5%"><col style="width:8.5%"><col style="width:10.5%"><col style="width:4%"></colgroup>
       <thead><tr><th>순번</th><th>출고일</th><th>품명</th><th>단위</th><th>수량</th><th>단가</th><th>공급가액</th><th>부가세</th><th>총합계 ( 포함가)</th><th>비고</th></tr></thead>
       <tbody>${rows}</tbody>
       <tfoot><tr><td class="tot" colspan="6">합　계</td><td class="n">${won(supply)}</td><td class="n">${won(vat)}</td><td class="n">${won(supply + vat)}</td><td></td></tr></tfoot>
@@ -247,18 +248,19 @@ const PRINT_CSS = `
   .head{display:flex;justify-content:space-between;margin:10mm 0 6mm}
   .to b{font-size:13pt} .to span{display:block;font-size:8.5pt;color:#555;margin:2px 0 6mm}
   .to .no{font-size:8pt;line-height:1.6} .to .ask{margin-top:8mm;font-size:8.5pt}
-  .from{text-align:right} .from b{font-size:13pt;display:block;margin-bottom:4px}
-  .from table{border-collapse:collapse;font-size:8pt} .from th{text-align:left;color:#555;font-weight:500;padding:1px 14px 1px 0}
-  .from td{text-align:left;padding:1px 0}
-  .from{position:relative;padding-right:0}
-  .stamp{position:absolute;right:118px;top:6px;width:56px;height:56px;opacity:.88;z-index:2}
+  .from{position:relative;text-align:right}
+  .from .cname{font-size:13pt;font-weight:800;display:block;margin-bottom:6px}
+  .from table{border-collapse:collapse;font-size:8pt;margin-left:auto;table-layout:fixed;width:300px}
+  .from th{text-align:left;color:#555;font-weight:500;padding:1.5px 0;white-space:nowrap}
+  .from td{text-align:left;padding:1.5px 0;white-space:nowrap;font-weight:400}
+  .stamp{position:absolute;right:150px;top:8px;width:48px;height:48px;opacity:.8;z-index:2}
   .sum{display:flex;border:1px solid #ddd} .sum .lb{background:#F0B346;color:#fff;font-weight:700;text-align:center;padding:5px 0;width:42%}
   .sum .val{flex:1;text-align:center;padding:5px 0;font-size:11pt}
   .hangul{text-align:center;font-size:9pt;margin:3px 0 5px}
   .terms{position:relative;border:1px solid #ddd;padding:6px 8px;line-height:1.7;font-size:8pt;min-height:26mm}
   .logo{position:absolute;right:10px;bottom:8px;width:98px}
   .items{width:100%;border-collapse:collapse;margin-top:6mm;table-layout:fixed}
-  .items th{background:#F0B346;color:#fff;font-weight:700;font-size:8pt;padding:4px 2px;border:1px solid #fff}
+  .items th{background:#F0B346;color:#fff;font-weight:700;font-size:8pt;padding:4px 2px;border:1px solid #fff;text-align:center;vertical-align:middle}
   .items td{border:1px solid #e3e3e3;padding:3px 4px;height:22px;font-size:8pt;overflow:hidden}
   .items td.c{text-align:center} .items td.n{text-align:right} .items td.nm{white-space:normal;word-break:break-all;line-height:1.3}
   .items tfoot .tot{background:#F0B346;color:#fff;font-weight:700;text-align:center}
@@ -307,16 +309,25 @@ const A4_W = 794;                                   // A4 가로 210mm ≈ 794px
 
 async function renderImage(doc, scale = 2) {
   const h2c = await loadScript(H2C_CDN, () => window.html2canvas);
-  const box = document.createElement('div');
-  box.setAttribute('style', `position:fixed;left:-10000px;top:0;width:${A4_W}px;background:#fff;z-index:-1`);
-  box.innerHTML = `<style>${PRINT_CSS.replace(/@media screen[\s\S]*?\}\s*\}/, '')}</style>${sheetHtml(doc)}`;
-  document.body.appendChild(box);
+  // 페이지 CSS가 섞이지 않게 iframe 안에서 그린다 — 인쇄(PDF) 결과와 똑같이 나오도록
+  const fr = document.createElement('iframe');
+  fr.setAttribute('style', `position:fixed;left:-10000px;top:0;width:${A4_W}px;height:1200px;border:0;background:#fff`);
+  document.body.appendChild(fr);
   try {
-    await document.fonts.ready.catch(() => {});
-    const canvas = await h2c(box.querySelector('.sheet'), { scale, backgroundColor: '#ffffff', useCORS: true, logging: false });
+    const d = fr.contentDocument;
+    d.open();
+    d.write(`<!doctype html><meta charset="utf-8">
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+      <style>${PRINT_CSS}\nbody{background:#fff;padding:0;width:${A4_W}px}.sheet{width:${A4_W}px;margin:0;box-shadow:none;padding:10mm}</style>
+      ${sheetHtml(doc)}`);
+    d.close();
+    await new Promise((ok) => setTimeout(ok, 350));
+    if (d.fonts && d.fonts.ready) await d.fonts.ready.catch(() => {});
+    const el = d.querySelector('.sheet');
+    const canvas = await h2c(el, { scale, backgroundColor: '#ffffff', useCORS: true, logging: false, windowWidth: A4_W, width: A4_W, height: el.scrollHeight });
     return await new Promise((ok) => canvas.toBlob((b) => ok(b), 'image/png'));
   } finally {
-    box.remove();
+    fr.remove();
   }
 }
 
