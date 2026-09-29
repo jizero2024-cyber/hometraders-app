@@ -219,8 +219,8 @@ function sheetHtml(doc) {
       <div class="to"><b>${esc2(doc.partner)} 貴下</b><span>${esc2(place)}</span>
         <div class="no">발행번호 : ${doc.ymd}${String(doc.seq).padStart(4, '0')}<br>발행일자 : ${sd.getFullYear()}년 ${sd.getMonth() + 1}월 ${sd.getDate()}일</div>
         <div class="ask">아래와 같이 대금 지급을 요청드립니다.</div></div>
-      <div class="from"><b>${SUPPLIER.name}</b>
-        <table><tr><th>대표자</th><td>${SUPPLIER.ceo} <img class="stamp" src="${STAMP}"></td></tr>
+      <div class="from"><b>${SUPPLIER.name}</b><img class="stamp" src="${STAMP}" alt="">
+        <table><tr><th>대표자</th><td>${SUPPLIER.ceo}</td></tr>
           <tr><th>등록번호</th><td>${SUPPLIER.biz}</td></tr><tr><th>소재지</th><td>${SUPPLIER.addr}</td></tr>
           <tr><th>업 태</th><td>${SUPPLIER.kind}　종 목　${SUPPLIER.item}</td></tr>
           <tr><th>담당자</th><td>${SUPPLIER.mgr}　　연락처　${SUPPLIER.tel}</td></tr>
@@ -249,8 +249,9 @@ const PRINT_CSS = `
   .to .no{font-size:8pt;line-height:1.6} .to .ask{margin-top:8mm;font-size:8.5pt}
   .from{text-align:right} .from b{font-size:13pt;display:block;margin-bottom:4px}
   .from table{border-collapse:collapse;font-size:8pt} .from th{text-align:left;color:#555;font-weight:500;padding:1px 14px 1px 0}
-  .from td{text-align:left;padding:1px 0;position:relative}
-  .stamp{position:absolute;left:34px;top:-16px;width:44px;height:44px;opacity:.95}
+  .from td{text-align:left;padding:1px 0}
+  .from{position:relative;padding-right:0}
+  .stamp{position:absolute;right:118px;top:6px;width:56px;height:56px;opacity:.88;z-index:2}
   .sum{display:flex;border:1px solid #ddd} .sum .lb{background:#F0B346;color:#fff;font-weight:700;text-align:center;padding:5px 0;width:42%}
   .sum .val{flex:1;text-align:center;padding:5px 0;font-size:11pt}
   .hangul{text-align:center;font-size:9pt;margin:3px 0 5px}
