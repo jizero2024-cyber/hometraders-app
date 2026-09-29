@@ -77,10 +77,10 @@
       <button class="btn ghost" id="imgAll" disabled>전부 이미지 저장</button>
     </div>
     <p class="dz-hint"><kbd>Cmd</kbd><kbd>V</kbd> 로 붙여넣어도 됩니다</p>
-    <input type="file" id="file" accept=".xlsx,.xlsm,.xls" hidden>
+    <input type="file" id="file" accept=".xlsx,.xlsm,.xls,image/*" hidden>
   </div>
 
-  <p class="note">공간제작소 거래명세표는 <b>품목 1개당 1장씩</b> 발행됩니다. 다른 거래처는 전표 1건당 1장이에요.</p>
+  <p class="note">공간제작소 거래명세표는 <b>품목 1개당 1장씩</b> 발행됩니다. 다른 거래처는 전표 1건당 1장이에요.<br>거래명세서 <b>화면 캡처 사진</b>으로 만드는 기능은 9월 29일 오후 4시 안까지 붙여두겠습니다.</p>
   <ol class="how">
     <li>이카운트에서 <b>판매 자료</b>를 <b>엑셀(.xlsx)</b>로 내려받기</li>
     <li>그 <b>엑셀 파일</b>을 위 칸에 끌어다 놓기 (또는 [파일 선택])</li>
@@ -149,7 +149,7 @@ async function handle(file) {
 // 사진(캡처) 인식은 잠시 꺼둠 — 품목이 매번 달라 숫자를 잘못 읽을 수 있어서, 엑셀만 받는다
 //   (js/stmt-ocr.js 는 그대로 두었으니 다시 켜려면 아래 두 줄만 되살리면 됨)
 async function viaOCR() {
-  throw new Error('사진 인식은 잠시 꺼뒀어요 — 이카운트에서 내려받은 엑셀 파일(.xlsx)을 넣어 주세요.');
+  throw new Error('거래명세서 화면 캡처 사진은 9월 29일 오후 4시 안까지 붙여두겠습니다. 지금은 이카운트에서 내려받은 엑셀 파일(.xlsx)을 넣어 주세요.');
 }
 
 let lastWarn = [];
