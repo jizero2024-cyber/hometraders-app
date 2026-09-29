@@ -242,7 +242,8 @@ function sheetHtml(doc) {
 
 const PRINT_CSS = `
   @page { size:A4 portrait; margin:12mm 10mm; }
-  *{box-sizing:border-box} body{margin:0;font-family:"Pretendard","Apple SD Gothic Neo",sans-serif;color:#222;font-size:9pt}
+  *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  html,body{-webkit-print-color-adjust:exact;print-color-adjust:exact} body{margin:0;font-family:"Pretendard","Apple SD Gothic Neo",sans-serif;color:#222;font-size:9pt}
   .sheet{page-break-after:always;padding:2mm 0}
   .ttl{background:#F0B346;color:#fff;font-size:20pt;font-weight:800;letter-spacing:.5em;text-align:center;padding:10px 0 10px 12px}
   .head{display:flex;justify-content:space-between;margin:10mm 0 6mm}
