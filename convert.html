@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>서류 전환 · 홈트레이더스</title>
+<link rel="icon" type="image/png" href="./icons/favicon.png">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root { --bg:#f4f5f7; --card:#fff; --line:#e6e8eb; --tx:#1c1f23; --dim:#6b7280; --on:#F0B346; --blue:#577DF9; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent }
+  body { margin:0; background:var(--bg); color:var(--tx); font-family:"Pretendard","Apple SD Gothic Neo",sans-serif; }
+  header { background:#fff; border-bottom:1px solid var(--line); padding:18px 20px; display:flex; align-items:center; gap:12px }
+  header h1 { margin:0; font-size:19px; font-weight:800; letter-spacing:-.3px }
+  header a { margin-left:auto; color:var(--dim); text-decoration:none; font-size:14px; font-weight:600 }
+  main { max-width:960px; margin:0 auto; padding:22px 16px 60px }
+  .tabs { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:12px; margin-bottom:22px }
+  .tab { background:var(--card); border:2px solid var(--line); border-radius:16px; padding:18px 16px; cursor:pointer; text-align:left; font:inherit }
+  .tab b { display:block; font-size:16px; font-weight:800; margin-bottom:5px }
+  .tab span { font-size:13px; color:var(--dim); line-height:1.45 }
+  .tab.on { border-color:var(--on); background:#fffaf0 }
+  .tab.soon { opacity:.55 }
+  .drop { background:var(--card); border:2px dashed #cfd4da; border-radius:18px; padding:46px 20px; text-align:center; transition:.15s }
+  .drop.over { border-color:var(--on); background:#fffaf0 }
+  .drop b { display:block; font-size:18px; font-weight:800; margin-bottom:8px }
+  .drop span { color:var(--dim); font-size:14px; line-height:1.6 }
+  .btn { appearance:none; border:0; border-radius:12px; padding:13px 22px; font:inherit; font-weight:700; font-size:15px; cursor:pointer; background:#111; color:#fff }
+  .btn.ghost { background:#fff; color:var(--tx); border:1px solid var(--line) }
+  .btn[disabled] { opacity:.4; cursor:default }
+  .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:16px }
+  .msg { margin-top:16px; padding:14px 16px; border-radius:12px; font-size:14px; line-height:1.6 }
+  .msg.err { background:#fee; color:#a11 } .msg.info { background:#eef3ff; color:#2b4a9b }
+  table { width:100%; border-collapse:collapse; background:#fff; border-radius:14px; overflow:hidden; margin-top:18px; font-size:14px }
+  th { background:#fafbfc; text-align:left; padding:11px 12px; font-size:12.5px; color:var(--dim); border-bottom:1px solid var(--line) }
+  td { padding:11px 12px; border-bottom:1px solid #f1f2f4 }
+  td.n, th.n { text-align:right } td.c, th.c { text-align:center }
+  tr:last-child td { border-bottom:0 }
+  .sm { padding:7px 14px; font-size:13px; border-radius:9px }
+  .how { counter-reset:s; list-style:none; margin:18px 0 0; padding:0; display:grid; gap:8px }
+  .how li { counter-increment:s; background:#fff; border:1px solid var(--line); border-radius:12px; padding:12px 14px 12px 44px; position:relative; font-size:14px; color:#333 }
+  .how li::before { content:counter(s); position:absolute; left:14px; top:11px; width:20px; height:20px; border-radius:50%; background:var(--on); color:#fff; font-size:12px; font-weight:800; display:grid; place-items:center }
+  .paste { font-size:13px; color:var(--dim) } .paste b { background:#fff; border:1px solid var(--line); border-radius:6px; padding:2px 7px; font-size:12px }
+  .hide { display:none }
+  @media (max-width:520px){ main{padding:16px 12px 48px} .drop{padding:34px 14px} }
+</style>
+</head>
+<body>
+<header>
+  <h1>서류 전환</h1>
+  <a href="./">ERP로 →</a>
+</header>
+<main>
+  <div class="tabs">
+    <button class="tab on" data-kind="stmt"><b>거래명세표 전환</b><span><b>공간제작소용</b> · 품목 1개당 1장씩 발행됩니다</span></button>
+    <button class="tab soon" data-kind="deliv"><b>납품확인서 전환</b><span>인슐레이션·방수시트·타이벡 납품확인서</span></button>
+    <button class="tab soon" data-kind="quote"><b>견적서 전환</b><span>품목·단가 → 홈트 견적서 양식</span></button>
+    <button class="tab soon" data-kind="ace"><b>에이스명세표 전환</b><span>에이스목재 양식으로 변환</span></button>
+  </div>
+
+  <div id="drop" class="drop">
+    <b>여기에 파일을 끌어다 놓으세요</b>
+    <span><b>공간제작소 거래명세표</b> — 품목 1개당 1장씩 만들어집니다.<br>
+      이카운트에서 내려받은 <b>판매</b> 엑셀을 넣으세요 (판매현황내역 · 거래처원장 · 거래명세서 다 됩니다).<br>
+      화면을 캡처한 사진이나 PDF도 됩니다 — <span id="aiState">확인 중…</span></span>
+    <div class="row" style="justify-content:center">
+      <button class="btn" id="pick">파일 선택</button>
+      <button class="btn ghost" id="printAll" disabled>전부 인쇄 · PDF</button>
+      <span class="paste">또는 <b>Cmd</b>+<b>V</b>로 붙여넣기</span>
+    </div>
+    <input type="file" id="file" accept=".xlsx,.xlsm,.xls,image/*,.pdf" hidden>
+  </div>
+
+  <ol class="how">
+    <li>이카운트에서 <b>판매</b> 자료를 엑셀로 내려받기</li>
+    <li>위 칸에 끌어다 놓기 (또는 [파일 선택])</li>
+    <li>목록에서 <b>[열기]</b> → 인쇄 창에서 <b>PDF로 저장</b> 또는 바로 인쇄</li>
+  </ol>
+  <div id="msg"></div>
+  <div id="out"></div>
+</main>
+
+<script type="module">
+import * as SM from './js/stmt.js';
+
+const HELPER = 'http://127.0.0.1:4180';
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+let docs = [], helperUp = false;
+
+fetch(HELPER + '/api/health').then((r) => r.json()).then((j) => {
+  helperUp = !!j.ok;
+  $('aiState').textContent = j.ai ? '도우미 연결됨 (이미지 인식 가능)' : '도우미는 연결됐지만 AI 키가 없어요 (엑셀만)';
+}).catch(() => { $('aiState').textContent = '이 맥의 도우미가 꺼져 있어요 — 엑셀만 됩니다'; });
+
+document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => {
+  if (t.classList.contains('soon')) { say('info', `${t.querySelector('b').textContent}은 아직 이 화면에 안 붙었어요. ERP 메뉴에서 쓰시거나, 붙여달라고 말씀해 주세요.`); return; }
+  document.querySelectorAll('.tab').forEach((x) => x.classList.toggle('on', x === t));
+  say('', ''); $('out').innerHTML = ''; docs = []; $('printAll').disabled = true;
+}));
+
+const say = (cls, html) => { $('msg').className = cls ? 'msg ' + cls : ''; $('msg').innerHTML = html; };
+$('pick').onclick = () => $('file').click();
+$('file').onchange = (e) => handle(e.target.files[0]);
+$('printAll').onclick = () => docs.length && SM.printSheets(docs);
+
+const drop = $('drop');
+['dragenter', 'dragover'].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add('over'); }));
+['dragleave', 'drop'].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', (e) => handle(e.dataTransfer.files[0]));
+// 복사·붙여넣기 (Cmd+V) — 캡처 사진이나 파일 그대로
+window.addEventListener('paste', (e) => {
+  const cd = e.clipboardData;
+  if (!cd) return;
+  let f = [...(cd.files || [])][0];
+  if (!f) {
+    const it = [...(cd.items || [])].find((x) => x.kind === 'file');
+    if (it) f = it.getAsFile();
+  }
+  if (f) { e.preventDefault(); handle(f); }
+});
+
+async function handle(file) {
+  if (!file) return;
+  say('info', `${esc(file.name || '붙여넣은 이미지')} 읽는 중…`);
+  $('out').innerHTML = ''; docs = []; $('printAll').disabled = true;
+  try {
+    const isExcel = /\.(xlsx|xlsm|xls)$/i.test(file.name || '');
+    docs = isExcel ? SM.splitSheets(SM.parseSales(await SM.readSheets(file))) : await viaHelper(file);
+    render();
+  } catch (err) {
+    say('err', esc(err.message || err));
+  }
+}
+
+// 이미지·PDF 는 이 맥의 도우미(AI)가 읽어 준다 — 엑셀은 도우미 없이 브라우저에서 바로
+async function viaHelper(file) {
+  if (!helperUp) throw new Error('이미지·PDF는 이 맥의 도우미가 켜져 있어야 읽을 수 있어요. 엑셀 파일을 쓰시거나, 터미널에서 도우미를 켜 주세요.');
+  const b64 = await new Promise((ok) => { const rd = new FileReader(); rd.onload = () => ok(String(rd.result).split(',')[1] || ''); rd.readAsDataURL(file); });
+  const r = await fetch(HELPER + '/api/doc/read', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: file.name || 'capture.png', data: b64 }) });
+  const j = await r.json();
+  if (!j.ok) throw new Error(j.error || '도우미가 문서를 못 읽었어요.');
+  return SM.fromDoc(j.doc);
+}
+
+function render() {
+  if (!docs.length) { say('err', '만들 전표가 없어요.'); return; }
+  say('info', `거래명세표 <b>${docs.length}장</b>을 만들었어요. [열기]를 누르면 인쇄 창에서 PDF로 저장할 수 있어요.`);
+  $('printAll').disabled = false;
+  $('out').innerHTML = `<table><thead><tr><th>전표</th><th>거래처</th><th>품명</th><th class="n">수량</th><th class="n">합계(포함)</th><th class="c">인쇄</th></tr></thead><tbody>
+    ${docs.map((d, i) => `<tr><td>${esc(d.slip)}</td><td>${esc(d.partner)}</td><td>${esc(d.items.map((x) => x.name).join(' / '))}</td>
+      <td class="n">${d.items.reduce((a, x) => a + x.qty, 0).toLocaleString()}</td>
+      <td class="n">${d.items.reduce((a, x) => a + x.supply + x.vat, 0).toLocaleString()}</td>
+      <td class="c"><button class="btn ghost sm" data-i="${i}">열기</button></td></tr>`).join('')}</tbody></table>`;
+  $('out').querySelectorAll('button[data-i]').forEach((b) => b.onclick = () => SM.printSheets([docs[Number(b.dataset.i)]]));
+}
+</script>
+</body>
+</html>
