@@ -12,7 +12,9 @@
   body { margin:0; background:var(--bg); color:var(--tx); font-family:"Pretendard","Apple SD Gothic Neo",sans-serif; }
   header { background:#fff; border-bottom:1px solid var(--line); padding:18px 20px; display:flex; align-items:center; gap:12px }
   header h1 { margin:0; font-size:19px; font-weight:800; letter-spacing:-.3px }
-  header a { margin-left:auto; color:var(--dim); text-decoration:none; font-size:14px; font-weight:600 }
+  header a { color:var(--dim); text-decoration:none; font-size:14px; font-weight:600 }
+  header .link { margin-left:auto; margin-right:14px; background:none; border:0; font:inherit; font-size:14px; font-weight:600; color:var(--dim); cursor:pointer }
+  header .link.on { color:#1f8b4c }
   main { max-width:960px; margin:0 auto; padding:22px 16px 60px }
   .tabs { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:12px; margin-bottom:22px }
   .tab { background:var(--card); border:2px solid var(--line); border-radius:16px; padding:20px 14px 16px; cursor:pointer; text-align:center; font:inherit }
@@ -56,6 +58,7 @@
 <body>
 <header>
   <h1>서류 전환</h1>
+  <button class="link" id="drive">드라이브 연결</button>
   <a href="./">ERP로 →</a>
 </header>
 <main>
@@ -106,6 +109,20 @@ document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () 
 const say = (cls, html) => { $('msg').className = cls ? 'msg ' + cls : ''; $('msg').innerHTML = html; };
 $('pick').onclick = () => $('file').click();
 $('file').onchange = (e) => handle(e.target.files[0]);
+function drawDrive() {
+  const on = !!SM.driveUrl();
+  $('drive').textContent = on ? '드라이브 연결됨' : '드라이브 연결';
+  $('drive').classList.toggle('on', on);
+}
+$('drive').onclick = () => {
+  const now = SM.driveUrl();
+  const v = prompt('구글 드라이브 저장 창구 주소(웹 앱 URL)를 붙여넣으세요.\n비우고 확인하면 연결을 끕니다.\n\n만드는 법: script.google.com → 서류 저장 창구 → 배포 → 웹 앱 → URL 복사', now || '');
+  if (v === null) return;
+  SM.setDriveUrl(v);
+  drawDrive();
+  say('info', v ? '드라이브에 자동 저장합니다 — [PDF]·[이미지]를 누르면 거래처·날짜 폴더에 함께 쌓여요.' : '드라이브 자동 저장을 껐어요.');
+};
+drawDrive();
 $('printAll').onclick = () => docs.length && SM.printSheets(docs);
 $('imgAll').onclick = async () => {
   if (!docs.length) return;
@@ -174,7 +191,14 @@ function render() {
       <td class="n">${d.items.reduce((a, x) => a + x.qty, 0).toLocaleString()}</td>
       <td class="n">${d.items.reduce((a, x) => a + x.supply + x.vat, 0).toLocaleString()}</td>
       <td class="c"><button class="btn ghost sm" data-p="${i}">PDF</button> <button class="btn ghost sm" data-g="${i}">이미지</button></td></tr>`).join('')}</tbody></table>`;
-  $('out').querySelectorAll('button[data-p]').forEach((b) => b.onclick = () => SM.printSheets([docs[Number(b.dataset.p)]]));
+  $('out').querySelectorAll('button[data-p]').forEach((b) => b.onclick = async () => {
+    const d = docs[Number(b.dataset.p)];
+    SM.printSheets([d]);
+    if (SM.driveUrl()) {
+      try { const png = await SM.pngBlob(d); await SM.saveToDrive(d, png, '.png'); say('info', '드라이브에도 저장했어요.'); }
+      catch (e) { say('err', '드라이브 저장 실패: ' + esc(e.message || e)); }
+    }
+  });
   $('out').querySelectorAll('button[data-g]').forEach((b) => b.onclick = async () => {
     b.disabled = true; const old = b.textContent; b.textContent = '만드는 중…';
     try { await SM.saveImages([docs[Number(b.dataset.g)]]); } catch (e) { say('err', esc(e.message || e)); }

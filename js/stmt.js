@@ -343,7 +343,33 @@ export async function saveImages(docs, onStep) {
   for (let i = 0; i < docs.length; i++) {
     if (onStep) onStep(i + 1, docs.length);
     const blob = await renderImage(docs[i]);
-    if (blob) saveBlob(blob, sheetTitle(docs[i]) + '.png');
+    if (blob) {
+      saveBlob(blob, sheetTitle(docs[i]) + '.png');
+      try { await saveToDrive(docs[i], blob, '.png'); } catch (e) { if (onStep) onStep(`드라이브 저장 실패: ${e.message}`, 0); }
+    }
     await new Promise((r) => setTimeout(r, 250));   // 브라우저가 여러 장 내려받기를 막지 않게 사이를 둠
   }
+}
+
+// ── 구글 드라이브로 자동 저장 (Apps Script 저장 창구) ────────
+//    거래명세표/<거래처>/<연-월>/<월-일 (요일)>/ 에 쌓인다. 창구 주소는 브라우저에 기억시켜 둔다.
+const DRIVE_KEY = 'ht_drive_endpoint';
+export const driveUrl = () => { try { return localStorage.getItem(DRIVE_KEY) || ''; } catch (_) { return ''; } };
+export const setDriveUrl = (u) => { try { u ? localStorage.setItem(DRIVE_KEY, u.trim()) : localStorage.removeItem(DRIVE_KEY); } catch (_) {} };
+
+const toB64 = (blob) => new Promise((ok) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1] || ''); r.readAsDataURL(blob); });
+
+export async function saveToDrive(doc, blob, ext) {
+  const url = driveUrl();
+  if (!url) return null;
+  const body = { files: [{ partner: doc.partner, ymd: doc.ymd, name: sheetTitle(doc) + ext, mime: blob.type || 'application/octet-stream', data: await toB64(blob) }] };
+  const res = await fetch(url, { method: 'POST', body: JSON.stringify(body) });   // Apps Script 는 단순 요청만 받음
+  const j = await res.json().catch(() => ({ ok: false, error: '드라이브 응답을 읽지 못했어요.' }));
+  if (!j.ok) throw new Error(j.error || '드라이브 저장 실패');
+  return j.made;
+}
+
+// 이미지(PNG)를 만들어 드라이브에도 올린다 (창구 주소가 있을 때만)
+export async function pngBlob(doc) {
+  return renderImage(doc);
 }
