@@ -4,6 +4,7 @@
 import { LOGO, STAMP } from './stmt-assets.js';
 
 const XLSX_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+const H2C_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
 const PER_ITEM_PARTNERS = ['공간제작소'];          // 이 거래처만 품목마다 한 장, 나머지는 전표당 한 장
 const SUPPLIER = {
   name: '주식회사 홈트레이더스', ceo: '이 최 원', biz: '876-87-02032',
@@ -38,6 +39,16 @@ function loadXLSX() {
     });
   }
   return xlsxLoading;
+}
+
+function loadScript(src, has) {
+  if (has()) return Promise.resolve(has());
+  return new Promise((ok, no) => {
+    const el = document.createElement('script');
+    el.src = src; el.onload = () => ok(has());
+    el.onerror = () => no(new Error('필요한 도구를 못 받았어요 — 인터넷 연결을 확인하세요.'));
+    document.head.appendChild(el);
+  });
 }
 
 export async function readSheets(file) {
@@ -288,4 +299,39 @@ export function fromDoc(doc) {
   }).filter((it) => it.name && it.qty > 0 && it.supply > 0);
   if (!items.length) throw new Error('읽은 문서에서 품목·금액을 못 찾았어요 — 수량과 단가(또는 공급가액)가 보이는 사진인지 확인하세요.');
   return splitSheets([{ slip: `${ymd}-1`, ymd, partner: nfc(d.partner) || '거래처미상', items }]);
+}
+
+// ── 이미지(PNG)로 저장 — 카톡·문자로 바로 보내기 ────────────
+const A4_W = 794;                                   // A4 가로 210mm ≈ 794px (96dpi)
+
+async function renderImage(doc, scale = 2) {
+  const h2c = await loadScript(H2C_CDN, () => window.html2canvas);
+  const box = document.createElement('div');
+  box.setAttribute('style', `position:fixed;left:-10000px;top:0;width:${A4_W}px;background:#fff;z-index:-1`);
+  box.innerHTML = `<style>${PRINT_CSS.replace(/@media screen[\s\S]*?\}\s*\}/, '')}</style>${sheetHtml(doc)}`;
+  document.body.appendChild(box);
+  try {
+    await document.fonts.ready.catch(() => {});
+    const canvas = await h2c(box.querySelector('.sheet'), { scale, backgroundColor: '#ffffff', useCORS: true, logging: false });
+    return await new Promise((ok) => canvas.toBlob((b) => ok(b), 'image/png'));
+  } finally {
+    box.remove();
+  }
+}
+
+function saveBlob(blob, name) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+
+export async function saveImages(docs, onStep) {
+  for (let i = 0; i < docs.length; i++) {
+    if (onStep) onStep(i + 1, docs.length);
+    const blob = await renderImage(docs[i]);
+    if (blob) saveBlob(blob, sheetTitle(docs[i]) + '.png');
+    await new Promise((r) => setTimeout(r, 250));   // 브라우저가 여러 장 내려받기를 막지 않게 사이를 둠
+  }
 }
