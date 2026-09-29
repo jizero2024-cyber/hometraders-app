@@ -391,13 +391,17 @@ export function printSheets(docs, style) {
   w.document.close();
 }
 
-export const sheetTitle = (doc) => {
+export const sheetTitle = (doc, style) => {
   const short = (n) => {
     const m = /(\d+\*\d+\*\d+)/.exec(n.replace(/(\d),(?=\d{3})/g, '$1'));
     return m ? m[1].replace(/\*/g, 'x') : n.split('_').pop();
   };
   const slip = String(doc.slip || '').split('-')[1] || '1';          // 이카운트 전표번호 뒷자리 (20260721-1 → 1)
-  return `${doc.ymd.slice(2)}-${slip}_${key(doc.partner)}_${String(doc.seq).padStart(2, '0')}_${short(doc.items[0].name)}`;
+  const item = short(doc.items[0].name);
+  if (style === 'ace') {                                            // 에이스는 다른 회사 문서라 이름 규칙도 따로
+    return `제${doc.ymd.slice(2)}-${slip}호_${key(doc.partner)}_${item}_에이스`;
+  }
+  return `${doc.ymd.slice(2)}-${slip}_${key(doc.partner)}_${String(doc.seq).padStart(2, '0')}_${item}`;
 };
 
 // ── 도우미(AI)가 읽은 문서 → 전표 한 장 (캡처·PDF용) ────────
@@ -458,9 +462,9 @@ export async function saveImages(docs, onStep, style) {
     if (onStep) onStep(i + 1, docs.length);
     const blob = await renderImage(docs[i], 2, style);
     if (blob) {
-      saveBlob(blob, sheetTitle(docs[i]) + '.png');
+      saveBlob(blob, sheetTitle(docs[i], style) + '.png');
       try {
-        const got = await saveToDrive(docs[i], blob, '.png');
+        const got = await saveToDrive(docs[i], blob, '.png', style);
         if (got && onStep) onStep(`드라이브 저장됨 (${got[0] && got[0].folder || ''})`, i + 1);
       } catch (e) { if (onStep) onStep(`드라이브 저장 실패: ${e.message}`, 0); }
     }
@@ -484,10 +488,10 @@ export const setDriveUrl = (u) => { try { localStorage.setItem(DRIVE_KEY, (u || 
 
 const toB64 = (blob) => new Promise((ok) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1] || ''); r.readAsDataURL(blob); });
 
-export async function saveToDrive(doc, blob, ext) {
+export async function saveToDrive(doc, blob, ext, style) {
   const url = driveUrl();
   if (!url) return null;
-  const body = { files: [{ partner: doc.partner, ymd: doc.ymd, name: sheetTitle(doc) + ext, mime: blob.type || 'application/octet-stream', data: await toB64(blob) }] };
+  const body = { files: [{ partner: style === 'ace' ? '에이스목재산업' : doc.partner, ymd: doc.ymd, name: sheetTitle(doc, style) + ext, mime: blob.type || 'application/octet-stream', data: await toB64(blob) }] };
   const res = await fetch(url, { method: 'POST', body: JSON.stringify(body) });   // Apps Script 는 단순 요청만 받음
   const j = await res.json().catch(() => ({ ok: false, error: '드라이브 응답을 읽지 못했어요.' }));
   if (!j.ok) throw new Error(j.error || '드라이브 저장 실패');

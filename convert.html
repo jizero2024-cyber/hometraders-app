@@ -120,7 +120,7 @@
 </main>
 
 <script type="module">
-import * as SM from './js/stmt.js?v=77';
+import * as SM from './js/stmt.js?v=78';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -200,7 +200,7 @@ function setupPanel(cfg) {
       const d = docs[Number(b.dataset.p)];
       SM.printSheets([d], cfg.style);
       if (SM.driveUrl()) {
-        try { const png = await SM.pngBlob(d, cfg.style); await SM.saveToDrive(d, png, '.png'); say2('info', '드라이브에도 저장했어요.'); }
+        try { const png = await SM.pngBlob(d, cfg.style); await SM.saveToDrive(d, png, '.png', cfg.style); say2('info', '드라이브에도 저장했어요.'); }
         catch (e) { say2('err', '드라이브 저장 실패: ' + esc(e.message || e)); }
       }
     });
