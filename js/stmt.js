@@ -290,7 +290,7 @@ function aceHtml(doc) {
     <table class="foot2"><colgroup><col style="width:18%"><col></colgroup>
       <tr><td class="lb">납기 / 납품일</td><td>${d.getMonth() + 1}월 ${d.getDate()}일</td></tr>
       <tr><td class="lb">입금계좌</td><td>${ACE.bank}</td></tr>
-      <tr><td class="lb">특기사항</td><td></td></tr></table>
+</table>
   </section>`;
 }
 
