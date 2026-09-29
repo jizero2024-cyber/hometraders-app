@@ -15,9 +15,11 @@
   header a { margin-left:auto; color:var(--dim); text-decoration:none; font-size:14px; font-weight:600 }
   main { max-width:960px; margin:0 auto; padding:22px 16px 60px }
   .tabs { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:12px; margin-bottom:22px }
-  .tab { background:var(--card); border:2px solid var(--line); border-radius:16px; padding:18px 16px; cursor:pointer; text-align:left; font:inherit }
-  .tab b { display:block; font-size:16px; font-weight:800; margin-bottom:5px }
-  .tab span { font-size:13px; color:var(--dim); line-height:1.45 }
+  .tab { background:var(--card); border:2px solid var(--line); border-radius:16px; padding:20px 14px 16px; cursor:pointer; text-align:center; font:inherit }
+  .tab .ico { width:52px; height:52px; border-radius:50%; object-fit:contain; display:block; margin:0 auto 10px }
+  .tab .ico.ph { background:#f1f3f5; color:#9aa0a6; font-size:19px; font-weight:800; display:grid; place-items:center }
+  .tab b { display:block; font-size:16px; font-weight:800; margin-bottom:4px }
+  .tab span { font-size:12.5px; color:var(--dim); line-height:1.45 }
   .tab.on { border-color:var(--on); background:#fffaf0 }
   .tab.soon { opacity:.55 }
   .drop { background:var(--card); border:2px dashed #cfd4da; border-radius:18px; padding:46px 20px; text-align:center; transition:.15s }
@@ -43,6 +45,7 @@
   td.n, th.n { text-align:right } td.c, th.c { text-align:center }
   tr:last-child td { border-bottom:0 }
   .sm { padding:7px 14px; font-size:13px; border-radius:9px }
+  .note { margin:22px 0 0; padding:13px 16px; background:#fffaf0; border:1px solid #f4e3c3; border-radius:12px; font-size:13.5px; color:#7a5b21 }
   .how { counter-reset:s; list-style:none; margin:18px 0 0; padding:0; display:grid; gap:8px }
   .how li { counter-increment:s; background:#fff; border:1px solid var(--line); border-radius:12px; padding:12px 14px 12px 44px; position:relative; font-size:14px; color:#333 }
   .how li::before { content:counter(s); position:absolute; left:14px; top:11px; width:20px; height:20px; border-radius:50%; background:var(--on); color:#fff; font-size:12px; font-weight:800; display:grid; place-items:center }
@@ -57,10 +60,10 @@
 </header>
 <main>
   <div class="tabs">
-    <button class="tab on" data-kind="stmt"><b>거래명세표 전환</b><span><b>공간제작소용</b> · 품목 1개당 1장씩 발행됩니다<br>이카운트 <b>판매 엑셀</b>을 넣으세요</span></button>
-    <button class="tab soon" data-kind="deliv"><b>납품확인서 전환</b><span>인슐레이션·방수시트·타이벡 납품확인서</span></button>
-    <button class="tab soon" data-kind="quote"><b>견적서 전환</b><span>품목·단가 → 홈트 견적서 양식</span></button>
-    <button class="tab soon" data-kind="ace"><b>에이스명세표 전환</b><span>에이스목재 양식으로 변환</span></button>
+    <button class="tab on" data-kind="stmt"><img class="ico" src="./icons/partner-gongan.png" alt=""><b>거래명세표 변환</b><span>공간제작소</span></button>
+    <button class="tab soon" data-kind="deliv"><div class="ico ph">납</div><b>납품확인서 변환</b><span>인슐레이션·방수시트·타이벡</span></button>
+    <button class="tab soon" data-kind="quote"><div class="ico ph">견</div><b>견적서 변환</b><span>품목·단가 → 홈트 견적서</span></button>
+    <button class="tab soon" data-kind="ace"><div class="ico ph">에</div><b>에이스명세표 변환</b><span>에이스목재 양식</span></button>
   </div>
 
   <div id="drop" class="drop">
@@ -77,6 +80,7 @@
     <input type="file" id="file" accept=".xlsx,.xlsm,.xls,image/*,.pdf" hidden>
   </div>
 
+  <p class="note">공간제작소 거래명세표는 <b>품목 1개당 1장씩</b> 발행됩니다. 다른 거래처는 전표 1건당 1장이에요.</p>
   <ol class="how">
     <li>이카운트에서 <b>판매 자료</b>를 <b>엑셀(.xlsx)</b>로 내려받기</li>
     <li>그 <b>엑셀 파일</b>을 위 칸에 끌어다 놓기 (또는 [파일 선택])</li>
