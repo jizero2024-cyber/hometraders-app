@@ -346,7 +346,10 @@ export async function saveImages(docs, onStep) {
     const blob = await renderImage(docs[i]);
     if (blob) {
       saveBlob(blob, sheetTitle(docs[i]) + '.png');
-      try { await saveToDrive(docs[i], blob, '.png'); } catch (e) { if (onStep) onStep(`드라이브 저장 실패: ${e.message}`, 0); }
+      try {
+        const got = await saveToDrive(docs[i], blob, '.png');
+        if (got && onStep) onStep(`드라이브 저장됨 (${got[0] && got[0].folder || ''})`, i + 1);
+      } catch (e) { if (onStep) onStep(`드라이브 저장 실패: ${e.message}`, 0); }
     }
     await new Promise((r) => setTimeout(r, 250));   // 브라우저가 여러 장 내려받기를 막지 않게 사이를 둠
   }
@@ -359,12 +362,12 @@ const DRIVE_KEY = 'ht_drive_endpoint';
 const DRIVE_DEFAULT = 'https://script.google.com/macros/s/AKfycbwO58PSbjeCicjpPa6ms7SyjAoKbQBMkWCASnIMY67Nq0HtYRjvpjN2TFQyJUzbWSlP/exec';
 export const driveUrl = () => {
   try {
-    const v = localStorage.getItem(DRIVE_KEY);
-    if (v === '') return '';                       // 사용자가 일부러 끈 경우
-    return v || DRIVE_DEFAULT;
+    const v = (localStorage.getItem(DRIVE_KEY) || '').trim();
+    if (v === 'off') return '';                    // 일부러 끈 경우만 저장 안 함
+    return /^https?:/.test(v) ? v : DRIVE_DEFAULT; // 빈 값·이상한 값이면 기본 주소로
   } catch (_) { return DRIVE_DEFAULT; }
 };
-export const setDriveUrl = (u) => { try { localStorage.setItem(DRIVE_KEY, (u || '').trim()); } catch (_) {} };
+export const setDriveUrl = (u) => { try { localStorage.setItem(DRIVE_KEY, (u || '').trim() || 'off'); } catch (_) {} };
 
 const toB64 = (blob) => new Promise((ok) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1] || ''); r.readAsDataURL(blob); });
 
