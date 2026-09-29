@@ -243,7 +243,7 @@ export function wonHangul(n) {
 const ITEM_ROWS = 5;
 // ── 에이스목재산업 양식 (에이스 → 거래처) ─────────────────
 const CLIENTS = {                                   // 받는 곳 정보 (알고 있는 거래처)
-  공간제작소: { ceo: '곽동욱', biz: '812-88-00492', addr: '경기도 화성시 우정읍 매향리 2-22' },
+  공간제작소: { ceo: '박정진', biz: '812-88-00492', addr: '경기도 화성시 우정읍 매향리 2-22', mail: 'gg-arch@naver.com' },
 };
 
 const ACE = {
@@ -275,11 +275,11 @@ function aceHtml(doc) {
       <tr><td class="lb">대표자</td><td>${esc2(cl.ceo || '')}</td><td class="lb">대표자</td><td>${ACE.ceo}</td></tr>
       <tr><td class="lb">사업자등록번호</td><td>${esc2(cl.biz || '')}</td><td class="lb">사업자등록번호</td><td>${ACE.biz}</td></tr>
       <tr><td class="lb">주소</td><td>${esc2(cl.addr || '')}</td><td class="lb">소재지</td><td>${ACE.addr}</td></tr>
-      <tr><td class="lb"></td><td></td><td class="lb">이메일</td><td>${ACE.mail}</td></tr>
+      <tr><td class="lb">이메일</td><td>${esc2(cl.mail || '')}</td><td class="lb">이메일</td><td>${ACE.mail}</td></tr>
     </table>
     <p class="say">아래와 같이 납품하였음을 확인합니다.</p>
     <table class="total"><colgroup><col style="width:52%"><col></colgroup>
-      <tr><td class="hd">합계금액 (공급가액 + 세액)</td><td class="hd sum">일금　${won(supply + vat)}　원정</td></tr></table>
+      <tr><td class="hd">합계금액 (공급가액 + 세액)</td><td class="hd sum">${won(supply + vat)}원</td></tr></table>
     <table class="items ace">
       <colgroup><col style="width:5%"><col style="width:22%"><col style="width:14%"><col style="width:10%"><col style="width:9%"><col style="width:11%"><col style="width:15%"><col style="width:14%"></colgroup>
       <thead><tr><th>NO</th><th>품　명</th><th>규　격</th><th>B/D</th><th>수량</th><th>단가</th><th>공급가액</th><th>세액</th></tr></thead>
