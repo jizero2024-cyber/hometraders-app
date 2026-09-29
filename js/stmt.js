@@ -249,12 +249,12 @@ const PRINT_CSS = `
   .head{display:flex;justify-content:space-between;margin:10mm 0 6mm}
   .to b{font-size:13pt} .to span{display:block;font-size:8.5pt;color:#555;margin:2px 0 6mm}
   .to .no{font-size:8pt;line-height:1.6} .to .ask{margin-top:8mm;font-size:8.5pt}
-  .from{position:relative;text-align:right}
-  .from .cname{font-size:13pt;font-weight:800;display:block;margin-bottom:6px}
-  .from table{border-collapse:collapse;font-size:8pt;margin-left:auto;table-layout:fixed;width:300px}
+  .from{position:relative;width:300px;margin-left:auto;text-align:left}
+  .from .cname{font-size:13pt;font-weight:800;display:block;margin-bottom:6px;text-align:left}
+  .from table{border-collapse:collapse;font-size:8pt;table-layout:fixed;width:100%}
   .from th{text-align:left;color:#555;font-weight:500;padding:1.5px 0;white-space:nowrap}
   .from td{text-align:left;padding:1.5px 0;white-space:nowrap;font-weight:400}
-  .stamp{position:absolute;right:150px;top:8px;width:48px;height:48px;opacity:.8;z-index:2}
+  .stamp{position:absolute;left:96px;top:4px;width:48px;height:48px;opacity:.8;z-index:2}
   .sum{display:flex;border:1px solid #ddd} .sum .lb{background:#F0B346;color:#fff;font-weight:700;text-align:center;padding:5px 0;width:42%}
   .sum .val{flex:1;text-align:center;padding:5px 0;font-size:11pt}
   .hangul{text-align:center;font-size:9pt;margin:3px 0 5px}
