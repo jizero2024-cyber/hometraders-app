@@ -80,7 +80,7 @@
     <div class="dz-ico">＋</div>
     <b>엑셀 파일을 여기에 끌어다 놓으세요</b>
     <p class="dz-sub">이카운트에서 내려받은 <em>판매 엑셀 (.xlsx)</em></p>
-    <div class="dz-tags"><span>판매현황내역 엑셀</span><span>거래처원장 엑셀</span><span>거래명세서 엑셀</span></div>
+    <div class="dz-tags"><span>판매전표 엑셀</span><span>판매현황내역 엑셀</span><span>거래처원장 엑셀</span><span>거래명세서 엑셀</span></div>
     <div class="row" style="justify-content:center">
       <button class="btn" id="pick">파일 선택</button>
       <button class="btn ghost" id="printAll" disabled>전부 인쇄 · PDF</button>
@@ -90,7 +90,7 @@
     <input type="file" id="file" accept=".xlsx,.xlsm,.xls,image/*" hidden>
   </div>
 
-  <p class="note">공간제작소는 <b>품목 1개당 1장</b>, 뉴하우징홈은 <b>현장별로 1장</b>, 그 밖의 거래처는 <b>전표 1건당 1장</b>으로 나옵니다.</p>
+  <p class="note">공간제작소는 <b>품목 1개당 1장</b>, 뉴하우징홈은 <b>현장별로 1장</b>(판매전표 <b>규격</b> 칸에 적은 현장명 기준), 그 밖의 거래처는 <b>전표 1건당 1장</b>으로 나옵니다.</p>
   <ol class="how">
     <li>이카운트에서 <b>판매 자료</b>를 <b>엑셀(.xlsx)</b>로 내려받기</li>
     <li>그 <b>엑셀 파일</b>을 위 칸에 끌어다 놓기 (또는 [파일 선택])</li>
@@ -120,7 +120,7 @@
 </main>
 
 <script type="module">
-import * as SM from './js/stmt.js?v=81';
+import * as SM from './js/stmt.js?v=82';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
