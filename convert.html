@@ -121,11 +121,11 @@ function drawDrive() {
 }
 $('drive').onclick = () => {
   const now = SM.driveUrl();
-  const v = prompt('구글 드라이브 저장 창구 주소(웹 앱 URL)를 붙여넣으세요.\n비우고 확인하면 연결을 끕니다.\n\n만드는 법: script.google.com → 서류 저장 창구 → 배포 → 웹 앱 → URL 복사', now || '');
+  const v = prompt('구글 드라이브 저장 창구 주소입니다. 보통 그대로 두시면 됩니다.\n비우고 [확인]을 누르면 자동 저장을 끕니다.', now || '');
   if (v === null) return;
   SM.setDriveUrl(v);
   drawDrive();
-  say('info', v ? '드라이브에 자동 저장합니다 — [PDF]·[이미지]를 누르면 거래처·날짜 폴더에 함께 쌓여요.' : '드라이브 자동 저장을 껐어요.');
+  say('info', v ? '드라이브에 자동 저장합니다 — [PDF]·[이미지]를 누르면 명세표/거래처/월 폴더에 함께 쌓여요.' : '드라이브 자동 저장을 껐어요.');
 };
 drawDrive();
 $('printAll').onclick = () => docs.length && SM.printSheets(docs);

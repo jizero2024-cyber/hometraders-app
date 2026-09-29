@@ -355,8 +355,16 @@ export async function saveImages(docs, onStep) {
 // ── 구글 드라이브로 자동 저장 (Apps Script 저장 창구) ────────
 //    거래명세표/<거래처>/<연-월>/<월-일 (요일)>/ 에 쌓인다. 창구 주소는 브라우저에 기억시켜 둔다.
 const DRIVE_KEY = 'ht_drive_endpoint';
-export const driveUrl = () => { try { return localStorage.getItem(DRIVE_KEY) || ''; } catch (_) { return ''; } };
-export const setDriveUrl = (u) => { try { u ? localStorage.setItem(DRIVE_KEY, u.trim()) : localStorage.removeItem(DRIVE_KEY); } catch (_) {} };
+// 기본 저장 창구 (배포된 Apps Script 웹 앱) — 설정 없이도 바로 저장된다. [드라이브 연결]로 바꾸거나 끌 수 있음
+const DRIVE_DEFAULT = 'https://script.google.com/macros/s/AKfycbwO58PSbjeCicjpPa6ms7SyjAoKbQBMkWCASnIMY67Nq0HtYRjvpjN2TFQyJUzbWSlP/exec';
+export const driveUrl = () => {
+  try {
+    const v = localStorage.getItem(DRIVE_KEY);
+    if (v === '') return '';                       // 사용자가 일부러 끈 경우
+    return v || DRIVE_DEFAULT;
+  } catch (_) { return DRIVE_DEFAULT; }
+};
+export const setDriveUrl = (u) => { try { localStorage.setItem(DRIVE_KEY, (u || '').trim()); } catch (_) {} };
 
 const toB64 = (blob) => new Promise((ok) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1] || ''); r.readAsDataURL(blob); });
 
