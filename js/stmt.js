@@ -142,12 +142,23 @@ function parseAceLedger(rows) {
     const memo = nfc(r && r[cN]);
     const amount = num(r && r[cS]);
     if (!memo || !amount) return;
-    const im = /^(.*?)\s*\/\s*([\d,]+)\s*\*\s*([\d,.]+)\s*$/.exec(memo);   // 품명 / 수량 * 단가
-    const name = stripTag(im ? im[1] : memo);
+    const im = /^(.*?)\s*\/\s*([\d,]+)\s*\*\s*([\d,.]+)\s*$/.exec(memo);   // 품명 / 수량 * 단가(부가세 별도)
+    const head = im ? im[1] : memo;
+    const name = stripTag(head);
     const qty = im ? num(im[2]) : null;
-    const supply = Math.round(amount / 1.1);
+    const price = im ? num(im[3]) : null;
     if (!name) return;
-    cur.items.push({ date: cur.date, name, qty: qty || 1, supply, vat: amount - supply });
+    // 규격·B/D 는 품명 뒤 대괄호에서 (예: [6PT/12T 4*8] → B/D 6PT · 규격 12T 4*8). [0826/공간제작소] 같은 현장 태그는 무시
+    let spec = '', bd = '';
+    const tag = /\[([^\]]*)\]\s*$/.exec(nfc(head));
+    if (tag && !/^\d{4}\//.test(tag[1])) {
+      const parts = tag[1].split('/').map((x) => x.trim()).filter(Boolean);
+      if (parts.length > 1) { bd = parts[0]; spec = parts.slice(1).join(' '); } else { spec = parts[0] || ''; }
+    }
+    // 금액은 수량 × 단가 (세금계산서와 같게). 단가가 없으면 원장 금액에서 역산
+    const supply = qty && price ? Math.round(qty * price) : Math.round(amount / 1.1);
+    const vat = Math.round(supply * 0.1);
+    cur.items.push({ date: cur.date, name, qty: qty || 1, supply, vat, spec, bd });
   });
   return out.filter((v) => v.items.length).length ? out.filter((v) => v.items.length) : null;
 }
@@ -261,7 +272,7 @@ function aceHtml(doc) {
   const cl = CLIENTS[ck] || {};
   const rows = doc.items.map((it, i) => `<tr>
       <td class="c">${i + 1}</td><td class="nm">${esc2(it.name).replace(/([_*(])/g, '$1&#8203;')}</td>
-      <td class="c">${esc2(it.spec || '')}</td><td class="c">${esc2(it.unit || '')}</td>
+      <td class="c">${esc2(it.spec || '')}</td><td class="c">${esc2(it.bd || '')}</td>
       <td class="n">${won(it.qty)}</td><td class="n">${won(it.supply / it.qty)}</td>
       <td class="n">${won(it.supply)}</td><td class="n">${won(it.vat)}</td></tr>`).join('')
     + ('<tr>' + '<td></td>'.repeat(8) + '</tr>').repeat(Math.max(0, 11 - doc.items.length));
