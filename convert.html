@@ -54,6 +54,10 @@
   td { padding:11px 12px; border-bottom:1px solid #f1f2f4 }
   td.n, th.n { text-align:right } td.c, th.c { text-align:center }
   tr:last-child td { border-bottom:0 }
+  input.site { width:100%; min-width:130px; box-sizing:border-box; border:1px solid var(--line); border-radius:8px;
+    padding:6px 9px; font:inherit; font-size:13px; background:#fff; color:var(--tx) }
+  input.site:focus { outline:none; border-color:var(--on); background:#fffdf7 }
+  input.site::placeholder { color:#b6bcc4 }
   .sm { padding:7px 14px; font-size:13px; border-radius:9px }
   .note { margin:22px 0 0; padding:13px 16px; background:#fffaf0; border:1px solid #f4e3c3; border-radius:12px; font-size:13.5px; color:#7a5b21 }
   .how { counter-reset:s; list-style:none; margin:18px 0 0; padding:0; display:grid; gap:8px }
@@ -94,7 +98,7 @@
     <input type="file" id="file" accept=".xlsx,.xlsm,.xls,image/*" hidden>
   </div>
 
-  <p class="note">공간제작소는 <b>품목 1개당 1장</b>, 뉴하우징홈은 <b>현장별로 1장</b>(판매전표 <b>규격</b> 칸에 적은 현장명 기준), 그 밖의 거래처는 <b>전표 1건당 1장</b>으로 나옵니다.</p>
+  <p class="note">공간제작소는 <b>품목 1개당 1장</b>, 뉴하우징홈은 <b>현장별로 1장</b>(판매전표 <b>규격</b> 칸에 적은 현장명 기준), 그 밖의 거래처는 <b>전표 1건당 1장</b>으로 나옵니다.<br>현장명이 비어 있으면 아래 표의 <b>현장명</b> 칸에 직접 적으면 됩니다.</p>
   <ol class="how">
     <li>이카운트에서 <b>판매 자료</b>를 <b>엑셀(.xlsx)</b>로 내려받기</li>
     <li>그 <b>엑셀 파일</b>을 위 칸에 끌어다 놓기 (또는 [파일 선택])</li>
@@ -187,13 +191,19 @@ function setupPanel(cfg) {
 
   function render() {
     if (!docs.length) { say2('err', '만들 전표가 없어요.'); return; }
-    say2('info', `${cfg.title} <b>${docs.length}장</b>을 만들었어요. [PDF] 또는 [이미지]로 저장하세요.`);
+    const site = !!cfg.siteCol;                   // 현장명 직접 적는 칸
+    const blank = site ? docs.filter((d) => !d.site).length : 0;
+    say2('info', `${cfg.title} <b>${docs.length}장</b>을 만들었어요. [PDF] 또는 [이미지]로 저장하세요.`
+      + (blank ? ` 현장명이 없는 <b>${blank}장</b>은 아래 <b>현장명</b> 칸에 직접 적으면 명세서와 파일 이름에 들어갑니다.` : ''));
     $$(cfg.printAll).disabled = false; $$(cfg.imgAll).disabled = false;
-    $$(cfg.out).innerHTML = `<table><thead><tr><th>전표</th><th>거래처</th><th>품명</th><th class="n">수량</th><th class="n">합계(포함)</th><th class="c">받기</th></tr></thead><tbody>
-      ${docs.map((d, i) => `<tr><td>${esc(d.slip)}</td><td>${esc(d.partner)}</td><td>${esc(d.items.map((x) => x.name).join(' / '))}</td>
+    $$(cfg.out).innerHTML = `<table><thead><tr><th>전표</th><th>거래처</th>${site ? '<th>현장명</th>' : ''}<th>품명</th><th class="n">수량</th><th class="n">합계(포함)</th><th class="c">받기</th></tr></thead><tbody>
+      ${docs.map((d, i) => `<tr><td>${esc(d.slip)}</td><td>${esc(d.partner)}</td>${site ? `<td><input class="site" data-s="${i}" value="${esc(d.site || '')}" placeholder="현장명 적기"></td>` : ''}<td>${esc(d.items.map((x) => x.name).join(' / '))}</td>
         <td class="n">${d.items.reduce((a, x) => a + x.qty, 0).toLocaleString()}</td>
         <td class="n">${d.items.reduce((a, x) => a + x.supply + x.vat, 0).toLocaleString()}</td>
         <td class="c"><button class="btn ghost sm" data-p="${i}">PDF</button> <button class="btn ghost sm" data-g="${i}">이미지</button></td></tr>`).join('')}</tbody></table>`;
+    $$(cfg.out).querySelectorAll('input.site').forEach((el) => {
+      el.oninput = () => { docs[Number(el.dataset.s)].site = el.value.trim(); };   // 적는 즉시 반영 (다시 그리지 않아 커서가 안 튄다)
+    });
     $$(cfg.out).querySelectorAll('button[data-p]').forEach((b) => b.onclick = async () => {
       const d = docs[Number(b.dataset.p)];
       SM.printSheets([d], cfg.style);
@@ -210,7 +220,7 @@ function setupPanel(cfg) {
   }
 }
 
-setupPanel({ style: 'homt', title: '거래명세표', drop: 'drop', pick: 'pick', file: 'file', printAll: 'printAll', imgAll: 'imgAll', msg: 'msg', out: 'out' });
+setupPanel({ style: 'homt', title: '거래명세표', drop: 'drop', pick: 'pick', file: 'file', printAll: 'printAll', imgAll: 'imgAll', msg: 'msg', out: 'out', siteCol: true });
 setupPanel({ style: 'ace', title: '에이스 거래명세서', drop: 'adrop', pick: 'apick', file: 'afile', printAll: 'aprintAll', imgAll: 'aimgAll', msg: 'amsg', out: 'aout' });
 
 // 붙여넣기 — 지금 보이는 칸으로
