@@ -376,7 +376,7 @@ function sheetHtml(doc) {
   return `<section class="sheet">
     <div class="ttl">거 래 명 세 서</div>
     <div class="head">
-      <div class="to"><b>${esc2(doc.partner)} 貴下</b><span class="${doc.site ? 'site' : ''}">${esc2(doc.site ? '현장 : ' + doc.site : place)}</span>
+      <div class="to"><b>${esc2(doc.partner)} 貴下</b><span class="${doc.site ? 'site' : ''}">${esc2(doc.site ? '현장명 : ' + doc.site : place)}</span>
         <div class="no">발행번호 : ${doc.ymd}${String(doc.seq).padStart(4, '0')}<br>발행일자 : ${sd.getFullYear()}년 ${sd.getMonth() + 1}월 ${sd.getDate()}일</div>
         <div class="ask">아래와 같이 대금 지급을 요청드립니다.</div></div>
       <div class="from"><b class="cname">${SUPPLIER.name}</b><img class="stamp" src="${STAMP}" alt="">
