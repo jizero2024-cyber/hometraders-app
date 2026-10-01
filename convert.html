@@ -89,7 +89,7 @@
     <div class="dz-ico">＋</div>
     <b>엑셀 파일을 여기에 끌어다 놓으세요</b>
     <p class="dz-sub">이카운트에서 내려받은 <em>판매 엑셀 (.xlsx)</em></p>
-    <div class="dz-tags"><span>판매전표 엑셀</span><span>판매현황내역 엑셀</span><span>거래처원장 엑셀</span><span>거래명세서 엑셀</span></div>
+    <div class="dz-tags"><span>판매전표 엑셀</span><span>판매현황내역 엑셀</span><span>거래처원장 엑셀</span><span>거래명세서 엑셀</span><span>견적서 엑셀</span></div>
     <div class="row" style="justify-content:center">
       <button class="btn" id="pick">파일 선택</button>
       <button class="btn ghost" id="printAll" disabled>전부 인쇄 · PDF</button>
@@ -148,7 +148,7 @@
 </main>
 
 <script type="module">
-import * as SM from './js/stmt.js?v=90';
+import * as SM from './js/stmt.js?v=91';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));

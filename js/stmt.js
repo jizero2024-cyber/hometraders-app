@@ -240,6 +240,62 @@ function dropCancelled(vs) {                        // 취소(마이너스) 전�
 }
 
 
+// 견적서 엑셀 (우리가 만든 견적서 양식 — 파란 양식 포함) → 주황 홈트 명세표로
+//   머리줄: 순번 | 품명 | 규격 | 단위 | 수량 | 단가 | 합계(공급가액) | 부가세 | 총합계
+function parseQuote(rows) {
+  const flat = rows.map((r) => (r || []).map((c) => nfc(c)));
+  const hi = flat.findIndex((r) => r.some((c) => /^(순번|No)$/i.test(c)) && r.some((c) => c.replace(/\s/g, '') === '품명')
+    && r.some((c) => c.replace(/\s/g, '') === '수량'));
+  if (hi < 0) return null;
+  const H = flat[hi].map((c) => c.replace(/\s/g, ''));
+  const col = (re) => H.findIndex((h) => re.test(h));
+  const cN = col(/^품명$/), cSp = col(/^규격/), cU = col(/^단위/), cQ = col(/^수량/),
+        cPr = col(/^단가/), cS = col(/^(합계\(부가세별도\)|공급가액|합계)/), cV = col(/^부가세/);
+  if (cN < 0 || cQ < 0) return null;
+
+  const all = flat.flat();
+  const partner = (() => {                       // '○○○ 貴下' 줄에서 받는 곳
+    for (const r of flat) for (const c of r) {
+      const m = /^(.+?)\s*貴\s*[下中]$/.exec(c);
+      if (m) { const t = m[1].replace(/\s*(님|귀하)\s*$/, '').trim(); if (t) return t; }
+    }
+    return '';
+  })();
+  const after = (label) => {                     // '발행일자' 처럼 이름표 오른쪽의 첫 값
+    for (const r of flat) {
+      const i = r.findIndex((c) => c.replace(/\s/g, '').startsWith(label));
+      if (i >= 0) {
+        const rest = r.slice(i).join(' ').replace(/^[^:：]*[:：]/, '');
+        const v = nfc(rest) || nfc(r.slice(i + 1).find((c) => c) || '');
+        if (v) return v;
+      }
+    }
+    return '';
+  };
+  const site = after('건축주명').replace(/^[:：]\s*/, '').trim();
+  let date = null;
+  const dm = /(20\d\d)\D{1,3}(\d{1,2})\D{1,3}(\d{1,2})/.exec(after('발행일자') || all.find((c) => /20\d\d\D{1,3}\d{1,2}\D{1,3}\d{1,2}/.test(c)) || '');
+  if (dm) date = new Date(+dm[1], +dm[2] - 1, +dm[3]);
+  if (!date) date = new Date();
+  const ymd = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
+
+  const items = [];
+  flat.slice(hi + 1).forEach((r) => {
+    const name = nfc(r[cN]);
+    if (!name || /^(합\s*계|소\s*계|비\s*고)/.test(name)) return;
+    const qty = num(r[cQ]);
+    if (!qty) return;
+    const price = cPr >= 0 ? num(r[cPr]) : null;
+    const raw = (cS >= 0 ? num(r[cS]) : null) ?? (price ? qty * price : null);
+    if (raw == null || raw === 0) return;
+    const supply = Math.round(raw);                 // 견적서는 원 단위 소수가 섞여 있어 반올림
+    items.push({ date, name, spec: cSp >= 0 ? nfc(r[cSp]) : '', unit: cU >= 0 ? nfc(r[cU]) : '',
+      tag: '', site: '', qty, supply, vat: Math.round((cV >= 0 ? num(r[cV]) : 0) || supply * 0.1) });
+  });
+  if (!items.length) return null;
+  return [{ slip: `${ymd}-1`, ymd, partner: partner || '거래처미상', items, site }];
+}
+
 export function parseSales(sheets) {
   let got = [];
   sheets.forEach((rows) => { const r = parseEntry(rows); if (r) got = got.concat(r); });
@@ -251,6 +307,8 @@ export function parseSales(sheets) {
   sheets.forEach((rows) => { const r = parseLedger(rows); if (r) got = got.concat(r); });
   if (got.length) return dropCancelled(got);
   sheets.forEach((rows) => { got = got.concat(parseVouchers(rows)); });
+  if (got.length) return dropCancelled(got);
+  sheets.forEach((rows) => { const r = parseQuote(rows); if (r) got = got.concat(r); });   // 우리 견적서 엑셀
   if (!got.length) throw new Error('전표를 못 찾았어요 — 이카운트 판매전표·구매전표·판매현황내역·거래처원장·거래명세서 엑셀인지 확인하세요.');
   return dropCancelled(got);
 }
@@ -288,7 +346,7 @@ export function splitSheets(vouchers, opt) {
       if (!g.items.length) return;
       const k = `${v.ymd}|${v.partner}`;
       seq[k] = (seq[k] || 0) + 1;
-      out.push({ slip: v.slip, ymd: v.ymd, partner: v.partner, seq: seq[k], items: g.items, site: g.site || '' });
+      out.push({ slip: v.slip, ymd: v.ymd, partner: v.partner, seq: seq[k], items: g.items, site: g.site || v.site || '' });
     });
   });
   return out;
