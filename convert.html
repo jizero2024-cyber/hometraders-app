@@ -80,6 +80,7 @@
     <button class="tab on" data-kind="stmt"><img class="ico pic" src="./icons/calc.png" alt=""><b>거래명세표 변환</b><span class="sub">모든 거래처</span></button>
     <button class="tab soon" data-kind="deliv" disabled><span class="tag-soon">준비중</span><div class="ico ph">납</div><b>납품확인서 변환</b><span class="sub">인슐레이션·방수시트·타이벡</span></button>
     <button class="tab soon" data-kind="quote" disabled><span class="tag-soon">준비중</span><div class="ico ph">견</div><b>견적서 변환</b><span class="sub">품목·단가 → 홈트 견적서</span></button>
+    <button class="tab" data-kind="buy"><div class="ico ph">구</div><b>구매명세표 변환</b><span class="sub">매입(구매전표) → 구매명세서</span></button>
     <button class="tab" data-kind="ace"><div class="ico ph">에</div><b>에이스명세표 변환</b><span>에이스목재산업 이름으로</span></button>
   </div>
 
@@ -108,6 +109,25 @@
   <div id="out"></div>
   </div>
 
+  <div id="buypane" class="pane hide">
+    <div id="bdrop" class="drop">
+      <div class="dz-ico">＋</div>
+      <b>엑셀 파일을 여기에 끌어다 놓으세요</b>
+      <p class="dz-sub">이카운트에서 내려받은 <em>구매 엑셀 (.xlsx)</em></p>
+      <div class="dz-tags"><span>구매전표 엑셀</span><span>구매현황내역 엑셀</span><span>거래처원장 엑셀</span></div>
+      <div class="row" style="justify-content:center">
+        <button class="btn" id="bpick">파일 선택</button>
+        <button class="btn ghost" id="bprintAll" disabled>전부 인쇄 · PDF</button>
+        <button class="btn ghost" id="bimgAll" disabled>전부 이미지 저장</button>
+      </div>
+      <input type="file" id="bfile" accept=".xlsx,.xlsm,.xls" hidden>
+    </div>
+    <p class="note">우리가 <b>사들인 내역</b>을 정리한 <b>구매명세서</b>로 나옵니다.<br>
+      받는 곳은 물건을 준 <b>거래처</b>, 발행은 <b>주식회사 홈트레이더스</b> 이름으로 찍히고, 우리 계좌(결제정보)는 들어가지 않습니다.</p>
+    <div id="bmsg"></div>
+    <div id="bout"></div>
+  </div>
+
   <div id="acepane" class="pane hide">
     <div id="adrop" class="drop">
       <div class="dz-ico">＋</div>
@@ -128,7 +148,7 @@
 </main>
 
 <script type="module">
-import * as SM from './js/stmt.js?v=88';
+import * as SM from './js/stmt.js?v=90';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -142,11 +162,12 @@ document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () 
 }));
 function show(kind) {
   document.getElementById('homtpane').classList.toggle('hide', kind !== 'stmt');
+  document.getElementById('buypane').classList.toggle('hide', kind !== 'buy');
   document.getElementById('acepane').classList.toggle('hide', kind !== 'ace');
   if (kind === null) document.getElementById('homtpane').classList.remove('hide');   // 안내 메시지는 첫 화면에 표시
 }
 const msgOf = (k) => (cls, html) => {
-  const m = document.getElementById(k === 'ace' ? 'amsg' : 'msg');
+  const m = document.getElementById(k === 'ace' ? 'amsg' : k === 'buy' ? 'bmsg' : 'msg');
   m.className = cls ? 'msg ' + cls : ''; m.innerHTML = html;
 };
 
@@ -184,7 +205,7 @@ function setupPanel(cfg) {
       if (!/\.(xlsx|xlsm|xls)$/i.test(file.name || '')) throw new Error(cfg.style === 'ace'
         ? '엑셀 파일(.xlsx)을 넣어 주세요.'
         : '이카운트에서 내려받은 엑셀 파일(.xlsx)을 넣어 주세요.');
-      docs = SM.splitSheets(SM.parseSales(await SM.readSheets(file)));
+      docs = SM.splitSheets(SM.parseSales(await SM.readSheets(file)), { perVoucher: cfg.style === 'buy' });
       render();
     } catch (err) { say2('err', esc(err.message || err)); }
   }
@@ -221,6 +242,7 @@ function setupPanel(cfg) {
 }
 
 setupPanel({ style: 'homt', title: '거래명세표', drop: 'drop', pick: 'pick', file: 'file', printAll: 'printAll', imgAll: 'imgAll', msg: 'msg', out: 'out', siteCol: true });
+setupPanel({ style: 'buy', title: '구매명세서', drop: 'bdrop', pick: 'bpick', file: 'bfile', printAll: 'bprintAll', imgAll: 'bimgAll', msg: 'bmsg', out: 'bout' });
 setupPanel({ style: 'ace', title: '에이스 거래명세서', drop: 'adrop', pick: 'apick', file: 'afile', printAll: 'aprintAll', imgAll: 'aimgAll', msg: 'amsg', out: 'aout' });
 
 // 붙여넣기 — 지금 보이는 칸으로
@@ -230,7 +252,8 @@ window.addEventListener('paste', (e) => {
   if (!f) { const it = [...(cd.items || [])].find((x) => x.kind === 'file'); if (it) f = it.getAsFile(); }
   if (!f) return;
   e.preventDefault();
-  const pane = document.getElementById('acepane').classList.contains('hide') ? 'drop' : 'adrop';
+  const pane = !document.getElementById('acepane').classList.contains('hide') ? 'adrop'
+    : !document.getElementById('buypane').classList.contains('hide') ? 'bdrop' : 'drop';
   document.getElementById(pane).handleFile(f);
 });
 </script>

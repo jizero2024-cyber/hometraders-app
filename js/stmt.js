@@ -251,7 +251,7 @@ export function parseSales(sheets) {
   sheets.forEach((rows) => { const r = parseLedger(rows); if (r) got = got.concat(r); });
   if (got.length) return dropCancelled(got);
   sheets.forEach((rows) => { got = got.concat(parseVouchers(rows)); });
-  if (!got.length) throw new Error('판매 전표를 못 찾았어요 — 이카운트 판매현황내역·거래처원장·거래명세서 엑셀인지 확인하세요.');
+  if (!got.length) throw new Error('전표를 못 찾았어요 — 이카운트 판매전표·구매전표·판매현황내역·거래처원장·거래명세서 엑셀인지 확인하세요.');
   return dropCancelled(got);
 }
 
@@ -259,11 +259,14 @@ export function parseSales(sheets) {
 const perItem = (partner) => PER_ITEM_PARTNERS.some((p) => key(partner).includes(p) || p.includes(key(partner)));
 const perSite = (partner) => PER_SITE_PARTNERS.some((p) => key(partner).includes(p));
 
-export function splitSheets(vouchers) {
+export function splitSheets(vouchers, opt) {
   const out = [], seq = {};
+  const oneEach = !!(opt && opt.perVoucher);        // 구매명세서는 거래처와 상관없이 전표 1건당 1장
   vouchers.forEach((v) => {
     let groups;
-    if (perSite(v.partner)) {                       // 현장별 (뉴하우징 등)
+    if (oneEach) {
+      groups = [{ items: v.items }];
+    } else if (perSite(v.partner)) {                       // 현장별 (뉴하우징 등)
       const siteOfItem = (it) => nfc(it.site) || siteOf(it.tag, v.partner);   // 판매전표는 규격 칸, 원장은 품명 뒤 태그
       const found = [...new Set(v.items.map(siteOfItem).filter(Boolean))];
       const only = found.length === 1 ? found[0] : '';   // 전표에 현장이 한 곳뿐이면 태그 없는 품목도 같은 현장
@@ -400,6 +403,46 @@ function sheetHtml(doc) {
   </section>`;
 }
 
+
+// 구매명세서 — 우리가 산 내역 (공급자 = 거래처, 발행 = 홈트레이더스)
+//   거래명세서와 같은 모양이되 제목·문구·표 머리가 '구매/입고' 쪽으로 바뀌고, 우리 계좌(결제정보)는 빼고 찍는다.
+function buyHtml(doc) {
+  const d = doc.items[0].date;
+  const sd = new Date(+doc.ymd.slice(0, 4), +doc.ymd.slice(4, 6) - 1, +doc.ymd.slice(6, 8));
+  const supply = doc.items.reduce((a, i) => a + i.supply, 0), vat = doc.items.reduce((a, i) => a + i.vat, 0);
+  const rows = doc.items.map((it, i) => `<tr>
+      <td class="c">${i + 1}</td><td class="c">${it.date.getMonth() + 1}월 ${it.date.getDate()}일</td>
+      <td class="nm">${esc2(it.name).replace(/([_*(])/g, '$1&#8203;')}</td><td class="c">개</td><td class="n">${won(it.qty)}</td>
+      <td class="n">${won(it.supply / it.qty)}</td><td class="n">${won(it.supply)}</td><td class="n">${won(it.vat)}</td>
+      <td class="n">${won(it.supply + it.vat)}</td><td class="c"></td></tr>`).join('')
+    + ('<tr>' + '<td></td>'.repeat(10) + '</tr>').repeat(Math.max(0, ITEM_ROWS - doc.items.length));
+  return `<section class="sheet">
+    <div class="ttl">구 매 명 세 서</div>
+    <div class="head">
+      <div class="to"><b>${esc2(doc.partner)} 貴中</b><span class="${doc.site ? 'site' : ''}">${esc2(doc.site ? '현장명 : ' + doc.site : '')}</span>
+        <div class="no">발행번호 : ${doc.ymd}${String(doc.seq).padStart(4, '0')}<br>발행일자 : ${sd.getFullYear()}년 ${sd.getMonth() + 1}월 ${sd.getDate()}일</div>
+        <div class="ask">아래와 같이 구매(입고) 내역을 확인합니다.</div></div>
+      <div class="from"><b class="cname">${SUPPLIER.name}</b><img class="stamp" src="${STAMP}" alt="">
+        <table><colgroup><col style="width:58px"><col></colgroup>
+          <tr><th>대표자</th><td>${SUPPLIER.ceo}</td></tr>
+          <tr><th>등록번호</th><td>${SUPPLIER.biz}</td></tr><tr><th>소재지</th><td>${SUPPLIER.addr}</td></tr>
+          <tr><th>업 태</th><td>${SUPPLIER.kind}　종 목　${SUPPLIER.item}</td></tr>
+          <tr><th>담당자</th><td>${SUPPLIER.mgr}　　연락처　${SUPPLIER.tel}</td></tr>
+          <tr><th>이메일</th><td>${SUPPLIER.mail}</td></tr></table></div>
+    </div>
+    <div class="sum"><div class="lb">합계금액 (부가세포함)</div><div class="val">${won(supply + vat)}</div></div>
+    <div class="hangul">${wonHangul(supply + vat)}</div>
+    <div class="terms">* 구매조건<br>1. 입고일자 : ${d.getMonth() + 1}월 ${d.getDate()}일<br>2. 입고장소 : ${esc2(doc.site || '담당자 협의')}<br>
+      3. 대금 지불조건 : 협의사항<br>4. 세금계산서 : 발행 요청<img class="logo" src="${LOGO}"></div>
+    <table class="items">
+      <colgroup><col style="width:4.5%"><col style="width:8.5%"><col style="width:34%"><col style="width:4.5%"><col style="width:6.5%"><col style="width:8.5%"><col style="width:10.5%"><col style="width:8.5%"><col style="width:10.5%"><col style="width:4%"></colgroup>
+      <thead><tr><th>순번</th><th>입고일</th><th>품명</th><th>단위</th><th>수량</th><th>단가</th><th>공급가액</th><th>부가세</th><th>총합계 ( 포함가)</th><th>비고</th></tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr><td class="tot" colspan="6">합　계</td><td class="n">${won(supply)}</td><td class="n">${won(vat)}</td><td class="n">${won(supply + vat)}</td><td></td></tr></tfoot>
+    </table>
+  </section>`;
+}
+
 const PRINT_CSS = `
   @page { size:A4 portrait; margin:12mm 10mm; }
   *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -447,7 +490,7 @@ const PRINT_CSS = `
   @media screen { body{background:#eee;padding:14px} .sheet{background:#fff;box-shadow:0 1px 6px #0002;margin:0 auto 14px;padding:10mm;width:210mm} }
 `;
 
-const RENDER = { homt: (d) => sheetHtml(d), ace: (d) => aceHtml(d) };
+const RENDER = { homt: (d) => sheetHtml(d), ace: (d) => aceHtml(d), buy: (d) => buyHtml(d) };
 const html_ = (doc, style) => (RENDER[style] || RENDER.homt)(doc);
 
 export function printSheets(docs, style) {
@@ -470,7 +513,8 @@ export const sheetTitle = (doc, style) => {
   if (style === 'ace') {                                            // 에이스는 다른 회사 문서라 이름 규칙도 따로
     return `제${doc.ymd.slice(2)}-${slip}호_${key(doc.partner)}_${item}_에이스`;
   }
-  return `${doc.ymd.slice(2)}-${slip}_${key(doc.partner)}_${String(doc.seq).padStart(2, '0')}_${item}`;
+  const nm = `${doc.ymd.slice(2)}-${slip}_${key(doc.partner)}_${String(doc.seq).padStart(2, '0')}_${item}`;
+  return style === 'buy' ? nm + '_구매' : nm;
 };
 
 // ── 도우미(AI)가 읽은 문서 → 전표 한 장 (캡처·PDF용) ────────
