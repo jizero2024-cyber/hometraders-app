@@ -236,7 +236,7 @@ function dropCancelled(vs) {                        // 취소(마이너스) 전�
     const orig = vs.find((o) => !gone.has(o) && total(o) > 0 && o.partner === n.partner && sig(o) === sig(n));
     if (orig) gone.add(orig);
   });
-  return vs.filter((v) => !gone.has(v) && total(v) > 0).map((v) => ({ ...v, items: v.items.filter((i) => i.supply > 0) }));
+  return vs.filter((v) => !gone.has(v) && total(v) > 0).map((v) => ({ ...v, items: v.items.filter((i) => i.supply !== 0) }));   // 단위절삭 같은 마이너스 줄은 그대로 둔다
 }
 
 
