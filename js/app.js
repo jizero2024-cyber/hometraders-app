@@ -2832,6 +2832,17 @@ function drPriceCells(l, i) {
         <td><input class="num" data-drf="price" data-i="${i}" type="number" min="0" value="${esc(l.price || '')}"></td>
         <td class="n" id="dr-amt-${i}">${eN((Number(l.qty) || 0) * (Number(l.price) || 0))}</td>`;
 }
+// 구매전표 — 명세서에 찍힌 단가·공급가액·부가세를 그대로 쓰므로, 잘못 읽은 숫자를 여기서 고친다
+function drBuyCells(l, i) {
+  const f = (k) => `<td><input class="num" data-drb="${k}" data-i="${i}" type="number" min="0" step="any" value="${esc(l[k] ?? '')}"></td>`;
+  return f('unit_price') + f('amount') + f('vat');
+}
+function drBuyTotals() {
+  const ls = (dr.doc && dr.doc.lines) || [];
+  const sup = ls.reduce((a, l) => a + (Number(l.amount) || 0), 0);
+  const vat = ls.reduce((a, l) => a + (Number(l.vat) || 0), 0);
+  return { sup, vat, tot: sup + vat };
+}
 function drTotals() {
   const ls = (dr.doc && dr.doc.lines) || [];
   const sup = ls.reduce((a, l) => a + (Number(l.qty) || 0) * (Number(l.price) || 0), 0);
@@ -2854,7 +2865,8 @@ function deskDocRead() {
   else if (!d) right = `${dr.err ? `<div class="dr-err">${esc(dr.err)}</div>` : ''}<div class="e-empty">왼쪽에 문서를 올린 뒤 <b>[인식 시작]</b>을 누르세요.</div>`;
   else {
     const t = drTotals();
-    const isDeliv = drMode === 'deliv';
+    const isDeliv = drMode === 'deliv', isBuy = drMode === 'buy';
+    const tb = isBuy ? drBuyTotals() : null;
     const cnt = { high: 0, mid: 0, none: 0, edit: 0 }; d.lines.forEach((l) => { cnt[l.conf] = (cnt[l.conf] || 0) + 1; });
     right = `${dr.err ? `<div class="dr-err">${esc(dr.err)}</div>` : ''}
     <table class="e-ftbl"><colgroup><col style="width:80px"><col><col style="width:80px"><col><col style="width:80px"><col></colgroup>
@@ -2865,15 +2877,15 @@ function deskDocRead() {
     </table>
     <div class="e-lines-hd"><b>품목 ${d.lines.length}</b>
       <span class="dr-legend"><i class="dr-high"></i>확실 ${cnt.high}<i class="dr-mid"></i>확인 필요 ${cnt.mid}<i class="dr-none"></i>못 찾음 ${cnt.none}${cnt.edit ? `<i class="dr-edit"></i>직접 지정 ${cnt.edit}` : ''}</span><span class="sp"></span></div>
-    <div class="e-tw" style="flex:1;overflow-x:auto"><table class="e-grid" style="min-width:${isDeliv ? 860 : 980}px"><colgroup><col style="width:30px"><col style="width:22%">${isDeliv ? '<col style="width:128px">' : ''}<col style="width:84px"><col style="width:44px"><col style="width:48px"><col style="min-width:240px">${isDeliv ? '' : '<col style="width:96px"><col style="width:82px"><col style="width:86px">'}</colgroup>
-      <thead><tr><th>No</th><th>문서 품명 (원문)</th>${isDeliv ? '<th title="비우면 위 일자">출고일</th>' : ''}<th>규격</th><th>단위</th><th>수량</th><th>우리 품목 (이카운트)</th>${isDeliv ? '' : '<th>종전가</th><th>견적 단가</th><th>금액(별도)</th>'}</tr></thead>
+    <div class="e-tw" style="flex:1;overflow-x:auto"><table class="e-grid" style="min-width:${isDeliv ? 860 : 980}px"><colgroup><col style="width:30px"><col style="width:22%">${isDeliv ? '<col style="width:128px">' : ''}<col style="width:84px"><col style="width:44px"><col style="width:48px"><col style="min-width:240px">${isDeliv ? '' : isBuy ? '<col style="width:90px"><col style="width:100px"><col style="width:86px">' : '<col style="width:96px"><col style="width:82px"><col style="width:86px">'}</colgroup>
+      <thead><tr><th>No</th><th>문서 품명 (원문)</th>${isDeliv ? '<th title="비우면 위 일자">출고일</th>' : ''}<th>규격</th><th>단위</th><th>수량</th><th>우리 품목 (이카운트)</th>${isDeliv ? '' : isBuy ? '<th title="명세서 단가 — 잘못 읽었으면 고치세요 (공급가액·부가세도 다시 계산)">단가</th><th title="명세서 공급가액 — 고치면 부가세 다시 계산">공급가액</th><th>부가세</th>' : '<th>종전가</th><th>견적 단가</th><th>금액(별도)</th>'}</tr></thead>
       <tbody>${d.lines.map((l, i) => { const [cls] = DR_CONF[l.conf] || DR_CONF.none; return `<tr>
         <td class="no">${i + 1}</td><td title="${esc(l.raw_name)}" style="padding-left:6px">${esc(l.raw_name)}${l.unclear ? ' <span class="e-b orange">흐림</span>' : ''}${l.note ? ` <span class="muted">${esc(l.note)}</span>` : ''}</td>
         ${isDeliv ? `<td><input class="e-in" type="date" data-drf="date" data-i="${i}" value="${esc(isoDate(l.date))}" title="비우면 위 일자" style="width:100%"></td>` : ''}
         <td><input class="e-in" data-drf="spec" data-i="${i}" value="${esc(l.spec)}" style="width:100%"></td><td><input class="e-in" data-drf="unit" data-i="${i}" value="${esc(l.unit)}" style="width:100%;text-align:center"></td><td><input class="num" data-drf="qty" data-i="${i}" type="number" min="0" value="${esc(l.qty)}"></td>
         <td class="${cls}"><input data-drf="ours" data-i="${i}" class="dr-ours" autocomplete="off" value="${esc(l.ours || '')}" placeholder="${l.cands && l.cands.length ? '후보: ' + esc(l.cands[0]) : '우리 품목 검색·선택'}" title="${esc(l.ours || '')}${l.cands && l.cands.length ? '\n후보: ' + l.cands.map(esc).join(' / ') : ''}"></td>
-        ${isDeliv ? '' : drPriceCells(l, i)}</tr>`; }).join('')}</tbody>
-      ${isDeliv ? '' : `<tfoot><tr><td></td><td colspan="5" style="padding-left:6px;font-weight:700">합계 <span class="muted" id="dr-noprice">${t.noPrice ? `단가 없음 ${t.noPrice}` : ''}</span></td><td class="n muted" colspan="2">부가세 <b id="dr-vat">${eN(t.vat)}</b></td><td class="n muted">포함 <b id="dr-tot">${eN(t.tot)}</b></td><td class="n"><b id="dr-sup">${eN(t.sup)}</b></td></tr></tfoot>`}</table></div>
+        ${isDeliv ? '' : isBuy ? drBuyCells(l, i) : drPriceCells(l, i)}</tr>`; }).join('')}</tbody>
+      ${isDeliv ? '' : isBuy ? `<tfoot><tr><td></td><td colspan="5" style="padding-left:6px;font-weight:700">합계 <span class="muted">합계금액 <b id="drb-tot">${eN(tb.tot)}</b></span></td><td></td><td class="n"><b id="drb-sup">${eN(tb.sup)}</b></td><td class="n"><b id="drb-vat">${eN(tb.vat)}</b></td></tr></tfoot>` : `<tfoot><tr><td></td><td colspan="5" style="padding-left:6px;font-weight:700">합계 <span class="muted" id="dr-noprice">${t.noPrice ? `단가 없음 ${t.noPrice}` : ''}</span></td><td class="n muted" colspan="2">부가세 <b id="dr-vat">${eN(t.vat)}</b></td><td class="n muted">포함 <b id="dr-tot">${eN(t.tot)}</b></td><td class="n"><b id="dr-sup">${eN(t.sup)}</b></td></tr></tfoot>`}</table></div>
     <div class="e-tools">${eBtn('매핑 저장 (다음부터 자동)', 'erp-dr-learn')}${drMode === 'quote' ? eBtn('출고 입력으로 보내기', 'erp-dr-ship') : ''}<span class="sp"></span>
       ${isDeliv && dr.deliv ? (dr.deliv.outs || [dr.deliv.out]).map((o) => `<a class="e-btn" href="${HELPER}/api/file?path=${encodeURIComponent(o)}">납품확인서 받기 · ${esc(o.split('/').pop())}</a>`).join('') : ''}
       ${drMode === 'quote' && dr.quote ? `<a class="e-btn" href="${HELPER}/api/file?path=${encodeURIComponent(dr.quote.out)}">견적서 받기 · ${esc(dr.quote.out.split('/').pop())}</a>` : ''}
@@ -3268,14 +3280,22 @@ function drBuyPush() {
   helperFetch('/api/purchase/push', drBuyPayload()).then((j) => { dr.buy = j; dr.pushed = j.push; dr.err = ''; drStockFeed(j); })
     .catch((err) => { dr.err = err.message; }).finally(() => { dr.busy = false; render(); });
 }
+// 미리보기 표에서도 숫자를 바로 고친다 — 위 품목 표와 같은 줄(dr.doc.lines[i])을 고치고, 칸을 벗어나면 다시 검사
+function drPvCells(x, i) {
+  const l = (dr.doc && dr.doc.lines[i]) || {};
+  const f = (attr, v) => `<td><input class="num" ${attr} data-i="${i}" type="number" min="0" step="any" value="${esc(v ?? '')}" style="width:100%"></td>`;
+  return f('data-drf="qty"', l.qty ?? x.qty) + f('data-drb="unit_price"', l.unit_price ?? x.price) + f('data-drb="amount"', l.amount ?? x.supply) + f('data-drb="vat"', l.vat ?? x.vat);
+}
 function drBuyPanel() {
   const b = dr.buy;
   if (!b) return '';
   const v = b.voucher, st = b.sums, dt = b.doc_totals || {};
   const cmp = (k, label) => {
-    if (dt[k] === undefined) return `<td>${label}</td><td class="n">${eN(st[k])}</td><td class="n muted">명세서에 없음</td><td></td>`;
+    // 명세서 합계도 잘못 읽을 수 있어 고칠 수 있게 (비우면 '명세서에 없음' — 그 합계는 대조 안 함)
+    const inp = `<input class="num" data-drtot="${k}" type="number" min="0" step="1" value="${dt[k] ?? ''}" placeholder="명세서에 없음" title="명세서 하단 ${label} — 잘못 읽었으면 고치세요" style="width:100%">`;
+    if (dt[k] === undefined) return `<td>${label}</td><td class="n">${eN(st[k])}</td><td>${inp}</td><td></td>`;
     const same = dt[k] === st[k];
-    return `<td>${label}</td><td class="n">${eN(st[k])}</td><td class="n">${eN(dt[k])}</td><td class="c">${same ? '<span class="e-b green">일치</span>' : `<span class="e-b red">${eN(st[k] - dt[k])}원 차이</span>`}</td>`;
+    return `<td>${label}</td><td class="n">${eN(st[k])}</td><td>${inp}</td><td class="c">${same ? '<span class="e-b green">일치</span>' : `<span class="e-b red">${eN(st[k] - dt[k])}원 차이</span>`}</td>`;
   };
   return `<div class="e-panel" style="margin-top:8px"><div class="e-panel-hd"><b>구매전표 미리보기</b><span class="sp"></span>
       ${b.valid ? '<span class="e-b green">명세서와 합계 일치</span>' : '<span class="e-b red">전표 만들 수 없음</span>'}</div>
@@ -3291,7 +3311,7 @@ function drBuyPanel() {
     <div class="e-tw" style="overflow-x:auto"><table class="e-grid" style="min-width:760px"><colgroup><col style="width:30px"><col style="width:110px"><col style="min-width:260px"><col style="width:60px"><col style="width:84px"><col style="width:96px"><col style="width:84px"></colgroup>
       <thead><tr><th>No</th><th>품목코드</th><th>품목명 [규격]</th><th>수량</th><th>단가</th><th>공급가액</th><th>부가세</th></tr></thead>
       <tbody>${v.lines.map((x, i) => `<tr><td class="no">${i + 1}</td><td>${x.prod_cd ? esc(x.prod_cd) : '<span class="e-b red">없음</span>'}</td><td title="${esc(x.prod_des)}">${esc(x.prod_des)}${x.spec ? ` <span class="muted">[${esc(x.spec)}]</span>` : ''}</td>
-        <td class="n">${esc(x.qty)}</td><td class="n">${eN(x.price)}</td><td class="n">${eN(x.supply)}</td><td class="n">${eN(x.vat)}</td></tr>`).join('')}</tbody></table></div>
+        ${drPvCells(x, i)}</tr>`).join('')}</tbody></table></div>
     <table class="e-grid" style="margin-top:6px"><thead><tr><th style="width:110px"></th><th>전표</th><th>명세서</th><th style="width:110px">대조</th></tr></thead>
       <tbody><tr>${cmp('supply', '공급가액 합계')}</tr><tr>${cmp('vat', '부가세 합계')}</tr><tr>${cmp('total', '총액')}</tr></tbody></table>
     ${dr.pushed && dr.pushed.ok ? `<div class="e-sum"><span class="e-b green">이카운트 등록 완료</span> <span>${esc(dr.pushed.mode)} · 전표번호 ${esc((dr.pushed.slip_nos || []).join(', ') || '-')}</span></div>` : ''}
@@ -3688,6 +3708,20 @@ function erpAct(act, t) {
   }
 }
 // 문서 인식 — 파일 선택/끌어놓기, 입력칸 반영 (다시 그리지 않고 합계 칸만 갱신 → 한글 입력 안전)
+// 구매전표 숫자 고치기 — 단가(또는 수량)를 고치면 공급가액·부가세를, 공급가액을 고치면 부가세를 다시 계산 (계산값도 다시 고칠 수 있음)
+function drBuyEdit(el) {
+  const i = Number(el.dataset.i), l = dr.doc.lines[i]; if (!l) return;
+  const k = el.dataset.drb || 'qty';
+  if (k !== 'qty') l[k] = el.value === '' ? '' : Number(el.value);
+  const sync = (sel, v) => document.querySelectorAll(`${sel}[data-i="${i}"]`).forEach((x) => { if (x !== el) x.value = v; });
+  const set = (f, v) => { l[f] = v; sync(`[data-drb="${f}"]`, v); };
+  sync(k === 'qty' ? '[data-drf="qty"]' : `[data-drb="${k}"]`, el.value);
+  if ((k === 'unit_price' || k === 'qty') && Number(l.unit_price) > 0) set('amount', Math.round((Number(l.qty) || 0) * Number(l.unit_price)));
+  if (k !== 'vat') set('vat', Math.round((Number(l.amount) || 0) * 0.1));
+  const t = drBuyTotals();
+  [['drb-sup', t.sup], ['drb-vat', t.vat], ['drb-tot', t.tot]].forEach(([id, v]) => { const x = document.getElementById(id); if (x) x.textContent = eN(v); });
+  dr.buyStale = true;   // 다 고친 뒤(칸을 벗어날 때) 구매전표를 다시 검사
+}
 function drUpdateTotals(i) {
   const l = dr.doc.lines[i];
   const a = document.getElementById('dr-amt-' + i); if (a) a.textContent = eN((Number(l.qty) || 0) * (Number(l.price) || 0));
@@ -3718,6 +3752,12 @@ app.addEventListener('change', (e) => {
   }
   if (!dr.doc || !el.dataset) return;
   if (el.dataset.drh) { dr.doc[el.dataset.drh] = el.value.trim(); return; }
+  if (dr.buyStale && (el.dataset.drb || el.dataset.drf === 'qty')) { dr.buyStale = false; if (dr.buy) drBuy(); return; }   // 숫자를 고쳤으니 구매전표 다시 검사
+  if (el.dataset.drtot) {
+    const tt = dr.doc.totals = { ...(dr.doc.totals || {}) };
+    if (el.value === '') delete tt[el.dataset.drtot]; else tt[el.dataset.drtot] = Math.round(Number(el.value) || 0);
+    drBuy(); return;
+  }
   if (el.dataset.drf === 'date') { const l = dr.doc.lines[Number(el.dataset.i)]; if (l) l.date = isoDate(el.value); return; }
   if (el.dataset.drf === 'spec' || el.dataset.drf === 'unit') { const l = dr.doc.lines[Number(el.dataset.i)]; if (l) l[el.dataset.drf] = el.value; return; }
   if (el.dataset.drf === 'ours') {
@@ -3735,6 +3775,7 @@ app.addEventListener('change', (e) => {
 app.addEventListener('input', (e) => {
   if (e.target.dataset && e.target.dataset.drt) { if (e.target.dataset.drt === 'text') dr.text = e.target.value; else dr.textPartner = e.target.value; return; }   // 다시 그리지 않음 (한글 입력 안전)
   if (dr.doc && e.target.dataset && (e.target.dataset.drf === 'price' || e.target.dataset.drf === 'qty')) { const i = Number(e.target.dataset.i); dr.doc.lines[i][e.target.dataset.drf] = e.target.value; drUpdateTotals(i); }
+  if (dr.doc && drMode === 'buy' && e.target.dataset && (e.target.dataset.drb || e.target.dataset.drf === 'qty')) drBuyEdit(e.target);
 });
 app.addEventListener('dragover', (e) => { if (e.target.closest && e.target.closest('.dr-drop')) { e.preventDefault(); e.target.closest('.dr-drop').classList.add('over'); } });
 app.addEventListener('dragleave', (e) => { const z = e.target.closest && e.target.closest('.dr-drop'); if (z) z.classList.remove('over'); });
