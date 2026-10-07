@@ -5,6 +5,7 @@ import * as S from './store-supabase.js';
 import { ECOUNT_ITEMS } from './ecount-items.js';
 import { makeMatcher, readPastedText, quotePrev } from './textread.js';
 import * as DL from './delivery.js';
+import * as SM from './stmt.js';
 
 // 창고 아이콘 세트 (무채색)
 const WH_ICONS = {
@@ -3594,7 +3595,8 @@ function deskSale() {
 // 대화 화면 (PC 첫 화면) — 사진·PDF·캡처·글을 올리면 읽어서 구매입력·납품확인서·견적서·판매입력으로 만들고,
 // 처음 보는 품목은 대화로 물어 매핑을 저장한다. 계산·저장은 문서 인식/판매입력 화면과 같은 도우미 API 를 그대로 쓴다.
 // ══════════════════════════════════════════════════════════════
-const CH_MODES = [['buy', '구매입력'], ['sale', '판매입력'], ['deliv', '납품확인서'], ['quote', '견적서'], ['stmt', '거래명세표']];
+const CH_MODES = [['buy', '구매입력'], ['sale', '판매입력'], ['deliv', '납품확인서'], ['quote', '견적서'], ['stmt', '거래명세표'], ['bstmt', '구매명세표'], ['ace', '에이스명세표'], ['deposit', '입금표']];
+const CH_CONVERT = { stmt: 'homt', bstmt: 'buy', ace: 'ace' };   // 서류 전환 — 이카운트 엑셀 → 명세표 (js/stmt.js, 도우미 없이 브라우저에서)
 const CH_LABEL = Object.fromEntries(CH_MODES);
 const CH_KEY = 'ht_ch_jobs_v1';
 let ch = { jobs: [], cur: null, text: '', files: [], mode: '', loaded: false, scrollLen: -1, sent: {}, synced: false };
@@ -3666,7 +3668,10 @@ function chCmd(t) {
   if (/^(납품확인서|납품)(으로|로)?(만들어줘|해줘)?$/.test(s)) return 'deliv';
   if (/^(견적서|견적)(으로|로)?(만들어줘|해줘)?$/.test(s)) return 'quote';
   if (/^(판매입력|판매전표|판매)(으로|로)?(만들어줘|해줘)?$/.test(s)) return 'sale';
-  if (/^(거래명세표|명세표|거래명세서)(으로|로)?(만들어줘|해줘)?$/.test(s)) return 'stmt';
+  if (/^(거래명세표|명세표|거래명세서)(으로|로)?(만들어줘|해줘|변환)?$/.test(s)) return 'stmt';
+  if (/^(구매명세표|구매명세서)(으로|로)?(만들어줘|해줘|변환)?$/.test(s)) return 'bstmt';
+  if (/^(에이스|에이스명세표|에이스명세서)(으로|로)?(만들어줘|해줘|변환)?$/.test(s)) return 'ace';
+  if (/^입금표(만들어줘|해줘)?$/.test(s)) return 'deposit';
   if (/^(복사|복사해줘|붙여넣기복사)$/.test(s)) return 'copy';
   if (/^(엑셀|엑셀받기|파일)$/.test(s)) return 'file';
   if (/^(새작업|새로|처음부터)$/.test(s)) return 'new';
@@ -3674,6 +3679,9 @@ function chCmd(t) {
   return '';
 }
 function chModeFromText(t) {
+  if (/입금표/.test(t)) return 'deposit';
+  if (/구매명세/.test(t)) return 'bstmt';
+  if (/에이스/.test(t)) return 'ace';
   if (/구매/.test(t)) return 'buy';
   if (/납품/.test(t)) return 'deliv';
   if (/견적/.test(t)) return 'quote';
@@ -3700,19 +3708,21 @@ function chSend() {
     return;
   }
   if (cmd && !['copy', 'file', 'edit'].includes(cmd)) {   // 먼저 할 일만 말한 경우 — 고르고 자료를 기다림
-    ch.mode = cmd; if (!j || j.items.length || j.sale) j = chNewJob(cmd); else j.mode = cmd;
+    ch.mode = cmd; if (!j || j.items.length || j.sale || j.conv) j = chNewJob(cmd); else j.mode = cmd;
     j.msgs.push({ who: 'me', text });
-    chSay(j, cmd === 'stmt' ? '' : `${CH_LABEL[cmd]}로 만들게요. ${cmd === 'sale' ? '판매 목록 글을 붙여넣어 주세요 (거래처마다 *이름 머리줄).' : '명세서 사진·PDF를 끌어다 놓거나, 캡처를 Cmd+V로 붙여넣어 주세요.'}`);
-    if (cmd === 'stmt') chCard(j, 'stmt');
+    if (cmd === 'deposit') { chDeposit(j, ''); return; }
+    chSay(j, `${CH_LABEL[cmd]}로 만들게요. ${cmd === 'sale' ? '판매 목록 글을 붙여넣어 주세요 (거래처마다 *이름 머리줄).' : CH_CONVERT[cmd] ? '이카운트에서 내려받은 엑셀(.xlsx)을 끌어다 놓아 주세요.' : '명세서 사진·PDF를 끌어다 놓거나, 캡처를 Cmd+V로 붙여넣어 주세요.'}`);
     chSave(); render(); return;
   }
   if (cmd) { j = j || chNewJob(ch.mode); j.msgs.push({ who: 'me', text }); chSay(j, '아직 만든 게 없어요. 먼저 명세서나 글을 올려 주세요.'); chSave(); render(); return; }
   // 새 자료 → 새 작업
-  j = (j && !j.items.length && !j.sale) ? j : chNewJob(ch.mode);
+  j = (j && !j.items.length && !j.sale && !j.conv && !j.dep) ? j : chNewJob(ch.mode);
   j.mode = j.mode || ch.mode || chModeFromText(text);
   const onlyCmdText = files.length && text && chModeFromText(text) && text.length <= 15;
   j.msgs.push({ who: 'me', text, files: files.map((f) => f.name) });
-  if (j.mode === 'stmt') { chCard(j, 'stmt'); chSave(); render(); return; }
+  if (j.mode === 'deposit') { chDeposit(j, text); return; }
+  if (CH_CONVERT[j.mode] && files.length) { chConvert(j, files); return; }
+  if (CH_CONVERT[j.mode]) { chSay(j, '이카운트에서 내려받은 엑셀(.xlsx)을 끌어다 놓아 주세요.'); chSave(); render(); return; }
   if (j.mode === 'sale' && !files.length) { chSale(j, text); return; }
   j.items = files.map((f) => ({ name: f.name, mime: f.mime, b64: f.b64 }));
   if (text && !onlyCmdText) j.items.push({ name: '붙여넣은 글', text });
@@ -3756,7 +3766,8 @@ async function chReadAll(j) {
 const chUnknown = (it) => (it.doc ? it.doc.lines.map((l, k) => ({ l, k })).filter(({ l }) => (l.conf === 'mid' || l.conf === 'none') && !l._skip) : []);
 async function chRun(j) {
   const m = j.mode;
-  if (m === 'stmt') { chCard(j, 'stmt'); return; }
+  if (CH_CONVERT[m]) { await chConvert(j, j.items.filter((it) => it.b64).map((it) => ({ name: it.name, mime: it.mime, b64: it.b64 })), true); return; }
+  if (m === 'deposit') { chDeposit(j, ''); return; }
   if (m === 'sale') {
     const txt = j.items.filter((it) => it.text).map((it) => it.text).join('\n');
     if (!txt) { chSay(j, '판매입력은 붙여넣은 판매 목록 글로 만들어요. 사진은 구매입력·납품확인서·견적서로 만들 수 있어요.'); return; }
@@ -3778,10 +3789,59 @@ async function chRunItem(j, i) {   // 문서 한 장 → 고른 종류로 만들
 }
 function chDo(j, cmd) {
   const it = j.items.find((x) => x.doc) || null;
-  if (['buy', 'deliv', 'quote', 'sale', 'stmt'].includes(cmd)) { j.mode = cmd; ch.mode = cmd; chRun(j).then(() => { chSave(); render(); }); render(); return; }
+  if (['buy', 'deliv', 'quote', 'sale', 'stmt', 'bstmt', 'ace', 'deposit'].includes(cmd)) { j.mode = cmd; ch.mode = cmd; chRun(j).then(() => { chSave(); render(); }); render(); return; }
   if (cmd === 'copy') { chCopy(j); return; }
   if (cmd === 'file') { if (j.mode === 'sale') chSaleFile(j); else if (it) chBuyFile(j, j.items.indexOf(it)); return; }
   if (cmd === 'edit') { if (j.mode === 'sale') chSaleEdit(j); else if (it) chEdit(j, j.items.indexOf(it)); }
+}
+// 서류 전환 — 이카운트 판매·구매 엑셀 → 거래명세표·구매명세서·에이스 명세서 (서류 전환 화면과 같은 js/stmt.js)
+const b64File = (f) => { const bin = atob(f.b64 || ''); const u8 = new Uint8Array(bin.length); for (let k = 0; k < bin.length; k++) u8[k] = bin.charCodeAt(k); return new File([u8], f.name, { type: f.mime || '' }); };
+async function chConvert(j, files, quiet) {
+  const style = CH_CONVERT[j.mode];
+  const xl = files.filter((f) => /\.(xlsx|xlsm|xls)$/i.test(f.name || ''));
+  if (!xl.length) { chSay(j, `${CH_LABEL[j.mode]}는 이카운트에서 내려받은 엑셀(.xlsx)로 만들어요. 사진은 구매입력·납품확인서·견적서로 쓸 수 있어요.`, { err: true }); chSave(); render(); return; }
+  j.busy = true; render();
+  const docs = [];
+  for (const f of xl) {
+    try { docs.push(...SM.splitSheets(SM.parseSales(await SM.readSheets(b64File(f))), { perVoucher: style === 'buy' })); }
+    catch (e) { chSay(j, `${f.name}: ${e.message || e}`, { err: true }); }
+  }
+  j.busy = false;
+  if (docs.length) {
+    j.conv = { style, docs };
+    j.title = `${[...new Set(docs.map((d) => d.partner))].slice(0, 2).join('·')} ${CH_LABEL[j.mode]} ${docs.length}장`;
+    if (!j.msgs.some((m) => m.card === 'conv')) chCard(j, 'conv');
+  } else if (!quiet) chSay(j, '만들 전표가 없어요. 이카운트 판매(구매) 엑셀이 맞는지 확인해 주세요.', { err: true });
+  chSave(); render();
+}
+async function chConvOut(j, i, kind) {
+  const c = j.conv; if (!c) return;
+  const docs = i === undefined ? c.docs : [c.docs[i]];
+  if (kind === 'pdf') {
+    SM.printSheets(docs, c.style);
+    if (i !== undefined && SM.driveUrl()) {
+      try { const png = await SM.pngBlob(docs[0], c.style); await SM.saveToDrive(docs[0], png, '.png', c.style); chSay(j, '구글 드라이브에도 저장했어요.'); }
+      catch (e) { chSay(j, `드라이브 저장 실패: ${e.message || e}`, { err: true }); }
+      chSave(); render();
+    }
+    return;
+  }
+  j.busy = true; render();
+  try { await SM.saveImages(docs, null, c.style); chSay(j, `이미지 ${docs.length}장을 내려받았어요 (다운로드 폴더).`); }
+  catch (e) { chSay(j, e.message || String(e), { err: true }); }
+  j.busy = false; chSave(); render();
+}
+// 입금표 — "입금표 3,762,000 원익큐브 10/7" → 금액·받는 곳·날짜를 채운 입금표 작성 칸을 대화 안에 연다
+function chDeposit(j, text) {
+  const t = String(text || '').replace(/입금표/g, ' ');
+  const amt = (t.match(/\d{1,3}(?:,\d{3})+|\d{4,}/) || [''])[0].replace(/,/g, '');
+  const date = isoDate((t.match(/20\d\d[.\-/]\d{1,2}[.\-/]\d{1,2}/) || [''])[0]) || (() => { const m = t.match(/(\d{1,2})\s*[/월.]\s*(\d{1,2})\s*일?/); return m && !amt.includes(m[0]) ? isoDate(`${new Date().getFullYear()}-${m[1]}-${m[2]}`) : ''; })() || S.todayStr();
+  const memo = /상계/.test(t) || !t.trim() ? '상계처리' : '';
+  const to = t.replace(/(?:\d{1,3}(?:,\d{3})+|\d{4,})\s*원?|20\d\d[.\-/]\d{1,2}[.\-/]\d{1,2}|\d{1,2}\s*[/월.]\s*\d{1,2}\s*일?|상계처리|상계|만들어줘|해줘/g, ' ').replace(/\s+/g, ' ').trim();
+  j.dep = { amount: amt, date, to, memo: memo || '상계처리' };
+  j.title = `${to || '입금표'} 입금표`;
+  chCard(j, 'deposit');
+  chSave(); render();
 }
 function chBuyPayload(it) {
   const d = it.doc || {};
@@ -3987,9 +4047,24 @@ function chCardMap(j, i) {
   }).join('');
   return `<div class="ch-askmap"><b>처음 보는 품목 ${left.length}개</b><p>우리 품목을 고르면 바로 매핑으로 저장돼요. 다음부터는 자동으로 잡혀요.</p>${q}</div>`;
 }
-function chCardStmt() {
-  return `<div class="ch-card"><div class="ch-ch"><div><h3>거래명세표</h3><small>이카운트 판매전표 엑셀을 거래명세표로 바꾸는 건 서류 전환 화면에서 해요.</small></div></div>
-    <div class="ch-acts"><a class="ch-btn pri" href="./convert.html" target="_blank" rel="noopener">서류 전환 열기</a></div></div>`;
+function chCardConv(j) {
+  const c = j.conv; if (!c) return '';
+  const title = { homt: '거래명세표', buy: '구매명세서', ace: '에이스 거래명세서' }[c.style];
+  const site = c.style === 'homt';
+  const blank = site ? c.docs.filter((d) => !d.site).length : 0;
+  const rows = c.docs.map((d, i) => `<tr><td>${esc(d.partner)}<span class="ch-code">${esc(d.slip)} · ${esc(d.items.slice(0, 2).map((x) => x.name).join(' / '))}${d.items.length > 2 ? ` 외 ${d.items.length - 2}개` : ''}</span>
+      ${site ? `<input class="ch-site" data-i="${i}" value="${esc(d.site || '')}" placeholder="현장명 적기 (명세서·파일 이름에 들어가요)">` : ''}</td>
+    <td class="n">${eN(d.items.reduce((a, x) => a + x.supply + x.vat, 0))}</td>
+    <td class="q"><button type="button" class="ch-btn sm" data-act="erp-ch-conv" data-k="pdf" data-i="${i}">PDF</button> <button type="button" class="ch-btn sm" data-act="erp-ch-conv" data-k="img" data-i="${i}">이미지</button></td></tr>`);
+  return `<div class="ch-card"><div class="ch-ch"><div><h3>${title} ${c.docs.length}장</h3><small>${c.style === 'buy' ? '전표 1건당 1장 · 우리 계좌는 안 들어가요' : c.style === 'ace' ? '에이스목재산업 이름으로' : '공간제작소는 품목마다, 뉴하우징홈은 현장마다, 그 밖은 전표마다 1장'}${blank ? ` · 현장명 빈 곳 ${blank}장` : ''}</small></div><span class="ch-pill ok">완료</span></div>
+    ${chLinesTable(rows, j, 'c')}</table>
+    <div class="ch-acts"><button type="button" class="ch-btn pri" data-act="erp-ch-conv" data-k="pdf">전부 인쇄 · PDF</button><button type="button" class="ch-btn" data-act="erp-ch-conv" data-k="img">전부 이미지 저장</button></div></div>`;
+}
+function chCardDeposit(j) {
+  const d = j.dep; if (!d) return '';
+  const q = new URLSearchParams({ amount: d.amount || '', date: d.date || '', to: d.to || '', memo: d.memo || '' });
+  return `<div class="ch-card"><div class="ch-ch"><div><h3>입금표</h3><small>금액·날짜·받는 곳을 확인하고 [인쇄 / PDF] 또는 [그림 저장]을 누르세요.</small></div></div>
+    <iframe class="ch-frame" src="./deposit.html?${q}" title="입금표"></iframe></div>`;
 }
 function chMsgHtml(j, m) {
   if (m.who === 'me') {
@@ -4003,7 +4078,9 @@ function chMsgHtml(j, m) {
   else if (m.card === 'sale') inner = chCardSale(j);
   else if (m.card === 'map') inner = chCardMap(j, m.i);
   else if (m.card === 'read') inner = chCardRead(j, m.i);
-  else if (m.card === 'stmt') inner = chCardStmt();
+  else if (m.card === 'conv') inner = chCardConv(j);
+  else if (m.card === 'deposit') inner = chCardDeposit(j);
+  else if (m.card === 'stmt') inner = chCardConv(j);
   else if (m.text) inner = `<div class="ch-bt ${m.err ? 'err' : ''}">${esc(m.text)}${m.file ? `<div class="ch-acts" style="padding:8px 0 0;border:0">${chFileLink(m.file)}</div>` : ''}</div>`;
   if (!inner) return '';
   return `<div class="ch-bot"><div class="ch-av">홈</div><div class="ch-bb">${inner}</div></div>`;
@@ -4012,7 +4089,10 @@ function chWelcome() {
   const ex = [['buy', '구매입력', '거래처 명세서·견적서 사진 → 이카운트 구매입력 복사'], ['sale', '판매입력', '판매 목록 글 → 이카운트 판매입력 복사'],
     ['deliv', '납품확인서', '명세서에서 인슐레이션·방수시트·타이벡 납품확인서'], ['quote', '견적서', '발주서·카톡 품목 → 거래처 양식 견적서 (종전가)']];
   return `<div class="ch-hello"><h1>무엇을 만들까요?</h1><p>명세서 사진·PDF를 끌어다 놓거나, 캡처를 <b>Cmd+V</b>로 붙여넣으세요.</p>
-    <div class="ch-ex">${ex.map(([v, t, s]) => `<button type="button" class="ch-exb ${ch.mode === v ? 'on' : ''}" data-act="erp-ch-chip" data-v="${v}"><b>${t}</b><span>${s}</span></button>`).join('')}</div></div>`;
+    <div class="ch-ex">${ex.map(([v, t, s]) => `<button type="button" class="ch-exb ${ch.mode === v ? 'on' : ''}" data-act="erp-ch-chip" data-v="${v}"><b>${t}</b><span>${s}</span></button>`).join('')}</div>
+    <div class="ch-sub">서류 변환 · 이카운트 엑셀</div>
+    <div class="ch-ex4">${[['stmt', '거래명세표', '판매 엑셀 → 홈트 명세표'], ['bstmt', '구매명세표', '구매 엑셀 → 구매명세서'], ['ace', '에이스명세표', '에이스목재산업 이름으로'], ['deposit', '입금표', '금액·날짜만 넣으면 끝']]
+      .map(([v, t, s]) => `<button type="button" class="ch-exb sm ${ch.mode === v ? 'on' : ''}" data-act="erp-ch-chip" data-v="${v}"><b>${t}</b><span>${s}</span></button>`).join('')}</div></div>`;
 }
 function renderChat() {
   chLoad();
@@ -4063,6 +4143,7 @@ function chAct(act, t) {
   else if (act === 'erp-ch-new') { ch.cur = null; ch.files = []; ch.scrollLen = -1; render(); }
   else if (act === 'erp-ch-open') { ch.cur = t.dataset.id; ch.scrollLen = -1; render(); }
   else if (act === 'erp-ch-del') { if (confirm('이 작업 기록을 지울까요? (다른 컴퓨터에서도 지워져요)')) { const id = t.dataset.id; ch.jobs = ch.jobs.filter((x) => x.id !== id); delete ch.sent[id]; if (ch.cur === id) ch.cur = null; S.deleteChatJob(id); chSave(); render(); } }
+  else if (act === 'erp-ch-chip' && t.dataset.v === 'deposit') { const nj = (j && !j.msgs.length) ? j : chNewJob('deposit'); nj.mode = 'deposit'; ch.cur = nj.id; nj.msgs.push({ who: 'me', text: '입금표' }); chDeposit(nj, ''); }
   else if (act === 'erp-ch-chip') { ch.mode = ch.mode === t.dataset.v ? '' : t.dataset.v; if (j && !j.items.length && !j.sale) j.mode = ch.mode; render(); const ta = document.getElementById('ch-text'); if (ta) ta.focus(); }
   else if (act === 'erp-ch-unatt') { ch.files.splice(Number(t.dataset.k), 1); render(); }
   else if (!j) return;
@@ -4073,12 +4154,14 @@ function chAct(act, t) {
   else if (act === 'erp-ch-toggle') { j.open = j.open || {}; j.open[t.dataset.k] = !j.open[t.dataset.k]; render(); }
   else if (act === 'erp-ch-pick') chPick(j, Number(t.dataset.i), Number(t.dataset.k), t.dataset.v);
   else if (act === 'erp-ch-skip') chPick(j, Number(t.dataset.i), Number(t.dataset.k), null);
+  else if (act === 'erp-ch-conv') chConvOut(j, t.dataset.i !== undefined ? Number(t.dataset.i) : undefined, t.dataset.k);
   else if (act === 'erp-ch-find') { const it = j.items[Number(t.dataset.i)]; it._find = it._find === Number(t.dataset.k) ? undefined : Number(t.dataset.k); ch.focusFind = true; render(); }
 }
 // 입력·붙여넣기·끌어다 놓기 (대화 화면에서만)
 app.addEventListener('input', (e) => {
   if (state.route !== 'chat') return;
   if (e.target.id === 'ch-text') { ch.text = e.target.value; e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 180) + 'px'; }
+  if (e.target.classList && e.target.classList.contains('ch-site')) { const j = chJob(); if (j && j.conv) { j.conv.docs[Number(e.target.dataset.i)].site = e.target.value.trim(); clearTimeout(ch.siteT); ch.siteT = setTimeout(chSave, 800); } return; }
   if (e.target.id === 'ch-find-in') {
     const res = document.getElementById('ch-find-res'); if (!res) return;
     const { i, k } = e.target.dataset;

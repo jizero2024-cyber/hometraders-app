@@ -678,3 +678,12 @@ body.erp .sheet .csend{border-radius:999px;background:#1f1e1c}
 .e-grid td input:hover{border-color:#e3e1dc}
 .e-grid td input:focus{border-color:#e8731c;background:#fff}
 body.erp .sheet{font-size:14px}
+/* 서류 변환·입금표 (대화 화면) */
+.ch-sub{margin:26px 0 10px;text-align:left;font-size:14px;color:var(--c-sub);font-weight:600}
+.ch-ex4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;text-align:left}
+body.erp .ch-exb.sm{padding:12px 14px}
+.ch-exb.sm b{font-size:15px}.ch-exb.sm span{font-size:13px}
+.ch-site{display:block;width:100%;max-width:360px;margin-top:6px;padding:6px 10px;border:1px solid var(--c-line2);border-radius:8px;outline:0;font-size:14px}
+.ch-site:focus{border-color:var(--c-acc)}
+body.erp .ch-btn.sm{padding:5px 10px;font-size:13px;border-radius:8px}
+.ch-frame{display:block;width:100%;height:720px;border:0;border-top:1px solid #f0eee9}

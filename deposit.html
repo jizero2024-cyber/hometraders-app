@@ -252,6 +252,8 @@
   }
 
   ['amount', 'date', 'to', 'memo'].forEach(id => $(id).addEventListener('input', render));
+  // 대화 화면에서 열 때 — 주소 뒤 ?amount=&date=&to=&memo= 로 칸을 채워서 연다
+  (() => { const q = new URLSearchParams(location.search); ['amount', 'date', 'to', 'memo'].forEach((k) => { const v = q.get(k); if (v !== null && v !== '') $(k).value = k === 'amount' ? Number(v.replace(/[^\d]/g, '')).toLocaleString() : v; }); })();
   render();
 
   // 파일 이름 — 260810_원익큐브_입금표_3762000원
