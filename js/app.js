@@ -1998,12 +1998,12 @@ const DESK_MENU = [
 const DESK_TITLES = {};
 DESK_MENU.forEach(([g, items]) => items.forEach(([r, l]) => { if (r) DESK_TITLES[r] = [l, g]; }));
 // 모바일 route ↔ PC route
-const DESK_FROM_MOBILE = { home: 'dash', quote: 'quotes', ship: 'ships', invoice: 'invoices', stock: 'stock', silicone: 'silicone', settings: 'settings' };
-const MOBILE_FROM_DESK = { dash: 'home', partners: 'settings', items: 'quote', whs: 'settings', ecount: 'quote', itemmap: 'quote', quotes: 'quote',
+const DESK_FROM_MOBILE = { home: 'chat', quote: 'quotes', ship: 'ships', invoice: 'invoices', stock: 'stock', silicone: 'silicone', settings: 'settings' };
+const MOBILE_FROM_DESK = { chat: 'home', dash: 'home', partners: 'settings', items: 'quote', whs: 'settings', ecount: 'quote', itemmap: 'quote', quotes: 'quote',
   ships: 'ship', dispatch: 'home', invoices: 'invoice', inbound: 'stock', buy: 'invoice', stock: 'stock', silicone: 'silicone', settings: 'settings',
   docread: 'home', delivdocs: 'home' };
 function deskRoute(r) {
-  if (DESK_TITLES[r]) return r;
+  if (r === 'chat' || DESK_TITLES[r]) return r;
   if (r === 'quote') { const t = state.quoteTab; state.quoteTab = 'quote'; return t === 'price' ? 'items' : t === 'ecount' ? 'ecount' : t === 'map' ? 'itemmap' : 'quotes'; }
   if (r === 'invoice' && state.invoiceTab === 'buy') { state.invoiceTab = 'pending'; return 'buy'; }
   return DESK_FROM_MOBILE[r] || 'dash';
@@ -2121,6 +2121,7 @@ function deskTop() {
     <div class="e-brand"><img src="./icons/favicon.png" alt=""><b>홈트레이더스 재고·출고</b></div>
     <div class="e-corp">주식회사 홈트레이더스</div>
     <div class="e-quick">
+      <button type="button" data-act="erp-nav" data-r="chat" style="font-weight:700">← 대화 화면</button>
       <button type="button" data-act="new-ship">${I.plus}출고 입력</button>
       <button type="button" data-act="add-inbound">입고 입력</button>
       <button type="button" data-act="add-quote">견적 입력</button>
@@ -2793,7 +2794,7 @@ async function helperFetch(path, body) {
 function helperCheck() {
   helperState.at = Date.now();  // 재확인 주기 기준 — 재조회 전에 찍어 무한 렌더 루프 방지
   helperFetch('/api/health').then((j) => { helperState = { checked: true, up: true, info: j, at: Date.now() }; })
-    .catch(() => { helperState = { checked: true, up: false, info: null, at: Date.now() }; }).finally(() => { if (['docread', 'delivdocs'].includes(state.route)) render(); });
+    .catch(() => { helperState = { checked: true, up: false, info: null, at: Date.now() }; }).finally(() => { if (['docread', 'delivdocs', 'chat'].includes(state.route)) render(); });
 }
 const helperBadge = () => !helperState.checked ? '<span class="e-b gray">도우미 확인 중…</span>'
   : !helperState.up ? '<span class="e-b red">로컬 도우미 꺼짐</span>'
@@ -2818,7 +2819,7 @@ function drNormDates(doc) {
 }
 // 문서 인식은 무엇을 할지 먼저 고른다 — 고른 일에 필요한 칸·버튼만 보인다
 let drMode = '';
-const DR_MODES = [['deliv', '납품확인서'], ['buy', '구매전표'], ['quote', '견적·출고']];
+const DR_MODES = [['deliv', '납품확인서'], ['buy', '구매입력'], ['quote', '견적·출고']];
 const drModeTabs = () => `<div class="e-tabs">${DR_MODES.map(([v, l]) => `<button class="e-tab ${drMode === v ? 'on' : ''}" type="button" data-act="erp-dr-mode" data-v="${v}">${l}</button>`).join('')}</div>`;
 function drSetMode(v) {
   drMode = v;
@@ -2851,7 +2852,7 @@ function drTotals() {
 }
 function deskDocRead() {
   if (!helperState.checked || !helperState.at || Date.now() - helperState.at > 60000) { helperState.at = Date.now(); helperCheck(); }
-  if (!drMode) return ePage(`${drModeTabs()}<div class="e-empty" style="margin-top:24px">무엇을 할지 먼저 고르세요 — <b>납품확인서</b> · <b>구매전표</b> · <b>견적·출고</b><br><span class="muted">고른 일에 맞는 칸과 버튼만 나와요.</span></div>`);
+  if (!drMode) return ePage(`${drModeTabs()}<div class="e-empty" style="margin-top:24px">무엇을 할지 먼저 고르세요 — <b>납품확인서</b> · <b>구매입력</b> · <b>견적·출고</b><br><span class="muted">고른 일에 맞는 칸과 버튼만 나와요.</span></div>`);
   if (helperState.up) syncPrevPrices();
   if (drq.files.length > 1 && dr.fromBatch === undefined) return drqPanel();
   const d = dr.doc;
@@ -2889,11 +2890,11 @@ function deskDocRead() {
     <div class="e-tools">${eBtn('매핑 저장 (다음부터 자동)', 'erp-dr-learn')}${drMode === 'quote' ? eBtn('출고 입력으로 보내기', 'erp-dr-ship') : ''}<span class="sp"></span>
       ${isDeliv && dr.deliv ? (dr.deliv.outs || [dr.deliv.out]).map((o) => `<a class="e-btn" href="${HELPER}/api/file?path=${encodeURIComponent(o)}">납품확인서 받기 · ${esc(o.split('/').pop())}</a>`).join('') : ''}
       ${drMode === 'quote' && dr.quote ? `<a class="e-btn" href="${HELPER}/api/file?path=${encodeURIComponent(dr.quote.out)}">견적서 받기 · ${esc(dr.quote.out.split('/').pop())}</a>` : ''}
-      ${isDeliv ? eBtn('납품확인서 만들기', 'erp-dr-deliv', '', 'pri') : drMode === 'buy' ? eBtn('구매전표 만들기', 'erp-dr-buy', '', 'pri') : eBtn('견적서 만들기 (거래처 양식)', 'erp-dr-quote', '', 'pri')}</div>
+      ${isDeliv ? eBtn('납품확인서 만들기', 'erp-dr-deliv', '', 'pri') : drMode === 'buy' ? eBtn('구매입력 만들기', 'erp-dr-buy', '', 'pri') : eBtn('견적서 만들기 (거래처 양식)', 'erp-dr-quote', '', 'pri')}</div>
     ${dr.note ? `<div class="e-sum"><span>${esc(dr.note)}</span></div>` : ''}
     ${drMode === 'buy' ? drBuyPanel() : ''}`;
   }
-  return ePage(`${drModeTabs()}<div class="e-tools">${dr.fromBatch !== undefined ? eBtn(`← ${drMode === 'buy' ? '구매전표' : drMode === 'deliv' ? '납품확인서' : '명세서'} 모음으로`, 'erp-drq-back', '', 'pri') : ''}<label class="e-btn ${dr.fromBatch !== undefined ? '' : 'pri'}" for="dr-file">파일 선택</label><input type="file" id="dr-file" accept="image/*,.heic,.pdf,.xlsx,.xls,.csv" multiple hidden>
+  return ePage(`${drModeTabs()}<div class="e-tools">${dr.fromChat ? eBtn('← 대화로', 'erp-ch-back', '', 'pri') : ''}${dr.fromBatch !== undefined ? eBtn(`← ${drMode === 'buy' ? '구매입력' : drMode === 'deliv' ? '납품확인서' : '명세서'} 모음으로`, 'erp-drq-back', '', 'pri') : ''}<label class="e-btn ${dr.fromBatch !== undefined ? '' : 'pri'}" for="dr-file">파일 선택</label><input type="file" id="dr-file" accept="image/*,.heic,.pdf,.xlsx,.xls,.csv" multiple hidden>
       ${eBtn('인식 시작', 'erp-dr-read', dr.b64 && !dr.busy ? '' : 'disabled')}${dr.name ? `<span class="e-selinfo">${esc(dr.name)}</span>${eBtn('비우기', 'erp-dr-clear', '', 'sm')}` : ''}
       <span class="sp"></span>${drMode === 'deliv' ? `<label class="e-btn sm" for="dr-stamp">${DL.getStamp() ? '도장 ✓' : '도장'}</label><input type="file" id="dr-stamp" accept="image/*" hidden>` : ''}${helperBadge()}</div>
     <div class="e-dr"><div class="e-panel dr-drop"><div class="e-panel-hd"><b>원본 문서</b></div><div class="dr-view">${left}</div></div>
@@ -3084,7 +3085,7 @@ function drqPanel() {
   return ePage(`${drModeTabs()}<div class="e-tools"><label class="e-btn" for="dr-file">파일 선택</label><input type="file" id="dr-file" accept="image/*,.heic,.pdf,.xlsx,.xls,.csv" multiple hidden>
       <span class="e-selinfo">명세서 ${n}개 · 인식 ${read}개${b ? ` · 합계 일치 ${b.passed}개 / 막힘 ${b.failed}개` : ''}</span><span class="sp"></span>${helperBadge()}</div>
     ${dr.err ? `<div class="dr-err">${esc(dr.err)}</div>` : ''}
-    <div class="e-panel"><div class="e-panel-hd"><b>구매전표 모음</b><span class="sp"></span>
+    <div class="e-panel"><div class="e-panel-hd"><b>구매입력 모음</b><span class="sp"></span>
       ${eBtn(drq.busy ? '처리 중…' : '전부 인식', 'erp-drq-read', drq.busy || read === n ? 'disabled' : '', read === n ? '' : 'pri')}${eBtn('다시 검사', 'erp-drq-check', drq.busy || !read ? 'disabled' : '')}</div>
       <div class="e-tw" style="overflow-x:auto"><table class="e-grid" style="min-width:900px"><colgroup><col style="width:30px"><col style="width:22%"><col style="width:90px"><col style="width:100px"><col style="width:240px"><col><col style="width:100px"></colgroup>
         <thead><tr><th>No</th><th>거래처 / 파일</th><th>일자</th><th>총액</th><th>규격 (날짜/판매처/현장)</th><th>상태</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
@@ -3297,7 +3298,7 @@ function drBuyPanel() {
     const same = dt[k] === st[k];
     return `<td>${label}</td><td class="n">${eN(st[k])}</td><td>${inp}</td><td class="c">${same ? '<span class="e-b green">일치</span>' : `<span class="e-b red">${eN(st[k] - dt[k])}원 차이</span>`}</td>`;
   };
-  return `<div class="e-panel" style="margin-top:8px"><div class="e-panel-hd"><b>구매전표 미리보기</b><span class="sp"></span>
+  return `<div class="e-panel" style="margin-top:8px"><div class="e-panel-hd"><b>구매입력 미리보기</b><span class="sp"></span>
       ${b.valid ? '<span class="e-b green">명세서와 합계 일치</span>' : '<span class="e-b red">전표 만들 수 없음</span>'}</div>
     <table class="e-ftbl"><colgroup><col style="width:80px"><col><col style="width:80px"><col></colgroup>
       <tr><th>거래처</th><td><input class="e-in" id="dr-buy-cust" value="${esc(v.cust_code)}" placeholder="거래처코드" style="width:130px"> ${esc(v.cust_name)} <span class="muted">${esc(v.cust_how)}</span></td>
@@ -3586,6 +3587,487 @@ function deskSale() {
   }
   return ePage(`${head}${err}${paste}${body}`, 'scroll');
 }
+// ══════════════════════════════════════════════════════════════
+// 대화 화면 (PC 첫 화면) — 사진·PDF·캡처·글을 올리면 읽어서 구매입력·납품확인서·견적서·판매입력으로 만들고,
+// 처음 보는 품목은 대화로 물어 매핑을 저장한다. 계산·저장은 문서 인식/판매입력 화면과 같은 도우미 API 를 그대로 쓴다.
+// ══════════════════════════════════════════════════════════════
+const CH_MODES = [['buy', '구매입력'], ['sale', '판매입력'], ['deliv', '납품확인서'], ['quote', '견적서'], ['stmt', '거래명세표']];
+const CH_LABEL = Object.fromEntries(CH_MODES);
+const CH_KEY = 'ht_ch_jobs_v1';
+let ch = { jobs: [], cur: null, text: '', files: [], mode: '', loaded: false, scrollLen: -1 };
+function chLoad() {
+  if (ch.loaded) return;
+  ch.loaded = true;
+  try { ch.jobs = JSON.parse(localStorage.getItem(CH_KEY) || '[]') || []; } catch (e) { ch.jobs = []; }
+  ch.jobs.forEach((j) => { j.busy = false; (j.items || []).forEach((it) => { it.busy = false; }); });
+}
+function chSave() {
+  try {
+    const slim = ch.jobs.slice(0, 40).map((j) => ({ ...j, items: (j.items || []).map(({ b64, ...it }) => it) }));   // 사진 원본은 저장 안 함 (용량)
+    localStorage.setItem(CH_KEY, JSON.stringify(slim));
+  } catch (e) { /* 저장 공간이 차도 화면은 그대로 */ }
+}
+const chJob = () => ch.jobs.find((j) => j.id === ch.cur) || null;
+function chNewJob(mode) {
+  const j = { id: 'j' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), at: Date.now(), title: '새 작업', mode: mode || '', msgs: [], items: [], sale: null };
+  ch.jobs.unshift(j); ch.cur = j.id;
+  return j;
+}
+const chSay = (j, text, extra) => { j.msgs.push({ who: 'bot', text, ...(extra || {}) }); };
+const chCard = (j, card, i) => { j.msgs.push({ who: 'bot', card, i }); };
+function chTitle(j) {
+  const it = (j.items || []).find((x) => x.doc && x.doc.partner);
+  const who = it ? it.doc.partner : (j.sale && j.sale.results && j.sale.results[0] ? (j.sale.results[0].voucher.cust_name || '') : '');
+  j.title = `${who || (j.items[0] && j.items[0].name) || '붙여넣은 글'}${j.items.length > 1 ? ` 외 ${j.items.length - 1}장` : ''}`;
+}
+// 짧은 말 → 할 일
+function chCmd(t) {
+  const s = t.replace(/\s/g, '');
+  if (/^(구매입력|구매전표|구매)(으로|로)?(만들어줘|해줘)?$/.test(s)) return 'buy';
+  if (/^(납품확인서|납품)(으로|로)?(만들어줘|해줘)?$/.test(s)) return 'deliv';
+  if (/^(견적서|견적)(으로|로)?(만들어줘|해줘)?$/.test(s)) return 'quote';
+  if (/^(판매입력|판매전표|판매)(으로|로)?(만들어줘|해줘)?$/.test(s)) return 'sale';
+  if (/^(거래명세표|명세표|거래명세서)(으로|로)?(만들어줘|해줘)?$/.test(s)) return 'stmt';
+  if (/^(복사|복사해줘|붙여넣기복사)$/.test(s)) return 'copy';
+  if (/^(엑셀|엑셀받기|파일)$/.test(s)) return 'file';
+  if (/^(새작업|새로|처음부터)$/.test(s)) return 'new';
+  if (/^(고치기|수정)$/.test(s)) return 'edit';
+  return '';
+}
+function chModeFromText(t) {
+  if (/구매/.test(t)) return 'buy';
+  if (/납품/.test(t)) return 'deliv';
+  if (/견적/.test(t)) return 'quote';
+  if (/판매/.test(t)) return 'sale';
+  if (/명세표|명세서로/.test(t)) return 'stmt';
+  return '';
+}
+function chAddFiles(list) {
+  const files = [...(list || [])].filter(Boolean);
+  if (!files.length) return;
+  Promise.all(files.map(drFileObj)).then((arr) => { ch.files.push(...arr); render(); const ta = document.getElementById('ch-text'); if (ta) ta.focus(); });
+}
+function chSend() {
+  const ta = document.getElementById('ch-text'); if (ta) ch.text = ta.value;
+  const text = (ch.text || '').trim(); const files = ch.files;
+  if (!text && !files.length) return;
+  let j = chJob();
+  const cmd = !files.length && text.length <= 15 ? chCmd(text) : '';
+  ch.text = ''; ch.files = [];
+  if (cmd === 'new') { chNewJob(ch.mode); render(); return; }
+  if (cmd && j && (j.items.length || j.sale)) {
+    j.msgs.push({ who: 'me', text });
+    chDo(j, cmd);
+    return;
+  }
+  if (cmd && !['copy', 'file', 'edit'].includes(cmd)) {   // 먼저 할 일만 말한 경우 — 고르고 자료를 기다림
+    ch.mode = cmd; if (!j || j.items.length || j.sale) j = chNewJob(cmd); else j.mode = cmd;
+    j.msgs.push({ who: 'me', text });
+    chSay(j, cmd === 'stmt' ? '' : `${CH_LABEL[cmd]}로 만들게요. ${cmd === 'sale' ? '판매 목록 글을 붙여넣어 주세요 (거래처마다 *이름 머리줄).' : '명세서 사진·PDF를 끌어다 놓거나, 캡처를 Cmd+V로 붙여넣어 주세요.'}`);
+    if (cmd === 'stmt') chCard(j, 'stmt');
+    chSave(); render(); return;
+  }
+  if (cmd) { j = j || chNewJob(ch.mode); j.msgs.push({ who: 'me', text }); chSay(j, '아직 만든 게 없어요. 먼저 명세서나 글을 올려 주세요.'); chSave(); render(); return; }
+  // 새 자료 → 새 작업
+  j = (j && !j.items.length && !j.sale) ? j : chNewJob(ch.mode);
+  j.mode = j.mode || ch.mode || chModeFromText(text);
+  const onlyCmdText = files.length && text && chModeFromText(text) && text.length <= 15;
+  j.msgs.push({ who: 'me', text, files: files.map((f) => f.name) });
+  if (j.mode === 'stmt') { chCard(j, 'stmt'); chSave(); render(); return; }
+  if (j.mode === 'sale' && !files.length) { chSale(j, text); return; }
+  j.items = files.map((f) => ({ name: f.name, mime: f.mime, b64: f.b64 }));
+  if (text && !onlyCmdText) j.items.push({ name: '붙여넣은 글', text });
+  chTitle(j);
+  chReadAll(j);
+}
+function chNorm(doc) {
+  doc.lines = (doc.lines || []).map((l) => ({ ...l, ours: l.match ? l.match.ours : l.ours, code: l.match ? l.match.code : l.code, conf: l.match ? l.match.conf : l.conf, cands: l.match ? l.match.cands : l.cands, price: l.prev ? l.prev.price : (l.price || '') }));
+  drNormDates(doc);
+  return doc;
+}
+async function chReadOne(it) {
+  if (it.text) {
+    if (helperState.up) { try { const j = await helperFetch('/api/doc/read', { text: it.text, partner: '' }); it.usage = j.usage; return chNorm(j.doc); } catch (e) { /* 아래로 */ } }
+    if (!textMatch || textMatchMap !== S.getItemMap()) { textMatchMap = S.getItemMap(); textMatch = makeMatcher(ECOUNT_ITEMS, textMatchMap); }
+    return chNorm(readPastedText(it.text, '', textMatch, prevForHere));
+  }
+  if (helperState.up) { const j = await helperFetch('/api/doc/read', { name: it.name, data: it.b64 }); it.usage = j.usage; return chNorm(j.doc); }
+  return chNorm(await drReadHere({ name: it.name, b64: it.b64 }));
+}
+async function chReadAll(j) {
+  j.busy = true; render();
+  for (let i = 0; i < j.items.length; i++) {
+    const it = j.items[i];
+    it.busy = true; render();
+    try { it.doc = await chReadOne(it); it.orig = JSON.parse(JSON.stringify(it.doc.lines || [])); it.err = ''; }
+    catch (e) { it.err = e.message; }
+    it.busy = false;
+    if (it.doc) {
+      const n = it.doc.lines.length, bad = it.doc.lines.filter((l) => l.conf === 'mid' || l.conf === 'none').length;
+      chSay(j, `${it.doc.partner ? it.doc.partner + ' ' : ''}${it.doc.doc_type || '문서'}를 읽었어요. ${n}줄${bad ? `, 그중 ${bad}줄은 우리 품목을 확인해야 해요` : ''}.`);
+    } else chSay(j, `${it.name}을 읽지 못했어요 — ${it.err}`, { err: true });
+  }
+  j.busy = false; chTitle(j);
+  if (!j.items.some((it) => it.doc)) { chSave(); render(); return; }
+  j.items.forEach((it, i) => { if (it.doc && chUnknown(it).length) chCard(j, 'map', i); });
+  if (!j.mode) chCard(j, 'ask');
+  else await chRun(j);
+  chSave(); render();
+}
+const chUnknown = (it) => (it.doc ? it.doc.lines.map((l, k) => ({ l, k })).filter(({ l }) => (l.conf === 'mid' || l.conf === 'none') && !l._skip) : []);
+async function chRun(j) {
+  const m = j.mode;
+  if (m === 'stmt') { chCard(j, 'stmt'); return; }
+  if (m === 'sale') {
+    const txt = j.items.filter((it) => it.text).map((it) => it.text).join('\n');
+    if (!txt) { chSay(j, '판매입력은 붙여넣은 판매 목록 글로 만들어요. 사진은 구매입력·납품확인서·견적서로 만들 수 있어요.'); return; }
+    await chSale(j, txt, true); return;
+  }
+  if (!helperState.up && m !== 'deliv') { chSay(j, `${CH_LABEL[m]}는 이 맥의 로컬 도우미가 켜져 있어야 만들 수 있어요.`, { err: true }); return; }
+  const wait = j.items.filter((it) => it.doc && chUnknown(it).length).length;
+  if (wait) chSay(j, `위 품목을 고르면 바로 ${CH_LABEL[m]}를 만들게요. 모르는 품목은 [그대로 두기]를 누르세요.`);
+  for (let i = 0; i < j.items.length; i++) if (j.items[i].doc && !chUnknown(j.items[i]).length) await chRunItem(j, i);
+}
+async function chRunItem(j, i) {   // 문서 한 장 → 고른 종류로 만들기
+  const it = j.items[i], m = j.mode;
+  if (!it || !it.doc || !['buy', 'deliv', 'quote'].includes(m)) return;
+  if (m === 'buy') await chBuy(it);
+  else if (m === 'deliv') await chDeliv(it);
+  else if (m === 'quote') await chQuote(it);
+  it.done = m;
+  if (!j.msgs.some((x) => x.card === m && x.i === i)) chCard(j, m, i);   // 같은 카드는 한 번만 — 다시 만들면 위 카드가 바뀜
+}
+function chDo(j, cmd) {
+  const it = j.items.find((x) => x.doc) || null;
+  if (['buy', 'deliv', 'quote', 'sale', 'stmt'].includes(cmd)) { j.mode = cmd; ch.mode = cmd; chRun(j).then(() => { chSave(); render(); }); render(); return; }
+  if (cmd === 'copy') { chCopy(j); return; }
+  if (cmd === 'file') { if (j.mode === 'sale') chSaleFile(j); else if (it) chBuyFile(j, j.items.indexOf(it)); return; }
+  if (cmd === 'edit') { if (j.mode === 'sale') chSaleEdit(j); else if (it) chEdit(j, j.items.indexOf(it)); }
+}
+function chBuyPayload(it) {
+  const d = it.doc || {};
+  const defTag = /^\d{4}-\d{2}-\d{2}$/.test(d.doc_date || '') ? d.doc_date.slice(5, 7) + d.doc_date.slice(8, 10) + '/' : '';
+  return { doc: it.doc, wh: it.wh || '', cust: it.cust || '', tag: it.tag ?? defTag, tag_all: !!it.tagAll };
+}
+async function chBuy(it) {
+  it.busy = true; render();
+  try { it.buy = await helperFetch('/api/purchase', chBuyPayload(it)); it.copied = false; it.buyFile = ''; } catch (e) { it.buy = null; it.err = e.message; }
+  it.busy = false;
+}
+async function chBuyFile(j, i) {
+  const it = j.items[i]; if (!it || !it.doc) return;
+  it.busy = true; render();
+  try { const r = await helperFetch('/api/purchase/file', chBuyPayload(it)); it.buy = r; it.buyFile = r.out; chFeedStock(it); chSay(j, `엑셀을 만들었어요: ${r.out.split('/').pop()}`, { file: r.out }); }
+  catch (e) { chSay(j, e.message, { err: true }); }
+  it.busy = false; chSave(); render();
+}
+function chFeedStock(it) {   // 구매입력 → 실리콘 재고 입고 (문서 인식 화면과 같은 규칙)
+  const keep = dr;
+  dr = { ...dr, doc: it.doc, stockMsg: null };
+  try { drStockFeed(it.buy); it.stockMsg = dr.stockMsg; } finally { dr = keep; }
+}
+async function chDeliv(it) {
+  if (!helperState.up) { it.err = '납품확인서는 이 맥의 로컬 도우미가 켜져 있어야 만들 수 있어요 (도우미 없이 만들려면 [고치기] → 납품확인서).'; return; }
+  it.busy = true; render();
+  try { it.deliv = await helperFetch('/api/delivery/make', { doc: it.doc, lines: it.doc.lines.map((l) => ({ ours: l.ours, raw_name: l.raw_name, name: l.name, unit: l.unit, qty: l.qty, date: l.date || '' })) }); }
+  catch (e) { it.deliv = null; it.err = e.message; }
+  it.busy = false;
+}
+async function chQuote(it) {
+  it.busy = true; render();
+  try { it.quote = await helperFetch('/api/quote', { doc: it.doc, lines: it.doc.lines.map((l) => ({ raw_name: l.raw_name, spec: l.spec, unit: l.unit, qty: l.qty, price: Number(l.price) || 0 })) }); }
+  catch (e) { it.quote = null; it.err = e.message; }
+  it.busy = false;
+}
+async function chSale(j, text, quiet) {
+  if (!helperState.up) { chSay(j, '판매입력은 이 맥의 로컬 도우미가 켜져 있어야 만들 수 있어요.', { err: true }); chSave(); render(); return; }
+  j.saleText = text; j.busy = true; render();
+  try {
+    const r = await helperFetch('/api/sale', { text, doc_date: S.todayStr(), wh: saleS.wh });
+    saleS.text = text;
+    const filled = saleApply(r, true);
+    if (filled) saleApply(await helperFetch('/api/sale', { items: saleItems() }));
+    j.sale = { results: saleS.results, paste: saleS.paste, passed: saleS.passed, total: saleS.total, wh: saleS.wh };
+    if (!quiet) j.title = (j.sale.results.map((x) => x.voucher.cust_name).filter(Boolean).slice(0, 2).join('·') || '판매 목록') + ' 판매입력';
+    chCard(j, 'sale');
+  } catch (e) { chSay(j, e.message, { err: true }); }
+  j.busy = false; chSave(); render();
+}
+async function chSaleFile(j) {
+  if (!j.sale) return;
+  j.busy = true; render();
+  try {
+    const items = j.sale.results.map((r) => ({ cust: r.voucher.cust_code || '', wh: j.sale.wh, doc: r.doc }));
+    const r = await helperFetch('/api/sale/file', { items });
+    j.sale = { ...j.sale, results: r.results, paste: r.paste || j.sale.paste, file: r.out };
+    chSay(j, `판매입력 엑셀을 만들었어요: ${r.out.split('/').pop()}`, { file: r.out });
+  } catch (e) { chSay(j, e.message, { err: true }); }
+  j.busy = false; chSave(); render();
+}
+function chSaleEdit(j) {
+  if (!j.sale) return;
+  saleS = { ...saleS, text: j.saleText || '', results: j.sale.results, paste: j.sale.paste, passed: j.sale.passed, total: j.sale.total, file: '', copied: false };
+  state.route = 'sale'; render();
+}
+function chCopy(j, i) {
+  if (j.mode === 'sale') {
+    if (!j.sale || !j.sale.paste) { chSay(j, '복사할 판매입력이 없어요.'); render(); return; }
+    if (saleS.results === j.sale.results) saleStockFeed();   // 실리콘 재고 반영 (판매입력 화면과 같은 규칙)
+    drCopyPaste(j.sale.paste, () => { j.sale.copied = true; chSay(j, '복사했어요. 이카운트 → 판매관리 → 판매입력 → 웹자료올리기 → 표 첫 칸 클릭 → Cmd+V'); chSave(); render(); });
+    return;
+  }
+  const it = i !== undefined ? j.items[i] : j.items.find((x) => x.buy && x.buy.valid);
+  if (!it || !it.buy || !it.buy.valid) { chSay(j, '합계가 맞는 구매입력이 없어 복사할 게 없어요. [고치기]에서 숫자를 확인해 주세요.'); render(); return; }
+  drCopyPaste(it.buy.paste, () => {
+    it.copied = true; chFeedStock(it);
+    chSay(j, '복사했어요. 이카운트 → 구매관리 → 구매입력 → 웹자료올리기 → 표 첫 칸(1번 줄 일자) 클릭 → Cmd+V → 확인 후 저장(F8)');
+    chSave(); render();
+  });
+}
+// 고치기 — 문서 인식 화면(숫자·품목·창고·규격 다 고칠 수 있는 곳)으로 열고, [← 대화로] 누르면 결과를 가져옴
+function chEdit(j, i) {
+  const it = j.items[i]; if (!it || !it.doc) return;
+  if (dr.url) URL.revokeObjectURL(dr.url);
+  let url = '';
+  if (it.b64 && it.mime) { try { const bin = atob(it.b64); const u8 = new Uint8Array(bin.length); for (let k = 0; k < bin.length; k++) u8[k] = bin.charCodeAt(k); url = URL.createObjectURL(new Blob([u8], { type: it.mime })); } catch (e) { url = ''; } }
+  dr = { name: it.name, url, mime: url ? it.mime : '', b64: it.b64 || '', busy: false, err: '', doc: it.doc, orig: it.orig, usage: it.usage || null, quote: it.quote || null, deliv: it.deliv || null, note: '', buy: it.buy || null, buyFile: it.buyFile || '', pushed: null, fromChat: { job: j.id, i } };
+  drMode = ['buy', 'deliv', 'quote'].includes(j.mode) ? j.mode : 'buy';
+  state.route = 'docread'; render();
+}
+function chBack() {
+  const fc = dr.fromChat;
+  if (fc) {
+    const j = ch.jobs.find((x) => x.id === fc.job), it = j && j.items[fc.i];
+    if (it) { it.doc = dr.doc; it.buy = dr.buy; it.buyFile = dr.buyFile; it.quote = dr.quote; it.deliv = dr.deliv; it.copied = !!dr.buyCopied; }
+    if (j) { ch.cur = j.id; if (it && j.mode === 'buy' && helperState.up) { chBuy(it).then(() => { chSave(); render(); }); } chSave(); }
+  }
+  dr = { ...dr, fromChat: undefined };
+  state.route = 'chat'; render();
+}
+// 매핑 — 처음 보는 품목을 대화로 물어서 저장 (도우미 사전 → 같은 거래처 표기는 다음부터 자동)
+async function chPick(j, i, k, name) {
+  const it = j.items[i]; const l = it && it.doc && it.doc.lines[k]; if (!l) return;
+  it._find = undefined;
+  if (name === null) l._skip = true;   // 그대로 두기 — 매핑 안 함
+  else {
+    l.ours = name; l.code = ecountCode(name); l.conf = 'edit';
+    render();
+    if (helperState.up) {
+      try { await helperFetch('/api/map/learn', { partner: it.doc.partner, items: [{ raw: l.raw_name, spec: l.spec, ours: name }] }); l.conf = 'high'; l._saved = true; }
+      catch (e) { chSay(j, `매핑 저장 실패: ${e.message}`, { err: true }); }
+    } else l._saved = false;
+  }
+  if (!chUnknown(it).length && ['buy', 'deliv', 'quote'].includes(j.mode) && helperState.up) {
+    if (it.done === j.mode) { await chRunItem(j, i); chSay(j, `품목을 고친 대로 위 ${CH_LABEL[j.mode]}를 다시 만들었어요.`); }
+    else await chRunItem(j, i);
+  }
+  chSave(); render();
+}
+function chFindList(q) {
+  const t = String(q || '').replace(/\s/g, '').toLowerCase(); if (!t) return [];
+  const parts = String(q).toLowerCase().split(/\s+/).filter(Boolean);
+  return ECOUNT_ITEMS.filter(([c, n]) => { const s = (n + c).toLowerCase(); return parts.every((p) => s.includes(p)); }).slice(0, 8);
+}
+// ── 그리기 ─────────────────────────────────────────
+const chFileLink = (p) => `<a class="ch-btn" href="${HELPER}/api/file?path=${encodeURIComponent(p)}">${esc(p.split('/').pop())} 받기</a>`;
+function chLinesTable(rows, j, key) {
+  const open = !!(j.open && j.open[key]);
+  const shown = open ? rows : rows.slice(0, 4);
+  return `<table class="ch-tbl">${shown.join('')}${rows.length > 4 ? `<tr class="ch-more"><td colspan="3"><button type="button" class="ch-link" data-act="erp-ch-toggle" data-k="${key}">${open ? '접기 ⌃' : `${rows.length - 4}줄 더 보기 ⌄`}</button></td></tr>` : ''}`;
+}
+function chCardRead(j, i) {
+  const it = j.items[i]; if (!it || !it.doc) return '';
+  const d = it.doc;
+  const rows = d.lines.map((l) => `<tr><td>${esc(l.raw_name)}${l.spec ? ` <span class="ch-dim">${esc(l.spec)}</span>` : ''}<span class="ch-code">${l.ours ? esc(l.ours) : '우리 품목 못 찾음'}</span></td><td class="q">${esc(l.qty)} ${esc(l.unit || '')}</td><td class="n">${l.unit_price ? eN(l.unit_price) : ''}</td></tr>`);
+  return `<div class="ch-card"><div class="ch-ch"><div><h3>${esc(d.doc_type || '문서')} · ${esc(d.partner || '거래처?')}</h3><small>${esc(d.doc_date || '')} · ${d.lines.length}줄</small></div></div>
+    ${chLinesTable(rows, j, 'r' + i)}</table></div>`;
+}
+function chCardAsk(j) {
+  return `<div class="ch-ask"><b>무엇으로 만들까요?</b><div class="ch-opts">${CH_MODES.map(([v, l]) => `<button type="button" class="ch-btn" data-act="erp-ch-mode" data-v="${v}">${l}</button>`).join('')}</div></div>`;
+}
+function chCardBuy(j, i) {
+  const it = j.items[i]; if (!it) return '';
+  if (it.busy) return '<div class="ch-wait">구매입력 검사 중…</div>';
+  const b = it.buy;
+  if (!b) return `<div class="ch-card"><div class="ch-ch"><div><h3>구매입력</h3><small>${esc(it.err || '검사하지 못했어요')}</small></div><span class="ch-pill err">못 만듦</span></div><div class="ch-acts"><button type="button" class="ch-btn pri" data-act="erp-ch-edit" data-i="${i}">고치기</button></div></div>`;
+  const v = b.voucher || {}, st = b.sums || {}, dt = b.doc_totals || {};
+  const rows = (v.lines || []).map((x) => `<tr><td>${esc(x.prod_des)}${x.spec ? ` <span class="ch-dim">[${esc(x.spec)}]</span>` : ''}<span class="ch-code">${x.prod_cd ? esc(x.prod_cd) : '품목코드 없음'}</span></td><td class="q">${eN(x.qty)}</td><td class="n">${eN(x.supply)}</td></tr>`);
+  const diff = ['supply', 'vat', 'total'].filter((k) => dt[k] !== undefined && dt[k] !== st[k]);
+  return `<div class="ch-card"><div class="ch-ch"><div><h3>구매입력 · ${esc(v.cust_name || it.doc.partner || '거래처?')}</h3><small>${esc(v.date || '')} · ${esc(v.wh_code || '')} ${esc(v.wh_name || '')}${v.tag ? ` · 규격 ${esc(v.tag)}` : ''}</small></div>
+      ${b.valid ? '<span class="ch-pill ok">합계 일치</span>' : '<span class="ch-pill err">확인 필요</span>'}</div>
+    ${b.errors.length ? `<div class="ch-errs">${b.errors.map((e) => `<div>${esc(e)}</div>`).join('')}</div>` : ''}
+    ${chLinesTable(rows, j, 'b' + i)}
+      <tr class="ch-sum"><td>합계 (공급가액 + 부가세)</td><td></td><td class="n">${eN(st.total)}</td></tr>
+      ${diff.length ? `<tr class="ch-sumx"><td colspan="3">명세서 ${diff.map((k) => `${{ supply: '공급가액', vat: '부가세', total: '총액' }[k]} ${eN(dt[k])}`).join(' · ')} — 차이 있음</td></tr>` : ''}</table>
+    ${b.warnings.length ? `<div class="ch-warn"><button type="button" class="ch-link" data-act="erp-ch-toggle" data-k="w${i}">참고 ${b.warnings.length}개 ${j.open && j.open['w' + i] ? '접기' : '보기'}</button>${j.open && j.open['w' + i] ? b.warnings.map((w) => `<div>${esc(w)}</div>`).join('') : ''}</div>` : ''}
+    <div class="ch-acts">
+      ${b.valid ? `<button type="button" class="ch-btn ${it.copied ? 'done' : 'pri'}" data-act="erp-ch-copy" data-i="${i}">${it.copied ? '복사됨 ✓' : '이카운트 붙여넣기 복사'}</button>` : ''}
+      ${b.valid ? (it.buyFile ? chFileLink(it.buyFile) : `<button type="button" class="ch-btn" data-act="erp-ch-file" data-i="${i}">엑셀 받기</button>`) : ''}
+      <button type="button" class="ch-btn ${b.valid ? '' : 'pri'}" data-act="erp-ch-edit" data-i="${i}">고치기</button></div></div>`;
+}
+function chCardDeliv(j, i) {
+  const it = j.items[i]; if (!it) return '';
+  if (it.busy) return '<div class="ch-wait">납품확인서 만드는 중…</div>';
+  const outs = it.deliv ? (it.deliv.outs || [it.deliv.out]).filter(Boolean) : [];
+  return `<div class="ch-card"><div class="ch-ch"><div><h3>납품확인서 · ${esc(it.doc.partner || '')}</h3><small>${outs.length ? `${outs.length}장 만들었어요` : esc(it.err || '만들 품목이 없어요 (인슐레이션·방수시트·타이벡만)')}</small></div>${outs.length ? '<span class="ch-pill ok">완료</span>' : '<span class="ch-pill err">확인 필요</span>'}</div>
+    <div class="ch-acts">${outs.map(chFileLink).join('')}<button type="button" class="ch-btn" data-act="erp-ch-edit" data-i="${i}">고치기</button></div></div>`;
+}
+function chCardQuote(j, i) {
+  const it = j.items[i]; if (!it) return '';
+  if (it.busy) return '<div class="ch-wait">견적서 만드는 중…</div>';
+  const q = it.quote; const noPrice = it.doc.lines.filter((l) => !(Number(l.price) > 0)).length;
+  return `<div class="ch-card"><div class="ch-ch"><div><h3>견적서 · ${esc(it.doc.partner || '')}</h3><small>${q ? `합계 ${Math.round(q.total_incl || 0).toLocaleString()}원 (부가세 포함)${noPrice ? ` · 단가 없는 줄 ${noPrice}개` : ''}` : esc(it.err || '만들지 못했어요')}</small></div>${q ? (noPrice ? '<span class="ch-pill warn">단가 확인</span>' : '<span class="ch-pill ok">완료</span>') : '<span class="ch-pill err">확인 필요</span>'}</div>
+    <div class="ch-acts">${q && q.out ? chFileLink(q.out) : ''}<button type="button" class="ch-btn" data-act="erp-ch-edit" data-i="${i}">고치기</button></div></div>`;
+}
+function chCardSale(j) {
+  const s = j.sale; if (!s) return '';
+  const rows = s.results.map((r) => `<tr><td>${esc(r.voucher.cust_name || '(거래처?)')}<span class="ch-code">${r.doc.lines.length}줄${r.errors.length ? ' · ' + esc(r.errors[0]) : ''}</span></td><td class="q">${r.ok ? '<span class="ch-pill ok">OK</span>' : '<span class="ch-pill err">확인</span>'}</td><td class="n">${eN((r.sums || {}).total)}</td></tr>`);
+  return `<div class="ch-card"><div class="ch-ch"><div><h3>판매입력 · ${s.results.length}곳</h3><small>통과 ${s.passed}/${s.results.length} · 합계 ${eN(s.total)}원</small></div>${s.passed === s.results.length ? '<span class="ch-pill ok">모두 통과</span>' : '<span class="ch-pill err">확인 필요</span>'}</div>
+    ${chLinesTable(rows, j, 's')}</table>
+    <div class="ch-acts"><button type="button" class="ch-btn ${s.copied ? 'done' : 'pri'}" data-act="erp-ch-copy">${s.copied ? '복사됨 ✓' : '이카운트 붙여넣기 복사'}</button>
+      ${s.file ? chFileLink(s.file) : `<button type="button" class="ch-btn" data-act="erp-ch-file">엑셀 받기</button>`}
+      <button type="button" class="ch-btn" data-act="erp-ch-edit">고치기</button></div></div>`;
+}
+function chCardMap(j, i) {
+  const it = j.items[i]; if (!it || !it.doc) return '';
+  const all = it.doc.lines.map((l, k) => ({ l, k })).filter(({ l }) => l.conf === 'mid' || l.conf === 'none' || l._saved !== undefined || l._skip);
+  if (!all.length) return '';
+  const left = chUnknown(it);
+  if (!left.length) {
+    const saved = all.filter(({ l }) => l._saved).length;
+    return `<div class="ch-done">처음 보는 품목 ${all.length}개 정리 끝${saved ? ` · 매핑 ${saved}개 저장 (다음부터 자동)` : ''}</div>`;
+  }
+  const q = left.map(({ l, k }) => {
+    const cands = [...new Set([l.ours, ...(l.cands || [])].filter(Boolean))].slice(0, 3);
+    const finding = it._find === k;
+    return `<div class="ch-q"><div class="ch-raw">${esc(l.raw_name)}${l.spec ? ` <span class="ch-dim">${esc(l.spec)}</span>` : ''}${l.qty ? ` <span class="ch-dim">· ${esc(l.qty)}${esc(l.unit || '')}</span>` : ''}</div>
+      <div class="ch-opts">${cands.map((c) => `<button type="button" class="ch-btn" data-act="erp-ch-pick" data-i="${i}" data-k="${k}" data-v="${esc(c)}">${esc(c)}</button>`).join('')}
+        <button type="button" class="ch-btn" data-act="erp-ch-find" data-i="${i}" data-k="${k}">다른 품목 찾기</button>
+        <button type="button" class="ch-btn ghost" data-act="erp-ch-skip" data-i="${i}" data-k="${k}">그대로 두기</button></div>
+      ${finding ? `<div class="ch-find"><input id="ch-find-in" data-i="${i}" data-k="${k}" placeholder="품목명 일부 (예: 평와샤 6)" autocomplete="off"><div id="ch-find-res" class="ch-opts"></div></div>` : ''}</div>`;
+  }).join('');
+  return `<div class="ch-askmap"><b>처음 보는 품목 ${left.length}개</b><p>우리 품목을 고르면 바로 매핑으로 저장돼요. 다음부터는 자동으로 잡혀요.</p>${q}</div>`;
+}
+function chCardStmt() {
+  return `<div class="ch-card"><div class="ch-ch"><div><h3>거래명세표</h3><small>이카운트 판매전표 엑셀을 거래명세표로 바꾸는 건 서류 전환 화면에서 해요.</small></div></div>
+    <div class="ch-acts"><a class="ch-btn pri" href="./convert.html" target="_blank" rel="noopener">서류 전환 열기</a></div></div>`;
+}
+function chMsgHtml(j, m) {
+  if (m.who === 'me') {
+    return `<div class="ch-me">${(m.files || []).map((n) => `<div class="ch-file"><span class="ic">${/\.pdf$/i.test(n) ? 'PDF' : /\.xls/i.test(n) ? 'XLS' : 'IMG'}</span>${esc(n)}</div>`).join('')}${m.text ? `<div class="ch-mt">${esc(m.text.length > 400 ? m.text.slice(0, 400) + '…' : m.text)}</div>` : ''}</div>`;
+  }
+  let inner = '';
+  if (m.card === 'ask') inner = chCardAsk(j);
+  else if (m.card === 'buy') inner = chCardBuy(j, m.i);
+  else if (m.card === 'deliv') inner = chCardDeliv(j, m.i);
+  else if (m.card === 'quote') inner = chCardQuote(j, m.i);
+  else if (m.card === 'sale') inner = chCardSale(j);
+  else if (m.card === 'map') inner = chCardMap(j, m.i);
+  else if (m.card === 'read') inner = chCardRead(j, m.i);
+  else if (m.card === 'stmt') inner = chCardStmt();
+  else if (m.text) inner = `<div class="ch-bt ${m.err ? 'err' : ''}">${esc(m.text)}${m.file ? `<div class="ch-acts" style="padding:8px 0 0;border:0">${chFileLink(m.file)}</div>` : ''}</div>`;
+  if (!inner) return '';
+  return `<div class="ch-bot"><div class="ch-av">홈</div><div class="ch-bb">${inner}</div></div>`;
+}
+function chWelcome() {
+  const ex = [['buy', '구매입력', '거래처 명세서·견적서 사진 → 이카운트 구매입력 복사'], ['sale', '판매입력', '판매 목록 글 → 이카운트 판매입력 복사'],
+    ['deliv', '납품확인서', '명세서에서 인슐레이션·방수시트·타이벡 납품확인서'], ['quote', '견적서', '발주서·카톡 품목 → 거래처 양식 견적서 (종전가)']];
+  return `<div class="ch-hello"><h1>무엇을 만들까요?</h1><p>명세서 사진·PDF를 끌어다 놓거나, 캡처를 <b>Cmd+V</b>로 붙여넣으세요.</p>
+    <div class="ch-ex">${ex.map(([v, t, s]) => `<button type="button" class="ch-exb ${ch.mode === v ? 'on' : ''}" data-act="erp-ch-chip" data-v="${v}"><b>${t}</b><span>${s}</span></button>`).join('')}</div></div>`;
+}
+function renderChat() {
+  chLoad();
+  document.body.classList.add('erp');
+  if (!helperState.checked || !helperState.at || Date.now() - helperState.at > 60000) { helperState.at = Date.now(); helperCheck(); }
+  const j = chJob();
+  const busy = j && (j.busy || j.items.some((it) => it.busy));
+  const today = new Date().toDateString();
+  const groups = [['오늘', ch.jobs.filter((x) => new Date(x.at).toDateString() === today)], ['이전', ch.jobs.filter((x) => new Date(x.at).toDateString() !== today)]];
+  const side = `<aside class="ch-side">
+      <div class="ch-brand"><img src="./icons/favicon.png" alt="">홈트 도우미</div>
+      <button type="button" class="ch-new" data-act="erp-ch-new">＋ 새 작업</button>
+      <div class="ch-jobs">${groups.map(([g, list]) => list.length ? `<div class="ch-grp">${g}</div>${list.slice(0, 30).map((x) => `<div class="ch-job ${x.id === ch.cur ? 'on' : ''}" data-act="erp-ch-open" data-id="${x.id}"><span>${esc(x.title)}</span><small>${esc(CH_LABEL[x.mode] || '종류 미정')}${x.items.length ? ` · ${x.items.reduce((a, it) => a + (it.doc ? it.doc.lines.length : 0), 0)}줄` : ''}</small><button type="button" class="ch-del" data-act="erp-ch-del" data-id="${x.id}" aria-label="지우기">✕</button></div>`).join('')}` : '').join('')}</div>
+      <div class="ch-menu">
+        ${[['dash', '업무 현황'], ['ships', '출고 조회'], ['dispatch', '배차 관리'], ['stock', '재고 현황'], ['invoices', '거래명세서'], ['docread', '문서 인식 (자세히)'], ['itemmap', '품목 매핑 사전'], ['settings', '환경설정']]
+          .map(([r, l]) => `<button type="button" data-act="erp-nav" data-r="${r}">${l}</button>`).join('')}
+        <a href="./convert.html" target="_blank" rel="noopener">서류 전환 (명세표·입금표)</a>
+      </div></aside>`;
+  const thread = j && j.msgs.length ? j.msgs.map((m) => chMsgHtml(j, m)).join('') + (busy ? '<div class="ch-bot"><div class="ch-av">홈</div><div class="ch-bb"><div class="ch-wait">읽는 중… (사진·PDF는 20~60초)</div></div></div>' : '') : chWelcome();
+  const status = !helperState.checked ? '<span class="ch-st"><i class="g"></i>도우미 확인 중</span>' : helperState.up ? '<span class="ch-st"><i class="on"></i>도우미 연결됨</span>' : '<span class="ch-st" title="사진·PDF 인식과 이카운트 전표는 이 맥의 도우미가 켜져 있어야 해요"><i class="off"></i>도우미 꺼짐 · 붙여넣은 글만 인식</span>';
+  app.dataset.route = 'chat';
+  app.innerHTML = `<div class="ch-app">${side}<main class="ch-main" id="ch-drop">
+      <div class="ch-top"><b>${esc(j ? j.title : '홈트 도우미')}</b><span class="sp"></span>${status}<span class="ch-user">${esc(myName())}</span><button type="button" class="ch-link" data-act="logout">로그아웃</button></div>
+      <div class="ch-thread" id="ch-thread"><div class="ch-col">${thread}</div></div>
+      <div class="ch-comp"><div class="ch-box">
+        <div class="ch-inner">
+          <div class="ch-chips">${CH_MODES.map(([v, l]) => `<button type="button" class="ch-chip ${ch.mode === v ? 'on' : ''}" data-act="erp-ch-chip" data-v="${v}">${l}</button>`).join('')}</div>
+          ${ch.files.length ? `<div class="ch-att">${ch.files.map((f, k) => `<span class="ch-file"><span class="ic">${/pdf/.test(f.mime) ? 'PDF' : /sheet|excel|\.xls/i.test(f.mime + f.name) ? 'XLS' : 'IMG'}</span>${esc(f.name)}<button type="button" class="ch-x" data-act="erp-ch-unatt" data-k="${k}" aria-label="빼기">✕</button></span>`).join('')}</div>` : ''}
+          <div class="ch-row"><label class="ch-clip" for="ch-file" title="파일 올리기">＋</label><input type="file" id="ch-file" accept="image/*,.heic,.pdf,.xlsx,.xls,.csv" multiple hidden>
+            <textarea id="ch-text" rows="1" placeholder="사진·PDF를 끌어다 놓거나, 캡처·카톡 품목 글을 붙여넣으세요">${esc(ch.text)}</textarea>
+            <button type="button" class="ch-send" data-act="erp-ch-send" aria-label="보내기" ${busy ? 'disabled' : ''}>↑</button></div>
+        </div>
+        <div class="ch-foot">Enter 보내기 · Shift+Enter 줄바꿈 · 캡처는 Cmd+V</div></div></div>
+    </main></div>
+    ${state.sheet ? `<div class="sheet-bg" data-act="backdrop"><div class="sheet"><button class="sheet-x" type="button" data-act="close" aria-label="닫기">✕</button>${state.sheet}</div></div>` : ''}`;
+  const ta = document.getElementById('ch-text');
+  if (ta) { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight, 180) + 'px'; }
+  const th = document.getElementById('ch-thread');
+  const len = j ? j.msgs.length + (busy ? 1 : 0) : -1;
+  if (th && len !== ch.scrollLen) { th.scrollTop = th.scrollHeight; ch.scrollLen = len; }
+  if (ch.focusFind) { const f = document.getElementById('ch-find-in'); if (f) f.focus(); ch.focusFind = false; }
+}
+function chAct(act, t) {
+  const j = chJob();
+  if (act === 'erp-ch-send') chSend();
+  else if (act === 'erp-ch-new') { ch.cur = null; ch.files = []; ch.scrollLen = -1; render(); }
+  else if (act === 'erp-ch-open') { ch.cur = t.dataset.id; ch.scrollLen = -1; render(); }
+  else if (act === 'erp-ch-del') { if (confirm('이 작업 기록을 지울까요?')) { ch.jobs = ch.jobs.filter((x) => x.id !== t.dataset.id); if (ch.cur === t.dataset.id) ch.cur = null; chSave(); render(); } }
+  else if (act === 'erp-ch-chip') { ch.mode = ch.mode === t.dataset.v ? '' : t.dataset.v; if (j && !j.items.length && !j.sale) j.mode = ch.mode; render(); const ta = document.getElementById('ch-text'); if (ta) ta.focus(); }
+  else if (act === 'erp-ch-unatt') { ch.files.splice(Number(t.dataset.k), 1); render(); }
+  else if (!j) return;
+  else if (act === 'erp-ch-mode') { j.msgs.push({ who: 'me', text: CH_LABEL[t.dataset.v] }); chDo(j, t.dataset.v); }
+  else if (act === 'erp-ch-copy') chCopy(j, t.dataset.i !== undefined ? Number(t.dataset.i) : undefined);
+  else if (act === 'erp-ch-file') { if (j.mode === 'sale') chSaleFile(j); else chBuyFile(j, Number(t.dataset.i)); }
+  else if (act === 'erp-ch-edit') { if (j.mode === 'sale') chSaleEdit(j); else chEdit(j, Number(t.dataset.i || 0)); }
+  else if (act === 'erp-ch-toggle') { j.open = j.open || {}; j.open[t.dataset.k] = !j.open[t.dataset.k]; render(); }
+  else if (act === 'erp-ch-pick') chPick(j, Number(t.dataset.i), Number(t.dataset.k), t.dataset.v);
+  else if (act === 'erp-ch-skip') chPick(j, Number(t.dataset.i), Number(t.dataset.k), null);
+  else if (act === 'erp-ch-find') { const it = j.items[Number(t.dataset.i)]; it._find = it._find === Number(t.dataset.k) ? undefined : Number(t.dataset.k); ch.focusFind = true; render(); }
+}
+// 입력·붙여넣기·끌어다 놓기 (대화 화면에서만)
+app.addEventListener('input', (e) => {
+  if (state.route !== 'chat') return;
+  if (e.target.id === 'ch-text') { ch.text = e.target.value; e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 180) + 'px'; }
+  if (e.target.id === 'ch-find-in') {
+    const res = document.getElementById('ch-find-res'); if (!res) return;
+    const { i, k } = e.target.dataset;
+    res.innerHTML = chFindList(e.target.value).map(([c, n]) => `<button type="button" class="ch-btn" data-act="erp-ch-pick" data-i="${i}" data-k="${k}" data-v="${esc(n)}">${esc(n)} <span class="ch-dim">${esc(c)}</span></button>`).join('') || (e.target.value.trim() ? '<span class="ch-dim">찾는 품목이 없어요</span>' : '');
+  }
+});
+app.addEventListener('change', (e) => { if (state.route === 'chat' && e.target.id === 'ch-file') { chAddFiles(e.target.files); e.target.value = ''; } });
+app.addEventListener('keydown', (e) => {
+  if (state.route !== 'chat' || e.target.id !== 'ch-text' || e.isComposing || e.keyCode === 229) return;
+  if (e.key === 'Enter' && !e.shiftKey && !e.metaKey && !e.ctrlKey) { e.preventDefault(); chSend(); }
+});
+document.addEventListener('paste', (e) => {
+  if (state.route !== 'chat' || !isDesk()) return;
+  const items = [...((e.clipboardData && e.clipboardData.items) || [])];
+  const pad = (n) => String(n).padStart(2, '0'); const d = new Date();
+  const base = `붙여넣기_${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+  const files = items.filter((it) => it.kind === 'file').map((it, i) => {
+    const f = it.getAsFile(); if (!f) return null;
+    if (!/^image\/|pdf$|sheet|excel|csv/.test(f.type) && !/\.(xlsx?|csv|pdf|heic|png|jpe?g)$/i.test(f.name || '')) return null;
+    const ext = (f.type.split('/')[1] || 'png').replace('jpeg', 'jpg');
+    return f.name && f.name !== 'image.png' ? f : new File([f], `${base}${i ? '_' + (i + 1) : ''}.${ext}`, { type: f.type });
+  }).filter(Boolean);
+  if (!files.length) return;   // 글자는 입력칸에 그대로 붙음
+  e.preventDefault();
+  chAddFiles(files);
+});
+app.addEventListener('dragover', (e) => { if (state.route === 'chat' && e.target.closest && e.target.closest('#ch-drop')) { e.preventDefault(); e.target.closest('#ch-drop').classList.add('over'); } });
+app.addEventListener('dragleave', (e) => { const z = state.route === 'chat' && e.target.closest && e.target.closest('#ch-drop'); if (z && !z.contains(e.relatedTarget)) z.classList.remove('over'); });
+app.addEventListener('drop', (e) => { if (state.route === 'chat' && e.target.closest && e.target.closest('#ch-drop')) { e.preventDefault(); e.target.closest('#ch-drop').classList.remove('over'); chAddFiles(e.dataTransfer.files); } });
+
 const DESK_SCREENS = { dash: deskDash, partners: deskPartners, items: deskItems, whs: deskWhs, ecount: deskEcount, itemmap: deskItemMap,
   quotes: deskQuotes, ships: deskShips, dispatch: deskDispatch, invoices: deskInvoices, inbound: deskInbound, buy: deskBuy, sale: deskSale,
   stock: deskStock, silicone: deskSilicone, settings: deskSettings, docread: deskDocRead, delivdocs: deskDelivDocs };
@@ -3597,6 +4079,7 @@ function renderDesk() {
   document.body.classList.add('erp');
   state.route = deskRoute(state.route);
   try { sessionStorage.setItem('ht_route', state.route); } catch (e) { /* 무시 */ }
+  if (state.route === 'chat') { renderChat(); return; }   // 첫 화면 = 대화
   const prevTw = app.querySelector('.e-main .e-tw');
   const keep = prevTw && app.dataset.route === state.route ? prevTw.scrollTop : 0;
   const [title, grp] = DESK_TITLES[state.route];
@@ -3650,6 +4133,7 @@ function eBulk(kind) {
 }
 // erp-* 클릭 처리
 function erpAct(act, t) {
+  if (act.startsWith('erp-ch-')) { if (act === 'erp-ch-back') chBack(); else chAct(act, t); return; }
   if (act === 'erp-nav') {
     state.route = t.dataset.r; state.sheet = null; eSel = { route: '', ids: new Set() };
     if (t.dataset.set) { const [k, v] = t.dataset.set.split('='); state[k] = v; }
