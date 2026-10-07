@@ -2102,8 +2102,11 @@ function eTable(o) {
   if (!o.noExport) eLast = { title: title || (DESK_TITLES[route] || [''])[0], cols, rows };
   const allOn = sel && rows.length && rows.every((r) => ids.has(r.id));
   const th = (c) => `<th class="${c.cls || ''} ${o.noSort ? '' : 'srt'}" ${o.noSort ? '' : `data-act="erp-sort" data-r="${route}" data-k="${c.k}"`}>${c.h}${so.k === c.k ? `<span class="ar">${so.d === 'desc' ? '▼' : '▲'}</span>` : ''}</th>`;
-  return `<div class="e-tw ${o.auto ? 'auto' : ''}" ${maxH ? `style="max-height:${maxH}"` : ''}><table class="e-tbl">
-    <colgroup>${sel ? '<col style="width:30px">' : ''}<col style="width:38px">${cols.map((c) => `<col ${c.w ? `style="width:${c.w}px"` : ''}>`).join('')}</colgroup>
+  // 글자가 커진 만큼 칸도 넓히고(×1.15), 폭을 안 정한 칸(품목·거래처 등)은 최소 220px — 창이 좁으면 옆으로 밀어 보기 (칸이 0으로 접혀 글자가 사라지던 문제)
+  const cw = (c) => Math.round(c.w * 1.15);
+  const minW = (sel ? 34 : 0) + 44 + cols.reduce((a, c) => a + (c.w ? cw(c) : 220), 0);
+  return `<div class="e-tw ${o.auto ? 'auto' : ''}" ${maxH ? `style="max-height:${maxH}"` : ''}><table class="e-tbl" style="min-width:${minW}px">
+    <colgroup>${sel ? '<col style="width:34px">' : ''}<col style="width:44px">${cols.map((c) => `<col ${c.w ? `style="width:${cw(c)}px"` : ''}>`).join('')}</colgroup>
     <thead><tr>${sel ? `<th class="chk"><input type="checkbox" data-act="erp-selall" ${allOn ? 'checked' : ''} aria-label="전체 선택"></th>` : ''}<th>No</th>${cols.map(th).join('')}</tr></thead>
     <tbody>${rows.length ? rows.map((r, i) => `<tr class="${rowAttr ? 'ck' : ''} ${ids.has(r.id) ? 'sel' : ''}" tabindex="0" ${rowAttr ? rowAttr(r) : ''}>
       ${sel ? `<td class="chk"><input type="checkbox" data-act="erp-sel" data-id="${esc(r.id)}" ${ids.has(r.id) ? 'checked' : ''}></td>` : ''}<td class="no">${i + 1}</td>
@@ -2118,11 +2121,11 @@ const ePage = (inner, cls = '') => `<div class="e-body ${cls}">${inner}</div>`;
 function deskTop() {
   const n = stuckItems().total;
   return `<header class="e-top">
-    <div class="e-brand"><img src="./icons/favicon.png" alt=""><b>홈트레이더스 재고·출고</b></div>
+    <div class="e-brand" data-act="erp-nav" data-r="chat" title="대화 화면으로"><img src="./icons/favicon.png" alt=""><b>홈트 도우미</b></div>
     <div class="e-corp">주식회사 홈트레이더스</div>
     <div class="e-quick">
-      <button type="button" data-act="erp-nav" data-r="chat" style="font-weight:700">← 대화 화면</button>
-      <button type="button" data-act="new-ship">${I.plus}출고 입력</button>
+      <button type="button" data-act="erp-nav" data-r="chat">← 대화 화면</button>
+      <button type="button" data-act="new-ship">출고 입력</button>
       <button type="button" data-act="add-inbound">입고 입력</button>
       <button type="button" data-act="add-quote">견적 입력</button>
       <button type="button" data-act="smart">붙여넣기 인식</button>

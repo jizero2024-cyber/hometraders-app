@@ -520,3 +520,161 @@ body.erp .ch-btn{font-size:15px;padding:9px 16px}
   body.erp .ch-chip{font-size:15px}
   body.erp .ch-btn{font-size:16px}
 }
+
+/* ══════════════════════════════════════════════════════════════
+   업무 화면 새 옷 (10/7) — 대화 화면과 같은 모양: 흰 바탕·연한 선·주황 하나·글자 14px·줄 높이 40px
+   (위 옛 규칙을 덮어씀 — 기능·칸 배치는 그대로)
+   ══════════════════════════════════════════════════════════════ */
+body.erp{--e-top-h:56px;--e-side-w:256px;
+  --e-top:#fff;--e-top-2:#f7f7f5;--e-top-ink:#1f1e1c;
+  --e-side:#f7f7f5;--e-side-line:#e7e5e0;--e-side-hd:transparent;--e-side-on:#e7e5df;--e-side-bar:#e8731c;
+  --e-line:#e3e1dc;--e-line-2:#ecebe7;--e-line-3:#f1f0ec;--e-th:#f7f6f3;--e-th-ink:#55524c;--e-lab:#f7f6f3;
+  --e-alt:#fff;--e-hover:#faf7f2;--e-sel:#fdf1e7;
+  --e-blue:#e8731c;--e-blue-d:#c75e10;--e-blue-bg:#fdf1e7;
+  --e-ink:#1f1e1c;--e-muted:#6b6862;--e-faint:#9b978f;
+  background:#fff;font-size:14px;line-height:1.5;word-break:keep-all}
+body.erp input,body.erp select,body.erp textarea,body.erp button{font-size:14px}
+/* 위 줄 */
+.e-top{background:#fff;color:var(--e-ink);border-bottom:1px solid var(--e-line);padding-right:16px}
+.e-brand{background:var(--e-side);border-right:1px solid var(--e-side-line);cursor:pointer}
+.e-brand img{height:26px;background:transparent;padding:0;border-radius:6px}
+.e-brand b{color:var(--e-ink);font-size:15px}
+.e-corp{display:none}
+.e-quick{gap:6px;padding:0 16px}
+.e-quick button{color:var(--e-ink);border:1px solid #d9d6cf;border-radius:999px;height:34px;padding:0 14px;font-size:14px;background:#fff}
+.e-quick button:hover{background:#f6f5f2;border-color:#cfccc5}
+.e-quick button:first-child{background:#e8731c;border-color:#e8731c;color:#fff;font-weight:700}
+.e-tr{gap:6px}
+.e-tr button,.e-tr .e-user{color:var(--e-ink);font-size:14px;height:34px;border-radius:999px;padding:0 12px}
+.e-tr button:hover{background:#f6f5f2}
+.e-user{color:var(--e-ink);font-weight:700}
+.e-sep{background:var(--e-line)}
+/* 왼쪽 메뉴 */
+.e-side{padding:8px 8px 20px;border-right:1px solid var(--e-side-line)}
+.e-grp{border-bottom:0}
+.e-grp-hd{background:transparent;border:0;color:var(--e-faint);font-size:12.5px;font-weight:600;padding:14px 10px 4px}
+.e-mi{border-left:0;border-radius:9px;font-size:14.5px;padding:8px 10px;color:#3a3833;margin:1px 0}
+.e-mi:hover{background:#eeede8}
+.e-mi.on{background:#e7e5df;color:var(--e-ink);font-weight:700}
+.e-mi .n{font-size:12px;background:#e7e5df;color:#55524c;border-radius:999px;min-width:22px;padding:1px 7px}
+.e-mi .n.hot{background:#e5484d;color:#fff}
+.e-mi .act{font-size:13px}
+/* 제목줄·본문 */
+.e-phead{padding:16px 24px 12px;border-bottom:0}
+.e-phead h1{font-size:21px;color:var(--e-ink)}
+.e-crumb{font-size:13px}
+.e-keys{display:none}
+.e-body{padding:4px 24px 16px;gap:12px}
+.e-body.scroll > * + *{margin-top:12px}
+/* 검색조건 */
+.e-cond{border:1px solid var(--e-line);border-radius:12px;overflow:hidden;background:#fff}
+.e-cf{min-height:44px;border-color:var(--e-line-2)}
+.e-cf > label{font-size:13.5px;color:#55524c;font-weight:600;padding:0 12px;min-width:76px;border-right:1px solid var(--e-line-2)}
+.e-cf > .v{padding:5px 8px}
+/* 입력칸 */
+.e-in,.e-sel{height:34px;border:1px solid #d9d6cf;border-radius:8px;padding:0 10px;font-size:14px}
+.e-in:focus,.e-sel:focus{border-color:#e8731c;box-shadow:0 0 0 3px rgba(232,115,28,.15)}
+.e-in.w-date{width:150px}
+/* 버튼 */
+.e-tools{gap:8px}
+.e-btn{height:36px;padding:0 15px;border:1px solid #d9d6cf;border-radius:10px;background:#fff;color:var(--e-ink);font-size:14px;font-weight:600;justify-content:center}
+.e-btn:hover{background:#f6f5f2;border-color:#cfccc5}
+.e-btn:active{background:#efede8}
+.e-btn.pri{background:#e8731c;border-color:#e8731c;color:#fff}
+.e-btn.pri:hover{background:#c75e10;border-color:#c75e10}
+.e-btn.pri .k{color:#ffe1c8}
+.e-btn.sm{height:30px;padding:0 11px;font-size:13px;border-radius:8px}
+.e-selinfo{font-size:13.5px}
+/* 탭 */
+.e-tabs{border-bottom:1px solid var(--e-line);gap:4px}
+.e-tab{height:42px;padding:0 16px;border:0;margin:0;background:transparent;color:var(--e-muted);font-size:14.5px;border-bottom:2px solid transparent}
+.e-tab:hover{color:var(--e-ink)}
+.e-tab.on{background:transparent;color:var(--e-ink);border-top:0;border-bottom:2px solid #e8731c;height:42px;top:1px}
+.e-tab .n{font-size:12.5px}
+/* 표 */
+.e-tw{border:1px solid var(--e-line);border-radius:12px}
+.e-tbl{font-size:14px}
+.e-tbl th{height:42px;font-size:13px;font-weight:600;color:#55524c;background:#f7f6f3;padding:0 10px;border-bottom:1px solid var(--e-line);border-right:0}
+.e-tbl th.srt:hover{background:#efede8}
+.e-tbl td{height:42px;padding:0 10px;border-bottom:1px solid var(--e-line-3);border-right:0}
+.e-tbl tbody tr:hover td{background:#faf7f2}
+.e-tbl tbody tr.sel td,.e-tbl tbody tr:focus td{background:#fdf1e7}
+.e-tbl tbody tr:focus td{box-shadow:inset 0 1px 0 #f2c79f,inset 0 -1px 0 #f2c79f}
+.e-tbl input[type=checkbox]{width:16px;height:16px;accent-color:#e8731c}
+.e-tbl tfoot td{background:#fbfaf8;border-top:1px solid var(--e-line);height:42px}
+.e-tbl .grp td{background:#f7f6f3 !important}
+.e-sum{font-size:13.5px;gap:20px}
+.e-empty{font-size:15px}
+/* 상태 표시 */
+.e-b{height:23px;padding:0 9px;border-radius:999px;font-size:12px;border:0}
+.e-b.ghost{border:1px solid var(--e-line-2)}
+.e-st{font-size:13px}
+/* 요약 숫자 */
+.e-kpi{border:0;gap:10px}
+.e-kpi button{border:1px solid var(--e-line);border-radius:12px;padding:12px 16px;gap:4px}
+.e-kpi button:last-child{border-right:1px solid var(--e-line)}
+.e-kpi button:hover{background:#faf7f2}
+.e-kpi .k{font-size:13px}
+.e-kpi .v{font-size:26px}
+.e-kpi .v small{font-size:13px}
+/* 패널·상자 */
+.e-panels{gap:14px}
+.e-panel{border:1px solid var(--e-line);border-radius:12px;overflow:hidden}
+.e-panel-hd{height:48px;padding:0 14px;background:#fff;border-bottom:1px solid var(--e-line-2)}
+.e-panel-hd b{font-size:15.5px;color:var(--e-ink)}
+.e-panel-hd .n{font-size:13px}
+.e-panel .e-tw{border-radius:0}
+.e-box{border:1px solid var(--e-line);border-radius:12px;overflow:hidden}
+.e-box-hd{background:#fff;border-bottom:1px solid var(--e-line-2);padding:12px 14px;font-size:15.5px;color:var(--e-ink)}
+.e-box-bd{padding:14px}
+.e-kv > span{padding:9px 12px;color:#55524c}
+.e-kv > div{padding:9px 12px}
+/* 입력 창(모달)·입력 표도 새 옷 */
+body.erp .sheet-bg{background:rgba(31,30,28,.32)}
+body.erp .sheet{border-radius:16px;border:0;box-shadow:0 16px 48px rgba(0,0,0,.18);padding:18px 22px}
+body.erp .sheet h2,body.erp .sheet .dochdr{background:#fff;border-bottom:1px solid var(--e-line-2);height:48px;margin:-18px -22px 14px;padding:0 50px 0 22px;font-size:17px;color:var(--e-ink)}
+body.erp .sheet .dochdr h2{margin:0;padding:0;height:auto}
+body.erp .sheet-x{width:34px;height:34px;border-radius:999px;border:0;margin:7px -12px -40px 0}
+body.erp .sheet-x:hover{background:#f1efea}
+body.erp .sheet .hint{font-size:13.5px}
+body.erp .sheet .field label{font-size:13px;color:#55524c}
+body.erp .sheet .field input,body.erp .sheet .field select,body.erp .sheet textarea,body.erp .sheet .addr-row input{height:36px;border:1px solid #d9d6cf;border-radius:8px;font-size:14px;padding:0 10px}
+body.erp .sheet textarea{height:auto;padding:8px 10px}
+body.erp .sheet .field input:focus,body.erp .sheet .field select:focus,body.erp .sheet textarea:focus{border-color:#e8731c;box-shadow:0 0 0 3px rgba(232,115,28,.15)}
+body.erp .sheet .seg button{height:34px;padding:0 14px;border:1px solid #d9d6cf;font-size:14px;color:#3a3833}
+body.erp .sheet .seg button:first-child{border-radius:8px 0 0 8px}
+body.erp .sheet .seg button:last-child{border-radius:0 8px 8px 0}
+body.erp .sheet .seg button.on{background:#e8731c;border-color:#e8731c;color:#fff}
+body.erp .sheet .btn{height:40px;padding:0 20px;border-radius:10px;font-size:15px;background:#e8731c;border:1px solid #e8731c;color:#fff}
+body.erp .sheet .btn:hover{background:#c75e10}
+body.erp .sheet .btn.ghost{background:#fff;border-color:#d9d6cf;color:var(--e-ink)}
+body.erp .sheet .btn.danger{background:transparent;border-color:transparent;color:var(--e-muted)}
+body.erp .sheet .tgl{height:34px;border-radius:8px;border:1px dashed #d9d6cf;font-size:14px}
+body.erp .sheet .tgl.on{background:#e8731c;border-color:#e8731c}
+body.erp .sheet .addr-row button,body.erp .sheet .holdseg button{height:36px;border-radius:8px;border:1px solid #d9d6cf;background:#fff;font-size:14px}
+body.erp .sheet .card,body.erp .sheet .doc,body.erp .sheet .quickbar,body.erp .sheet .alertbar{border-radius:12px}
+body.erp .sheet .doc h3{font-size:16px}
+body.erp .sheet .kv{font-size:14px}
+body.erp .sheet .sec-title{font-size:14.5px}
+body.erp .sheet .pill{border-radius:999px;font-size:12px}
+body.erp .sheet .pfill-in,body.erp .sheet .qlrow select,body.erp .sheet .qlrow input,body.erp .sheet .chatbar textarea{border-radius:8px;border-color:#d9d6cf;font-size:14px}
+body.erp .sheet .callrow{border-radius:8px;height:36px;font-size:14px}
+body.erp .sheet .csend{border-radius:999px;background:#1f1e1c}
+.e-ftbl{border:1px solid var(--e-line);border-radius:12px;border-collapse:separate;border-spacing:0;overflow:hidden}
+.e-ftbl th{width:100px;font-size:13.5px;color:#55524c;height:44px;padding:0 12px;border:0;border-bottom:1px solid var(--e-line-2);border-right:1px solid var(--e-line-2)}
+.e-ftbl td{padding:5px 8px;border:0;border-bottom:1px solid var(--e-line-2)}
+.e-ftbl tr:last-child th,.e-ftbl tr:last-child td{border-bottom:0}
+.e-ftbl td .e-in{height:34px}
+.e-disp{border:1px solid var(--e-line);border-radius:12px;overflow:hidden}
+.e-disp-hd{background:#f7f6f3;padding:8px 12px}
+.e-disp-hd b{font-size:14px;color:var(--e-ink)}
+.e-lines-hd b{font-size:15px;color:var(--e-ink)}
+.e-lines-hd .hint2{font-size:13px}
+.e-grid{border:1px solid var(--e-line);border-radius:12px;overflow:hidden}
+.e-grid th{font-size:13px;color:#55524c;height:40px;border-right:0;border-bottom:1px solid var(--e-line);background:#f7f6f3}
+.e-grid td{height:40px;border-right:0;border-bottom:1px solid var(--e-line-3);font-size:14px}
+.e-grid td.code{font-size:13px}
+.e-grid td input{height:32px;border-radius:8px;font-size:14px}
+.e-grid td input:hover{border-color:#e3e1dc}
+.e-grid td input:focus{border-color:#e8731c;background:#fff}
+body.erp .sheet{font-size:14px}
