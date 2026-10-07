@@ -3594,22 +3594,58 @@ function deskSale() {
 const CH_MODES = [['buy', '구매입력'], ['sale', '판매입력'], ['deliv', '납품확인서'], ['quote', '견적서'], ['stmt', '거래명세표']];
 const CH_LABEL = Object.fromEntries(CH_MODES);
 const CH_KEY = 'ht_ch_jobs_v1';
-let ch = { jobs: [], cur: null, text: '', files: [], mode: '', loaded: false, scrollLen: -1 };
+let ch = { jobs: [], cur: null, text: '', files: [], mode: '', loaded: false, scrollLen: -1, sent: {}, synced: false };
+// 작업 기록 = 공유 DB(chat_jobs)가 기준 — 어느 컴퓨터에서나 같은 목록. 표가 아직 없으면 이 브라우저(localStorage)에만.
+const chSlim = (j) => ({ ...j, busy: false, items: (j.items || []).map(({ b64, busy, ...it }) => it) });   // 사진 원본은 안 올림 (용량)
+const chSig = (j) => JSON.stringify({ ...chSlim(j), updated: 0 });
 function chLoad() {
   if (ch.loaded) return;
   ch.loaded = true;
   try { ch.jobs = JSON.parse(localStorage.getItem(CH_KEY) || '[]') || []; } catch (e) { ch.jobs = []; }
   ch.jobs.forEach((j) => { j.busy = false; (j.items || []).forEach((it) => { it.busy = false; }); });
 }
+function chMerge(server) {
+  const local = new Map(ch.jobs.map((j) => [j.id, j]));
+  const out = [];
+  server.forEach((sj) => {
+    const lj = local.get(sj.id);
+    local.delete(sj.id);
+    const busy = lj && (lj.busy || (lj.items || []).some((it) => it.busy));
+    if (lj && (busy || (lj.updated || 0) >= (sj.updated || 0))) { out.push(lj); return; }
+    if (lj) (sj.items || []).forEach((it, i) => { const l = (lj.items || [])[i]; if (l && l.b64 && l.name === it.name) it.b64 = l.b64; });   // 이 컴퓨터에 있는 사진 원본은 유지
+    ch.sent[sj.id] = chSig(sj);
+    out.push(sj);
+  });
+  local.forEach((lj) => {   // 이 브라우저에만 있는 기록: 처음 연결 때는 올리고, 그 뒤엔 다른 컴퓨터에서 지운 것으로 봄
+    const busy = lj.busy || (lj.items || []).some((it) => it.busy);
+    if (!ch.synced || busy || !ch.sent[lj.id]) out.push(lj);
+  });
+  out.sort((a, b) => (b.at || 0) - (a.at || 0));
+  ch.jobs = out;
+  if (ch.cur && !out.some((j) => j.id === ch.cur)) ch.cur = null;
+  ch.synced = true;
+  chSave();
+}
+function chSync() {
+  const st = S.getChatState();
+  if (st.busy || (st.at && Date.now() - st.at < 20000)) return;
+  S.loadChatJobs().then((r) => { if (r.ready) chMerge(S.getChatJobs()); if (state.route === 'chat') render(); });
+}
 function chSave() {
-  try {
-    const slim = ch.jobs.slice(0, 40).map((j) => ({ ...j, items: (j.items || []).map(({ b64, ...it }) => it) }));   // 사진 원본은 저장 안 함 (용량)
-    localStorage.setItem(CH_KEY, JSON.stringify(slim));
-  } catch (e) { /* 저장 공간이 차도 화면은 그대로 */ }
+  try { localStorage.setItem(CH_KEY, JSON.stringify(ch.jobs.slice(0, 60).map(chSlim))); } catch (e) { /* 저장 공간이 차도 화면은 그대로 */ }
+  if (!S.getChatState().ready) return;
+  ch.jobs.forEach((j) => {
+    if (!j.msgs || !j.msgs.length) return;   // 빈 새 작업은 안 올림
+    const sig = chSig(j);
+    if (ch.sent[j.id] === sig) return;
+    ch.sent[j.id] = sig;
+    j.updated = Date.now();
+    S.saveChatJob(chSlim(j)).then((r) => { if (r.error) delete ch.sent[j.id]; });
+  });
 }
 const chJob = () => ch.jobs.find((j) => j.id === ch.cur) || null;
 function chNewJob(mode) {
-  const j = { id: 'j' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), at: Date.now(), title: '새 작업', mode: mode || '', msgs: [], items: [], sale: null };
+  const j = { id: 'j' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), at: Date.now(), by: myName(), title: '새 작업', mode: mode || '', msgs: [], items: [], sale: null };
   ch.jobs.unshift(j); ch.cur = j.id;
   return j;
 }
@@ -3977,6 +4013,7 @@ function chWelcome() {
 }
 function renderChat() {
   chLoad();
+  chSync();   // 다른 컴퓨터에서 한 작업도 보이게 (20초마다)
   document.body.classList.add('erp');
   if (!helperState.checked || !helperState.at || Date.now() - helperState.at > 60000) { helperState.at = Date.now(); helperCheck(); }
   const j = chJob();
@@ -3986,7 +4023,8 @@ function renderChat() {
   const side = `<aside class="ch-side">
       <div class="ch-brand"><img src="./icons/favicon.png" alt="">홈트 도우미</div>
       <button type="button" class="ch-new" data-act="erp-ch-new">＋ 새 작업</button>
-      <div class="ch-jobs">${groups.map(([g, list]) => list.length ? `<div class="ch-grp">${g}</div>${list.slice(0, 30).map((x) => `<div class="ch-job ${x.id === ch.cur ? 'on' : ''}" data-act="erp-ch-open" data-id="${x.id}"><span>${esc(x.title)}</span><small>${esc(CH_LABEL[x.mode] || '종류 미정')}${x.items.length ? ` · ${x.items.reduce((a, it) => a + (it.doc ? it.doc.lines.length : 0), 0)}줄` : ''}</small><button type="button" class="ch-del" data-act="erp-ch-del" data-id="${x.id}" aria-label="지우기">✕</button></div>`).join('')}` : '').join('')}</div>
+      <div class="ch-jobs">${groups.map(([g, list]) => list.length ? `<div class="ch-grp">${g}</div>${list.slice(0, 30).map((x) => `<div class="ch-job ${x.id === ch.cur ? 'on' : ''}" data-act="erp-ch-open" data-id="${x.id}"><span>${esc(x.title)}</span><small>${x.by && x.by !== myName() ? esc(x.by) + ' · ' : ''}${esc(CH_LABEL[x.mode] || '종류 미정')}${x.items.length ? ` · ${x.items.reduce((a, it) => a + (it.doc ? it.doc.lines.length : 0), 0)}줄` : ''}</small><button type="button" class="ch-del" data-act="erp-ch-del" data-id="${x.id}" aria-label="지우기">✕</button></div>`).join('')}` : '').join('')}</div>
+      ${S.getChatState().missing ? '<div class="ch-note">작업 기록이 아직 이 컴퓨터에만 저장돼요 (공유 DB 표 준비 전)</div>' : ''}
       <div class="ch-menu">
         ${[['dash', '업무 현황'], ['ships', '출고 조회'], ['dispatch', '배차 관리'], ['stock', '재고 현황'], ['invoices', '거래명세서'], ['docread', '문서 인식 (자세히)'], ['itemmap', '품목 매핑 사전'], ['settings', '환경설정']]
           .map(([r, l]) => `<button type="button" data-act="erp-nav" data-r="${r}">${l}</button>`).join('')}
@@ -4021,7 +4059,7 @@ function chAct(act, t) {
   if (act === 'erp-ch-send') chSend();
   else if (act === 'erp-ch-new') { ch.cur = null; ch.files = []; ch.scrollLen = -1; render(); }
   else if (act === 'erp-ch-open') { ch.cur = t.dataset.id; ch.scrollLen = -1; render(); }
-  else if (act === 'erp-ch-del') { if (confirm('이 작업 기록을 지울까요?')) { ch.jobs = ch.jobs.filter((x) => x.id !== t.dataset.id); if (ch.cur === t.dataset.id) ch.cur = null; chSave(); render(); } }
+  else if (act === 'erp-ch-del') { if (confirm('이 작업 기록을 지울까요? (다른 컴퓨터에서도 지워져요)')) { const id = t.dataset.id; ch.jobs = ch.jobs.filter((x) => x.id !== id); delete ch.sent[id]; if (ch.cur === id) ch.cur = null; S.deleteChatJob(id); chSave(); render(); } }
   else if (act === 'erp-ch-chip') { ch.mode = ch.mode === t.dataset.v ? '' : t.dataset.v; if (j && !j.items.length && !j.sale) j.mode = ch.mode; render(); const ta = document.getElementById('ch-text'); if (ta) ta.focus(); }
   else if (act === 'erp-ch-unatt') { ch.files.splice(Number(t.dataset.k), 1); render(); }
   else if (!j) return;

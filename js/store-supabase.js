@@ -157,6 +157,33 @@ export async function savePrevPrices(rows) {   // 견적서 원래 줄 → 바�
   if (changed.length || gone.length) await loadPrevPrices();
   return { error: null, changed: changed.length, removed: gone.length };
 }
+// ── 대화 화면 작업 기록 (chat_jobs) — 어느 컴퓨터에서 열어도 같은 기록. 표가 없으면 화면은 이 브라우저 기록만 씀 ──
+let chatJobs = [];
+let chatState = { ready: false, missing: false, err: '', at: 0, busy: false };
+export async function loadChatJobs() {
+  if (chatState.busy) return chatState;
+  chatState.busy = true;
+  try {
+    const { data, error } = await sb.from('chat_jobs').select('id,data,created_by,updated_at').order('updated_at', { ascending: false }).limit(200);
+    if (error) chatState = { ready: false, missing: /does not exist|relation|schema cache|could not find/i.test(error.message), err: error.message, at: Date.now(), busy: false };
+    else { chatJobs = (data || []).map((r) => ({ ...(r.data || {}), id: r.id, by: r.created_by || (r.data || {}).by || '', updated: Date.parse(r.updated_at) || 0 })); chatState = { ready: true, missing: false, err: '', at: Date.now(), busy: false }; }
+  } catch (e) { chatState = { ready: false, missing: false, err: String((e && e.message) || e), at: Date.now(), busy: false }; }
+  return chatState;
+}
+export const getChatJobs = () => chatJobs;
+export const getChatState = () => ({ ...chatState });
+export async function saveChatJob(job) {   // 실패해도 알림창 없이 결과만 돌려줌 (화면은 이 브라우저 기록으로 계속)
+  if (!chatState.ready) return { error: { message: chatState.err || '작업 기록 표 없음' } };
+  const { error } = await sb.from('chat_jobs').upsert({ id: job.id, title: job.title || '', mode: job.mode || '', data: job, created_by: job.by || '', updated_at: new Date(job.updated || Date.now()).toISOString() });
+  if (error) console.error('[작업 기록 저장 실패]', error.message);
+  return { error };
+}
+export async function deleteChatJob(id) {
+  if (!chatState.ready) return { error: null };
+  const { error } = await sb.from('chat_jobs').delete().eq('id', id);
+  if (error) console.error('[작업 기록 삭제 실패]', error.message);
+  return { error };
+}
 // 실시간 구독은 딱 1회만. 이미 붙은 채널이 있으면 제거 후 재구독(재진입 안전) →
 // "cannot add postgres_changes callbacks after subscribe()" 방지.
 let _realtimeOn = false;
