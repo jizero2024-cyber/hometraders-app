@@ -5080,7 +5080,9 @@ async function boot() {
   myAccount = ((session.user && session.user.email) || '').split('@')[0];
   if (booted) { render(); return; }
   app.innerHTML = '<div style="padding:64px 24px;text-align:center;color:#888;font-size:15px">불러오는 중…</div>';
-  try { const r = sessionStorage.getItem('ht_route'); if (r && (TITLES[r] || DESK_TITLES[r])) state.route = r; } catch (e) { /* 무시 */ }
+  // PC는 열 때마다 대화 화면부터 (예전엔 마지막 화면을 기억해 업무 현황이 다시 떠서 바뀐 걸 못 봄). 휴대폰은 기억한 화면 그대로
+  if (isDesk()) state.route = 'chat';
+  else { try { const r = sessionStorage.getItem('ht_route'); if (r && TITLES[r]) state.route = r; } catch (e) { /* 무시 */ } }
   try { await S.init(); booted = true; render(); }
   catch (e) { app.innerHTML = `<div style="padding:48px 24px;text-align:center"><b>연결 오류</b><br><span style="color:#888;font-size:13px">${esc(e.message || String(e))}</span></div>`; }
 }
