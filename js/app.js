@@ -2823,7 +2823,7 @@ function drNormDates(doc) {
 }
 // 문서 인식은 무엇을 할지 먼저 고른다 — 고른 일에 필요한 칸·버튼만 보인다
 let drMode = '';
-const DR_MODES = [['deliv', '납품확인서'], ['buy', '구매입력'], ['quote', '견적·출고']];
+const DR_MODES = [['deliv', '납품확인서'], ['buy', '구매입력'], ['sale', '판매입력'], ['quote', '견적·출고']];
 const drModeTabs = () => `<div class="e-tabs">${DR_MODES.map(([v, l]) => `<button class="e-tab ${drMode === v ? 'on' : ''}" type="button" data-act="erp-dr-mode" data-v="${v}">${l}</button>`).join('')}</div>`;
 function drSetMode(v) {
   drMode = v;
@@ -2856,7 +2856,7 @@ function drTotals() {
 }
 function deskDocRead() {
   if (!helperState.checked || !helperState.at || Date.now() - helperState.at > 60000) { helperState.at = Date.now(); helperCheck(); }
-  if (!drMode) return ePage(`${drModeTabs()}<div class="e-empty" style="margin-top:24px">무엇을 할지 먼저 고르세요 — <b>납품확인서</b> · <b>구매입력</b> · <b>견적·출고</b><br><span class="muted">고른 일에 맞는 칸과 버튼만 나와요.</span></div>`);
+  if (!drMode) return ePage(`${drModeTabs()}<div class="e-empty" style="margin-top:24px">무엇을 할지 먼저 고르세요 — <b>납품확인서</b> · <b>구매입력</b> · <b>판매입력</b> · <b>견적·출고</b><br><span class="muted">고른 일에 맞는 칸과 버튼만 나와요.</span></div>`);
   if (helperState.up) syncPrevPrices();
   if (drq.files.length > 1 && dr.fromBatch === undefined) return drqPanel();
   const d = dr.doc;
@@ -2894,9 +2894,9 @@ function deskDocRead() {
     <div class="e-tools">${eBtn('매핑 저장 (다음부터 자동)', 'erp-dr-learn')}${drMode === 'quote' ? eBtn('출고 입력으로 보내기', 'erp-dr-ship') : ''}<span class="sp"></span>
       ${isDeliv && dr.deliv ? (dr.deliv.outs || [dr.deliv.out]).map((o) => `<a class="e-btn" href="${HELPER}/api/file?path=${encodeURIComponent(o)}">납품확인서 받기 · ${esc(o.split('/').pop())}</a>`).join('') : ''}
       ${drMode === 'quote' && dr.quote ? `<a class="e-btn" href="${HELPER}/api/file?path=${encodeURIComponent(dr.quote.out)}">견적서 받기 · ${esc(dr.quote.out.split('/').pop())}</a>` : ''}
-      ${isDeliv ? eBtn('납품확인서 만들기', 'erp-dr-deliv', '', 'pri') : drMode === 'buy' ? eBtn('구매입력 만들기', 'erp-dr-buy', '', 'pri') : eBtn('견적서 만들기 (거래처 양식)', 'erp-dr-quote', '', 'pri')}</div>
+      ${isDeliv ? eBtn('납품확인서 만들기', 'erp-dr-deliv', '', 'pri') : drMode === 'buy' ? eBtn('구매입력 만들기', 'erp-dr-buy', '', 'pri') : drMode === 'sale' ? eBtn(saleS.busy ? '만드는 중…' : '판매입력 만들기', 'erp-dr-sale', saleS.busy ? 'disabled' : '', 'pri') : eBtn('견적서 만들기 (거래처 양식)', 'erp-dr-quote', '', 'pri')}</div>
     ${dr.note ? `<div class="e-sum"><span>${esc(dr.note)}</span></div>` : ''}
-    ${drMode === 'buy' ? drBuyPanel() : ''}`;
+    ${drMode === 'buy' ? drBuyPanel() : ''}${drMode === 'sale' ? drSalePanel() : ''}`;
   }
   return ePage(`${drModeTabs()}<div class="e-tools">${dr.fromChat ? eBtn('← 대화로', 'erp-ch-back', '', 'pri') : ''}${dr.fromBatch !== undefined ? eBtn(`← ${drMode === 'buy' ? '구매입력' : drMode === 'deliv' ? '납품확인서' : '명세서'} 모음으로`, 'erp-drq-back', '', 'pri') : ''}<label class="e-btn ${dr.fromBatch !== undefined ? '' : 'pri'}" for="dr-file">파일 선택</label><input type="file" id="dr-file" accept="image/*,.heic,.pdf,.xlsx,.xls,.csv" multiple hidden>
       ${eBtn('인식 시작', 'erp-dr-read', dr.b64 && !dr.busy ? '' : 'disabled')}${dr.name ? `<span class="e-selinfo">${esc(dr.name)}</span>${eBtn('비우기', 'erp-dr-clear', '', 'sm')}` : ''}
@@ -3443,6 +3443,8 @@ function saleSync() {   // 화면의 모든 편집칸(거래처코드·단가·�
   document.querySelectorAll('input[data-sf]').forEach((el) => {
     const r = saleS.results[Number(el.dataset.p)]; if (!r) return;
     if (el.dataset.sf === 'cust') { r.voucher.cust_code = el.value.trim(); return; }
+    if (el.dataset.sf === 'tag') { r._tag = el.value; return; }
+    if (el.dataset.sf === 'tagall') { r._tagAll = el.checked; return; }
     const l = r.doc.lines[Number(el.dataset.i)]; if (!l) return;
     if (el.dataset.sf === 'price') { l.unit_price = Number(el.value) || 0; l.amount = (Number(l.qty) || 0) * l.unit_price; }
     else if (el.dataset.sf === 'qty') { l.qty = Number(el.value) || 0; l.amount = l.qty * (Number(l.unit_price) || 0); }
@@ -3452,7 +3454,7 @@ function saleSync() {   // 화면의 모든 편집칸(거래처코드·단가·�
 }
 function saleItems() {
   saleSync();
-  return (saleS.results || []).map((r) => ({ cust: r.voucher.cust_code || '', wh: saleS.wh, doc: r.doc }));
+  return (saleS.results || []).map((r) => ({ cust: r.voucher.cust_code || '', wh: saleS.wh, doc: r.doc, tag: r._tag ?? r.voucher.tag ?? '', tag_all: r._tagAll ?? !!r.voucher.tag_all }));
 }
 const _nkey = (s) => String(s || '').replace(/\(주\)|주식회사|㈜|\s/g, '');
 function salePrevPrice(custName, l) {   // 과거 판매가(운영앱 출고 이력)에서 같은 거래처·같은 색상/품목 최신 단가 (개당으로 환산)
@@ -3488,7 +3490,9 @@ function salePrepPrices(fill) {   // 줄마다 종전가 표시 + (fill 이면) 
   return filled;
 }
 function saleApply(j, fill) {
-  saleS.results = j.results; saleS.whs = j.warehouses || saleS.whs; saleS.paste = j.paste || '';
+  const old = saleS.results || [];
+  j.results.forEach((r, i) => { const o = old[i]; if (o && o.voucher.cust_name === r.voucher.cust_name) { r._tag = o._tag; r._tagAll = o._tagAll; r.pushed = o.pushed; } });   // 규격·등록 상태는 다시 검사해도 유지
+  saleS.results = j.results; saleS.whs = j.warehouses || saleS.whs; saleS.paste = j.paste || ''; saleS.ecount = j.ecount || saleS.ecount;
   saleS.passed = j.passed || 0; saleS.total = j.total || 0; saleS.file = ''; saleS.copied = false;
   return salePrepPrices(fill);
 }
@@ -3497,7 +3501,7 @@ function saleRead() {
   if (ta) saleS.text = ta.value; if (dt) saleS.date = dt.value; if (wh) saleS.wh = wh.value;
   if (!saleS.text.trim() || saleS.busy) return;
   const my = ++saleS.seq;
-  saleS.busy = true; saleS.err = ''; saleS.stockMsg = null; render();
+  saleS.busy = true; saleS.err = ''; saleS.stockMsg = null; saleS.fromDr = false; render();
   helperFetch('/api/sale', { text: saleS.text, doc_date: saleS.date, wh: saleS.wh })
     .then((j) => { if (my === saleS.seq) { const filled = saleApply(j, true); if (filled) { saleS.busy = false; saleRebuild(); return; } } })
     .catch((e) => { if (my === saleS.seq) saleS.err = e.message; }).finally(() => { saleS.busy = false; render(); });
@@ -3550,11 +3554,31 @@ function saleFile() {
   helperFetch('/api/sale/file', { items })
     .then((j) => { if (my === saleS.seq) { saleApply(j); saleS.file = j.out; saleStockFeed(); } }).catch((e) => { if (my === saleS.seq) saleS.err = e.message; }).finally(() => { saleS.busy = false; render(); });
 }
-function saleCard(r, pi) {
+// 판매전표 한 장 → 이카운트 판매입력에 바로 등록 (구매입력 [이카운트에 바로 등록] 과 같은 흐름)
+function salePush(pi) {
+  const r = saleS.results && saleS.results[pi];
+  if (!r || !r.ok || saleS.busy) return;
+  const e = saleS.ecount || {};
+  if (!e.ready) { alert('이카운트 연결 정보가 없어요. 도우미 .env 에 ' + (e.missing || []).join(', ') + ' 를 넣고 도우미를 다시 켜주세요.'); return; }
   const v = r.voucher;
+  const where = e.mode === '실서버' ? '실제 이카운트 ERP' : '이카운트 테스트 서버';
+  if (!confirm(`${where}에 판매전표를 등록할까요?\n\n거래처: ${v.cust_name} (${v.cust_code})\n일자: ${v.date}\n품목 ${v.lines.length}줄 · 총액 ${eN(r.sums.total)}원 (공급가액 ${eN(r.sums.supply)} + 부가세 ${eN(r.sums.vat)})`)) return;
+  const item = saleItems()[pi];
+  saleS.busy = true; saleS.err = ''; render();
+  helperFetch('/api/sale/push', { item }).then((j) => {
+    const keep = { _tag: r._tag, _tagAll: r._tagAll };
+    saleS.results[pi] = { ...j, ...keep, pushed: j.push };
+    saleStockFeed();
+  }).catch((err) => { saleS.err = `${v.cust_name}: ${err.message}`; }).finally(() => { saleS.busy = false; render(); });
+}
+function saleCard(r, pi) {
+  const v = r.voucher, st = r.sums || {};
+  const e = saleS.ecount || {};
+  const done = r.pushed && r.pushed.ok;
   const rows = v.lines.map((x, i) => {
     const l = (r.doc.lines || [])[i] || {};
     return `<tr>
+      <td class="no">${i + 1}</td>
       <td>${x.prod_cd ? esc(x.prod_cd) : '<span class="e-b red">코드X</span>'}</td>
       <td><input class="e-in dr-ours" autocomplete="off" data-sf="ours" data-p="${pi}" data-i="${i}" value="${esc(l.ours || x.prod_des || '')}" placeholder="우리 품목 검색·선택" style="width:100%"></td>
       <td><input class="e-in" data-sf="spec" data-p="${pi}" data-i="${i}" value="${esc(x.spec || '')}" style="width:100%"></td>
@@ -3563,14 +3587,55 @@ function saleCard(r, pi) {
       <td class="n">${eN(x.supply)}</td><td class="n">${eN(x.vat)}</td>
       <td class="muted">${l.prev && l.prev.price ? eN(l.prev.price) : ''}</td></tr>`;
   }).join('');
-  return `<div class="e-panel" style="margin-top:8px"><div class="e-panel-hd">
-      <b>${esc(v.cust_name || '(거래처?)')}</b> ${r.ok ? '<span class="e-b green">전표 OK</span>' : '<span class="e-b red">확인 필요</span>'}<span class="sp"></span>
-      거래처코드 <input class="e-in" data-sf="cust" data-p="${pi}" value="${esc(v.cust_code || '')}" placeholder="코드" style="width:120px"> <span class="muted">${esc(v.cust_how || '')}</span></div>
+  const tag = r._tag ?? v.tag ?? '', tagAll = r._tagAll ?? !!v.tag_all;
+  return `<div class="e-panel" style="margin-top:8px"><div class="e-panel-hd"><b>판매입력 미리보기 · ${esc(v.cust_name || '(거래처?)')}</b><span class="sp"></span>
+      ${r.ok ? '<span class="e-b green">전표 만들 수 있음</span>' : '<span class="e-b red">전표 만들 수 없음</span>'}</div>
+    <table class="e-ftbl"><colgroup><col style="width:80px"><col><col style="width:80px"><col></colgroup>
+      <tr><th>거래처</th><td><input class="e-in" data-sf="cust" data-p="${pi}" value="${esc(v.cust_code || '')}" placeholder="거래처코드" style="width:130px"> ${esc(v.cust_name || '')} <span class="muted">${esc(v.cust_how || '')}</span></td>
+        <th>출하창고</th><td>${esc(v.wh_code || '')} ${esc(v.wh_name || saleWhName())} <span class="muted">(위에서 바꿈)</span></td></tr>
+      <tr><th>일자</th><td>${esc(v.date || '')}</td>
+        <th>규격</th><td><input class="e-in" data-sf="tag" data-p="${pi}" value="${esc(tag)}" placeholder="1007/뉴하우징홈/예산덕산/맹도재소장님" style="width:220px"> <label class="muted"><input type="checkbox" data-sf="tagall" data-p="${pi}" ${tagAll ? 'checked' : ''}> 모든 줄</label> <span class="muted">(이카운트 규격 칸)</span></td></tr>
+    </table>
     ${r.errors.length ? `<div class="dr-err">${r.errors.map(esc).join('<br>')}</div>` : ''}
     ${r.warnings.length ? `<div class="e-sum"><span class="muted">${r.warnings.map(esc).join('<br>')}</span></div>` : ''}
-    <div class="e-tw"><table class="e-grid" style="min-width:720px"><colgroup><col style="width:120px"><col style="min-width:220px"><col style="width:80px"><col style="width:60px"><col style="width:90px"><col style="width:96px"><col style="width:84px"><col style="width:80px"></colgroup>
-      <thead><tr><th>품목코드</th><th>우리 품목(이카운트)</th><th>규격</th><th>수량</th><th>단가</th><th>공급가액</th><th>부가세</th><th>종전가</th></tr></thead>
-      <tbody>${rows}</tbody></table></div></div>`;
+    <div class="e-tw" style="overflow-x:auto"><table class="e-grid" style="min-width:760px"><colgroup><col style="width:30px"><col style="width:120px"><col style="min-width:220px"><col style="width:80px"><col style="width:60px"><col style="width:90px"><col style="width:96px"><col style="width:84px"><col style="width:80px"></colgroup>
+      <thead><tr><th>No</th><th>품목코드</th><th>우리 품목(이카운트)</th><th>규격</th><th>수량</th><th>단가</th><th>공급가액</th><th>부가세</th><th>종전가</th></tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr><td></td><td colspan="5" style="padding-left:6px;font-weight:700">합계 <span class="muted">총액 <b>${eN(st.total)}</b></span></td><td class="n"><b>${eN(st.supply)}</b></td><td class="n"><b>${eN(st.vat)}</b></td><td></td></tr></tfoot></table></div>
+    ${done ? `<div class="e-sum"><span class="e-b green">이카운트 등록 완료</span> <span>${esc(r.pushed.mode || '')} · 전표번호 ${esc((r.pushed.slip_nos || []).join(', ') || '-')}</span></div>` : ''}
+    <div class="e-tools"><span class="sp"></span>
+      ${eBtn(done ? '등록됨 ✓' : `이카운트에 바로 등록${e.mode === '테스트' ? ' (테스트)' : ''}`, 'erp-sale-push', r.ok && e.ready && !done && !saleS.busy ? `data-p="${pi}"` : `disabled title="${esc(e.ready === false ? '도우미 .env 에 이카운트 API 인증키가 필요해요' : '')}"`, done ? '' : 'pri')}</div></div>`;
+}
+// 아래 공통 버튼 — 판매입력 화면과 문서 인식(판매입력) 모두 같은 줄
+function saleTools() {
+  const s = saleS;
+  return `<div class="e-tools" style="margin-top:8px">통과 <b>${s.passed}/${s.results.length}</b> · 합계 ${eN(s.total)}원<span class="sp"></span>
+      ${eBtn('다시 검사', 'erp-sale-recheck', s.busy ? 'disabled' : '')}
+      ${s.file ? `<a class="e-btn" href="${HELPER}/api/file?path=${encodeURIComponent(s.file)}">받기 · ${esc(s.file.split('/').pop())}</a>` : ''}
+      ${eBtn('판매입력 엑셀 만들기', 'erp-sale-file', s.passed ? '' : 'disabled')}
+      ${eBtn(s.copied ? '복사됨 ✓' : '이카운트 붙여넣기용 복사', 'erp-sale-copy', (s.results && s.results.length) ? '' : 'disabled')}</div>
+    ${saleStockMsgHtml()}
+    <div class="e-sum"><span class="muted">이카운트: 판매관리 → 판매입력 → 웹자료올리기 → 표 첫 칸 클릭 → 붙여넣기(Cmd+V) → 확인 후 저장. ※ 구매입력 화면에 붙이지 마세요.</span></div>`;
+}
+// 문서 인식 → 판매입력: 인식표의 우리 품목·수량·단가(종전가)로 판매전표를 만든다. 문서 합계는 구매가라 대조하지 않음.
+function drSale() {
+  if (!dr.doc || saleS.busy) return;
+  drSaveFixes();
+  const whSel = document.getElementById('sale-wh'); if (whSel) saleS.wh = whSel.value;
+  const item = saleDocItem(dr.doc);
+  const my = ++saleS.seq;
+  saleS.busy = true; saleS.err = ''; saleS.text = ''; saleS.results = null; saleS.stockMsg = null; saleS.fromDr = true; render();
+  helperFetch('/api/sale', { items: [item] })
+    .then((j) => { if (my === saleS.seq && saleApply(j, true)) { saleS.busy = false; saleRebuild(); } })   // 단가 빈 줄은 종전가로 채우고 다시 검사
+    .catch((e) => { if (my === saleS.seq) saleS.err = e.message; }).finally(() => { saleS.busy = false; render(); });
+}
+function drSalePanel() {
+  const s = saleS;
+  const whs = s.whs.length ? s.whs : [{ code: '00123', name: '천안창고' }, { code: '00120', name: 'NS로지스' }];
+  const head = `<div class="e-tools" style="margin-top:8px"><label class="muted">출하창고 <select class="e-sel" id="sale-wh">${whs.map((w) => `<option value="${esc(w.code)}"${w.code === s.wh ? ' selected' : ''}>${esc(w.code)} ${esc(w.name)}</option>`).join('')}</select></label>
+    <span class="muted">단가는 위 표의 단가(종전가) — 비어 있으면 채우고 [판매입력 만들기]</span></div>`;
+  if (!s.fromDr || !s.results) return head + (s.err ? `<div class="dr-err">${esc(s.err)}</div>` : '');
+  return head + (s.err ? `<div class="dr-err">${esc(s.err)}</div>` : '') + s.results.map((r, pi) => saleCard(r, pi)).join('') + saleTools();
 }
 function deskSale() {
   const s = saleS;
@@ -3584,15 +3649,7 @@ function deskSale() {
       <textarea id="sale-text" class="e-in" style="width:100%;min-height:120px;font-family:inherit" placeholder="*국제통상&#10;베이지 20박스&#10;상아색 20박스&#10;&#10;*테시&#10;베이지 12박스">${esc(s.text)}</textarea></div>`;
   const err = s.err ? `<div class="dr-err">${esc(s.err)}</div>` : '';
   let body = '';
-  if (s.results) {
-    body = s.results.map((r, pi) => saleCard(r, pi)).join('')
-      + `<div class="e-tools" style="margin-top:8px">통과 <b>${s.passed}/${s.results.length}</b> · 합계 ${eN(s.total)}원<span class="sp"></span>
-        ${s.file ? `<a class="e-btn" href="${HELPER}/api/file?path=${encodeURIComponent(s.file)}">받기 · ${esc(s.file.split('/').pop())}</a>` : ''}
-        ${eBtn('판매입력 엑셀 만들기', 'erp-sale-file', s.passed ? '' : 'disabled')}
-        ${eBtn(s.copied ? '복사됨 ✓' : '이카운트 붙여넣기용 복사', 'erp-sale-copy', (s.results && s.results.length) ? '' : 'disabled')}</div>
-      ${saleStockMsgHtml()}
-      <div class="e-sum"><span class="muted">이카운트: 판매관리 → 판매입력 → 웹자료올리기 → 표 첫 칸 클릭 → 붙여넣기(Cmd+V) → 확인 후 저장. ※ 구매입력 화면에 붙이지 마세요.</span></div>`;
-  }
+  if (s.results) body = s.results.map((r, pi) => saleCard(r, pi)).join('') + saleTools();
   return ePage(`${head}${err}${paste}${body}`, 'scroll');
 }
 // ══════════════════════════════════════════════════════════════
@@ -3715,7 +3772,7 @@ function chSend() {
     ch.mode = cmd; if (!j || j.items.length || j.sale || j.conv) j = chNewJob(cmd); else j.mode = cmd;
     j.msgs.push({ who: 'me', text });
     if (cmd === 'deposit') { chDeposit(j, ''); return; }
-    chSay(j, `${CH_LABEL[cmd]}로 만들게요. ${cmd === 'sale' ? '판매 목록 글을 붙여넣어 주세요 (거래처마다 *이름 머리줄).' : CH_CONVERT[cmd] ? '이카운트에서 내려받은 엑셀(.xlsx)을 끌어다 놓아 주세요.' : '명세서 사진·PDF를 끌어다 놓거나, 캡처를 Cmd+V로 붙여넣어 주세요.'}`);
+    chSay(j, `${CH_LABEL[cmd]}로 만들게요. ${cmd === 'sale' ? '판매 목록 글을 붙여넣거나(거래처마다 *이름 머리줄) 발주서·명세서 사진을 올려 주세요.' : CH_CONVERT[cmd] ? '이카운트에서 내려받은 엑셀(.xlsx)을 끌어다 놓아 주세요.' : '명세서 사진·PDF를 끌어다 놓거나, 캡처를 Cmd+V로 붙여넣어 주세요.'}`);
     chSave(); render(); return;
   }
   if (cmd) { j = j || chNewJob(ch.mode); j.msgs.push({ who: 'me', text }); chSay(j, '아직 만든 게 없어요. 먼저 명세서나 글을 올려 주세요.'); chSave(); render(); return; }
@@ -3774,8 +3831,9 @@ async function chRun(j) {
   if (m === 'deposit') { chDeposit(j, ''); return; }
   if (m === 'sale') {
     const txt = j.items.filter((it) => it.text).map((it) => it.text).join('\n');
-    if (!txt) { chSay(j, '판매입력은 붙여넣은 판매 목록 글로 만들어요. 사진은 구매입력·납품확인서·견적서로 만들 수 있어요.'); return; }
-    await chSale(j, txt, true); return;
+    const docs = j.items.filter((it) => it.doc).map((it) => it.doc);
+    if (!txt && !docs.length) { chSay(j, '판매입력은 판매 목록 글이나 발주서·명세서 사진으로 만들어요.'); return; }
+    await chSale(j, txt, true, txt ? null : docs); return;
   }
   if (!helperState.up && m !== 'deliv') { chSay(j, `${CH_LABEL[m]}는 이 맥의 로컬 도우미가 켜져 있어야 만들 수 있어요.`, { err: true }); return; }
   const wait = j.items.filter((it) => it.doc && chUnknown(it).length).length;
@@ -3882,11 +3940,15 @@ async function chQuote(it) {
   catch (e) { it.quote = null; it.err = e.message; }
   it.busy = false;
 }
-async function chSale(j, text, quiet) {
+// 문서(사진·PDF) → 판매전표 요청 칸: 인식표의 우리 품목·수량·단가를 그대로, 단가 빈 줄은 도우미가 종전가로 채움
+const saleDocItem = (d) => ({ wh: saleS.wh, doc: { ...d, from_doc: true, lines: d.lines.map((l) => ({ ...l, unit_price: Number(l.price) || Number(l.unit_price) || 0,
+  amount: (Number(l.qty) || 0) * (Number(l.price) || Number(l.unit_price) || 0), match: l.match || { ours: l.ours || '', code: l.code || '', conf: l.conf || 'none' } })) } });
+async function chSale(j, text, quiet, docs) {
   if (!helperState.up) { chSay(j, '판매입력은 이 맥의 로컬 도우미가 켜져 있어야 만들 수 있어요.', { err: true }); chSave(); render(); return; }
   j.saleText = text; j.busy = true; render();
   try {
-    const r = await helperFetch('/api/sale', { text, doc_date: S.todayStr(), wh: saleS.wh });
+    saleS.fromDr = false;
+    const r = await helperFetch('/api/sale', docs ? { items: docs.map(saleDocItem) } : { text, doc_date: S.todayStr(), wh: saleS.wh });
     saleS.text = text;
     const filled = saleApply(r, true);
     if (filled) saleApply(await helperFetch('/api/sale', { items: saleItems() }));
@@ -4092,7 +4154,7 @@ function chMsgHtml(j, m) {
   return `<div class="ch-bot"><div class="ch-av">홈</div><div class="ch-bb">${inner}</div></div>`;
 }
 function chWelcome() {
-  const ex = [['buy', '구매입력', '거래처 명세서·견적서 사진 → 이카운트 구매입력 복사'], ['sale', '판매입력', '판매 목록 글 → 이카운트 판매입력 복사'],
+  const ex = [['buy', '구매입력', '거래처 명세서·견적서 사진 → 이카운트 구매입력 복사'], ['sale', '판매입력', '판매 목록 글·발주서 사진 → 이카운트 판매입력'],
     ['deliv', '납품확인서', '명세서에서 인슐레이션·방수시트·타이벡 납품확인서'], ['quote', '견적서', '발주서·카톡 품목 → 거래처 양식 견적서 (종전가)']];
   return `<div class="ch-hello"><h1>무엇을 만들까요?</h1><p>명세서 사진·PDF를 끌어다 놓거나, 캡처를 <b>Cmd+V</b>로 붙여넣으세요.</p>
     <div class="ch-ex">${ex.map(([v, t, s]) => `<button type="button" class="ch-exb ${ch.mode === v ? 'on' : ''}" data-act="erp-ch-chip" data-v="${v}"><b>${t}</b><span>${s}</span></button>`).join('')}</div>
@@ -4302,6 +4364,9 @@ function erpAct(act, t) {
   else if (act === 'erp-dr-buypush') drBuyPush();
   else if (act === 'erp-dr-buycopy') { if (dr.buy) { drCopyPaste(dr.buy.paste, () => { dr.buyCopied = true; render(); }); drStockFeed(dr.buy); render(); } }
   else if (act === 'erp-sale-read') saleRead();
+  else if (act === 'erp-sale-push') salePush(Number(t.dataset.p));
+  else if (act === 'erp-sale-recheck') saleRebuild();
+  else if (act === 'erp-dr-sale') drSale();
   else if (act === 'erp-sale-file') saleFile();
   else if (act === 'erp-sale-copy') { if (saleS.paste) { drCopyPaste(saleS.paste, () => { saleS.copied = true; render(); }); saleStockFeed(); render(); } }
   else if (act === 'erp-sale-clear') { saleS.results = null; saleS.text = ''; saleS.err = ''; saleS.file = ''; saleS.stockMsg = null; render(); }
@@ -4353,9 +4418,12 @@ app.addEventListener('change', (e) => {
     return;
   }
   if (el.id === 'dr-sitedoc') { drSiteDoc(el.files && el.files[0]); el.value = ''; return; }
+  if (el.id === 'sale-wh') { saleS.wh = el.value; if (saleS.results) saleRebuild(); return; }   // 출하창고 바꾸면 바로 다시 검사
   if (el.dataset.sf) {   // 판매입력 카드 편집 (거래처코드·단가·품목) → 재검증
     const p = Number(el.dataset.p); const r = saleS.results && saleS.results[p]; if (!r) return;
     if (el.dataset.sf === 'cust') { r.voucher.cust_code = el.value.trim(); }
+    else if (el.dataset.sf === 'tag') { r._tag = el.value; }
+    else if (el.dataset.sf === 'tagall') { r._tagAll = el.checked; }
     else {
       const l = r.doc.lines[Number(el.dataset.i)]; if (!l) return;
       if (el.dataset.sf === 'price') { l.unit_price = Number(el.value) || 0; l.amount = (Number(l.qty) || 0) * l.unit_price; }
