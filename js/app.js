@@ -3195,10 +3195,14 @@ function drLearn() {
   const items = dr.doc.lines.filter((l) => l.ours && l.conf !== 'high').map((l) => ({ raw: l.raw_name, spec: l.spec, ours: l.ours }));
   if (!items.length) { dr.note = '새로 저장할 매핑이 없어요 (확실한 줄은 이미 사전에 있음).'; render(); return; }
   drSaveFixes();
-  helperFetch('/api/map/learn', { partner: dr.doc.partner, items }).then((j) => {
+  // 공유 사전(item_map)에 저장 — 도우미가 켜져 있으면 도우미가(이 맥 파일 + 공유 사전), 꺼져 있으면 이 화면이 바로
+  const save = helperState.up
+    ? helperFetch('/api/map/learn', { partner: dr.doc.partner, items }).then((j) => j.saved)
+    : S.saveItemMap(dr.doc.partner, items.map((x) => ({ ...x, code: ecountCode(x.ours) })), myAccount);
+  save.then((n) => {
     dr.doc.lines.forEach((l) => { if (l.ours && l.conf !== 'high') l.conf = 'high'; });
-    dr.note = `매핑 ${j.saved}개 저장 — 같은 거래처 표기는 다음부터 자동으로 초록(확실)으로 잡혀요.`;
-  }).catch((e) => { dr.err = e.message; }).finally(render);
+    dr.note = `매핑 ${n}개 공유 사전에 저장 — 같은 거래처 표기는 다음부터 어느 PC에서든 자동으로 초록(확실)으로 잡혀요.`;
+  }).catch((e) => { dr.err = `매핑 저장 실패: ${e.message}`; }).finally(render);
 }
 // 화면에서 고친 값을 도우미에 알려줘 다음 판독부터 맞게 읽게 한다 (조용히)
 function drSaveFixes() {
@@ -3943,7 +3947,7 @@ function chBack() {
   dr = { ...dr, fromChat: undefined };
   state.route = 'chat'; render();
 }
-// 매핑 — 처음 보는 품목을 대화로 물어서 저장 (도우미 사전 → 같은 거래처 표기는 다음부터 자동)
+// 매핑 — 처음 보는 품목을 대화로 물어서 공유 사전(item_map)에 저장 → 같은 거래처 표기는 다음부터 어느 PC에서든 자동
 async function chPick(j, i, k, name) {
   const it = j.items[i]; const l = it && it.doc && it.doc.lines[k]; if (!l) return;
   it._find = undefined;
@@ -3951,10 +3955,12 @@ async function chPick(j, i, k, name) {
   else {
     l.ours = name; l.code = ecountCode(name); l.conf = 'edit';
     render();
-    if (helperState.up) {
-      try { await helperFetch('/api/map/learn', { partner: it.doc.partner, items: [{ raw: l.raw_name, spec: l.spec, ours: name }] }); l.conf = 'high'; l._saved = true; }
-      catch (e) { chSay(j, `매핑 저장 실패: ${e.message}`, { err: true }); }
-    } else l._saved = false;
+    try {   // 공유 사전에 저장 — 도우미가 꺼져 있어도 이 화면이 바로 저장
+      const one = [{ raw: l.raw_name, spec: l.spec, ours: name }];
+      if (helperState.up) await helperFetch('/api/map/learn', { partner: it.doc.partner, items: one });
+      else await S.saveItemMap(it.doc.partner, one.map((x) => ({ ...x, code: l.code })), myAccount);
+      l.conf = 'high'; l._saved = true;
+    } catch (e) { l._saved = false; chSay(j, `매핑 저장 실패: ${e.message}`, { err: true }); }
   }
   if (!chUnknown(it).length && ['buy', 'deliv', 'quote'].includes(j.mode) && helperState.up) {
     if (it.done === j.mode) { await chRunItem(j, i); chSay(j, `품목을 고친 대로 위 ${CH_LABEL[j.mode]}를 다시 만들었어요.`); }

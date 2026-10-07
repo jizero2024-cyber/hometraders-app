@@ -226,10 +226,10 @@ export function makeMatcher(ecountItems, itemMap) {
   const byNorm = new Map();
   for (const [c, n] of ecountItems) if (!byNorm.has(norm(n))) byNorm.set(norm(n), [c, n]);
   const seeds = new Map();
-  for (const [partner, raw, ours] of itemMap) {
+  for (const [partner, raw, ours, spec] of itemMap) {
     const k = norm(raw);
     if (!seeds.has(k)) seeds.set(k, []);
-    seeds.get(k).push({ partner, ours });
+    seeds.get(k).push({ partner, ours, spec: spec || '' });
   }
   let prepared = null;   // 품목마다 대문자 이름·규격 토큰 (처음 추정할 때 한 번만)
   const masterName = (raw) => {
@@ -244,7 +244,8 @@ export function makeMatcher(ecountItems, itemMap) {
   return function match(partner, raw, spec = '') {
     const hit = seeds.get(norm(raw)) || (spec && seeds.get(norm(`${raw} ${spec}`))) || [];
     if (hit.length) {
-      const pick = hit.find((s) => norm(s.partner) === norm(partner)) || hit[0];
+      const same = hit.filter((s) => norm(s.partner) === norm(partner));   // 같은 거래처 → 같은 규격 순으로
+      const pick = same.find((s) => s.spec && norm(s.spec) === norm(spec)) || same[0] || hit.find((s) => !s.spec || norm(s.spec) === norm(spec)) || hit[0];
       const alts = [...new Set(hit.filter((s) => s.ours !== pick.ours).map((s) => s.ours))];
       return { ours: pick.ours, code: byName.get(pick.ours) || '', conf: 'high', src: '사전', cands: alts.slice(0, 4) };
     }
@@ -300,7 +301,7 @@ export function quotePrev(rows, partner, raw, spec = '') {
 // prevFor(거래처, 원문품명, 규격, 우리품목) → {price, src, date} | null
 export function readPastedText(text, partner, match, prevFor) {
   const doc = parseText(text, partner);
-  doc.remarks += ' · 도우미 없이 이 화면에서 인식 (학습 매핑은 도우미가 켜져 있을 때만)';
+  doc.remarks += ' · 도우미 없이 이 화면에서 인식 (매핑은 공유 사전)';
   doc.lines = doc.lines.map((l) => {
     const m = match(doc.partner, l.raw_name, l.spec);
     let prev = null;

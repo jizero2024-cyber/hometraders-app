@@ -92,9 +92,14 @@ async function _init() {
   loadPrevPrices();   // 종전가 표는 따로 — 표가 아직 없어도 로그인·화면은 그대로
   loadItemMap();      // 품목 매핑 사전도 따로 (공개 코드에서 뺀 거래처 표기)
 }
-// ── 품목 매핑 사전 (item_map) — [거래처, 거래처표기, 우리품목명] ──
+// ── 품목 매핑 사전 (item_map) — [거래처, 거래처표기, 우리품목명, 규격] ──
+// 10/7부터 사전은 이 표 하나(도우미·ERP·자동화가 같이 씀). 확인 기다리는 제안은 item_map_suggest 에 따로 있어 여기선 안 읽음.
 let itemMap = [];
+let itemRows = [];
 let itemMapState = { ready: false, missing: false, err: '' };
+const mapRows = (rows) => rows.filter((r) => (r.status || '확정') === '확정' && r.ours)
+  .sort((a, b) => String(a.partner).localeCompare(String(b.partner)) || String(a.raw).localeCompare(String(b.raw)))
+  .map((r) => [r.partner || '', r.raw || '', r.ours || '', r.spec || '']);
 async function loadItemMap() {
   try {
     const all = [];
@@ -107,8 +112,8 @@ async function loadItemMap() {
       all.push(...(data || []));
       if (!data || data.length < 1000) break;
     }
-    all.sort((a, b) => String(a.partner).localeCompare(String(b.partner)) || String(a.raw).localeCompare(String(b.raw)));
-    itemMap = all.map((r) => [r.partner || '', r.raw || '', r.ours || '']);
+    itemRows = all;
+    itemMap = mapRows(all);
     itemMapState = { ready: true, missing: false, err: '' };
   } catch (e) {
     itemMapState = { ready: false, missing: false, err: String((e && e.message) || e) };
@@ -116,6 +121,34 @@ async function loadItemMap() {
   notify();
 }
 export const getItemMap = () => itemMap;
+const nfc = (s) => String(s || '').normalize('NFC').trim();
+const squash = (s) => nfc(s).replace(/\s+/g, '').toUpperCase();
+const head4 = (s) => squash(String(s || '').replace(/\(주\)|주식회사|㈜/g, '')).slice(0, 4);   // '(주)원익큐브'·'원익큐브' 같은 거래처로
+async function sha16(s) {
+  const b = await crypto.subtle.digest('SHA-1', new TextEncoder().encode(s));
+  return [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, '0')).join('').slice(0, 16);
+}
+// 사람이 고른 매핑을 공유 사전에 바로 저장 (도우미 없이도 · 어느 PC에서든). items: [{raw, spec, ours, code}]
+// 같은 거래처(앞 네 글자)·표기·규격 줄이 이미 있으면 그 줄을 고침 → 같은 표기에 답이 둘 생기지 않게.
+export async function saveItemMap(partner, items, by = '') {
+  const rows = [];
+  for (const it of items) {
+    const raw = nfc(it.raw), spec = nfc(it.spec);
+    if (!raw || !it.ours) continue;
+    const ex = itemRows.find((r) => squash(r.raw) === squash(raw) && squash(r.spec) === squash(spec) && head4(r.partner) === head4(partner));
+    const p = ex ? ex.partner : nfc(partner);
+    const id = ex ? ex.id : await sha16(`${p}|${raw}` + (spec ? `|${spec}` : ''));
+    rows.push({ id, partner: p, raw, spec, ours: nfc(it.ours), code: it.code || '', status: '확정',
+      src: 'ERP 화면에서 고름', confirmed_by: by, updated_at: new Date().toISOString() });
+  }
+  if (!rows.length) return 0;
+  const { error } = await sb.from('item_map').upsert(rows);
+  if (error) throw new Error(error.message);
+  for (const r of rows) itemRows = itemRows.filter((x) => x.id !== r.id).concat([{ ...(itemRows.find((x) => x.id === r.id) || {}), ...r }]);
+  itemMap = mapRows(itemRows);
+  notify();
+  return rows.length;
+}
 export const getItemMapState = () => ({ ...itemMapState, count: itemMap.length });
 // ── 종전가 표 (prev_prices) — 도우미가 켜진 맥이 견적서 종전가를 올리고, 다른 PC는 읽기만 ──
 let prevPrices = [];
