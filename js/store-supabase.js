@@ -123,7 +123,7 @@ async function loadItemMap() {
 export const getItemMap = () => itemMap;
 const nfc = (s) => String(s || '').normalize('NFC').trim();
 const squash = (s) => nfc(s).replace(/\s+/g, '').toUpperCase();
-const head4 = (s) => squash(String(s || '').replace(/\(주\)|주식회사|㈜/g, '')).slice(0, 4);   // '(주)원익큐브'·'원익큐브' 같은 거래처로
+const head4 = (s) => squash(String(s || '').replace(/\(주\)|주식회사|㈜/g, '')).slice(0, 4);   // '(주)OO'·'OO' 를 같은 거래처로
 async function sha16(s) {
   const b = await crypto.subtle.digest('SHA-1', new TextEncoder().encode(s));
   return [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, '0')).join('').slice(0, 16);
