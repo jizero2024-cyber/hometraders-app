@@ -491,3 +491,32 @@ body.erp .ch-send{background:var(--c-ink);color:#fff;font-size:17px}
 body.erp .ch-send:disabled{background:#cfccc5;cursor:default}
 .ch-foot{text-align:center;color:var(--c-faint);font-size:12px;margin-top:8px}
 .ch-note{font-size:12px;color:var(--c-warn);background:var(--c-warn-bg);border-radius:8px;padding:6px 10px;margin:6px 0}
+/* 글자 키우기 (10/7 "글씨가 작아 보인다") — 대화 화면은 기본 16px, 넓은 화면은 더 크게 */
+.ch-app{font-size:16px}
+body.erp .ch-app button,body.erp .ch-app input,body.erp .ch-app textarea{font-size:15px}
+body.erp .ch-row textarea{font-size:16px}
+.ch-brand{font-size:16px}
+.ch-job{font-size:15px}.ch-job small{font-size:13px}
+body.erp .ch-menu button,.ch-menu a{font-size:14.5px;padding:7px 10px}
+.ch-top b{font-size:16px}.ch-st{font-size:14px}.ch-user{font-size:14px}
+.ch-col,.ch-box{max-width:900px}
+.ch-hello h1{font-size:34px}.ch-hello p{font-size:16px}
+.ch-exb b{font-size:17px}.ch-exb span{font-size:14.5px}
+body.erp .ch-exb{padding:18px 20px}
+body.erp .ch-chip{font-size:14px;padding:6px 14px}
+.ch-ch h3{font-size:17px}.ch-ch small{font-size:14px}
+.ch-tbl{font-size:15px}.ch-code{font-size:13px}
+.ch-foot{font-size:13px}
+body.erp .ch-btn{font-size:15px;padding:9px 16px}
+@media (min-width:1600px){
+  .ch-app{font-size:17px}
+  .ch-app{grid-template-columns:280px minmax(0,1fr)}
+  .ch-col,.ch-box{max-width:1000px}
+  body.erp .ch-app button,body.erp .ch-app input,body.erp .ch-app textarea{font-size:16px}
+  body.erp .ch-row textarea{font-size:17px}
+  .ch-hello h1{font-size:38px}.ch-hello p{font-size:17px}
+  .ch-exb b{font-size:18px}.ch-exb span{font-size:15px}
+  .ch-tbl{font-size:16px}.ch-ch h3{font-size:18px}
+  body.erp .ch-chip{font-size:15px}
+  body.erp .ch-btn{font-size:16px}
+}
