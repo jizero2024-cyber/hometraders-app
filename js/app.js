@@ -3311,10 +3311,10 @@ function drBuyPanel() {
   return `<div class="e-panel" style="margin-top:8px"><div class="e-panel-hd"><b>구매입력 미리보기</b><span class="sp"></span>
       ${b.valid ? '<span class="e-b green">명세서와 합계 일치</span>' : '<span class="e-b red">전표 만들 수 없음</span>'}</div>
     <table class="e-ftbl"><colgroup><col style="width:80px"><col><col style="width:80px"><col></colgroup>
-      <tr><th>거래처</th><td><input class="e-in" id="dr-buy-cust" value="${esc(v.cust_code)}" placeholder="거래처코드" style="width:130px"> ${esc(v.cust_name)} <span class="muted">${esc(v.cust_how)}</span></td>
+      <tr><th>거래처</th><td><input class="e-in" id="dr-buy-cust" list="ec-partners" autocomplete="off" value="${esc(v.cust_code)}" placeholder="거래처 이름·코드 검색" style="width:200px">${ecPartnerList()} ${esc(v.cust_name)} <span class="muted">${esc(v.cust_how)}</span></td>
         <th>입고창고</th><td><select class="e-sel" id="dr-buy-wh">${(b.warehouses || []).map((w) => `<option value="${esc(w.code)}"${w.code === v.wh_code ? ' selected' : ''}>${esc(w.code)} ${esc(w.name)}</option>`).join('')}</select></td></tr>
       <tr><th>일자</th><td>${esc(v.date)}</td>
-        <th>규격</th><td><input class="e-in" id="dr-buy-tag" value="${esc(v.tag || '')}" placeholder="0911/뉴하우징/평택김인숙" style="width:180px"> <label class="muted"><input type="checkbox" id="dr-buy-all" ${v.tag_all ? 'checked' : ''}> 모든 줄</label> <span class="muted">(이카운트 규격 칸 · 고친 뒤 [다시 검사])</span></td></tr>
+        <th>규격</th><td><input class="e-in" id="dr-buy-tag" value="${esc(v.tag || '')}" placeholder="MMDD/판매처/현장/건축주" style="width:180px"> <label class="muted"><input type="checkbox" id="dr-buy-all" ${v.tag_all ? 'checked' : ''}> 모든 줄</label> <span class="muted">(이카운트 규격 칸 · 고친 뒤 [다시 검사])</span></td></tr>
     </table>
     ${b.errors.length ? `<div class="dr-err">${b.errors.map(esc).join('<br>')}</div>` : ''}
     ${b.warnings.length ? `<div class="e-sum"><span class="muted">${b.warnings.map(esc).join('<br>')}</span></div>` : ''}
@@ -3573,6 +3573,15 @@ function salePush(pi) {
     saleStockFeed();
   }).catch((err) => { saleS.err = `${v.cust_name}: ${err.message}`; }).finally(() => { saleS.busy = false; render(); });
 }
+// 이카운트 거래처 목록(도우미) — 거래처 칸에 이름으로 검색해 고르게. 이름을 넣어도 도우미가 코드로 바꿔 줌
+let ecPartners = null;
+function ecPartnerList() {
+  if (ecPartners === null && helperState.up) {
+    ecPartners = [];
+    helperFetch('/api/partners').then((j) => { ecPartners = j.partners || []; render(); }).catch(() => { ecPartners = null; });
+  }
+  return `<datalist id="ec-partners">${(ecPartners || []).map((x) => `<option value="${esc(x.name)}">${esc(x.code)}</option>`).join('')}</datalist>`;
+}
 function saleCard(r, pi) {
   const v = r.voucher, st = r.sums || {};
   const e = saleS.ecount || {};
@@ -3593,10 +3602,10 @@ function saleCard(r, pi) {
   return `<div class="e-panel" style="margin-top:8px"><div class="e-panel-hd"><b>판매입력 미리보기 · ${esc(v.cust_name || '(거래처?)')}</b><span class="sp"></span>
       ${r.ok ? '<span class="e-b green">전표 만들 수 있음</span>' : '<span class="e-b red">전표 만들 수 없음</span>'}</div>
     <table class="e-ftbl"><colgroup><col style="width:80px"><col><col style="width:80px"><col></colgroup>
-      <tr><th>거래처</th><td><input class="e-in" data-sf="cust" data-p="${pi}" value="${esc(v.cust_code || '')}" placeholder="거래처코드" style="width:130px"> ${esc(v.cust_name || '')} <span class="muted">${esc(v.cust_how || '')}</span></td>
+      <tr><th>거래처</th><td><input class="e-in" data-sf="cust" data-p="${pi}" list="ec-partners" autocomplete="off" value="${esc(v.cust_code || '')}" placeholder="거래처 이름·코드 검색" style="width:200px"> ${esc(v.cust_name || '')} <span class="muted">${esc(v.cust_how || '')}</span></td>
         <th>출하창고</th><td>${esc(v.wh_code || '')} ${esc(v.wh_name || saleWhName())} <span class="muted">(위에서 바꿈)</span></td></tr>
       <tr><th>일자</th><td>${esc(v.date || '')}</td>
-        <th>규격</th><td><input class="e-in" data-sf="tag" data-p="${pi}" value="${esc(tag)}" placeholder="1007/뉴하우징홈/예산덕산/맹도재소장님" style="width:220px"> <label class="muted"><input type="checkbox" data-sf="tagall" data-p="${pi}" ${tagAll ? 'checked' : ''}> 모든 줄</label> <span class="muted">(이카운트 규격 칸)</span></td></tr>
+        <th>규격</th><td><input class="e-in" data-sf="tag" data-p="${pi}" value="${esc(tag)}" placeholder="MMDD/판매처/현장/건축주" style="width:220px"> <label class="muted"><input type="checkbox" data-sf="tagall" data-p="${pi}" ${tagAll ? 'checked' : ''}> 모든 줄</label> <span class="muted">(이카운트 규격 칸)</span></td></tr>
     </table>
     ${r.errors.length ? `<div class="dr-err">${r.errors.map(esc).join('<br>')}</div>` : ''}
     ${r.warnings.length ? `<div class="e-sum"><span class="muted">${r.warnings.map(esc).join('<br>')}</span></div>` : ''}
@@ -3611,7 +3620,7 @@ function saleCard(r, pi) {
 // 아래 공통 버튼 — 판매입력 화면과 문서 인식(판매입력) 모두 같은 줄
 function saleTools() {
   const s = saleS;
-  return `<div class="e-tools" style="margin-top:8px">통과 <b>${s.passed}/${s.results.length}</b> · 합계 ${eN(s.total)}원<span class="sp"></span>
+  return `${ecPartnerList()}<div class="e-tools" style="margin-top:8px">통과 <b>${s.passed}/${s.results.length}</b> · 합계 ${eN(s.total)}원<span class="sp"></span>
       ${eBtn('다시 검사', 'erp-sale-recheck', s.busy ? 'disabled' : '')}
       ${s.file ? `<a class="e-btn" href="${HELPER}/api/file?path=${encodeURIComponent(s.file)}">받기 · ${esc(s.file.split('/').pop())}</a>` : ''}
       ${eBtn('판매입력 엑셀 만들기', 'erp-sale-file', s.passed ? '' : 'disabled')}
