@@ -3734,6 +3734,7 @@ function chCmd(t) {
   if (/^(에이스|에이스명세표|에이스명세서)(으로|로)?(만들어줘|해줘|변환)?$/.test(s)) return 'ace';
   if (/^입금표(만들어줘|해줘)?$/.test(s)) return 'deposit';
   if (/^(복사|복사해줘|붙여넣기복사)$/.test(s)) return 'copy';
+  if (/^(등록|등록해줘|이카운트등록|바로등록|입력해줘)$/.test(s)) return 'push';
   if (/^(엑셀|엑셀받기|파일)$/.test(s)) return 'file';
   if (/^(새작업|새로|처음부터)$/.test(s)) return 'new';
   if (/^(고치기|수정)$/.test(s)) return 'edit';
@@ -3768,7 +3769,7 @@ function chSend() {
     chDo(j, cmd);
     return;
   }
-  if (cmd && !['copy', 'file', 'edit'].includes(cmd)) {   // 먼저 할 일만 말한 경우 — 고르고 자료를 기다림
+  if (cmd && !['copy', 'file', 'edit', 'push'].includes(cmd)) {   // 먼저 할 일만 말한 경우 — 고르고 자료를 기다림
     ch.mode = cmd; if (!j || j.items.length || j.sale || j.conv) j = chNewJob(cmd); else j.mode = cmd;
     j.msgs.push({ who: 'me', text });
     if (cmd === 'deposit') { chDeposit(j, ''); return; }
@@ -3853,6 +3854,7 @@ function chDo(j, cmd) {
   const it = j.items.find((x) => x.doc) || null;
   if (['buy', 'deliv', 'quote', 'sale', 'stmt', 'bstmt', 'ace', 'deposit'].includes(cmd)) { j.mode = cmd; ch.mode = cmd; chRun(j).then(() => { chSave(); render(); }); render(); return; }
   if (cmd === 'copy') { chCopy(j); return; }
+  if (cmd === 'push') { const k = j.items.findIndex((x) => x.buy && x.buy.valid && !(x.pushed && x.pushed.ok)); if (k >= 0) chPush(j, k); else { chSay(j, '등록할 구매입력이 없어요 (합계가 맞아야 등록돼요).'); chSave(); render(); } return; }
   if (cmd === 'file') { if (j.mode === 'sale') chSaleFile(j); else if (it) chBuyFile(j, j.items.indexOf(it)); return; }
   if (cmd === 'edit') { if (j.mode === 'sale') chSaleEdit(j); else if (it) chEdit(j, j.items.indexOf(it)); }
 }
@@ -3914,6 +3916,22 @@ async function chBuy(it) {
   it.busy = true; render();
   try { it.buy = await helperFetch('/api/purchase', chBuyPayload(it)); it.copied = false; it.buyFile = ''; } catch (e) { it.buy = null; it.err = e.message; }
   it.busy = false;
+}
+// 이카운트에 바로 등록 (도우미 /api/purchase/push — 같은 명세서 두 번 X, 검증 통과한 전표만)
+async function chPush(j, i) {
+  const it = j.items[i]; const b = it && it.buy; if (!b || !b.valid || it.busy) return;
+  const e = b.ecount || {};
+  if (!e.ready) { chSay(j, `이카운트 연결 정보가 없어요 — 도우미 .env 에 ${(e.missing || []).join(', ')} 를 넣고 도우미를 다시 켜 주세요.`, { err: true }); chSave(); render(); return; }
+  const v = b.voucher;
+  const where = e.mode === '실서버' ? '실제 이카운트 ERP' : '이카운트 테스트 서버';
+  if (!confirm(`${where}에 구매입력을 등록할까요?\n\n거래처: ${v.cust_name} (${v.cust_code})\n일자: ${v.date}\n품목 ${v.lines.length}줄 · 총액 ${eN(b.sums.total)}원 (공급가액 ${eN(b.sums.supply)} + 부가세 ${eN(b.sums.vat)})`)) return;
+  it.busy = true; render();
+  try {
+    const r = await helperFetch('/api/purchase/push', chBuyPayload(it));
+    it.buy = r; it.pushed = r.push; chFeedStock(it);
+    chSay(j, `이카운트에 등록했어요 (${r.push.mode}) · 전표번호 ${(r.push.slip_nos || []).join(', ') || '-'}`);
+  } catch (err) { chSay(j, err.message, { err: true }); }
+  it.busy = false; chSave(); render();
 }
 async function chBuyFile(j, i) {
   const it = j.items[i]; if (!it || !it.doc) return;
@@ -4003,7 +4021,7 @@ function chBack() {
   const fc = dr.fromChat;
   if (fc) {
     const j = ch.jobs.find((x) => x.id === fc.job), it = j && j.items[fc.i];
-    if (it) { it.doc = dr.doc; it.buy = dr.buy; it.buyFile = dr.buyFile; it.quote = dr.quote; it.deliv = dr.deliv; it.copied = !!dr.buyCopied; }
+    if (it) { it.doc = dr.doc; it.buy = dr.buy; it.buyFile = dr.buyFile; it.quote = dr.quote; it.deliv = dr.deliv; it.copied = !!dr.buyCopied; if (dr.pushed) it.pushed = dr.pushed; }
     if (j) { ch.cur = j.id; if (it && j.mode === 'buy' && helperState.up) { chBuy(it).then(() => { chSave(); render(); }); } chSave(); }
   }
   dr = { ...dr, fromChat: undefined };
@@ -4067,8 +4085,10 @@ function chCardBuy(j, i) {
       <tr class="ch-sum"><td>합계 (공급가액 + 부가세)</td><td></td><td class="n">${eN(st.total)}</td></tr>
       ${diff.length ? `<tr class="ch-sumx"><td colspan="3">명세서 ${diff.map((k) => `${{ supply: '공급가액', vat: '부가세', total: '총액' }[k]} ${eN(dt[k])}`).join(' · ')} — 차이 있음</td></tr>` : ''}</table>
     ${b.warnings.length ? `<div class="ch-warn"><button type="button" class="ch-link" data-act="erp-ch-toggle" data-k="w${i}">참고 ${b.warnings.length}개 ${j.open && j.open['w' + i] ? '접기' : '보기'}</button>${j.open && j.open['w' + i] ? b.warnings.map((w) => `<div>${esc(w)}</div>`).join('') : ''}</div>` : ''}
+    ${it.pushed && it.pushed.ok ? `<div class="ch-pushed"><span class="ch-pill ok">이카운트 등록 완료</span> ${esc(it.pushed.mode || '')} · 전표번호 ${esc((it.pushed.slip_nos || []).join(', ') || '-')}</div>` : ''}
     <div class="ch-acts">
-      ${b.valid ? `<button type="button" class="ch-btn ${it.copied ? 'done' : 'pri'}" data-act="erp-ch-copy" data-i="${i}">${it.copied ? '복사됨 ✓' : '이카운트 붙여넣기 복사'}</button>` : ''}
+      ${b.valid && !(it.pushed && it.pushed.ok) ? `<button type="button" class="ch-btn pri" data-act="erp-ch-push" data-i="${i}" title="${esc(b.ecount && !b.ecount.ready ? '도우미 .env 에 이카운트 API 키가 필요해요' : '확인 창이 한 번 뜬 뒤 등록돼요 · 같은 명세서는 두 번 안 들어가요')}">이카운트에 바로 등록${b.ecount && b.ecount.mode === '테스트' ? ' (테스트)' : ''}</button>` : ''}
+      ${b.valid ? `<button type="button" class="ch-btn ${it.copied ? 'done' : ''}" data-act="erp-ch-copy" data-i="${i}">${it.copied ? '복사됨 ✓' : '붙여넣기용 복사'}</button>` : ''}
       ${b.valid ? (it.buyFile ? chFileLink(it.buyFile) : `<button type="button" class="ch-btn" data-act="erp-ch-file" data-i="${i}">엑셀 받기</button>`) : ''}
       <button type="button" class="ch-btn ${b.valid ? '' : 'pri'}" data-act="erp-ch-edit" data-i="${i}">고치기</button></div></div>`;
 }
@@ -4222,6 +4242,7 @@ function chAct(act, t) {
   else if (act === 'erp-ch-toggle') { j.open = j.open || {}; j.open[t.dataset.k] = !j.open[t.dataset.k]; render(); }
   else if (act === 'erp-ch-pick') chPick(j, Number(t.dataset.i), Number(t.dataset.k), t.dataset.v);
   else if (act === 'erp-ch-skip') chPick(j, Number(t.dataset.i), Number(t.dataset.k), null);
+  else if (act === 'erp-ch-push') chPush(j, Number(t.dataset.i));
   else if (act === 'erp-ch-conv') chConvOut(j, t.dataset.i !== undefined ? Number(t.dataset.i) : undefined, t.dataset.k);
   else if (act === 'erp-ch-find') { const it = j.items[Number(t.dataset.i)]; it._find = it._find === Number(t.dataset.k) ? undefined : Number(t.dataset.k); ch.focusFind = true; render(); }
 }
