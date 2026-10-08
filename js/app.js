@@ -2876,7 +2876,9 @@ function deskDocRead() {
     right = `${dr.err ? `<div class="dr-err">${esc(dr.err)}</div>` : ''}
     <table class="e-ftbl"><colgroup><col style="width:80px"><col><col style="width:80px"><col><col style="width:80px"><col></colgroup>
       <tr><th>문서</th><td>${esc(d.doc_type || '')}${dr.usage ? ` <span class="muted">AI ${dr.usage.in + dr.usage.out}토큰 · 약 ${Math.round(dr.usage.usd * 1400).toLocaleString()}원</span>` : ' <span class="muted">AI 미사용</span>'}</td>
-        <th>거래처</th><td><input class="e-in" data-drh="partner" value="${esc(d.partner || '')}"></td><th>담당자</th><td><input class="e-in" data-drh="manager" value="${esc(d.manager || '')}"></td></tr>
+        <th>거래처</th><td><input class="e-in" data-drh="partner" value="${esc(d.partner || '')}"></td><th>담당자</th><td>${drMode === 'buy'
+          ? `<input class="e-in" data-drh="emp" value="${esc(d.emp || '')}" placeholder="구매입력한 우리 직원" title="거래처 담당자가 아니라 구매입력한 우리 직원 이름 (지금은 비워 둠)">`   // 10/8 대표: 구매입력 담당자는 거래처 사람 말고 우리 직원
+          : `<input class="e-in" data-drh="manager" value="${esc(d.manager || '')}">`}</td></tr>
       <tr><th>현장명</th><td style="display:flex;gap:4px"><input class="e-in" data-drh="owner" value="${esc(d.owner || '')}" style="flex:1">${drMode === 'buy' ? '' : `<label class="e-btn sm" for="dr-sitedoc" title="건축허가서·신고필증 사진/PDF에서 건축주·현장 주소를 채워요 (서류 날짜는 안 씀)">${siteDoc.busy ? '읽는 중…' : '현장 서류'}</label><input type="file" id="dr-sitedoc" accept="image/*,.heic,.pdf" hidden>`}</td><th>납품장소</th><td><input class="e-in" data-drh="site" value="${esc(d.site || '')}"></td><th>일자</th><td><input class="e-in" type="date" data-drh="doc_date" value="${esc(isoDate(d.doc_date))}" title="명세서 일자 — 줄마다 출고일이 비어 있으면 이 날짜가 납품일"></td></tr>
       ${d.remarks ? `<tr><th>메모</th><td colspan="5">${esc(d.remarks)}</td></tr>` : ''}
     </table>
