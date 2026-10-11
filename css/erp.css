@@ -688,3 +688,45 @@ body.erp .ch-exb.sm{padding:12px 14px}
 body.erp .ch-btn.sm{padding:5px 10px;font-size:13px;border-radius:8px}
 .ch-frame{display:block;width:100%;height:720px;border:0;border-top:1px solid #f0eee9}
 .ch-pushed{padding:8px 16px 0;font-size:14px;color:var(--c-sub)}
+/* 스밭비서 입력 확인 (2026-10-11) */
+.rv-top{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;padding:10px 12px;background:#f6f8fb;border:1px solid #dfe4ea;margin-bottom:8px;line-height:1.6}
+.rv-sum{display:flex;gap:8px;align-items:center;white-space:nowrap}
+.rv-tabs{display:flex;gap:4px;margin-bottom:8px;flex-wrap:wrap}
+.rv-tabs button{border:1px solid #d4dae3;background:#fff;padding:5px 12px;border-radius:14px;font-size:12.5px;cursor:pointer}
+.rv-tabs button.on{background:#1f3a5f;color:#fff;border-color:#1f3a5f}
+.rv-tabs button span{opacity:.7;margin-left:3px}
+.rv-list{display:flex;flex-direction:column;gap:10px;padding-bottom:40px}
+.rv-card{background:#fff;border:1px solid #dfe4ea;border-radius:6px;padding:10px 12px;font-size:13px}
+.rv-card.todo{border-left:4px solid #e8913a}
+.rv-hd{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.rv-hd .sp{flex:1}
+.rv-v{font-size:14.5px}.rv-amt{color:#1f3a5f}.rv-t{color:#56647a}
+.rv-slip{margin:4px 0 6px;font-size:12px}
+.rv-sec{margin:6px 0;padding-top:6px;border-top:1px dashed #e4e7ec}
+.rv-lb{font-weight:700;font-size:12px;color:#344054;margin-bottom:3px}
+details.rv-sec>summary.rv-lb{cursor:pointer}
+.rv-sec ol{margin:0;padding-left:18px;line-height:1.6}
+.rv-links{display:flex;gap:12px;flex-wrap:wrap;margin-top:4px}
+.rv-a{color:#1f5bd8;text-decoration:underline;font-size:12px}
+.rv-call{margin:3px 0}
+.rv-call summary{cursor:pointer;line-height:1.6}
+.rv-call pre{white-space:pre-wrap;background:#f8f9fb;border:1px solid #e4e7ec;padding:8px;margin:4px 0;max-height:360px;overflow:auto;font-size:12px;line-height:1.6;font-family:inherit}
+.rv-tw{overflow-x:auto}
+.rv-lines{width:100%;border-collapse:collapse;font-size:12px}
+.rv-lines th,.rv-lines td{border-bottom:1px solid #eef0f3;padding:3px 5px;text-align:left;vertical-align:top}
+.rv-lines th{background:#f6f8fb;font-weight:600}.rv-lines .n{text-align:right;white-space:nowrap}
+.rv-dec{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.rv-db{border:1px solid #d4dae3;background:#fff;padding:7px 12px;border-radius:5px;font-size:13px;cursor:pointer}
+.rv-db.on.green{background:#e3f2e6;border-color:#2f8a46;font-weight:700}.rv-db.on.blue{background:#e6effd;border-color:#3b6fd8;font-weight:700}
+.rv-db.on.orange{background:#fff1e3;border-color:#e8913a;font-weight:700}.rv-db.on.red{background:#fde2e1;border-color:#d64545;font-weight:700}.rv-db.on.gray{background:#eef0f3;border-color:#667085;font-weight:700}
+.rv-fix{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}.rv-fix label{display:flex;gap:4px;align-items:center;font-size:12px}.rv-fix .e-in{width:120px}
+.rv-memo{display:flex;gap:6px;align-items:flex-start;margin-top:6px}.rv-memo textarea{flex:1;min-height:36px}
+.rv-who{margin-top:4px;font-size:12px}
+.rv-mbell{margin-left:auto;position:relative;background:none;border:0;padding:6px;color:inherit;width:36px;height:36px}
+.rv-mbell svg{width:22px;height:22px}
+.rv-mbell .cnt{position:absolute;top:0;right:-2px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:#e5484d;color:#fff;font-size:10.5px;font-weight:700;display:grid;place-items:center}
+.rv-m{padding:10px 12px 90px}
+.rv-m .rv-top{flex-direction:column}.rv-m .rv-memo{flex-direction:column}.rv-m .rv-memo textarea{width:100%}
+.ch-top .rv-bell{display:inline-flex;align-items:center;gap:4px;margin-right:10px;border:1px solid #f5c9a8;background:#fff7ef;color:#b45309;border-radius:14px;padding:3px 10px;font-size:12.5px;cursor:pointer}
+.ch-top .rv-bell svg{width:15px;height:15px}
+.ch-top .rv-bell .cnt{position:static;margin-left:2px}

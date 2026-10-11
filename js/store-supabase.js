@@ -439,3 +439,26 @@ export async function signIn(id, password) {
   if (error) throw error;
 }
 export async function signOut() { _initPromise = null; await sb.auth.signOut(); }
+
+// ── 스밭비서 입력 확인 (purchase_review) — 2026-10-11 ─────────────────────
+// 스밭비서가 2027 날짜로 넣은 전표(2026 누락분)를 대표가 보고 판단 → 스밭비서가 읽어 2026 으로 정리
+let reviews = [];
+let reviewState = { ready: false, missing: false, err: '', at: 0, busy: false };
+export async function loadReviews() {
+  if (reviewState.busy) return reviewState;
+  reviewState.busy = true;
+  try {
+    const { data, error } = await sb.from('purchase_review').select('*').order('sort', { ascending: true }).limit(1000);
+    if (error) reviewState = { ready: false, missing: /does not exist|relation|schema cache|could not find/i.test(error.message), err: error.message, at: Date.now(), busy: false };
+    else { reviews = data || []; reviewState = { ready: true, missing: false, err: '', at: Date.now(), busy: false }; }
+  } catch (e) { reviewState = { ready: false, missing: false, err: String((e && e.message) || e), at: Date.now(), busy: false }; }
+  return reviewState;
+}
+export const getReviews = () => reviews;
+export const getReviewState = () => ({ ...reviewState });
+export async function saveReview(id, patch) {
+  const row = { ...patch, updated_at: new Date().toISOString() };
+  const { error } = await sb.from('purchase_review').update(row).eq('id', id);
+  if (error) throw new Error(error.message);
+  reviews = reviews.map((r) => (r.id === id ? { ...r, ...row } : r));
+}

@@ -1993,16 +1993,16 @@ const isDesk = () => DESK_MQ.matches;
 const DESK_MENU = [
   ['현황', [['dash', '업무 현황']]],
   ['판매·재고', [['sale', '판매입력 (붙여넣기)'], ['silicone', '실리콘 재고'], ['stock', '재고 현황'], ['', '출고 입력', 'new-ship'], ['ships', '출고 조회'], ['dispatch', '배차 관리'], ['invoices', '거래명세서']]],
-  ['매입·문서', [['docread', '문서 인식 (발주서·명세표)'], ['buy', '구매명세서'], ['', '입고 입력', 'add-inbound'], ['inbound', '입고 조회']]],
+  ['매입·문서', [['review', '스밭비서 입력 확인'], ['docread', '문서 인식 (발주서·명세표)'], ['buy', '구매명세서'], ['', '입고 입력', 'add-inbound'], ['inbound', '입고 조회']]],
   ['기타', [['quotes', '견적서 조회'], ['', '견적서 입력', 'add-quote'], ['delivdocs', '납품확인서'], ['partners', '거래처 등록'], ['items', '품목 등록'], ['whs', '창고 등록'], ['ecount', '이카운트 품목 조회'], ['itemmap', '품목 매핑 사전'], ['settings', '환경설정']]],
 ];
 const DESK_TITLES = {};
 DESK_MENU.forEach(([g, items]) => items.forEach(([r, l]) => { if (r) DESK_TITLES[r] = [l, g]; }));
 // 모바일 route ↔ PC route
-const DESK_FROM_MOBILE = { home: 'chat', quote: 'quotes', ship: 'ships', invoice: 'invoices', stock: 'stock', silicone: 'silicone', settings: 'settings' };
+const DESK_FROM_MOBILE = { review: 'review', home: 'chat', quote: 'quotes', ship: 'ships', invoice: 'invoices', stock: 'stock', silicone: 'silicone', settings: 'settings' };
 const MOBILE_FROM_DESK = { chat: 'home', dash: 'home', partners: 'settings', items: 'quote', whs: 'settings', ecount: 'quote', itemmap: 'quote', quotes: 'quote',
   ships: 'ship', dispatch: 'home', invoices: 'invoice', inbound: 'stock', buy: 'invoice', stock: 'stock', silicone: 'silicone', settings: 'settings',
-  docread: 'home', delivdocs: 'home' };
+  docread: 'home', delivdocs: 'home', review: 'review' };
 function deskRoute(r) {
   if (r === 'chat' || DESK_TITLES[r]) return r;
   if (r === 'quote') { const t = state.quoteTab; state.quoteTab = 'quote'; return t === 'price' ? 'items' : t === 'ecount' ? 'ecount' : t === 'map' ? 'itemmap' : 'quotes'; }
@@ -2133,6 +2133,7 @@ function deskTop() {
       <button type="button" data-act="briefing">출고 공지</button>
     </div>
     <div class="e-tr">
+      ${rvBell()}
       <button type="button" class="e-bell" data-act="checklist" title="확인 필요">${I.bell}확인 필요${n ? `<span class="cnt">${n}</span>` : ''}</button>
       <span class="e-sep"></span>
       <span class="e-user">${esc(myName())}</span>
@@ -4266,7 +4267,7 @@ function renderChat() {
   const status = !helperState.checked ? '<span class="ch-st"><i class="g"></i>도우미 확인 중</span>' : helperState.up ? '<span class="ch-st"><i class="on"></i>도우미 연결됨</span>' : '<span class="ch-st" title="사진·PDF 인식과 이카운트 전표는 이 맥의 도우미가 켜져 있어야 해요"><i class="off"></i>도우미 꺼짐 · 붙여넣은 글만 인식</span>';
   app.dataset.route = 'chat';
   app.innerHTML = `<div class="ch-app">${side}<main class="ch-main" id="ch-drop">
-      <div class="ch-top"><b>${esc(j ? j.title : '홈트 도우미')}</b><span class="sp"></span>${status}<span class="ch-user">${esc(myName())}</span><button type="button" class="ch-link" data-act="logout">로그아웃</button></div>
+      <div class="ch-top"><b>${esc(j ? j.title : '홈트 도우미')}</b><span class="sp"></span>${rvBell()}${status}<span class="ch-user">${esc(myName())}</span><button type="button" class="ch-link" data-act="logout">로그아웃</button></div>
       <div class="ch-thread" id="ch-thread"><div class="ch-col">${thread}</div></div>
       <div class="ch-comp"><div class="ch-box">
         <div class="ch-inner">
@@ -4346,9 +4347,118 @@ app.addEventListener('dragover', (e) => { if (state.route === 'chat' && e.target
 app.addEventListener('dragleave', (e) => { const z = state.route === 'chat' && e.target.closest && e.target.closest('#ch-drop'); if (z && !z.contains(e.relatedTarget)) z.classList.remove('over'); });
 app.addEventListener('drop', (e) => { if (state.route === 'chat' && e.target.closest && e.target.closest('#ch-drop')) { e.preventDefault(); e.target.closest('#ch-drop').classList.remove('over'); chAddFiles(e.dataTransfer.files); } });
 
+// ── 화면: 스밭비서 입력 확인 (🔔) — 스밭비서가 찾은 2026 누락분을 대표가 보고 판단 → 스밭비서가 읽어 입력·정리 (2026-10-11) ──
+// 이미 2027 로 넣은 건(전표번호 있음): ✅ 맞음 → 2026 으로 바꿈 · 앞으로 찾는 건(전표번호 없음): ✅ 맞음 → 그때 입력
+const RV_TABS = [['todo', '확인 전'], ['decided', '판단 완료'], ['done', '처리 완료'], ['all', '전체']];
+const rv = { tab: 'todo', draft: {}, saving: '', err: '', kicked: false };
+const rvWon = (n) => Number(n || 0).toLocaleString('ko-KR');
+const rvDecs = (r) => [[ '맞음', (r.slip_nos || []).length ? '✅ 맞음 · 2026으로' : '✅ 맞음 · 입력해줘', 'green'], ['고쳐서', '✏️ 고쳐서', 'blue'],
+  ['단가 오류', '💲 단가 오류', 'orange'], ['누락 아님', '❌ 누락 아님', 'red'], ['보류', '⏸ 보류', 'gray']];
+function rvKick() {
+  if (rv.kicked) return;
+  rv.kicked = true;
+  S.loadReviews().then(() => render());
+}
+const rvTodo = () => S.getReviews().filter((r) => r.status === '확인 전');
+function rvBell(mobile) {
+  rvKick();
+  const n = rvTodo().length;
+  if (!S.getReviewState().ready && !n) return '';
+  return mobile
+    ? `<button type="button" class="rv-mbell" data-act="nav" data-r="review" title="스밭비서 입력 확인">${I.bell}${n ? `<span class="cnt">${n}</span>` : ''}</button>`
+    : `<button type="button" class="e-bell rv-bell" data-act="erp-nav" data-r="review" title="스밭비서가 찾은 누락 전표 확인">${I.bell}스밭비서 입력${n ? `<span class="cnt">${n}</span>` : ''}</button>`;
+}
+const RV_DONE = ['2026 입력완료', '입력완료', '제외', '보류'];
+function rvList() {
+  const all = S.getReviews();
+  if (rv.tab === 'todo') return all.filter((r) => r.status === '확인 전');
+  if (rv.tab === 'decided') return all.filter((r) => r.status === '판단 완료');
+  if (rv.tab === 'done') return all.filter((r) => RV_DONE.includes(r.status));
+  return all;
+}
+const rvLink = (url, label) => (url ? `<a class="rv-a" href="${esc(url)}" target="_blank" rel="noopener">${label}</a>` : '');
+function rvCard(r) {
+  const d = r.data || {};
+  const lines = d.lines || [];
+  const dec = rv.draft[r.id]?.decision ?? r.decision ?? '';
+  const needFix = dec === '고쳐서' || dec === '단가 오류';
+  const fix = rv.draft[r.id]?.fix || r.fix || {};
+  const pushed = (r.slip_nos || []).length > 0;
+  const badge = r.status === '확인 전' ? '<span class="e-b orange">확인 전</span>' : r.status === '판단 완료' ? '<span class="e-b blue">판단 완료 · 스밭비서 처리 대기</span>'
+    : /입력완료/.test(r.status) ? `<span class="e-b green">${esc(r.status)}</span>` : `<span class="e-b gray">${esc(r.status)}</span>`;
+  const pct = (l) => (l.price_diff_pct == null ? '' : Math.abs(l.price_diff_pct) > 3
+    ? `<span class="e-b red" title="같은 거래처 최근 구매 ${esc(l.prev_slip)} ${rvWon(l.prev_price)}원">${l.price_diff_pct > 0 ? '+' : ''}${l.price_diff_pct}%</span>`
+    : `<span class="muted">${l.price_diff_pct > 0 ? '+' : ''}${l.price_diff_pct}%</span>`);
+  const lineTbl = `<div class="rv-tw"><table class="rv-lines"><thead><tr><th>품목</th><th>규격</th><th class="n">수량</th><th class="n">단가</th><th class="n">공급가</th><th>최근 단가 (2026)</th><th>원장 품명</th></tr></thead><tbody>
+    ${lines.map((l) => `<tr><td>${esc(l.name)}</td><td>${esc(l.spec || '')}</td><td class="n">${rvWon(l.qty)}</td><td class="n">${rvWon(l.price)}</td><td class="n">${rvWon(l.supply)}</td>
+      <td>${l.prev_price != null ? `${rvWon(l.prev_price)} <span class="muted">${esc(l.prev_slip)}</span> ${pct(l)}` : '<span class="muted">—</span>'}</td><td class="muted">${esc(l.ledger || '')}</td></tr>`).join('')}</tbody></table></div>`;
+  const calls = (d.calls || []).map((c) => `<details class="rv-call"><summary>${c.kind === '카톡' ? '💬' : '📞'} <b>${esc(c.at)}</b> ${esc(c.who)} — ${esc(c.summary || '')}</summary>
+    <pre>${esc(c.text || '(원문 없음)')}</pre>${rvLink(c.drive_url, `구글 드라이브에서 ${c.kind === '카톡' ? '카톡 원문' : '그날 통화전문'} 열기 ↗`)}</details>`).join('');
+  return `<div class="rv-card ${r.status === '확인 전' ? 'todo' : ''}" id="rv-${esc(r.id)}">
+    <div class="rv-hd"><b class="rv-v">${esc(r.vendor)}</b><span>${esc(r.doc_date || '')}</span><b class="rv-amt">${rvWon(r.amount)}원</b>
+      <span class="rv-t">${esc(d.title || '')}</span><span class="sp"></span>${d.price_flag ? '<span class="e-b red">단가 확인</span>' : ''}${badge}</div>
+    <div class="rv-slip">${pushed ? `스밭비서가 넣은 전표 ${r.slip_nos.map((x) => `<span class="e-b gray">${esc(x)}</span>`).join(' ')} <span class="muted">· 일자 2027 · 적요 [스튜디오밭]</span>`
+      : '<span class="muted">아직 이카운트에 안 넣음 — ✅ 누르시면 스밭비서가 입력해요</span>'}</div>
+    <div class="rv-sec"><div class="rv-lb">왜 2026 누락?</div><ol>${(d.why || []).map((w) => `<li>${esc(w)}</li>`).join('')}</ol>
+      ${(d.sources || []).length ? `<div class="muted">근거 자료: ${d.sources.map(esc).join(' · ')}</div>` : ''}
+      <div class="rv-links">${rvLink(d.vendor_folder_url, '📁 거래처 폴더 (원장·명세표) ↗')}${rvLink(d.calls_folder_url, '📞 2026 통화전문 폴더 ↗')}${rvLink(d.talk_file_url, '📒 거래처별 대화 파일 ↗')}</div></div>
+    <div class="rv-sec"><div class="rv-lb">근거 통화·카톡 <span class="muted">(누르면 원문이 펼쳐져요)</span></div>${calls || '<span class="muted">찾은 통화 없음 — 원장만 근거</span>'}</div>
+    <details class="rv-sec" ${lines.length <= 4 ? 'open' : ''}><summary class="rv-lb">${pushed ? '넣은' : '넣을'} 줄 ${lines.length}개</summary>${lineTbl}</details>
+    <div class="rv-dec">${rvDecs(r).map(([k, l, c]) => `<button type="button" class="rv-db ${c} ${dec === k ? 'on' : ''}" data-act="erp-rv-dec" data-id="${esc(r.id)}" data-d="${k}">${l}</button>`).join('')}</div>
+    ${needFix ? `<div class="rv-fix"><label>맞는 수량 <input class="e-in" data-rvfix="qty" data-id="${esc(r.id)}" value="${esc(fix.qty ?? '')}"></label>
+      <label>맞는 단가 <input class="e-in" data-rvfix="price" data-id="${esc(r.id)}" value="${esc(fix.price ?? '')}"></label>
+      <label>규격 <input class="e-in" data-rvfix="spec" data-id="${esc(r.id)}" value="${esc(fix.spec ?? '')}" placeholder="0915/비드앤비/울진"></label></div>` : ''}
+    <div class="rv-memo"><textarea class="e-in" rows="2" data-rvmemo="${esc(r.id)}" placeholder="메모 (예: 수량 50롤, 단가 175,000, 판매처 공간제작소)">${esc(rv.draft[r.id]?.memo ?? r.memo ?? '')}</textarea>
+      ${eBtn(rv.saving === r.id ? '저장 중…' : '판단 저장', 'erp-rv-save', `data-id="${esc(r.id)}" ${dec ? '' : 'disabled'}`, 'pri')}</div>
+    ${r.decided_by ? `<div class="muted rv-who">판단: ${esc(r.decision || '')} · ${esc(r.decided_by)} · ${esc(String(r.decided_at || '').slice(0, 16).replace('T', ' '))}${r.result ? ` · 스밭비서: ${esc(r.result)}` : ''}</div>` : ''}
+  </div>`;
+}
+function reviewHtml() {
+  const st = S.getReviewState();
+  if (!st.ready) {
+    return `<div class="e-box"><div class="e-box-bd">${st.at ? (st.missing ? '확인 목록 표(purchase_review)가 아직 없어요. Supabase 에 SQL 을 실행해 주세요.' : `불러오지 못했어요: ${esc(st.err)}`) : '불러오는 중…'}</div></div>`;
+  }
+  const all = S.getReviews(); const list = rvList();
+  const todo = all.filter((r) => r.status === '확인 전');
+  const cnt = { todo: todo.length, decided: all.filter((r) => r.status === '판단 완료').length, done: all.filter((r) => RV_DONE.includes(r.status)).length, all: all.length };
+  return `<div class="rv-top"><div><b>스밭비서가 찾은 2026 구매 누락</b> — 근거(원장·통화·카톡)를 보고 판단해 주세요. 판단하시면 스밭비서가 그대로 이카운트에 반영해요.
+      <div class="muted">✅ 맞음 → 2026 으로 입력 (이미 2027 로 넣은 건은 2026 으로 바꿈) · ✏️/💲 → 고칠 값대로 · ❌ → 넣지 않음(2027 전표는 정리) · ⏸ → 자료 더 찾기</div></div>
+    <div class="rv-sum"><span>확인 전 <b>${todo.length}</b>건 · ${rvWon(todo.reduce((a, r) => a + Number(r.amount || 0), 0))}원</span>${eBtn('새로고침', 'erp-rv-reload', '', 'sm')}</div></div>
+    <div class="rv-tabs">${RV_TABS.map(([k, l]) => `<button type="button" class="${rv.tab === k ? 'on' : ''}" data-act="erp-rv-tab" data-v="${k}">${l} <span>${cnt[k]}</span></button>`).join('')}</div>
+    ${rv.err ? `<div class="dr-err">${esc(rv.err)}</div>` : ''}
+    <div class="rv-list">${list.length ? list.map(rvCard).join('') : '<div class="e-empty">없어요.</div>'}</div>`;
+}
+const deskReview = () => ePage(reviewHtml(), 'rv-page');
+const screenReview = () => `<div class="rv-m">${reviewHtml()}</div>`;
+function rvSync(id) {
+  const dft = rv.draft[id] = rv.draft[id] || {};
+  const m = app.querySelector(`[data-rvmemo="${CSS.escape(id)}"]`);
+  if (m) dft.memo = m.value;
+  app.querySelectorAll(`[data-rvfix][data-id="${CSS.escape(id)}"]`).forEach((el) => { dft.fix = { ...(dft.fix || {}), [el.dataset.rvfix]: el.value.trim() }; });
+  return dft;
+}
+function rvAct(act, t) {
+  const id = t.dataset.id;
+  if (act === 'erp-rv-tab') { rv.tab = t.dataset.v; render(); return; }
+  if (act === 'erp-rv-reload') { S.loadReviews().then(() => render()); return; }
+  if (act === 'erp-rv-dec') { const dft = rvSync(id); dft.decision = t.dataset.d; render(); return; }
+  if (act === 'erp-rv-save') {
+    const r = S.getReviews().find((x) => x.id === id); if (!r) return;
+    const dft = rvSync(id); const decision = dft.decision ?? r.decision;
+    if (!decision) return;
+    const fix = (decision === '고쳐서' || decision === '단가 오류') ? (dft.fix || r.fix || {}) : null;
+    if (fix && !fix.qty && !fix.price && !fix.spec && !(dft.memo ?? r.memo)) { rv.err = '고칠 값(수량·단가·규격)이나 메모를 적어 주세요.'; render(); return; }
+    rv.saving = id; rv.err = ''; render();
+    S.saveReview(id, { decision, memo: dft.memo ?? r.memo ?? '', fix, status: '판단 완료', decided_by: myName(), decided_at: new Date().toISOString() })
+      .then(() => { delete rv.draft[id]; })
+      .catch((e) => { rv.err = `저장 못 했어요: ${e.message}`; })
+      .finally(() => { rv.saving = ''; render(); });
+  }
+}
+
 const DESK_SCREENS = { dash: deskDash, partners: deskPartners, items: deskItems, whs: deskWhs, ecount: deskEcount, itemmap: deskItemMap,
   quotes: deskQuotes, ships: deskShips, dispatch: deskDispatch, invoices: deskInvoices, inbound: deskInbound, buy: deskBuy, sale: deskSale,
-  stock: deskStock, silicone: deskSilicone, settings: deskSettings, docread: deskDocRead, delivdocs: deskDelivDocs };
+  stock: deskStock, silicone: deskSilicone, settings: deskSettings, docread: deskDocRead, delivdocs: deskDelivDocs, review: deskReview };
 // 화면별 F2(신규)
 const DESK_NEW = { dash: 'new-ship', ships: 'new-ship', dispatch: 'new-ship', silicone: 'new-ship', quotes: 'add-quote', inbound: 'add-inbound',
   stock: 'add-item', items: 'add-item', partners: 'add-partner', whs: 'add-wh' };
@@ -4456,6 +4566,7 @@ function erpAct(act, t) {
   else if (act === 'erp-sale-file') saleFile();
   else if (act === 'erp-sale-copy') { if (saleS.paste) { drCopyPaste(saleS.paste, () => { saleS.copied = true; render(); }); saleStockFeed(); render(); } }
   else if (act === 'erp-sale-clear') { saleS.results = null; saleS.text = ''; saleS.err = ''; saleS.file = ''; saleS.stockMsg = null; render(); }
+  else if (act.startsWith('erp-rv-')) rvAct(act, t);
   else if (act === 'erp-drq-read') drqReadAll();
   else if (act === 'erp-drq-check') drqCheck();
   else if (act === 'erp-drq-file') drqFile();
@@ -4676,7 +4787,7 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ── 렌더 ──────────────────────────────────────────────
-const TITLES = { home: ['홈트레이더스', '재고 · 출고 관리'], quote: ['견적', '견적 · 단가표'], silicone: ['실리콘', '색상별 재고'], stock: ['창고', '창고별 재고'], ship: ['출고', '등록하면 재고 자동 차감'], invoice: ['명세서', '거래명세서 발행 관리'], settings: ['설정', '품목 · 데이터'] };
+const TITLES = { home: ['홈트레이더스', '재고 · 출고 관리'], quote: ['견적', '견적 · 단가표'], silicone: ['실리콘', '색상별 재고'], stock: ['창고', '창고별 재고'], ship: ['출고', '등록하면 재고 자동 차감'], invoice: ['명세서', '거래명세서 발행 관리'], settings: ['설정', '품목 · 데이터'], review: ['스밭비서 입력 확인', '2027로 넣은 2026 누락분'] };
 
 function render() {
   if (isDesk()) { renderDesk(); return; }   // PC(1024px↑) = 업무형 화면
@@ -4684,10 +4795,10 @@ function render() {
   if (!TITLES[state.route]) mobileFromDesk();
   try { sessionStorage.setItem('ht_route', state.route); } catch (e) { /* 무시 */ }
   const [title, sub] = TITLES[state.route];
-  const body = { home: screenHome, quote: screenQuote, silicone: screenSilicone, stock: screenStock, ship: screenShip, invoice: screenInvoice, settings: screenSettings }[state.route]();
+  const body = { review: screenReview, home: screenHome, quote: screenQuote, silicone: screenSilicone, stock: screenStock, ship: screenShip, invoice: screenInvoice, settings: screenSettings }[state.route]();
   const showFab = state.route === 'ship' || state.route === 'home' || state.route === 'stock';
   app.innerHTML = `
-    <div class="appbar"><img class="logo" src="./icons/logo-full.png" alt="HOME TRADERS"><h1>${title}</h1><span class="sub">${sub}</span></div>
+    <div class="appbar"><img class="logo" src="./icons/logo-full.png" alt="HOME TRADERS"><h1>${title}</h1><span class="sub">${sub}</span>${rvBell(true)}</div>
     ${body}
     ${showFab ? `<div class="fab-wrap">
       ${state.fabOpen ? `
