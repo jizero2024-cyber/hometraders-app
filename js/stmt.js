@@ -317,13 +317,46 @@ export function parseSales(sheets) {
 const perItem = (partner) => PER_ITEM_PARTNERS.some((p) => key(partner).includes(p) || p.includes(key(partner)));
 const perSite = (partner) => PER_SITE_PARTNERS.some((p) => key(partner).includes(p));
 
+// 모든 거래처: 같은 날·같은 거래처·같은 현장으로 나간 품목은 전표가 달라도 한 장으로 합침
+//   (천안창고·업체직송처럼 창고가 달라 전표를 나눠 입력한 경우). 현장 = 판매전표 규격 칸 또는 품명 태그(1012/공간/울산/서생 → 울산 서생).
+//   현장 태그가 없는 품목은 원래 규칙대로(공간 품목별 · 뉴하우징 현장미상 · 그 밖 전표당 한 장).
+const NOT_SITE = new Set(['천안', '천안창고', '단가모름', '지원', '운임지원', '완', '확인', '추정', '공간추정']);
+const siteKey = (site) => site.split(/\s+/).filter((t) => t && !/\d/.test(t) && !NOT_SITE.has(t)).join('');   // 2PT·224*5PT·1.5*50m 같은 수량 메모는 현장이 아님
+function mergeSameSite(vouchers) {
+  const out = [], by = {};
+  vouchers.forEach((v) => {
+    const siteOfItem = (it) => nfc(it.site) || siteOf(it.tag, v.partner);
+    const found = [...new Set(v.items.map(siteOfItem).filter((s) => siteKey(s)))];
+    const only = found.length === 1 ? found[0] : '';   // 전표에 현장이 한 곳뿐이면 태그 없는 품목도 같은 현장
+    const rest = [];
+    v.items.forEach((it) => {
+      const site = siteKey(siteOfItem(it)) ? siteOfItem(it) : only;
+      if (!site) { rest.push(it); return; }
+      const k = `${v.ymd}|${key(v.partner)}|${siteKey(site)}`;
+      const item = { ...it, slip: v.slip };            // 따로 뽑는 품목(공간 구조재)은 제 전표번호로
+      if (!by[k]) { by[k] = { ...v, items: [], site, slips: [], merged: true }; out.push(by[k]); }
+      by[k].items.push(item);
+      if (!by[k].slips.includes(v.slip)) by[k].slips.push(v.slip);
+    });
+    if (rest.length) out.push({ ...v, items: rest });
+  });
+  return out;
+}
+
 export function splitSheets(vouchers, opt) {
   const out = [], seq = {};
   const oneEach = !!(opt && opt.perVoucher);        // 구매명세서는 거래처와 상관없이 전표 1건당 1장
+  if (!oneEach) vouchers = mergeSameSite(vouchers);
   vouchers.forEach((v) => {
     let groups;
     if (oneEach) {
       groups = [{ items: v.items }];
+    } else if (v.merged && perItem(v.partner)) {    // 같은 날·같은 현장 묶음 (공간제작소) → 한 장. 구조재는 공간이 따로 받기를 원해 품목마다 한 장
+      const lumber = (i) => i.name.replace(/\s/g, '').startsWith('구조재');
+      groups = [{ items: v.items.filter((i) => !lumber(i)), site: v.site }]
+        .concat(v.items.filter(lumber).map((i) => ({ items: [i], site: v.site, slip: i.slip })));
+    } else if (v.merged) {                          // 같은 날·같은 현장 묶음 (그 밖의 거래처) → 모든 품목 한 장
+      groups = [{ items: v.items, site: v.site }];
     } else if (perSite(v.partner)) {                       // 현장별 (뉴하우징 등)
       const siteOfItem = (it) => nfc(it.site) || siteOf(it.tag, v.partner);   // 판매전표는 규격 칸, 원장은 품명 뒤 태그
       const found = [...new Set(v.items.map(siteOfItem).filter(Boolean))];
@@ -346,7 +379,7 @@ export function splitSheets(vouchers, opt) {
       if (!g.items.length) return;
       const k = `${v.ymd}|${v.partner}`;
       seq[k] = (seq[k] || 0) + 1;
-      out.push({ slip: v.slip, ymd: v.ymd, partner: v.partner, seq: seq[k], items: g.items, site: g.site || v.site || '' });
+      out.push({ slip: g.slip || v.slip, ymd: v.ymd, partner: v.partner, seq: seq[k], items: g.items, site: g.site || v.site || '' });
     });
   });
   return out;
