@@ -343,7 +343,7 @@ function mergeSameSite(vouchers) {
   return out;
 }
 
-// 공간제작소 구조재: 같은 출고일·같은 치수(2*10*12)면 수종(SPF·스프러스·레드우드)·전표가 달라도 한 장
+// 공간제작소 구조재: 같은 전표·같은 치수(2*10*12)면 수종(SPF·스프러스·레드우드)이 달라도 한 장. 전표가 다르면 따로
 const isLumber = (i) => i.name.replace(/\s/g, '').startsWith('구조재');
 const lumberSize = (i) => { const m = /(\d+)\s*\*\s*(\d+)\s*\*\s*(\d+)/.exec(i.name.replace(/(\d),(?=\d{3})/g, '$1')); return m ? `${m[1]}*${m[2]}*${m[3]}` : i.name; };
 const isCeramic = (i) => /세라믹사이딩|아이큐브/.test(i.name.replace(/\s/g, ''));
@@ -384,8 +384,8 @@ export function splitSheets(vouchers, opt) {
     }
     groups.forEach((g) => {
       if (!g.items.length) return;
-      const lk = g.lumber ? `${v.ymd}|${key(v.partner)}|${g.lumber}` : '';
-      if (lk && lumberAt[lk]) { lumberAt[lk].items.push(...g.items); return; }   // 같은 날·같은 치수 구조재는 먼저 만든 장에 붙임
+      const lk = g.lumber ? `${g.slip || v.slip}|${key(v.partner)}|${g.lumber}` : '';   // 같은 전표 안에서만
+      if (lk && lumberAt[lk]) { lumberAt[lk].items.push(...g.items); return; }   // 같은 전표·같은 치수 구조재는 먼저 만든 장에 붙임
       const k = `${v.ymd}|${v.partner}`;
       seq[k] = (seq[k] || 0) + 1;
       out.push({ slip: g.slip || v.slip, ymd: v.ymd, partner: v.partner, seq: seq[k], items: [...g.items], site: g.site || v.site || '' });
