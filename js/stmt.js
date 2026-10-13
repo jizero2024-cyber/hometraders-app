@@ -343,18 +343,26 @@ function mergeSameSite(vouchers) {
   return out;
 }
 
+// 공간제작소 구조재: 같은 출고일·같은 치수(2*10*12)면 수종(SPF·스프러스·레드우드)·전표가 달라도 한 장
+const isLumber = (i) => i.name.replace(/\s/g, '').startsWith('구조재');
+const lumberSize = (i) => { const m = /(\d+)\s*\*\s*(\d+)\s*\*\s*(\d+)/.exec(i.name.replace(/(\d),(?=\d{3})/g, '$1')); return m ? `${m[1]}*${m[2]}*${m[3]}` : i.name; };
+const isCeramic = (i) => /세라믹사이딩|아이큐브/.test(i.name.replace(/\s/g, ''));
+const isFreight = (i) => i.name.replace(/\s/g, '').includes('운반비');
+const isSilicone = (i) => !isCeramic(i) && i.name.replace(/\s/g, '').startsWith('실리콘');   // 일반 실리콘(ss9000)은 택배비 포함 단가 → 운반비 없이 따로
+
 export function splitSheets(vouchers, opt) {
-  const out = [], seq = {};
+  const out = [], seq = {}, lumberAt = {};
   const oneEach = !!(opt && opt.perVoucher);        // 구매명세서는 거래처와 상관없이 전표 1건당 1장
   if (!oneEach) vouchers = mergeSameSite(vouchers);
   vouchers.forEach((v) => {
     let groups;
     if (oneEach) {
       groups = [{ items: v.items }];
-    } else if (v.merged && perItem(v.partner)) {    // 같은 날·같은 현장 묶음 (공간제작소) → 한 장. 구조재는 공간이 따로 받기를 원해 품목마다 한 장
-      const lumber = (i) => i.name.replace(/\s/g, '').startsWith('구조재');
-      groups = [{ items: v.items.filter((i) => !lumber(i)), site: v.site }]
-        .concat(v.items.filter(lumber).map((i) => ({ items: [i], site: v.site, slip: i.slip })));
+    } else if (v.merged && perItem(v.partner)) {    // 같은 날·같은 현장 묶음 (공간제작소) → 세라믹사이딩·운반비 등 한 장(운반비 청구). 실리콘은 따로, 구조재는 치수별
+      const rest = (i) => !isLumber(i) && !isSilicone(i);
+      groups = [{ items: v.items.filter(rest), site: v.site }]
+        .concat(v.items.filter(isSilicone).map((i) => ({ items: [i], site: v.site, slip: i.slip })))
+        .concat(v.items.filter(isLumber).map((i) => ({ items: [i], site: v.site, slip: i.slip, lumber: lumberSize(i) })));
     } else if (v.merged) {                          // 같은 날·같은 현장 묶음 (그 밖의 거래처) → 모든 품목 한 장
       groups = [{ items: v.items, site: v.site }];
     } else if (perSite(v.partner)) {                       // 현장별 (뉴하우징 등)
@@ -369,17 +377,21 @@ export function splitSheets(vouchers, opt) {
       });
       groups = [...by.entries()].map(([site, items]) => ({ items, site: site === '현장미상' ? '' : site }));
     } else if (perItem(v.partner)) {                // 품목별 (공간제작소)
-      const cer = v.items.filter((i) => i.name.replace(/\s/g, '').includes('세라믹사이딩'));
-      groups = (cer.length >= 2 ? [{ items: cer }] : cer.map((i) => ({ items: [i] })))
-        .concat(v.items.filter((i) => !i.name.replace(/\s/g, '').includes('세라믹사이딩')).map((i) => ({ items: [i] })));
+      const cer = v.items.filter(isCeramic);
+      const bundle = cer.length ? cer.concat(v.items.filter(isFreight)) : [];   // 아이큐브 + 운반비 한 장
+      groups = (bundle.length >= 2 ? [{ items: bundle }] : bundle.map((i) => ({ items: [i] })))
+        .concat(v.items.filter((i) => !bundle.includes(i)).map((i) => ({ items: [i], lumber: isLumber(i) ? lumberSize(i) : '' })));
     } else {                                        // 전표당 한 장 (그 밖의 거래처)
       groups = [{ items: v.items }];
     }
     groups.forEach((g) => {
       if (!g.items.length) return;
+      const lk = g.lumber ? `${v.ymd}|${key(v.partner)}|${g.lumber}` : '';
+      if (lk && lumberAt[lk]) { lumberAt[lk].items.push(...g.items); return; }   // 같은 날·같은 치수 구조재는 먼저 만든 장에 붙임
       const k = `${v.ymd}|${v.partner}`;
       seq[k] = (seq[k] || 0) + 1;
-      out.push({ slip: g.slip || v.slip, ymd: v.ymd, partner: v.partner, seq: seq[k], items: g.items, site: g.site || v.site || '' });
+      out.push({ slip: g.slip || v.slip, ymd: v.ymd, partner: v.partner, seq: seq[k], items: [...g.items], site: g.site || v.site || '' });
+      if (lk) lumberAt[lk] = out[out.length - 1];
     });
   });
   return out;
