@@ -348,7 +348,7 @@ const isLumber = (i) => i.name.replace(/\s/g, '').startsWith('구조재');
 const lumberSize = (i) => { const m = /(\d+)\s*\*\s*(\d+)\s*\*\s*(\d+)/.exec(i.name.replace(/(\d),(?=\d{3})/g, '$1')); return m ? `${m[1]}*${m[2]}*${m[3]}` : i.name; };
 const isCeramic = (i) => /세라믹사이딩|아이큐브/.test(i.name.replace(/\s/g, ''));
 const isFreight = (i) => i.name.replace(/\s/g, '').includes('운반비');
-const isSilicone = (i) => !isCeramic(i) && i.name.replace(/\s/g, '').startsWith('실리콘');   // 일반 실리콘(ss9000)은 택배비 포함 단가 → 운반비 없이 따로
+const isSilicone = (i) => i.name.replace(/\s/g, '').startsWith('실리콘');
 
 export function splitSheets(vouchers, opt) {
   const out = [], seq = {}, lumberAt = {};
@@ -358,10 +358,8 @@ export function splitSheets(vouchers, opt) {
     let groups;
     if (oneEach) {
       groups = [{ items: v.items }];
-    } else if (v.merged && perItem(v.partner)) {    // 같은 날·같은 현장 묶음 (공간제작소) → 세라믹사이딩·운반비 등 한 장(운반비 청구). 실리콘은 따로, 구조재는 치수별
-      const rest = (i) => !isLumber(i) && !isSilicone(i);
-      groups = [{ items: v.items.filter(rest), site: v.site }]
-        .concat(v.items.filter(isSilicone).map((i) => ({ items: [i], site: v.site, slip: i.slip })))
+    } else if (v.merged && perItem(v.partner)) {    // 같은 날·같은 현장 묶음 (공간제작소) → 세라믹사이딩·부자재·실리콘·운반비 한 장. 구조재만 치수별
+      groups = [{ items: v.items.filter((i) => !isLumber(i)), site: v.site }]
         .concat(v.items.filter(isLumber).map((i) => ({ items: [i], site: v.site, slip: i.slip, lumber: lumberSize(i) })));
     } else if (v.merged) {                          // 같은 날·같은 현장 묶음 (그 밖의 거래처) → 모든 품목 한 장
       groups = [{ items: v.items, site: v.site }];
@@ -378,7 +376,7 @@ export function splitSheets(vouchers, opt) {
       groups = [...by.entries()].map(([site, items]) => ({ items, site: site === '현장미상' ? '' : site }));
     } else if (perItem(v.partner)) {                // 품목별 (공간제작소)
       const cer = v.items.filter(isCeramic);
-      const bundle = cer.length ? cer.concat(v.items.filter(isFreight)) : [];   // 아이큐브 + 운반비 한 장
+      const bundle = cer.length ? cer.concat(v.items.filter((i) => isFreight(i) || isSilicone(i))) : [];   // 아이큐브 + 실리콘 + 운반비 한 장
       groups = (bundle.length >= 2 ? [{ items: bundle }] : bundle.map((i) => ({ items: [i] })))
         .concat(v.items.filter((i) => !bundle.includes(i)).map((i) => ({ items: [i], lumber: isLumber(i) ? lumberSize(i) : '' })));
     } else {                                        // 전표당 한 장 (그 밖의 거래처)
