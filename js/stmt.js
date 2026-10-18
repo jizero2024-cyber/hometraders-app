@@ -15,7 +15,7 @@ const SUPPLIER = {
   mgr: '김수정 매니저', tel: '010-2573-8478', mail: 'hometraders@naver.com',
   bank: '은행명 : 기업은행  |  계좌번호 : 120-187273-04-013  |  예금주 : 주식회사 홈트레이더스',
 };
-const PLACES = { 공간제작소: '경기 화성시 우정읍 매향리 2-22' };   // 거래처별 인도 장소 (없으면 빈칸)
+const PLACES = { 공간제작소: '경기 화성시 우정읍 매향리 989' };   // 거래처별 인도 장소 (없으면 빈칸)
 
 const nfc = (v) => String(v == null ? '' : v).normalize('NFC').trim();
 const key = (s) => nfc(s).replace(/\(주\)|주식회사|㈜|\s/g, '');
@@ -416,7 +416,7 @@ export function wonHangul(n) {
 const ITEM_ROWS = 5;
 // ── 에이스목재산업 양식 (에이스 → 거래처) ─────────────────
 const CLIENTS = {                                   // 받는 곳 정보 (알고 있는 거래처)
-  공간제작소: { ceo: '박정진', biz: '812-88-00492', addr: '경기도 화성시 우정읍 매향리 2-22', mail: 'gg-arch@naver.com' },
+  공간제작소: { ceo: '박정진', biz: '812-88-00492', addr: '경기도 화성시 우정읍 매향리 989', mail: 'gg-arch@naver.com' },
 };
 
 const ACE = {
