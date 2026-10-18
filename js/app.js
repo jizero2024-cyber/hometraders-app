@@ -3904,7 +3904,10 @@ async function chConvOut(j, i, kind) {
     return;
   }
   j.busy = true; render();
-  try { await SM.saveImages(docs, null, c.style); chSay(j, `이미지 ${docs.length}장을 내려받았어요 (다운로드 폴더).`); }
+  try {
+    const n = await SM.saveImages(docs, null, c.style);
+    chSay(j, n > 1 ? `이미지 ${n}장을 ZIP 하나로 내려받았어요 (다운로드 폴더).` : `이미지 ${n}장을 내려받았어요 (다운로드 폴더).`);
+  }
   catch (e) { chSay(j, e.message || String(e), { err: true }); }
   j.busy = false; chSave(); render();
 }

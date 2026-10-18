@@ -187,8 +187,8 @@ function setupPanel(cfg) {
     if (!docs.length) return;
     $$(cfg.imgAll).disabled = true;
     try {
-      await SM.saveImages(docs, (t, i) => say2('info', typeof t === 'string' ? esc(t) : `이미지 만드는 중… ${i}`), cfg.style);
-      say2('info', `이미지 <b>${docs.length}장</b>을 내려받았어요. (다운로드 폴더)`);
+      const n = await SM.saveImages(docs, (t, i) => say2('info', typeof t === 'string' ? esc(t) : `이미지 만드는 중… ${i}`), cfg.style);
+      say2('info', n > 1 ? `이미지 <b>${n}장</b>을 ZIP 하나로 내려받았어요. (다운로드 폴더)` : `이미지 <b>${n}장</b>을 내려받았어요. (다운로드 폴더)`);
     } catch (e) { say2('err', esc(e.message || e)); }
     $$(cfg.imgAll).disabled = false;
   };

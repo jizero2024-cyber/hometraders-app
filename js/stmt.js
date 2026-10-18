@@ -5,6 +5,7 @@ import { LOGO, STAMP } from './stmt-assets.js';
 
 const XLSX_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
 const H2C_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+const JSZIP_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
 const PER_ITEM_PARTNERS = ['공간제작소'];          // 이 거래처만 품목마다 한 장
 const PER_SITE_PARTNERS = ['뉴하우징'];            // 이 거래처는 현장(품명 뒤 태그)마다 한 장
 // 그 밖의 거래처는 전표당 한 장
@@ -671,19 +672,30 @@ function saveBlob(blob, name) {
   setTimeout(() => URL.revokeObjectURL(url), 4000);
 }
 
+// 여러 장은 ZIP 하나로 내려받는다 — 브라우저가 클릭 뒤 늦게 시작된 두 번째 다운로드부터 막기 때문
 export async function saveImages(docs, onStep, style) {
+  const made = [];
   for (let i = 0; i < docs.length; i++) {
     if (onStep) onStep(i + 1, docs.length);
     const blob = await renderImage(docs[i], 2, style);
-    if (blob) {
-      saveBlob(blob, sheetTitle(docs[i], style) + '.png');
-      try {
-        const got = await saveToDrive(docs[i], blob, '.png', style);
-        if (got && onStep) onStep(`드라이브 저장됨 (${got[0] && got[0].folder || ''})`, i + 1);
-      } catch (e) { if (onStep) onStep(`드라이브 저장 실패: ${e.message}`, 0); }
-    }
-    await new Promise((r) => setTimeout(r, 250));   // 브라우저가 여러 장 내려받기를 막지 않게 사이를 둠
+    if (blob) made.push({ doc: docs[i], blob, name: sheetTitle(docs[i], style) + '.png' });
   }
+  if (made.length === 1) saveBlob(made[0].blob, made[0].name);
+  else if (made.length > 1) {
+    const JSZip = await loadScript(JSZIP_CDN, () => window.JSZip);
+    const zip = new JSZip();
+    made.forEach((m) => zip.file(m.name, m.blob));
+    const d = made[0].doc;
+    const zname = `${d.ymd.slice(2)}_${style === 'ace' ? '에이스' : key(d.partner)}_${made.length}장.zip`;
+    saveBlob(await zip.generateAsync({ type: 'blob' }), zname);
+  }
+  for (let i = 0; i < made.length; i++) {
+    try {
+      const got = await saveToDrive(made[i].doc, made[i].blob, '.png', style);
+      if (got && onStep) onStep(`드라이브 저장됨 (${got[0] && got[0].folder || ''})`, i + 1);
+    } catch (e) { if (onStep) onStep(`드라이브 저장 실패: ${e.message}`, 0); }
+  }
+  return made.length;
 }
 
 // ── 구글 드라이브로 자동 저장 (Apps Script 저장 창구) ────────
