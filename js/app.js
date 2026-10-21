@@ -3786,7 +3786,7 @@ function chSend() {
     j.msgs.push({ who: 'me', text });
     if (cmd === 'deposit') { chDeposit(j, ''); return; }
     if (cmd === 'sale' && helperState.up) { chSay(j, '판매입력이에요. 판매 목록 글·발주서 사진을 올리거나, 아래 최근 구매전표에서 고르세요.'); chLoadBuys(j); return; }
-    chSay(j, `${CH_LABEL[cmd]}로 만들게요. ${cmd === 'sale' ? '판매 목록 글을 붙여넣거나(거래처마다 *이름 머리줄) 발주서·명세서 사진을 올려 주세요.' : CH_CONVERT[cmd] ? '이카운트에서 내려받은 엑셀(.xlsx)을 끌어다 놓아 주세요.' : '명세서 사진·PDF를 끌어다 놓거나, 캡처를 Cmd+V로 붙여넣어 주세요.'}`);
+    chSay(j, `${CH_LABEL[cmd]}로 만들게요. ${cmd === 'sale' ? '판매 목록 글을 붙여넣거나(거래처마다 *이름 머리줄) 발주서·명세서 사진을 올려 주세요.' : CH_CONVERT[cmd] ? '이카운트에서 내려받은 엑셀(.xlsx)을 끌어다 놓거나, 출고일보 전표 링크를 붙여넣어 주세요 (여러 개 한 번에 가능).' : '명세서 사진·PDF를 끌어다 놓거나, 캡처를 Cmd+V로 붙여넣어 주세요.'}`);
     chSave(); render(); return;
   }
   if (cmd) { j = j || chNewJob(ch.mode); j.msgs.push({ who: 'me', text }); chSay(j, '아직 만든 게 없어요. 먼저 명세서나 글을 올려 주세요.'); chSave(); render(); return; }
@@ -3795,9 +3795,10 @@ function chSend() {
   j.mode = j.mode || ch.mode || chModeFromText(text);
   const onlyCmdText = files.length && text && chModeFromText(text) && text.length <= 15;
   j.msgs.push({ who: 'me', text, files: files.map((f) => f.name) });
+  if (!files.length && CH_SLIP_LINK.test(text)) { chLinks(j, text); return; }
   if (j.mode === 'deposit') { chDeposit(j, text); return; }
   if (CH_CONVERT[j.mode] && files.length) { chConvert(j, files); return; }
-  if (CH_CONVERT[j.mode]) { chSay(j, '이카운트에서 내려받은 엑셀(.xlsx)을 끌어다 놓아 주세요.'); chSave(); render(); return; }
+  if (CH_CONVERT[j.mode]) { chSay(j, '이카운트에서 내려받은 엑셀(.xlsx)을 끌어다 놓거나, 출고일보 전표 링크를 붙여넣어 주세요.'); chSave(); render(); return; }
   if (j.mode === 'sale' && !files.length) { chSale(j, text); return; }
   j.items = files.map((f) => ({ name: f.name, mime: f.mime, b64: f.b64 }));
   if (text && !onlyCmdText) j.items.push({ name: '붙여넣은 글', text });
@@ -3889,6 +3890,36 @@ async function chConvert(j, files, quiet) {
     j.title = `${[...new Set(docs.map((d) => d.partner))].slice(0, 2).join('·')} ${CH_LABEL[j.mode]} ${docs.length}장`;
     if (!j.msgs.some((m) => m.card === 'conv')) chCard(j, 'conv');
   } else if (!quiet) chSay(j, '만들 전표가 없어요. 이카운트 판매(구매) 엑셀이 맞는지 확인해 주세요.', { err: true });
+  chSave(); render();
+}
+// 출고일보 전표 링크(구글 드라이브) → 거래명세표 — 도우미가 이 맥의 드라이브 폴더에서 이카운트 전표 PDF 를 읽어 판매전표 엑셀 꼴로 돌려줌 (10/22)
+//   여러 링크 한 번에 · 판매전표 = 거래명세표, 구매전표만 있으면 구매명세서. 구매명세표·에이스명세표를 먼저 골랐으면 그 양식으로.
+const CH_SLIP_LINK = /drive\.google\.com\/(?:file\/d\/|open\?id=)[A-Za-z0-9_-]{20,}/;
+async function chLinks(j, text) {
+  if (!helperState.up) { chSay(j, '전표 링크는 이 맥의 로컬 도우미가 켜져 있어야 읽을 수 있어요. 이카운트 판매 엑셀(.xlsx)을 끌어다 놓아도 돼요.', { err: true }); chSave(); render(); return; }
+  j.busy = true; render();
+  let r;
+  try { r = await helperFetch('/api/slip/links', { text }); }
+  catch (e) { j.busy = false; chSay(j, `전표 링크를 못 읽었어요 — ${e.message || e}`, { err: true }); chSave(); render(); return; }
+  j.busy = false;
+  r.slips.filter((s) => s.error).forEach((s) => chSay(j, `${s.file || '링크 ' + s.id.slice(0, 8) + '…'}: ${s.error}`, { err: true }));
+  r.slips.filter((s) => s.warn).forEach((s) => chSay(j, `${s.kind}전표 ${s.slip}: ${s.warn}`, { err: true }));
+  const ok = r.slips.filter((s) => s.rows && s.rows.length);
+  if (!ok.length) { chSave(); render(); return; }
+  const style = CH_CONVERT[j.mode] || (ok.every((s) => s.kind === '구매') ? 'buy' : 'homt');
+  const use = CH_CONVERT[j.mode] ? ok : ok.filter((s) => (s.kind === '구매') === (style === 'buy'));
+  const left = ok.filter((s) => !use.includes(s));
+  j.mode = Object.keys(CH_CONVERT).find((k) => CH_CONVERT[k] === style);
+  let docs = [];
+  try { docs = SM.splitSheets(SM.parseSales([[r.head, ...use.flatMap((s) => s.rows)]]), { perVoucher: style === 'buy' }); }
+  catch (e) { chSay(j, `${e.message || e}`, { err: true }); }
+  chSay(j, `전표 ${use.length}건을 읽었어요 — ${use.map((s) => `${s.kind} ${s.slip} ${s.partner}`).join(', ')}.`
+    + (left.length ? ` 구매전표 ${left.length}건(${left.map((s) => s.slip).join(', ')})은 뺐어요 — 구매명세서가 필요하면 그 링크만 따로 붙여넣으세요.` : ''));
+  if (docs.length) {
+    j.conv = { style, docs };
+    j.title = `${[...new Set(docs.map((d) => d.partner))].slice(0, 2).join('·')} ${CH_LABEL[j.mode]} ${docs.length}장`;
+    if (!j.msgs.some((m) => m.card === 'conv')) chCard(j, 'conv');
+  }
   chSave(); render();
 }
 async function chConvOut(j, i, kind) {
@@ -4244,7 +4275,7 @@ function chWelcome() {
   return `<div class="ch-hello"><h1>무엇을 만들까요?</h1><p>명세서 사진·PDF를 끌어다 놓거나, 캡처를 <b>Cmd+V</b>로 붙여넣으세요.</p>
     <div class="ch-ex">${ex.map(([v, t, s]) => `<button type="button" class="ch-exb ${ch.mode === v ? 'on' : ''}" data-act="erp-ch-chip" data-v="${v}"><b>${t}</b><span>${s}</span></button>`).join('')}</div>
     <div class="ch-sub">서류 변환 · 이카운트 엑셀</div>
-    <div class="ch-ex4">${[['stmt', '거래명세표', '판매 엑셀 → 홈트 명세표'], ['bstmt', '구매명세표', '구매 엑셀 → 구매명세서'], ['ace', '에이스명세표', '에이스목재산업 이름으로'], ['deposit', '입금표', '금액·날짜만 넣으면 끝']]
+    <div class="ch-ex4">${[['stmt', '거래명세표', '판매 엑셀·전표 링크 → 홈트 명세표'], ['bstmt', '구매명세표', '구매 엑셀 → 구매명세서'], ['ace', '에이스명세표', '에이스목재산업 이름으로'], ['deposit', '입금표', '금액·날짜만 넣으면 끝']]
       .map(([v, t, s]) => `<button type="button" class="ch-exb sm ${ch.mode === v ? 'on' : ''}" data-act="erp-ch-chip" data-v="${v}"><b>${t}</b><span>${s}</span></button>`).join('')}</div></div>`;
 }
 function renderChat() {
