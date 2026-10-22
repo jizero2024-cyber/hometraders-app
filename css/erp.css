@@ -730,3 +730,15 @@ details.rv-sec>summary.rv-lb{cursor:pointer}
 .ch-top .rv-bell{display:inline-flex;align-items:center;gap:4px;margin-right:10px;border:1px solid #f5c9a8;background:#fff7ef;color:#b45309;border-radius:14px;padding:3px 10px;font-size:12.5px;cursor:pointer}
 .ch-top .rv-bell svg{width:15px;height:15px}
 .ch-top .rv-bell .cnt{position:static;margin-left:2px}
+
+/* 납품확인서 — 만드는 방법 · 큰 버튼 (10/22) */
+.dd-guide{margin:12px 0 14px;padding:16px 18px;border:1px solid #f0e4d8;border-radius:10px;background:#fffaf5}
+.dd-acts{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.dd-big{display:flex;flex-direction:column;align-items:flex-start;gap:3px;min-width:220px;padding:14px 18px;border:1px solid #f0c9a6;border-radius:10px;background:#fff;color:#1f2937;cursor:pointer;text-decoration:none;font:inherit;text-align:left}
+.dd-big b{font-size:16px}
+.dd-big span{font-size:12.5px;color:#6b7280}
+.dd-big:hover{border-color:#ea7a2b;background:#fff3e8}
+.dd-big.drive{border-color:#9cc3f0}
+.dd-big.drive:hover{border-color:#2f6fbf;background:#eef5fd}
+.dd-how{margin:0 0 6px;padding-left:20px;font-size:14px;line-height:1.8;color:#374151}
+.dd-note{margin:0;font-size:12.5px;color:#6b7280}

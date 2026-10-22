@@ -3416,6 +3416,21 @@ function drToShip() {
   sfExtra = dr.doc.lines.map((l) => ({ name: l.ours || l.raw_name, qty: l.qty || '', unit: l.unit || '', price: l.price || '' }));
   openSheet(sheetShipForm());
 }
+// 납품확인서 만드는 방법 (10/22 대표: "만드는 버튼이 없어") — 대상 품목·규칙은 도우미 config.json 과 같음
+const DD_DRIVE = '';   // 납품확인서가 쌓이는 구글 드라이브 폴더 링크 (정해지면 넣음 — 비어 있으면 버튼 안 보임)
+const ddGuide = () => `<div class="dd-guide">
+  <div class="dd-acts">
+    <button type="button" class="dd-big" data-act="erp-dd-make" data-v="chat"><b>명세서로 만들기</b><span>대화 화면 · 사진·PDF 올리기</span></button>
+    <button type="button" class="dd-big" data-act="erp-dd-make" data-v="doc"><b>문서 인식으로 만들기</b><span>줄을 확인·고친 뒤 만들기</span></button>
+    ${DD_DRIVE ? `<a class="dd-big drive" href="${DD_DRIVE}" target="_blank" rel="noopener"><b>구글 드라이브에서 보기</b><span>만든 납품확인서 PDF 폴더</span></a>` : ''}
+  </div>
+  <ol class="dd-how">
+    <li><b>명세서로</b> — [명세서로 만들기] → 거래명세서 사진·PDF를 끌어다 놓기 → 납품확인서 PDF</li>
+    <li><b>문서 인식으로</b> — [문서 인식으로 만들기] → 명세서 올리고 [인식 시작] → 품목·출고일 확인 → [납품확인서 만들기]</li>
+    <li><b>자동</b> — 명세서 화면에서 <b>[발행완료]</b>를 누른 뉴하우징·공간제작소 출고는 5분 안에 저절로 만들어져요</li>
+  </ol>
+  <p class="dd-note">인슐레이션·방수시트·타이벡 품목만 · 명세서 줄 날짜마다 1장 · 공간제작소는 품목별 · 이 맥의 도우미가 켜져 있어야 해요</p>
+</div>`;
 function deskDelivDocs() {
   if (!helperState.checked) helperCheck();
   if (helperState.up && dd.rows === null && !dd.loading) {
@@ -3423,7 +3438,7 @@ function deskDelivDocs() {
     helperFetch('/api/delivery').then((j) => { dd.rows = j.rows; dd.err = ''; }).catch((e) => { dd.err = e.message; dd.rows = []; })
       .finally(() => { dd.loading = false; if (state.route === 'delivdocs') render(); });
   }
-  if (helperState.checked && !helperState.up) return ePage(helperOff());
+  if (helperState.checked && !helperState.up) return ePage(ddGuide() + helperOff());
   const w = helperState.info || {};
   const rows = (dd.rows || []).map((r, i) => ({ ...r, id: String(i) }));
   const cols = [
@@ -3437,6 +3452,7 @@ function deskDelivDocs() {
   ];
   return ePage(`<div class="e-tools">${eBtn('새로고침', 'erp-dd-reload', '', 'pri')}<span class="sp"></span>${helperBadge()}
       ${w.watch ? '<span class="e-b green">자동 감시 중</span>' : `<span class="e-b orange" title="${esc(w.watchErr || '')}">자동 감시 꺼짐${w.watchErr ? ' · ' + esc(w.watchErr) : ''}</span>`}</div>
+    ${ddGuide()}
     ${dd.err ? `<div class="dr-err">${esc(dd.err)}</div>` : ''}
     ${dd.rows === null ? '<div class="e-empty">불러오는 중…</div>' : eTable({ route: 'delivdocs', cols, rows, title: '납품확인서', empty: '아직 만들어진 납품확인서가 없어요.' })}`);
 }
@@ -4623,6 +4639,12 @@ function erpAct(act, t) {
   else if (act === 'erp-dr-ship') drToShip();
   else if (act === 'erp-dr-clear') { if (dr.url) URL.revokeObjectURL(dr.url); dr = { name: '', url: '', mime: '', b64: '', busy: false, err: '', doc: null, orig: null, usage: null, quote: null, note: '', buy: null, buyFile: '' }; render(); }
   else if (act === 'erp-dr-check') { helperState.checked = false; helperCheck(); render(); }
+  else if (act === 'erp-dd-make') {   // 납품확인서 만들기 — 대화 화면(납품확인서로) 또는 문서 인식(납품확인서 탭)
+    if (t.dataset.v === 'doc') { state.route = 'docread'; drSetMode('deliv'); return; }
+    chLoad(); ch.mode = 'deliv'; const j = chNewJob('deliv');
+    chSay(j, '납품확인서로 만들게요. 거래명세서 사진·PDF를 끌어다 놓거나, 캡처를 Cmd+V로 붙여넣어 주세요.');
+    state.route = 'chat'; render();
+  }
   else if (act === 'erp-dd-reload') { dd = { rows: null, err: '' }; helperState.checked = false; helperCheck(); render(); }
   else if (act === 'erp-stockfix') {   // 실사 수정 — 기존 stock-edit 과 같은 입력·같은 저장(setStock), 끝나면 수불부로 복귀
     const it = S.findItem(t.dataset.id); if (!it) return;
