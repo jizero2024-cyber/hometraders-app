@@ -15,7 +15,7 @@ const SET_KEYS = new Set(['vehicle', 'pay', 'weight', 'sched']);
 const IN_KEYS = new Set(['vehicle', 'goods', 'weight', 'sched', 'from.addr', 'from.phone', 'to.addr', 'to.phone']);
 const MAX = { name: 60, addr: 120, phone: 30, text: 100 };
 const cut = (v, n) => String(v || '').trim().slice(0, n);
-const F = { from: null, to: null, vehicle: '', pay: '현불', goods: '', weight: '', sched: '', open: '', q: { from: '', to: '' } };
+const F = { from: null, to: null, vehicle: '', pay: '현불', goods: '건축자재', weight: '', sched: '', open: '', q: { from: '', to: '' } };
 
 // ── 초성 검색 ─────────────────────────────────────────
 const CHO = 'ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ';
@@ -107,7 +107,7 @@ function placeField(t, label) {
 }
 
 export function dispatchText() {
-  const L = ['안녕하세요', '배차 부탁드립니다!', ''];
+  const L = ['배차 부탁드립니다!', ''];
   const place = (lab, p) => {
     L.push(`${lab}: ${p ? p.name : '○○'}`);
     if (p && p.addr) L.push(p.addr);
@@ -213,7 +213,7 @@ function submit(ctx) {
       note: ['배차 요청함(홈트 첫 화면)', F.weight && `무게 ${cut(F.weight, MAX.phone)}`, F.sched && `일정 ${cut(F.sched, MAX.text)}`].filter(Boolean).join(' · '),
     });
     alert('배차요청톡을 복사했어요. 이음물류 카톡방에 붙여넣으세요.\n출고 목록에도 \'출고예정\'으로 등록했어요.');
-    Object.assign(F, { from: null, to: null, vehicle: '', pay: '현불', goods: '', weight: '', sched: '', open: '', q: { from: '', to: '' } });
+    Object.assign(F, { from: null, to: null, vehicle: '', pay: '현불', goods: '건축자재', weight: '', sched: '', open: '', q: { from: '', to: '' } });
     ctx.rerender();
   };
   const fallback = () => {

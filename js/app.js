@@ -4836,7 +4836,23 @@ document.addEventListener('keydown', (e) => {
 // ── 렌더 ──────────────────────────────────────────────
 const TITLES = { home: ['홈트레이더스', '재고 · 출고 관리'], quote: ['견적', '견적 · 단가표'], silicone: ['실리콘', '색상별 재고'], stock: ['창고', '창고별 재고'], ship: ['출고', '등록하면 재고 자동 차감'], invoice: ['명세서', '거래명세서 발행 관리'], settings: ['설정', '품목 · 데이터'], review: ['스밭비서 입력 확인', '2027로 넣은 2026 누락분'] };
 
+// 주소에 화면 이름 — erp.hometraders.co.kr/homt · /chat · /ship … (10/22 대표). 첫 화면은 / .
+//   그 주소로 바로 열어도(즐겨찾기·공유) 그 화면, 뒤로가기는 앞 화면. 서버에 없는 주소는 404.html(=index.html)이 앱을 띄움.
+const routeOk = (r) => r === 'start' || r === 'homt' || r === 'chat' || !!TITLES[r] || !!DESK_TITLES[r];
+function routeFromPath() {
+  const r = decodeURIComponent(location.pathname).replace(/^\/+|\/+$/g, '').replace(/\.html$/, '');
+  return r && r !== 'index' && routeOk(r) ? r : 'start';
+}
+let urlReplace = true;   // 처음 열 때·뒤로가기 때는 기록을 새로 쌓지 않음
+function syncUrl() {
+  const path = state.route === 'start' ? '/' : '/' + state.route;
+  if (location.pathname !== path) history[urlReplace ? 'replaceState' : 'pushState'](null, '', path + location.search);
+  urlReplace = false;
+}
+window.addEventListener('popstate', () => { state.route = routeFromPath(); state.sheet = null; urlReplace = true; render(); });
+
 function render() {
+  queueMicrotask(syncUrl);   // 화면을 다 그린 뒤 정해진 route 로 (PC·휴대폰 route 바꿈 포함)
   if (state.route === 'start' || state.route === 'homt') {   // 첫 화면(에이스/홈트) · 홈트 배차 요청 — PC·휴대폰 같은 화면
     document.body.classList.remove('erp');
     app.innerHTML = state.route === 'start' ? HD.startScreen() : HD.homtScreen();
@@ -5491,7 +5507,7 @@ async function boot() {
   if (booted) { render(); return; }
   app.innerHTML = '<div style="padding:64px 24px;text-align:center;color:#888;font-size:15px">불러오는 중…</div>';
   // PC는 열 때마다 대화 화면부터 (예전엔 마지막 화면을 기억해 업무 현황이 다시 떠서 바뀐 걸 못 봄). 휴대폰은 기억한 화면 그대로
-  state.route = 'start';   // 열 때마다 첫 화면(에이스/홈트)부터 — 에이스를 누르면 아래 aceRoute() 로 기존 ERP
+  state.route = routeFromPath();   // 열 때마다 첫 화면(에이스/홈트)부터 — 주소에 화면 이름(/homt·/chat …)이 있으면 그 화면. 에이스를 누르면 아래 aceRoute() 로 기존 ERP
   try { await S.init(); booted = true; render(); }
   catch (e) { app.innerHTML = `<div style="padding:48px 24px;text-align:center"><b>연결 오류</b><br><span style="color:#888;font-size:13px">${esc(e.message || String(e))}</span></div>`; }
 }
