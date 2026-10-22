@@ -122,63 +122,67 @@ export function planConfirms(client, owner, addr, byDate) {
 }
 
 // ── 구글 시트 양식(납품확인서_양식.xlsx) 그대로 — 칸 너비·줄 높이는 시트 px (helper.render 와 같음)
-const COLS = [109, 80, 95, 90, 86, 59, 103, 89, 145, 66];
+const COLS = [109, 80, 78, 155, 70, 59, 72, 89, 145, 66];   // 품명 칸을 넓히고 용도·등급·단위를 줄임 (10/22 — 품명이 세 줄로 접히던 것). 합은 양식과 같음
 const ZOOM = 0.7075;
 const ROWS_MIN = 10;
 
+// 크기는 시트 px × ZOOM 을 정수 px 로 미리 계산 (예전엔 CSS zoom — 칸 높이가 소수점이 되어 줄 굵기가 들쭉날쭉, 10/22)
+const Z = (v) => Math.round(v * ZOOM);
+const F = (pt) => `${Math.round(pt * 0.85 * 10) / 10}pt`;   // 글자는 조금 크게 (zoom 때 5~7pt 로 너무 작았음)
 function sheetHtml(c, logo, stamp, today) {
   const sup = CFG.공급자;
   const rows = sortRows(c.rows);
   const cols = rows.map(itemCols);
   const total = rows.reduce((a, r) => a + r.qty, 0);
   const units = [...new Set(cols.map((x) => x.unit))];
-  const tr = (h, cells) => `<tr style="height:${h}px">${cells}<td class="x"></td></tr>`;
+  const tr = (h, cells) => `<tr style="height:${Z(h)}px">${cells}<td class="x"></td></tr>`;
   const lab = (t, span = 1) => `<td class="hd" colspan="${span}">${t}</td>`;
   const val = (t, span = 1) => `<td class="v" colspan="${span}">${esc(t)}</td>`;
   let items = rows.map((r, i) => { const x = cols[i]; return tr(21, `<td class="i">${esc(c.date)}</td><td class="i">${esc(x.brand)}</td><td class="i">${esc(x.use)}</td>`
     + `<td class="i">${esc(x.prod)}</td><td class="i">${esc(x.grade)}</td><td class="i">${fmt(r.qty)}</td>`
     + `<td class="i">${esc(x.unit)}</td><td class="i" colspan="2">${esc(x.note)}</td>`); }).join('');
   items += tr(21, '<td class="i"></td>'.repeat(7) + '<td class="i" colspan="2"></td>').repeat(Math.max(0, ROWS_MIN - rows.length));
-  const colg = COLS.map((w) => `<col style="width:${w}px">`).join('');
-  const stampLeft = COLS.slice(0, 6).reduce((a, b) => a + b, 0) + 8;
+  const colg = COLS.map((w) => `<col style="width:${Z(w)}px">`).join('');
+  const stampLeft = Z(COLS.slice(0, 6).reduce((a, b) => a + b, 0) + 8);
+  const blank = (h) => `<tr style="height:${Z(h)}px"><td colspan="10"></td></tr>`;
   return `<div class="sheet"><table><colgroup>${colg}</colgroup>
-<tr style="height:73px"><td colspan="10"></td></tr>
-<tr style="height:73px"><td colspan="10" style="vertical-align:top;text-align:left;padding:0"><img src="${logo}" style="width:120px;height:62px;display:block"></td></tr>
-<tr style="height:73px"><td colspan="9" style="font-size:24pt;font-weight:700">납 품 확 인 서</td><td></td></tr>
+${blank(73)}
+<tr style="height:${Z(73)}px"><td colspan="10" style="vertical-align:top;text-align:left;padding:0"><img src="${logo}" style="width:${Z(120)}px;height:${Z(62)}px;display:block"></td></tr>
+<tr style="height:${Z(73)}px"><td colspan="9" style="font-size:${F(24)};font-weight:700">납 품 확 인 서</td><td></td></tr>
 ${tr(26, lab('납 품 일') + val(c.date, 8))}
 ${tr(26, lab('납 품 처') + val(c.place, 8))}
-${tr(26, '<td></td>' + lab('공 급 자', 8))}
+${tr(26, lab('공 급 자', 9))}
 ${tr(26, lab('상 호') + val(sup.상호, 5) + lab('대 표 자') + val(sup.대표자, 2))}
 ${tr(26, lab('사업자번호') + val(sup.사업자번호, 8))}
 ${tr(26, lab('주 소') + val(sup.주소, 8))}
 ${tr(26, lab('납 품 내 용') + val(c.what + ' 납품의 건', 8))}
-<tr style="height:20px"><td colspan="10"></td></tr>
-<tr style="height:20px"><td colspan="10" style="text-align:left;vertical-align:bottom;font-size:8pt;font-weight:700;padding:0 0 1px 3px">※ 아래와 같이 납품 하였음을 확인 합니다.</td></tr>
-${tr(48, "<td class='h'>납품일자<br>년/월/일</td><td class='h'>브랜드</td><td class='h'>용도</td><td class='h'>품 명</td><td class='h'>등급</td><td class='h'>수량</td><td class='h'>단위</td><td class='h' colspan='2'>비 고<br><span style='font-size:7pt'>(시공 가능 면적 / 수량)</span></td>")}
+${blank(20)}
+<tr style="height:${Z(20)}px"><td colspan="10" style="text-align:left;vertical-align:bottom;font-size:${F(8)};font-weight:700;padding:0 0 1px 2px">※ 아래와 같이 납품 하였음을 확인 합니다.</td></tr>
+${tr(48, `<td class='h'>납품일자<br>년/월/일</td><td class='h'>브랜드</td><td class='h'>용도</td><td class='h'>품 명</td><td class='h'>등급</td><td class='h'>수량</td><td class='h'>단위</td><td class='h' colspan='2'>비 고<br><span style='font-size:${F(7)}'>(시공 가능 면적 / 수량)</span></td>`)}
 ${items}
-${tr(22, "<td class='hd' colspan='5' style='font-size:11pt;border:1px solid #D9D9D9'>합&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;계</td>"
-    + `<td class='v' style='font-size:10pt;font-weight:700'>${fmt(total)}</td>`
-    + `<td style='font-size:10pt;border-left:1px solid #D9D9D9;border-right:1px solid #D9D9D9'>${units.length === 1 ? esc(units[0]) : ''}</td><td class='v' colspan='2'></td>`)}
-<tr style="height:21px"><td colspan="10"></td></tr>
-<tr style="height:21px"><td colspan="10"></td></tr>
-<tr style="height:28px"><td colspan="9" style="font-size:12pt">${today.getFullYear()} 년&nbsp;&nbsp;&nbsp;${today.getMonth() + 1} 월&nbsp;&nbsp;&nbsp;${today.getDate()} 일</td><td></td></tr>
-<tr style="height:21px"><td colspan="10"></td></tr>
-<tr style="height:62px"><td colspan="9" style="font-size:16pt;position:relative">${esc(sup.상호)}
-${stamp ? `<img src="${stamp}" style="position:absolute;left:${stampLeft}px;top:1px;width:62px;height:62px">` : ''}</td><td></td></tr>
+${tr(22, `<td class='hd' colspan='5' style='font-size:${F(11)};border:1px solid #D9D9D9'>합&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;계</td>`
+    + `<td class='v' style='font-size:${F(10)};font-weight:700'>${fmt(total)}</td>`
+    + `<td class='v' style='font-size:${F(10)}'>${units.length === 1 ? esc(units[0]) : ''}</td><td class='v' colspan='2'></td>`)}
+${blank(21)}
+${blank(21)}
+<tr style="height:${Z(28)}px"><td colspan="9" style="font-size:${F(12)}">${today.getFullYear()} 년&nbsp;&nbsp;&nbsp;${today.getMonth() + 1} 월&nbsp;&nbsp;&nbsp;${today.getDate()} 일</td><td></td></tr>
+${blank(21)}
+<tr style="height:${Z(62)}px"><td colspan="9" style="font-size:${F(16)};position:relative">${esc(sup.상호)}
+${stamp ? `<img src="${stamp}" style="position:absolute;left:${stampLeft}px;top:1px;width:${Z(62)}px;height:${Z(62)}px">` : ''}</td><td></td></tr>
 </table></div>`;
 }
 
 const PAGE_CSS = `@page { size:A4 portrait; margin:1in 0.4in 0.6in 0.76in; }
 body{margin:0;font-family:"Pretendard Variable",Pretendard,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;color:#434343;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.sheet{zoom:${ZOOM};break-after:page}
+.sheet{break-after:page}
 .sheet:last-child{break-after:auto}
-table{border-collapse:collapse;table-layout:fixed;width:${COLS.reduce((a, b) => a + b, 0)}px}
-td{padding:0 3px;text-align:center;vertical-align:middle;overflow:hidden;white-space:nowrap}
+table{border-collapse:collapse;table-layout:fixed;width:${COLS.reduce((a, b) => a + Z(b), 0)}px}
+td{padding:0 2px;text-align:center;vertical-align:middle;overflow:hidden;white-space:nowrap}
 td.x{border:none}
-.hd{background:#F0B346;color:#fff;font-weight:700;font-size:10pt;border:1px solid #fff}
-.v{border:1px solid #D9D9D9;font-size:9pt}
-.h{background:#F0B346;color:#fff;font-weight:700;font-size:9pt;border:1px solid #D9D9D9;line-height:1.3;white-space:normal}
-.i{border:1px solid #D9D9D9;font-size:8pt;white-space:normal;word-break:break-all;line-height:1.25}`;
+.hd{background:#F0B346;color:#fff;font-weight:700;font-size:${F(10)};border:1px solid #fff}
+.v{border:1px solid #D9D9D9;font-size:${F(9)}}
+.h{background:#F0B346;color:#fff;font-weight:700;font-size:${F(9)};border:1px solid #D9D9D9;line-height:1.3;white-space:normal}
+.i{border:1px solid #D9D9D9;font-size:${F(8)};white-space:normal;word-break:break-all;line-height:1.25}`;
 
 // ── 도장 (이 기기 브라우저에만)
 const STAMP_KEY = 'ht.deliv.stamp';
