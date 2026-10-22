@@ -3421,12 +3421,10 @@ const DD_DRIVE = 'https://drive.google.com/drive/folders/1FZGZHJcsMoyld5a665bLVp
 const ddGuide = () => `<div class="dd-guide">
   <div class="dd-acts">
     <button type="button" class="dd-big" data-act="erp-dd-make" data-v="chat"><b>명세서로 만들기</b><span>대화 화면 · 사진·PDF 올리기</span></button>
-    <button type="button" class="dd-big" data-act="erp-dd-make" data-v="doc"><b>문서 인식으로 만들기</b><span>줄을 확인·고친 뒤 만들기</span></button>
     ${DD_DRIVE ? `<a class="dd-big drive" href="${DD_DRIVE}" target="_blank" rel="noopener"><b>구글 드라이브에서 보기</b><span>만든 납품확인서 PDF 폴더</span></a>` : ''}
   </div>
   <ol class="dd-how">
     <li><b>명세서로</b> — [명세서로 만들기] → 거래명세서 사진·PDF를 끌어다 놓기 → 납품확인서 PDF</li>
-    <li><b>문서 인식으로</b> — [문서 인식으로 만들기] → 명세서 올리고 [인식 시작] → 품목·출고일 확인 → [납품확인서 만들기]</li>
     <li><b>자동</b> — 명세서 화면에서 <b>[발행완료]</b>를 누른 뉴하우징·공간제작소 출고는 5분 안에 저절로 만들어져요</li>
   </ol>
   <p class="dd-note">인슐레이션·방수시트·타이벡 품목만 · 명세서 줄 날짜마다 1장 · 공간제작소는 품목별 · 이 맥의 도우미가 켜져 있어야 해요</p>
