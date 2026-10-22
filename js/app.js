@@ -3417,7 +3417,7 @@ function drToShip() {
   openSheet(sheetShipForm());
 }
 // 납품확인서 만드는 방법 (10/22 대표: "만드는 버튼이 없어") — 대상 품목·규칙은 도우미 config.json 과 같음
-const DD_DRIVE = '';   // 납품확인서가 쌓이는 구글 드라이브 폴더 링크 (정해지면 넣음 — 비어 있으면 버튼 안 보임)
+const DD_DRIVE = 'https://drive.google.com/drive/folders/1FZGZHJcsMoyld5a665bLVpO3ZpNoQ6G3';   // 내 드라이브/홈트레이더스_납품확인서 (도우미 storage.deliv_root, 10/22)
 const ddGuide = () => `<div class="dd-guide">
   <div class="dd-acts">
     <button type="button" class="dd-big" data-act="erp-dd-make" data-v="chat"><b>명세서로 만들기</b><span>대화 화면 · 사진·PDF 올리기</span></button>
