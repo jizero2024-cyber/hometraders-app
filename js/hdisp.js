@@ -13,11 +13,12 @@ const KIND_ORDER = { 창고: 0, 거래처: 1, '지난 배차': 2, 택배: 3 };
 // 화면이 다시 그려져도(공유 DB 실시간 갱신 등) 적던 내용이 남도록 여기 보관
 // 보안: 화면 속성(data-*)에서 온 이름은 아래 목록에 있는 칸만 바꿈 · 공유 DB 로 가는 글자는 길이 제한 · 화면에 찍는 값은 모두 esc()
 const SIDES = new Set(['from', 'to']);
-const SET_KEYS = new Set(['vehicle', 'pay', 'weight', 'sched', 'goods', 'sayAs']);
-const IN_KEYS = new Set(['vehicle', 'goods', 'weight', 'sched', 'from.addr', 'from.phone', 'to.addr', 'to.phone']);
+const SET_KEYS = new Set(['pay', 'weight', 'sched', 'goods', 'sayAs']);
+const IN_KEYS = new Set(['vehicle', 'goods', 'weight', 'sched', 'from.addr', 'from.phone', 'to.name', 'to.addr', 'to.phone']);
 const MAX = { name: 60, addr: 120, phone: 30, text: 100 };
+const LOAD_PHONE = '010-6207-8478';   // 상차지 연락처는 항상 이 번호 (10/22 대표) — 거래처 전화는 톡에 안 넣음
 const cut = (v, n) => String(v || '').trim().slice(0, n);
-const F = { from: null, to: null, vehicle: '', pay: '현불', goods: '건축자재', weight: '', sched: '', say: false, sayAs: '홈트레이더스', open: '', q: { from: '', to: '' } };
+const F = { from: null, to: null, cars: [], vehicle: '', pay: '현불', goods: '건축자재', weight: '', sched: '', say: false, sayAs: '홈트레이더스', open: '', q: { from: '', to: '' } };
 
 // ── 초성 검색 ─────────────────────────────────────────
 const CHO = 'ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ';
@@ -99,28 +100,34 @@ function updateList(t) {
 function placeField(t, label) {
   const p = F[t];
   return `<div class="hd-field"><label>${label}</label>
-    ${p ? `<div class="hd-picked"><div class="hd-picked-top"><b>${esc(p.name)}</b><span class="hd-kind">${esc(p.kind || '직접')}</span>
+    ${p ? `<div class="hd-picked"><div class="hd-picked-top">${p.kind === '현장' ? '<b>직접 입력</b>' : `<b>${esc(p.name)}</b>`}<span class="hd-kind">${esc(p.kind || '직접')}</span>
         <button type="button" class="hd-x" data-hd="clear" data-t="${t}">바꾸기</button></div>
+        ${p.kind === '현장' ? `<input class="hd-in" data-hd-in="${t}.name" maxlength="60" value="${esc(p.name)}" placeholder="받는 곳·현장 이름 (선택 — 예: 김OO 건축주 현장)">` : ''}
         <input class="hd-in" data-hd-in="${t}.addr" maxlength="120" value="${esc(p.addr)}" placeholder="주소 (확인·수정)">
-        <input class="hd-in" data-hd-in="${t}.phone" maxlength="30" value="${esc(p.phone)}" placeholder="연락처 (선택)" inputmode="tel"></div>`
+        ${t === 'from' ? `<div class="hd-fixed">연락처 ${LOAD_PHONE} <span>(상차지는 항상 이 번호)</span></div>`
+          : `<input class="hd-in" data-hd-in="${t}.phone" maxlength="30" value="${esc(p.phone)}" placeholder="연락처 (선택)" inputmode="tel">`}</div>`
       : `<input class="hd-in hd-search" id="hd-q-${t}" data-hd-q="${t}" maxlength="60" value="${esc(F.q[t])}" placeholder="검색 — 이름·주소·초성 (예: ㅇㅇㅋㅂ)" autocomplete="off">
-        <div class="hd-list" id="hd-list-${t}" style="${F.open === t ? '' : 'display:none'}">${listHtml(t)}</div>`}
+        <div class="hd-list" id="hd-list-${t}" style="${F.open === t ? '' : 'display:none'}">${listHtml(t)}</div>
+        ${t === 'to' ? '<button type="button" class="hd-direct" data-hd="direct" data-t="to">＋ 거래처가 아니면 주소 직접 입력</button>' : ''}`}
   </div>`;
 }
 
+// 차량은 여러 대 골라도 됨 — "1톤 또는 1.4톤" (10/22 대표). 직접 적은 차량(F.vehicle)은 맨 뒤에
+const carText = () => [...VEHICLES.filter((v) => F.cars.includes(v)), F.vehicle.trim()].filter(Boolean).join(' 또는 ');
 export function dispatchText() {
   const L = ['배차 부탁드립니다!'];
   if (F.say) L.push(`${F.sayAs} 물건이라고 하시면 됩니다!`);   // 상차지에서 누구 물건인지 — 매입처 직송·맡긴 물건 찾을 때 (이음물류 톡 10/22 분석)
   L.push('');
   const place = (lab, p) => {
-    L.push(`${lab}: ${p ? p.name : '○○'}`);
-    if (p && p.addr) L.push(p.addr);
-    if (p && p.phone) L.push(`연락처: ${p.phone}`);
+    L.push(`${lab}: ${p ? (p.name || p.addr || '○○') : '○○'}`);
+    if (p && p.addr && p.name) L.push(p.addr);
+    const phone = lab === '상차지' ? LOAD_PHONE : p && p.phone;
+    if (phone) L.push(`연락처: ${phone}`);
     L.push('');
   };
   place('상차지', F.from);
   place('하차지', F.to);
-  L.push(`차량: ${F.vehicle || '○톤'}`);
+  L.push(`차량: ${carText() || '○톤'}`);
   L.push(`운임: ${F.pay}`);
   L.push(`물건: ${F.goods.trim() || '○○'}`);
   if (F.weight.trim()) L.push(`무게: ${F.weight.trim()}`);
@@ -137,8 +144,8 @@ export function homtScreen() {
     ${placeField('to', '하차지')}
     <div class="hd-field"><label class="hd-check"><input type="checkbox" data-hd="say" ${F.say ? 'checked' : ''}> 상차지에 우리 물건이라고 말해 주세요</label>
       ${F.say ? `<div class="hd-chips">${chip('sayAs', '홈트레이더스', F.sayAs === '홈트레이더스')}${chip('sayAs', '에이스', F.sayAs === '에이스')}</div>` : ''}</div>
-    <div class="hd-field"><label>차량</label><div class="hd-chips">${VEHICLES.map((v) => chip('vehicle', v, F.vehicle === v)).join('')}</div>
-      <input class="hd-in" data-hd-in="vehicle" maxlength="100" value="${esc(VEHICLES.includes(F.vehicle) ? '' : F.vehicle)}" placeholder="직접 입력 (예: 1톤 탑차)"></div>
+    <div class="hd-field"><label>차량</label><div class="hd-chips">${VEHICLES.map((v) => `<button type="button" class="hd-chip ${F.cars.includes(v) ? 'on' : ''}" data-hd="car" data-v="${esc(v)}">${esc(v)}</button>`).join('')}</div>
+      <input class="hd-in" data-hd-in="vehicle" maxlength="100" value="${esc(F.vehicle)}" placeholder="직접 입력 (예: 1톤 탑차) · 여러 개 고르면 '또는'"></div>
     <div class="hd-field"><label>운임</label><div class="hd-chips">${chip('pay', '현불', F.pay === '현불')}${chip('pay', '착불', F.pay === '착불')}</div></div>
     <div class="hd-field"><label>품목</label><div class="hd-chips">${GOODS.map((v) => chip('goods', v, F.goods === v)).join('')}</div>
       <input class="hd-in" data-hd-in="goods" maxlength="100" value="${esc(GOODS.includes(F.goods) ? '' : F.goods)}" placeholder="직접 입력 (예: 방킬라이 1PLT · 3m)"></div>
@@ -161,14 +168,16 @@ export function bind(app, ctx) {
       return;
     }
     const a = t.dataset.hd, k = t.dataset.t;
-    if (['pick', 'pick-new', 'clear'].includes(a) && !SIDES.has(k)) return;
+    if (['pick', 'pick-new', 'clear', 'direct'].includes(a) && !SIDES.has(k)) return;
     if (a === 'go-ace') ctx.goAce();
     else if (a === 'go-homt') ctx.goHomt();
     else if (a === 'back') ctx.goStart();
     else if (a === 'pick') { F[k] = { ...search(F.q[k])[Number(t.dataset.i)] }; F.open = ''; F.q[k] = ''; ctx.rerender(); }
     else if (a === 'pick-new') { F[k] = { name: cut(F.q[k], MAX.name), addr: '', phone: '', kind: '직접' }; F.open = ''; F.q[k] = ''; ctx.rerender(); }
+    else if (a === 'direct') { F[k] = { name: '', addr: cut(F.q[k], MAX.addr), phone: '', kind: '현장' }; F.open = ''; F.q[k] = ''; ctx.rerender(); focusIn(`${k}.addr`); }   // 거래처 아닌 하차지 — 거래처에 저장 안 함
     else if (a === 'clear') { F[k] = null; F.open = k; ctx.rerender(); }
     else if (a === 'set') { const key = t.dataset.k; if (!SET_KEYS.has(key)) return; F[key] = F[key] === t.dataset.v && key !== 'pay' && key !== 'sayAs' ? '' : t.dataset.v; ctx.rerender(); }
+    else if (a === 'car') { const v = t.dataset.v; if (!VEHICLES.includes(v)) return; F.cars = F.cars.includes(v) ? F.cars.filter((x) => x !== v) : [...F.cars, v]; ctx.rerender(); }
     else if (a === 'say') { F.say = !!t.checked; ctx.rerender(); }
     else if (a === 'submit') submit(ctx);
   });
@@ -188,6 +197,7 @@ export function bind(app, ctx) {
 }
 // 다시 그린 뒤 검색칸이 열려 있었으면 커서를 돌려놓음 (공유 DB 갱신으로 화면이 새로 그려져도 치던 글자가 끊기지 않게)
 export function afterRender() { if (F.open) focusQ(F.open); }
+function focusIn(k) { setTimeout(() => { const el = document.querySelector(`[data-hd-in="${k}"]`); if (el) el.focus(); }, 0); }
 function focusQ(t) {
   const el = document.getElementById('hd-q-' + t);
   if (el) { el.focus(); const n = el.value.length; try { el.setSelectionRange(n, n); } catch (_) { /* 무시 */ } }
@@ -197,7 +207,7 @@ function focusQ(t) {
 function savePlaces() {
   const whs = new Set(S.getWarehouses().map((w) => norm(w.name)));
   [F.from, F.to].forEach((p) => {
-    if (!p || !p.name || p.kind === '택배' || whs.has(norm(p.name))) return;
+    if (!p || !p.name || p.kind === '택배' || p.kind === '현장' || whs.has(norm(p.name))) return;   // 직접 입력한 현장은 거래처가 아님
     const ex = S.getPartners().find((x) => norm(x.name) === norm(p.name));
     const addr = cut(p.addr, MAX.addr), phone = cut(p.phone, MAX.phone);
     if (!ex) { if (addr) S.addPartner({ name: cut(p.name, MAX.name), address: addr, phone, note: '배차 요청에서 등록' }); return; }
@@ -210,18 +220,19 @@ function savePlaces() {
 
 function submit(ctx) {
   if (!F.from || !F.to) return alert('상차지와 하차지를 골라 주세요.');
-  if (!F.vehicle) return alert('차량을 골라 주세요.');
+  if (!F.to.name && !(F.to.addr || '').trim()) return alert('하차지 주소를 적어 주세요.');
+  if (!carText()) return alert('차량을 골라 주세요.');
   const text = dispatchText();
   const done = () => {
     savePlaces();
     S.addShipment({
       date: S.todayStr(), warehouse: cut(F.from.name, MAX.name), client: cut(F.to.name, MAX.name), status: '출고예정', method: '배차',
-      name: cut(F.goods, MAX.text), qty: 0, unit: '', vehicle: cut(F.vehicle, MAX.phone), payment: F.pay,
-      loadPlace: cut(F.from.name, MAX.name), loadAddr: cut(F.from.addr, MAX.addr), unloadPlace: cut(F.to.name, MAX.name), unloadAddr: cut(F.to.addr, MAX.addr),
+      name: cut(F.goods, MAX.text), qty: 0, unit: '', vehicle: cut(carText(), MAX.text), payment: F.pay,
+      loadPlace: cut(F.from.name, MAX.name), loadAddr: cut(F.from.addr, MAX.addr), unloadPlace: cut(F.to.name || F.to.addr, MAX.name), unloadAddr: cut(F.to.addr, MAX.addr),
       note: ['배차 요청함(홈트 첫 화면)', F.weight && `무게 ${cut(F.weight, MAX.phone)}`, F.sched && `일정 ${cut(F.sched, MAX.text)}`].filter(Boolean).join(' · '),
     });
     alert('배차요청톡을 복사했어요. 이음물류 카톡방에 붙여넣으세요.\n출고 목록에도 \'출고예정\'으로 등록했어요.');
-    Object.assign(F, { from: null, to: null, vehicle: '', pay: '현불', goods: '건축자재', weight: '', sched: '', say: false, sayAs: '홈트레이더스', open: '', q: { from: '', to: '' } });
+    Object.assign(F, { from: null, to: null, cars: [], vehicle: '', pay: '현불', goods: '건축자재', weight: '', sched: '', say: false, sayAs: '홈트레이더스', open: '', q: { from: '', to: '' } });
     ctx.rerender();
   };
   const fallback = () => {

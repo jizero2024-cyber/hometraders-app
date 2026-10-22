@@ -505,6 +505,9 @@ textarea{resize:vertical;line-height:1.5;}
 .hd-chip.on { background: #1f3a5f; border-color: #1f3a5f; color: #fff; }
 .hd-field > label.hd-check { display: flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer; }
 .hd-check input { width: 18px; height: 18px; accent-color: #1f3a5f; }
+.hd-fixed { margin-top: 6px; padding: 10px 13px; border-radius: 11px; background: #f2f4f7; font-size: 15px; }
+.hd-fixed span { color: var(--muted, #667085); font-size: 12.5px; }
+.hd-direct { margin-top: 8px; border: 1px dashed #c4ccd8; background: #fff; border-radius: 11px; padding: 10px 13px; width: 100%; text-align: left; font: inherit; font-size: 14px; color: #3e6ae1; cursor: pointer; }
 .hd-pre { white-space: pre-wrap; background: var(--surface-2, #f8f9fb); border-radius: 11px; padding: 12px 13px; font-family: inherit; font-size: 14px; line-height: 1.55; margin: 0; }
 .hd-go { width: 100%; border: 0; border-radius: 12px; padding: 15px; font: inherit; font-size: 16px; font-weight: 700; background: #e8740c; color: #fff; cursor: pointer; }
 .appbar .logo[data-hd] { cursor: pointer; }
