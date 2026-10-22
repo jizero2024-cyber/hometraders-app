@@ -3980,7 +3980,8 @@ function chDlvPrint(j) {
 }
 function chCardDlv(j) {
   const c = j.dlv; if (!c) return '';
-  const rows = c.confirms.map((x) => `<tr><td>${esc(x.date)} · ${esc(x.place || x.client)}<span class="ch-code">${esc(x.items)}</span></td><td class="n">${esc(x.what)}</td><td class="q"></td></tr>`);
+  const rows = c.confirms.map((x, i) => `<tr><td>${esc(x.date)} · ${esc(x.client)}<span class="ch-code">${esc(x.items)}</span>
+      <input class="ch-site" data-dlv="1" data-i="${i}" value="${esc(x.site || '')}" placeholder="현장명 적기 (납품처·파일 이름에 들어가요)"></td><td class="n">${esc(x.what)}</td><td class="q"></td></tr>`);
   return `<div class="ch-card"><div class="ch-ch"><div><h3>납품확인서 ${c.confirms.length}장</h3><small>인쇄 창에서 "PDF로 저장"을 고르세요 · 날짜마다 1장${DL.getStamp() ? '' : ' · 처음 한 번 도장 그림을 골라요'}</small></div></div>
     ${chLinesTable(rows, j, 'd')}</table>
     <div class="ch-acts"><button type="button" class="ch-btn pri" data-act="erp-ch-dlv">인쇄 · PDF</button><label class="ch-btn" for="dr-stamp">${DL.getStamp() ? '도장 바꾸기' : '도장 고르기'}</label><input type="file" id="dr-stamp" accept="image/*" hidden></div></div>`;
@@ -4200,6 +4201,26 @@ function chFindList(q) {
   const parts = String(q).toLowerCase().split(/\s+/).filter(Boolean);
   return ECOUNT_ITEMS.filter(([c, n]) => { const s = (n + c).toLowerCase(); return parts.every((p) => s.includes(p)); }).slice(0, 8);
 }
+// 처음 보는 품목 — [다른 품목 찾기] 안 눌러도 비슷한 우리 품목을 후보로 먼저 (10/22 대표: 방수시트면 방수시트 품목들이 바로)
+//   품명·규격을 낱말로 쪼개 우리 품목명에 들어 있는 낱말 길이만큼 점수. 맨 앞 낱말(품목군: 방수시트·슁글·구조재…)이 맞으면 크게 더함
+const CH_TYPO = [[/(싱글|쉬글|씽글|쉥글)(?=[_\s(]|$)/g, '슁글']];   // 사진 판독 오타 (도우미 matcher.fix_typo 와 같음)
+function chSimilar(l, n) {
+  let t = `${l.raw_name || ''} ${l.spec || ''}`;
+  CH_TYPO.forEach(([re, to]) => { t = t.replace(re, to); });
+  const toks = [...new Set(t.replace(/^기타자재_/, '').split(/[^가-힣A-Za-z0-9.]+/).filter((x) => x.length >= 2))];
+  if (!toks.length) return [];
+  const head = toks[0];
+  const scored = [];
+  ECOUNT_ITEMS.forEach(([, name]) => {
+    const u = name.toUpperCase();
+    let sc = 0;
+    toks.forEach((x) => { if (u.includes(x.toUpperCase())) sc += x.length; });
+    if (u.includes(head.toUpperCase())) sc += 6;
+    if (sc >= 8) scored.push([sc, name]);
+  });
+  scored.sort((a, b) => b[0] - a[0] || a[1].length - b[1].length);
+  return [...new Set(scored.map((x) => x[1]))].slice(0, n || 5);
+}
 // ── 그리기 ─────────────────────────────────────────
 const chFileLink = (p) => `<a class="ch-btn" href="${HELPER}/api/file?path=${encodeURIComponent(p)}">${esc(p.split('/').pop())} 받기</a>`;
 function chLinesTable(rows, j, key) {
@@ -4283,7 +4304,7 @@ function chCardMap(j, i) {
     return `<div class="ch-done">처음 보는 품목 ${all.length}개 정리 끝${saved ? ` · 매핑 ${saved}개 저장 (다음부터 자동)` : ''}</div>`;
   }
   const q = left.map(({ l, k }) => {
-    const cands = [...new Set([l.ours, ...(l.cands || [])].filter(Boolean))].slice(0, 3);
+    const cands = [...new Set([l.ours, ...(l.cands || []), ...chSimilar(l, 5)].filter(Boolean))].slice(0, 5);
     const finding = it._find === k;
     return `<div class="ch-q"><div class="ch-raw">${esc(l.raw_name)}${l.spec ? ` <span class="ch-dim">${esc(l.spec)}</span>` : ''}${l.qty ? ` <span class="ch-dim">· ${esc(l.qty)}${esc(l.unit || '')}</span>` : ''}</div>
       <div class="ch-opts">${cands.map((c) => `<button type="button" class="ch-btn" data-act="erp-ch-pick" data-i="${i}" data-k="${k}" data-v="${esc(c)}">${esc(c)}</button>`).join('')}
@@ -4415,6 +4436,17 @@ function chAct(act, t) {
 app.addEventListener('input', (e) => {
   if (state.route !== 'chat') return;
   if (e.target.id === 'ch-text') { ch.text = e.target.value; e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 180) + 'px'; }
+  if (e.target.classList && e.target.classList.contains('ch-site') && e.target.dataset.dlv) {   // 납품확인서 현장명 → 납품처·파일 이름 (거래명세표 현장명 칸과 같은 모양)
+    const j = chJob(), x = j && j.dlv && j.dlv.confirms[Number(e.target.dataset.i)];
+    if (x) {
+      x.site = e.target.value.trim();
+      x.place = x.site || x.client;
+      const split = DL.CFG.품목별_분리_거래처.some((k) => (x.client || '').includes(k));
+      x.file = [x.date.replace(/-/g, ''), x.client, x.site, split ? x.what : ''].filter(Boolean).join('_').replace(/[\\/:*?"<>|]/g, ' ').replace(/\s+/g, ' ').trim();
+      clearTimeout(ch.siteT); ch.siteT = setTimeout(chSave, 800);
+    }
+    return;
+  }
   if (e.target.classList && e.target.classList.contains('ch-site')) { const j = chJob(); if (j && j.conv) { j.conv.docs[Number(e.target.dataset.i)].site = e.target.value.trim(); clearTimeout(ch.siteT); ch.siteT = setTimeout(chSave, 800); } return; }
   if (e.target.id === 'ch-find-in') {
     const res = document.getElementById('ch-find-res'); if (!res) return;
