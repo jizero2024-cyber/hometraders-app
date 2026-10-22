@@ -503,6 +503,8 @@ textarea{resize:vertical;line-height:1.5;}
 .hd-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .hd-chip { border: 1px solid var(--line, #d0d5dd); background: #fff; border-radius: 999px; padding: 8px 13px; font: inherit; font-size: 14px; cursor: pointer; color: var(--ink, #1f2937); }
 .hd-chip.on { background: #1f3a5f; border-color: #1f3a5f; color: #fff; }
+.hd-field > label.hd-check { display: flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer; }
+.hd-check input { width: 18px; height: 18px; accent-color: #1f3a5f; }
 .hd-pre { white-space: pre-wrap; background: var(--surface-2, #f8f9fb); border-radius: 11px; padding: 12px 13px; font-family: inherit; font-size: 14px; line-height: 1.55; margin: 0; }
 .hd-go { width: 100%; border: 0; border-radius: 12px; padding: 15px; font: inherit; font-size: 16px; font-weight: 700; background: #e8740c; color: #fff; cursor: pointer; }
 .appbar .logo[data-hd] { cursor: pointer; }

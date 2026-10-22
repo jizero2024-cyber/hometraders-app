@@ -13,11 +13,11 @@ const KIND_ORDER = { 창고: 0, 거래처: 1, '지난 배차': 2, 택배: 3 };
 // 화면이 다시 그려져도(공유 DB 실시간 갱신 등) 적던 내용이 남도록 여기 보관
 // 보안: 화면 속성(data-*)에서 온 이름은 아래 목록에 있는 칸만 바꿈 · 공유 DB 로 가는 글자는 길이 제한 · 화면에 찍는 값은 모두 esc()
 const SIDES = new Set(['from', 'to']);
-const SET_KEYS = new Set(['vehicle', 'pay', 'weight', 'sched', 'goods']);
+const SET_KEYS = new Set(['vehicle', 'pay', 'weight', 'sched', 'goods', 'sayAs']);
 const IN_KEYS = new Set(['vehicle', 'goods', 'weight', 'sched', 'from.addr', 'from.phone', 'to.addr', 'to.phone']);
 const MAX = { name: 60, addr: 120, phone: 30, text: 100 };
 const cut = (v, n) => String(v || '').trim().slice(0, n);
-const F = { from: null, to: null, vehicle: '', pay: '현불', goods: '건축자재', weight: '', sched: '', open: '', q: { from: '', to: '' } };
+const F = { from: null, to: null, vehicle: '', pay: '현불', goods: '건축자재', weight: '', sched: '', say: false, sayAs: '홈트레이더스', open: '', q: { from: '', to: '' } };
 
 // ── 초성 검색 ─────────────────────────────────────────
 const CHO = 'ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ';
@@ -109,7 +109,9 @@ function placeField(t, label) {
 }
 
 export function dispatchText() {
-  const L = ['배차 부탁드립니다!', ''];
+  const L = ['배차 부탁드립니다!'];
+  if (F.say) L.push(`${F.sayAs} 물건이라고 하시면 됩니다!`);   // 상차지에서 누구 물건인지 — 매입처 직송·맡긴 물건 찾을 때 (이음물류 톡 10/22 분석)
+  L.push('');
   const place = (lab, p) => {
     L.push(`${lab}: ${p ? p.name : '○○'}`);
     if (p && p.addr) L.push(p.addr);
@@ -133,6 +135,8 @@ export function homtScreen() {
     <div class="hd-top"><button type="button" class="hd-back" data-hd="back">‹ 처음으로</button><b>홈트 배차 요청</b><span></span></div>
     ${placeField('from', '상차지')}
     ${placeField('to', '하차지')}
+    <div class="hd-field"><label class="hd-check"><input type="checkbox" data-hd="say" ${F.say ? 'checked' : ''}> 상차지에 우리 물건이라고 말해 주세요</label>
+      ${F.say ? `<div class="hd-chips">${chip('sayAs', '홈트레이더스', F.sayAs === '홈트레이더스')}${chip('sayAs', '에이스', F.sayAs === '에이스')}</div>` : ''}</div>
     <div class="hd-field"><label>차량</label><div class="hd-chips">${VEHICLES.map((v) => chip('vehicle', v, F.vehicle === v)).join('')}</div>
       <input class="hd-in" data-hd-in="vehicle" maxlength="100" value="${esc(VEHICLES.includes(F.vehicle) ? '' : F.vehicle)}" placeholder="직접 입력 (예: 1톤 탑차)"></div>
     <div class="hd-field"><label>운임</label><div class="hd-chips">${chip('pay', '현불', F.pay === '현불')}${chip('pay', '착불', F.pay === '착불')}</div></div>
@@ -164,7 +168,8 @@ export function bind(app, ctx) {
     else if (a === 'pick') { F[k] = { ...search(F.q[k])[Number(t.dataset.i)] }; F.open = ''; F.q[k] = ''; ctx.rerender(); }
     else if (a === 'pick-new') { F[k] = { name: cut(F.q[k], MAX.name), addr: '', phone: '', kind: '직접' }; F.open = ''; F.q[k] = ''; ctx.rerender(); }
     else if (a === 'clear') { F[k] = null; F.open = k; ctx.rerender(); }
-    else if (a === 'set') { const key = t.dataset.k; if (!SET_KEYS.has(key)) return; F[key] = F[key] === t.dataset.v && key !== 'pay' ? '' : t.dataset.v; ctx.rerender(); }
+    else if (a === 'set') { const key = t.dataset.k; if (!SET_KEYS.has(key)) return; F[key] = F[key] === t.dataset.v && key !== 'pay' && key !== 'sayAs' ? '' : t.dataset.v; ctx.rerender(); }
+    else if (a === 'say') { F.say = !!t.checked; ctx.rerender(); }
     else if (a === 'submit') submit(ctx);
   });
   app.addEventListener('focusin', (e) => {
@@ -216,7 +221,7 @@ function submit(ctx) {
       note: ['배차 요청함(홈트 첫 화면)', F.weight && `무게 ${cut(F.weight, MAX.phone)}`, F.sched && `일정 ${cut(F.sched, MAX.text)}`].filter(Boolean).join(' · '),
     });
     alert('배차요청톡을 복사했어요. 이음물류 카톡방에 붙여넣으세요.\n출고 목록에도 \'출고예정\'으로 등록했어요.');
-    Object.assign(F, { from: null, to: null, vehicle: '', pay: '현불', goods: '건축자재', weight: '', sched: '', open: '', q: { from: '', to: '' } });
+    Object.assign(F, { from: null, to: null, vehicle: '', pay: '현불', goods: '건축자재', weight: '', sched: '', say: false, sayAs: '홈트레이더스', open: '', q: { from: '', to: '' } });
     ctx.rerender();
   };
   const fallback = () => {
