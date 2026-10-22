@@ -73,7 +73,7 @@ function search(q) {
 export function startScreen() {
   return `<div class="hd-start">
     <button class="hd-half ace" type="button" data-hd="go-ace"><span class="hd-big">에이스</span><span class="hd-sub">기존 ERP 화면</span></button>
-    <button class="hd-half homt" type="button" data-hd="go-homt"><img src="./icons/logo-full.png" alt=""><span class="hd-big">홈트</span><span class="hd-sub">배차 요청</span></button>
+    <button class="hd-half homt" type="button" data-hd="go-homt" aria-label="홈트 배차 요청"><img src="./icons/logo-full.png" alt="HOME TRADERS"></button>
   </div>`;
 }
 

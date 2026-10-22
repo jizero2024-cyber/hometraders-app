@@ -476,7 +476,8 @@ textarea{resize:vertical;line-height:1.5;}
 .hd-half { flex: 1; border: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; cursor: pointer; font-family: inherit; transition: filter .15s; }
 .hd-half:hover { filter: brightness(.97); }
 .hd-half.ace { background: #1f3a5f; color: #fff; }
-.hd-half.homt { background: #fff4e6; color: #1f2937; }
+.hd-half.homt { background: #fff; color: #1f2937; }
+.hd-half.homt img { height: 64px; }   /* 홈트 쪽은 로고만 (10/22 대표) */
 .hd-half img { height: 34px; }
 .hd-big { font-size: 44px; font-weight: 800; letter-spacing: .08em; }
 .hd-sub { font-size: 15px; opacity: .75; }
