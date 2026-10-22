@@ -3425,9 +3425,10 @@ const ddGuide = () => `<div class="dd-guide">
   </div>
   <ol class="dd-how">
     <li><b>명세서로</b> — [명세서로 만들기] → 거래명세서 사진·PDF를 끌어다 놓기 → 납품확인서 PDF</li>
+    <li><b>전표 링크로</b> — [명세서로 만들기] → 출고일보 판매전표 링크 붙여넣기 (여러 개 가능 · 도우미 없이도 돼요)</li>
     <li><b>자동</b> — 명세서 화면에서 <b>[발행완료]</b>를 누른 뉴하우징·공간제작소 출고는 5분 안에 저절로 만들어져요</li>
   </ol>
-  <p class="dd-note">인슐레이션·방수시트·타이벡 품목만 · 명세서 줄 날짜마다 1장 · 공간제작소는 품목별 · 이 맥의 도우미가 켜져 있어야 해요</p>
+  <p class="dd-note">인슐레이션 · 방수시트 · 타이벡(투습방수지) 종류 전부 (테이프·지지대 빼고) · 날짜마다 1장 · 공간제작소는 품목별 · 사진·PDF 는 이 맥의 도우미가 켜져 있어야 해요</p>
 </div>`;
 function deskDelivDocs() {
   if (!helperState.checked) helperCheck();
@@ -3933,6 +3934,7 @@ async function chLinks(j, text) {
   r.slips.filter((s) => s.warn).forEach((s) => chSay(j, `${s.kind}전표 ${s.slip}: ${s.warn}`, { err: true }));
   const ok = r.slips.filter((s) => s.rows && s.rows.length);
   if (!ok.length) { chSave(); render(); return; }
+  if (j.mode === 'deliv') { chLinksDeliv(j, r.head, ok); return; }
   const style = CH_CONVERT[j.mode] || (ok.every((s) => s.kind === '구매') ? 'buy' : 'homt');
   const use = CH_CONVERT[j.mode] ? ok : ok.filter((s) => (s.kind === '구매') === (style === 'buy'));
   const left = ok.filter((s) => !use.includes(s));
@@ -3948,6 +3950,38 @@ async function chLinks(j, text) {
     if (!j.msgs.some((m) => m.card === 'conv')) chCard(j, 'conv');
   }
   chSave(); render();
+}
+// 전표 링크 → 납품확인서 (10/22) — 판매전표만. 도우미 없이 브라우저 양식(js/delivery.js)으로 만들어 인쇄 창 → PDF.
+//   현장(납품처)은 거래명세표와 같은 규칙(전표 규격 태그 1021/자이/금산 → 금산). 인슐레이션·방수시트·타이벡만, 날짜마다 1장.
+function chLinksDeliv(j, head, ok) {
+  const use = ok.filter((s) => s.kind === '판매'), left = ok.filter((s) => s.kind !== '판매');
+  if (left.length) chSay(j, `구매전표 ${left.length}건(${left.map((s) => s.slip).join(', ')})은 뺐어요 — 납품확인서는 판매전표로 만들어요.`);
+  if (!use.length) { chSave(); render(); return; }
+  let docs = [];
+  try { docs = SM.splitSheets(SM.parseSales([[head, ...use.flatMap((s) => s.rows)]]), {}); }
+  catch (e) { chSay(j, `${e.message || e}`, { err: true }); chSave(); render(); return; }
+  const made = delivHere(docs.map((d) => ({ name: d.slip, doc: { partner: d.partner, owner: d.site || '', site: '', doc_date: d.ymd },
+    lines: d.items.map((x) => ({ name: x.name, qty: x.qty, date: DL.isoDate(x.date) })) })));
+  chSay(j, `판매전표 ${use.length}건을 읽었어요 — ${use.map((s) => `${s.slip} ${s.partner}`).join(', ')}.`
+    + (made.length ? '' : ' 인슐레이션·방수시트·타이벡 품목이 없어서 납품확인서는 안 만들었어요.'), made.length ? {} : { err: true });
+  if (made.length) {
+    j.dlv = { confirms: made };
+    j.title = `${[...new Set(made.map((c) => c.client))].slice(0, 2).join('·')} 납품확인서 ${made.length}장`;
+    if (!j.msgs.some((m) => m.card === 'dlv')) chCard(j, 'dlv');
+  }
+  chSave(); render();
+}
+function chDlvPrint(j) {
+  if (!j.dlv) return;
+  if (delivNeedStamp(() => chDlvPrint(j))) return;
+  DL.printConfirms(j.dlv.confirms).catch((e) => { chSay(j, `${e.message || e}`, { err: true }); chSave(); render(); });
+}
+function chCardDlv(j) {
+  const c = j.dlv; if (!c) return '';
+  const rows = c.confirms.map((x) => `<tr><td>${esc(x.date)} · ${esc(x.place || x.client)}<span class="ch-code">${esc(x.items)}</span></td><td class="n">${esc(x.what)}</td><td class="q"></td></tr>`);
+  return `<div class="ch-card"><div class="ch-ch"><div><h3>납품확인서 ${c.confirms.length}장</h3><small>인쇄 창에서 "PDF로 저장"을 고르세요 · 날짜마다 1장${DL.getStamp() ? '' : ' · 처음 한 번 도장 그림을 골라요'}</small></div></div>
+    ${chLinesTable(rows, j, 'd')}</table>
+    <div class="ch-acts"><button type="button" class="ch-btn pri" data-act="erp-ch-dlv">인쇄 · PDF</button><label class="ch-btn" for="dr-stamp">${DL.getStamp() ? '도장 바꾸기' : '도장 고르기'}</label><input type="file" id="dr-stamp" accept="image/*" hidden></div></div>`;
 }
 async function chConvOut(j, i, kind) {
   const c = j.conv; if (!c) return;
@@ -4289,6 +4323,7 @@ function chMsgHtml(j, m) {
   else if (m.card === 'map') inner = chCardMap(j, m.i);
   else if (m.card === 'read') inner = chCardRead(j, m.i);
   else if (m.card === 'conv') inner = chCardConv(j);
+  else if (m.card === 'dlv') inner = chCardDlv(j);
   else if (m.card === 'buys') inner = chCardBuys(j);
   else if (m.card === 'deposit') inner = chCardDeposit(j);
   else if (m.card === 'stmt') inner = chCardConv(j);
@@ -4370,6 +4405,7 @@ function chAct(act, t) {
   else if (act === 'erp-ch-tosale') { const it = j.items[Number(t.dataset.i)]; if (it && it.buy) chSaleFromBuy(it.buy.voucher, (it.pushed && it.pushed.slip_nos) || []); }
   else if (act === 'erp-ch-buypick') { const r = (j.buys || [])[Number(t.dataset.k)]; if (r) chSaleFromBuy(r.voucher, r.slip_nos); }
   else if (act === 'erp-ch-salepush') chSalePush(j, Number(t.dataset.i));
+  else if (act === 'erp-ch-dlv') chDlvPrint(j);
   else if (act === 'erp-ch-conv') chConvOut(j, t.dataset.i !== undefined ? Number(t.dataset.i) : undefined, t.dataset.k);
   else if (act === 'erp-ch-find') { const it = j.items[Number(t.dataset.i)]; it._find = it._find === Number(t.dataset.k) ? undefined : Number(t.dataset.k); ch.focusFind = true; render(); }
 }
@@ -4640,7 +4676,7 @@ function erpAct(act, t) {
   else if (act === 'erp-dd-make') {   // 납품확인서 만들기 — 대화 화면(납품확인서로) 또는 문서 인식(납품확인서 탭)
     if (t.dataset.v === 'doc') { state.route = 'docread'; drSetMode('deliv'); return; }
     chLoad(); ch.mode = 'deliv'; const j = chNewJob('deliv');
-    chSay(j, '납품확인서로 만들게요. 거래명세서 사진·PDF를 끌어다 놓거나, 캡처를 Cmd+V로 붙여넣어 주세요.');
+    chSay(j, '납품확인서로 만들게요. 거래명세서 사진·PDF를 끌어다 놓거나, 출고일보 판매전표 링크를 붙여넣어 주세요.');
     state.route = 'chat'; render();
   }
   else if (act === 'erp-dd-reload') { dd = { rows: null, err: '' }; helperState.checked = false; helperCheck(); render(); }
