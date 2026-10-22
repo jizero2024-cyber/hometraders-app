@@ -5,13 +5,15 @@
 import * as S from './store-supabase.js';
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+// 품목 고르기 — 이음물류 톡 배차 요청(7/27~10/20, 282건)에 자주 나온 자재 순. 기본값 건축자재 (10/22 대표)
+const GOODS = ['건축자재', '목재', '실리콘', '철물·부자재', '합판·OSB', '단열재', '석고보드'];
 const VEHICLES = ['다마스', '라보', '1톤', '1.4톤', '2.5톤', '3.5톤', '5톤', '5톤축', '11톤', '25톤'];
 const KIND_ORDER = { 창고: 0, 거래처: 1, '지난 배차': 2, 택배: 3 };
 
 // 화면이 다시 그려져도(공유 DB 실시간 갱신 등) 적던 내용이 남도록 여기 보관
 // 보안: 화면 속성(data-*)에서 온 이름은 아래 목록에 있는 칸만 바꿈 · 공유 DB 로 가는 글자는 길이 제한 · 화면에 찍는 값은 모두 esc()
 const SIDES = new Set(['from', 'to']);
-const SET_KEYS = new Set(['vehicle', 'pay', 'weight', 'sched']);
+const SET_KEYS = new Set(['vehicle', 'pay', 'weight', 'sched', 'goods']);
 const IN_KEYS = new Set(['vehicle', 'goods', 'weight', 'sched', 'from.addr', 'from.phone', 'to.addr', 'to.phone']);
 const MAX = { name: 60, addr: 120, phone: 30, text: 100 };
 const cut = (v, n) => String(v || '').trim().slice(0, n);
@@ -134,7 +136,8 @@ export function homtScreen() {
     <div class="hd-field"><label>차량</label><div class="hd-chips">${VEHICLES.map((v) => chip('vehicle', v, F.vehicle === v)).join('')}</div>
       <input class="hd-in" data-hd-in="vehicle" maxlength="100" value="${esc(VEHICLES.includes(F.vehicle) ? '' : F.vehicle)}" placeholder="직접 입력 (예: 1톤 탑차)"></div>
     <div class="hd-field"><label>운임</label><div class="hd-chips">${chip('pay', '현불', F.pay === '현불')}${chip('pay', '착불', F.pay === '착불')}</div></div>
-    <div class="hd-field"><label>품목</label><input class="hd-in" data-hd-in="goods" maxlength="100" value="${esc(F.goods)}" placeholder="예: 방킬라이 1PLT · 3m"></div>
+    <div class="hd-field"><label>품목</label><div class="hd-chips">${GOODS.map((v) => chip('goods', v, F.goods === v)).join('')}</div>
+      <input class="hd-in" data-hd-in="goods" maxlength="100" value="${esc(GOODS.includes(F.goods) ? '' : F.goods)}" placeholder="직접 입력 (예: 방킬라이 1PLT · 3m)"></div>
     <div class="hd-field"><label>무게</label><div class="hd-chips">${chip('weight', '최대중량', F.weight === '최대중량')}</div>
       <input class="hd-in" data-hd-in="weight" maxlength="100" value="${esc(F.weight === '최대중량' ? '' : F.weight)}" placeholder="예: 600kg"></div>
     <div class="hd-field"><label>일정 <span class="hd-opt-lab">(선택)</span></label><div class="hd-chips">${chip('sched', '오늘 상차 / 내일 하차', F.sched === '오늘 상차 / 내일 하차')}${chip('sched', '바로 상차 / 바로 하차', F.sched === '바로 상차 / 바로 하차')}</div>
