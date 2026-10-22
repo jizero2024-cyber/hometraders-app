@@ -3851,12 +3851,14 @@ async function chReadAll(j) {
   }
   j.busy = false; chTitle(j);
   if (!j.items.some((it) => it.doc)) { chSave(); render(); return; }
-  j.items.forEach((it, i) => { if (it.doc && chUnknown(it).length) chCard(j, 'map', i); });
+  j.items.forEach((it, i) => { if (it.doc && chUnknown(it, j).length) chCard(j, 'map', i); });
   if (!j.mode) chCard(j, 'ask');
   else await chRun(j);
   chSave(); render();
 }
-const chUnknown = (it) => (it.doc ? it.doc.lines.map((l, k) => ({ l, k })).filter(({ l }) => (l.conf === 'mid' || l.conf === 'none') && !l._skip) : []);
+// 납품확인서는 인슐레이션·방수시트·타이벡 줄만 물어봄 — 슁글·사이딩처럼 확인서에 안 들어가는 줄은 몰라도 그냥 만듦 (10/22 대표)
+const chAsk = (j, l) => !j || j.mode !== 'deliv' || !!(DL.categoryOf(l.raw_name) || DL.categoryOf(l.name) || DL.categoryOf(l.ours));
+const chUnknown = (it, j) => (it.doc ? it.doc.lines.map((l, k) => ({ l, k })).filter(({ l }) => (l.conf === 'mid' || l.conf === 'none') && !l._skip && chAsk(j, l)) : []);
 async function chRun(j) {
   const m = j.mode;
   if (CH_CONVERT[m]) { await chConvert(j, j.items.filter((it) => it.b64).map((it) => ({ name: it.name, mime: it.mime, b64: it.b64 })), true); return; }
@@ -3868,9 +3870,9 @@ async function chRun(j) {
     await chSale(j, txt, true, txt ? null : docs); return;
   }
   if (!helperState.up && m !== 'deliv') { chSay(j, `${CH_LABEL[m]}는 이 맥의 로컬 도우미가 켜져 있어야 만들 수 있어요.`, { err: true }); return; }
-  const wait = j.items.filter((it) => it.doc && chUnknown(it).length).length;
+  const wait = j.items.filter((it) => it.doc && chUnknown(it, j).length).length;
   if (wait) chSay(j, `위 품목을 고르면 바로 ${CH_LABEL[m]}를 만들게요. 모르는 품목은 [그대로 두기]를 누르세요.`);
-  for (let i = 0; i < j.items.length; i++) if (j.items[i].doc && !chUnknown(j.items[i]).length) await chRunItem(j, i);
+  for (let i = 0; i < j.items.length; i++) if (j.items[i].doc && !chUnknown(j.items[i], j).length) await chRunItem(j, i);
 }
 async function chRunItem(j, i) {   // 문서 한 장 → 고른 종류로 만들기
   const it = j.items[i], m = j.mode;
@@ -4187,7 +4189,7 @@ async function chPick(j, i, k, name) {
       l.conf = 'high'; l._saved = true;
     } catch (e) { l._saved = false; chSay(j, `매핑 저장 실패: ${e.message}`, { err: true }); }
   }
-  if (!chUnknown(it).length && ['buy', 'deliv', 'quote'].includes(j.mode) && helperState.up) {
+  if (!chUnknown(it, j).length && ['buy', 'deliv', 'quote'].includes(j.mode) && helperState.up) {
     if (it.done === j.mode) { await chRunItem(j, i); chSay(j, `품목을 고친 대로 위 ${CH_LABEL[j.mode]}를 다시 만들었어요.`); }
     else await chRunItem(j, i);
   }
@@ -4273,9 +4275,9 @@ function chCardSale(j) {
 }
 function chCardMap(j, i) {
   const it = j.items[i]; if (!it || !it.doc) return '';
-  const all = it.doc.lines.map((l, k) => ({ l, k })).filter(({ l }) => l.conf === 'mid' || l.conf === 'none' || l._saved !== undefined || l._skip);
+  const all = it.doc.lines.map((l, k) => ({ l, k })).filter(({ l }) => (l.conf === 'mid' || l.conf === 'none' || l._saved !== undefined || l._skip) && chAsk(j, l));
   if (!all.length) return '';
-  const left = chUnknown(it);
+  const left = chUnknown(it, j);
   if (!left.length) {
     const saved = all.filter(({ l }) => l._saved).length;
     return `<div class="ch-done">처음 보는 품목 ${all.length}개 정리 끝${saved ? ` · 매핑 ${saved}개 저장 (다음부터 자동)` : ''}</div>`;
