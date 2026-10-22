@@ -4828,7 +4828,7 @@ const TITLES = { home: ['홈트레이더스', '재고 · 출고 관리'], quote:
 function render() {
   if (state.route === 'start' || state.route === 'homt') {   // 첫 화면(에이스/홈트) · 홈트 배차 요청 — PC·휴대폰 같은 화면
     document.body.classList.remove('erp');
-    app.innerHTML = state.route === 'start' ? HD.startScreen() : HD.homtScreen(render);
+    app.innerHTML = state.route === 'start' ? HD.startScreen() : HD.homtScreen();
     if (state.route === 'homt') HD.afterRender();
     return;
   }
