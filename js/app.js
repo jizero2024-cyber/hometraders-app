@@ -3896,13 +3896,24 @@ async function chConvert(j, files, quiet) {
 }
 // 출고일보 전표 링크(구글 드라이브) → 거래명세표 — 도우미가 이 맥의 드라이브 폴더에서 이카운트 전표 PDF 를 읽어 판매전표 엑셀 꼴로 돌려줌 (10/22)
 //   여러 링크 한 번에 · 판매전표 = 거래명세표, 구매전표만 있으면 구매명세서. 구매명세표·에이스명세표를 먼저 골랐으면 그 양식으로.
+//   도우미가 켜져 있으면 도우미가 바로 읽고, 아니면 공유 DB(slip_rows — 맥 도우미가 10분마다 올려 둠)에서 찾음.
 const CH_SLIP_LINK = /drive\.google\.com\/(?:file\/d\/|open\?id=)[A-Za-z0-9_-]{20,}/;
+const CH_SLIP_IDS = /drive\.google\.com\/(?:file\/d\/|open\?id=)([A-Za-z0-9_-]{20,})/g;
+const CH_SLIP_HEAD = ['일자', '순번', '거래처명', '품목명', '규격', '수량', '단가', '공급가액', '부가세'];
+async function chSlipsFromDb(text) {
+  const ids = [...new Set([...text.matchAll(CH_SLIP_IDS)].map((m) => m[1]))];
+  const by = Object.fromEntries((await S.getSlipRows(ids)).map((g) => [g.drive_id, g]));
+  return { head: CH_SLIP_HEAD, slips: ids.map((id) => (by[id] ? { id, ...by[id] }
+    : { id, error: '공유 DB 에 아직 없는 전표예요 — 출고일보에 올라오고 10분쯤 지나면 돼요 (사무실 맥이 켜져 있을 때 올라감)' })) };
+}
 async function chLinks(j, text) {
-  if (!helperState.up) { chSay(j, '전표 링크는 이 맥의 로컬 도우미가 켜져 있어야 읽을 수 있어요. 이카운트 판매 엑셀(.xlsx)을 끌어다 놓아도 돼요.', { err: true }); chSave(); render(); return; }
   j.busy = true; render();
-  let r;
-  try { r = await helperFetch('/api/slip/links', { text }); }
-  catch (e) { j.busy = false; chSay(j, `전표 링크를 못 읽었어요 — ${e.message || e}`, { err: true }); chSave(); render(); return; }
+  let r = null;
+  if (helperState.up) { try { r = await helperFetch('/api/slip/links', { text }); } catch (e) { r = null; } }
+  if (!r) {
+    try { r = await chSlipsFromDb(text); }
+    catch (e) { j.busy = false; chSay(j, `전표 링크를 못 읽었어요 — ${e.message || e}`, { err: true }); chSave(); render(); return; }
+  }
   j.busy = false;
   r.slips.filter((s) => s.error).forEach((s) => chSay(j, `${s.file || '링크 ' + s.id.slice(0, 8) + '…'}: ${s.error}`, { err: true }));
   r.slips.filter((s) => s.warn).forEach((s) => chSay(j, `${s.kind}전표 ${s.slip}: ${s.warn}`, { err: true }));

@@ -217,6 +217,13 @@ export async function deleteChatJob(id) {
   if (error) console.error('[작업 기록 삭제 실패]', error.message);
   return { error };
 }
+// ── 출고일보 전표 링크 → 전표 줄 (slip_rows) — 맥 도우미가 이카운트 전표 PDF 를 읽어 올려 둔 것. 도우미 없이 거래명세표 만들 때 ──
+export async function getSlipRows(ids) {
+  if (!ids.length) return [];
+  const { data, error } = await sb.from('slip_rows').select('drive_id,kind,slip,partner,file,rows,warn').in('drive_id', ids);
+  if (error) throw new Error(/does not exist|relation|schema cache|could not find/i.test(error.message) ? '공유 DB 에 전표 표(slip_rows)가 아직 없어요.' : error.message);
+  return data || [];
+}
 // 실시간 구독은 딱 1회만. 이미 붙은 채널이 있으면 제거 후 재구독(재진입 안전) →
 // "cannot add postgres_changes callbacks after subscribe()" 방지.
 let _realtimeOn = false;
