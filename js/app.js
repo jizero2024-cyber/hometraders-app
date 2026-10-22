@@ -6,6 +6,7 @@ import { ECOUNT_ITEMS } from './ecount-items.js';
 import { makeMatcher, readPastedText, quotePrev } from './textread.js';
 import * as DL from './delivery.js';
 import * as SM from './stmt.js';
+import * as HD from './hdisp.js';
 
 // 창고 아이콘 세트 (무채색)
 const WH_ICONS = {
@@ -2125,6 +2126,7 @@ function deskTop() {
     <div class="e-brand" data-act="erp-nav" data-r="chat" title="대화 화면으로"><img src="./icons/favicon.png" alt=""><b>홈트 도우미</b></div>
     <div class="e-corp">주식회사 홈트레이더스</div>
     <div class="e-quick">
+      <button type="button" data-hd="back" title="에이스 / 홈트 고르는 첫 화면">⌂ 처음 화면</button>
       <button type="button" data-act="erp-nav" data-r="chat">← 대화 화면</button>
       <button type="button" data-act="new-ship">출고 입력</button>
       <button type="button" data-act="add-inbound">입고 입력</button>
@@ -4824,6 +4826,12 @@ document.addEventListener('keydown', (e) => {
 const TITLES = { home: ['홈트레이더스', '재고 · 출고 관리'], quote: ['견적', '견적 · 단가표'], silicone: ['실리콘', '색상별 재고'], stock: ['창고', '창고별 재고'], ship: ['출고', '등록하면 재고 자동 차감'], invoice: ['명세서', '거래명세서 발행 관리'], settings: ['설정', '품목 · 데이터'], review: ['스밭비서 입력 확인', '2027로 넣은 2026 누락분'] };
 
 function render() {
+  if (state.route === 'start' || state.route === 'homt') {   // 첫 화면(에이스/홈트) · 홈트 배차 요청 — PC·휴대폰 같은 화면
+    document.body.classList.remove('erp');
+    app.innerHTML = state.route === 'start' ? HD.startScreen() : HD.homtScreen(render);
+    if (state.route === 'homt') HD.afterRender();
+    return;
+  }
   if (isDesk()) { renderDesk(); return; }   // PC(1024px↑) = 업무형 화면
   document.body.classList.remove('erp');
   if (!TITLES[state.route]) mobileFromDesk();
@@ -4832,7 +4840,7 @@ function render() {
   const body = { review: screenReview, home: screenHome, quote: screenQuote, silicone: screenSilicone, stock: screenStock, ship: screenShip, invoice: screenInvoice, settings: screenSettings }[state.route]();
   const showFab = state.route === 'ship' || state.route === 'home' || state.route === 'stock';
   app.innerHTML = `
-    <div class="appbar"><img class="logo" src="./icons/logo-full.png" alt="HOME TRADERS"><h1>${title}</h1><span class="sub">${sub}</span>${rvBell(true)}</div>
+    <div class="appbar"><img class="logo" src="./icons/logo-full.png" alt="HOME TRADERS" data-hd="back" title="처음 화면"><h1>${title}</h1><span class="sub">${sub}</span>${rvBell(true)}</div>
     ${body}
     ${showFab ? `<div class="fab-wrap">
       ${state.fabOpen ? `
@@ -5472,8 +5480,7 @@ async function boot() {
   if (booted) { render(); return; }
   app.innerHTML = '<div style="padding:64px 24px;text-align:center;color:#888;font-size:15px">불러오는 중…</div>';
   // PC는 열 때마다 대화 화면부터 (예전엔 마지막 화면을 기억해 업무 현황이 다시 떠서 바뀐 걸 못 봄). 휴대폰은 기억한 화면 그대로
-  if (isDesk()) state.route = 'chat';
-  else { try { const r = sessionStorage.getItem('ht_route'); if (r && TITLES[r]) state.route = r; } catch (e) { /* 무시 */ } }
+  state.route = 'start';   // 열 때마다 첫 화면(에이스/홈트)부터 — 에이스를 누르면 아래 aceRoute() 로 기존 ERP
   try { await S.init(); booted = true; render(); }
   catch (e) { app.innerHTML = `<div style="padding:48px 24px;text-align:center"><b>연결 오류</b><br><span style="color:#888;font-size:13px">${esc(e.message || String(e))}</span></div>`; }
 }
@@ -5487,6 +5494,18 @@ app.addEventListener('change', (e) => {
   if ((it.note || '') === v) return;
   S.updateItem(it.id, { note: v });
   openSheet(sheetColor(it.name));
+});
+// 기존 ERP 첫 화면 — PC는 대화 화면, 휴대폰은 마지막에 보던 화면 (예전 boot 규칙 그대로)
+function aceRoute() {
+  if (isDesk()) return 'chat';
+  try { const r = sessionStorage.getItem('ht_route'); if (r && TITLES[r]) return r; } catch (e) { /* 무시 */ }
+  return 'home';
+}
+HD.bind(app, {
+  rerender: render,
+  goAce: () => { state.route = aceRoute(); state.sheet = null; render(); },
+  goHomt: () => { state.route = 'homt'; state.sheet = null; render(); },
+  goStart: () => { state.route = 'start'; state.sheet = null; render(); },
 });
 S.subscribe(render);
 S.onError((m) => alert('저장에 실패했어요 — 잠시 후 다시 시도해주세요.\n\n원인: ' + m));

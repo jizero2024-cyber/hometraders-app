@@ -469,3 +469,39 @@ textarea{resize:vertical;line-height:1.5;}
   .printarea{position:absolute;left:0;top:0;width:100%;border:none;padding:8mm 6mm;}
   .pr-tbl th{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
 }
+
+/* ── 첫 화면(에이스/홈트) · 홈트 배차 요청 (hdisp.js, 2026-10-22) ── */
+.hd-start { position: fixed; inset: 0; display: flex; flex-direction: column; background: var(--bg, #fff); }
+@media (min-width: 768px) { .hd-start { flex-direction: row; } }
+.hd-half { flex: 1; border: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; cursor: pointer; font-family: inherit; transition: filter .15s; }
+.hd-half:hover { filter: brightness(.97); }
+.hd-half.ace { background: #1f3a5f; color: #fff; }
+.hd-half.homt { background: #fff4e6; color: #1f2937; }
+.hd-half img { height: 34px; }
+.hd-big { font-size: 44px; font-weight: 800; letter-spacing: .08em; }
+.hd-sub { font-size: 15px; opacity: .75; }
+.hd-page { max-width: 640px; margin: 0 auto; padding: 12px 16px 40px; }
+.hd-top { display: flex; align-items: center; justify-content: space-between; padding: 6px 0 14px; font-size: 18px; }
+.hd-back { border: 0; background: none; font: inherit; font-size: 15px; color: var(--muted, #667085); cursor: pointer; padding: 6px 0; }
+.hd-field { margin-bottom: 16px; position: relative; }
+.hd-field > label { display: block; font-weight: 700; font-size: 14px; margin-bottom: 6px; }
+.hd-opt-lab { font-weight: 400; color: var(--faint, #98a2b3); }
+.hd-in { width: 100%; box-sizing: border-box; padding: 12px 13px; border-radius: 11px; border: 1px solid var(--line, #e4e7ec); background: var(--surface-2, #f8f9fb); color: var(--ink, #1f2937); font: inherit; font-size: 15px; margin-top: 6px; }
+.hd-search { margin-top: 0; }
+.hd-list { position: absolute; z-index: 20; left: 0; right: 0; max-height: 320px; overflow-y: auto; background: #fff; border: 1px solid var(--line, #e4e7ec); border-radius: 11px; box-shadow: 0 8px 24px rgba(16,24,40,.12); margin-top: 4px; }
+.hd-opt { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; width: 100%; text-align: left; border: 0; border-bottom: 1px solid #f2f4f7; background: #fff; padding: 10px 12px; font: inherit; cursor: pointer; }
+.hd-opt:hover { background: #f5f8ff; }
+.hd-opt.new { background: #fffaeb; }
+.hd-opt-nm { font-weight: 700; font-size: 15px; }
+.hd-opt-ad { grid-column: 1 / -1; font-size: 12.5px; color: var(--muted, #667085); }
+.hd-kind { font-size: 11.5px; color: #3e6ae1; background: #eef3ff; border-radius: 6px; padding: 2px 6px; align-self: center; white-space: nowrap; }
+.hd-empty { padding: 14px; color: var(--muted, #667085); font-size: 14px; }
+.hd-picked { border: 1px solid var(--line, #e4e7ec); border-radius: 11px; padding: 10px 12px; }
+.hd-picked-top { display: flex; align-items: center; gap: 8px; font-size: 16px; }
+.hd-x { margin-left: auto; border: 0; background: none; color: #3e6ae1; font: inherit; font-size: 13px; cursor: pointer; }
+.hd-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.hd-chip { border: 1px solid var(--line, #d0d5dd); background: #fff; border-radius: 999px; padding: 8px 13px; font: inherit; font-size: 14px; cursor: pointer; color: var(--ink, #1f2937); }
+.hd-chip.on { background: #1f3a5f; border-color: #1f3a5f; color: #fff; }
+.hd-pre { white-space: pre-wrap; background: var(--surface-2, #f8f9fb); border-radius: 11px; padding: 12px 13px; font-family: inherit; font-size: 14px; line-height: 1.55; margin: 0; }
+.hd-go { width: 100%; border: 0; border-radius: 12px; padding: 15px; font: inherit; font-size: 16px; font-weight: 700; background: #e8740c; color: #fff; cursor: pointer; }
+.appbar .logo[data-hd] { cursor: pointer; }
