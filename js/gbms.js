@@ -20,21 +20,7 @@ const G = { biz: 'homt', loaded: '', loading: false, err: '', list: [], docs: {}
 let ctx = { rerender: () => {}, goStart: () => {}, go: () => {}, me: () => '', slips: async () => ({ slips: [] }), helper: async () => ({}), helperUp: () => false };
 
 // ── 데이터 ─────────────────────────────────────────
-// 세라믹사이딩 출고(같은 날·같은 현장, 현장이 없으면 전표)는 운반비를 무조건 청구 — 공간로직스 차로 나간 출고만 빼고.
-//   구조재는 지금은 운반비 안 받음 (10/23 대표).
-//   운반비 줄이 하나도 없는 출고의 장에 noFreight 표시 → 직원 화면에만 빨갛게 (공간제작소 계정엔 안 보임)
-const slipKey = (slip) => { const m = /(20\d\d)\/(\d{1,2})\/(\d{1,2})\s*-\s*(\d+)/.exec(String(slip)); return m ? `${m[1]}${m[2].padStart(2, '0')}${m[3].padStart(2, '0')}-${m[4]}` : String(slip); };
-const hasFreight = (d) => d.items.some((x) => x.name.replace(/\s/g, '').includes('운반비'));
-function markNoFreight(list, logi) {
-  const by = {};
-  list.filter((d) => !d.manual).forEach((d) => { const k = d.site ? `${d.ymd}|${d.site}` : `${d.ymd}|${(d.slips || [d.slip]).join(',')}`; (by[k] = by[k] || []).push(d); });
-  Object.values(by).forEach((ds) => {
-    const isLogi = ds.some((d) => (d.slips || [d.slip]).some((sl) => logi.has(sl)));
-    const ceramic = ds.some((d) => d.items.some((x) => /세라믹사이딩|아이큐브/.test(x.name.replace(/\s/g, ''))));
-    const miss = ceramic && !isLogi && !ds.some(hasFreight);
-    ds.forEach((d) => { d.noFreight = miss; });
-  });
-}
+// 운반비 빠진 출고는 화면에 표시하지 않음 — 공간제작소와 같이 보는 화면 (10/23 대표). 누락은 출고일보 작업(ROUTINE)에서 이카운트에 넣음
 // 직접 등록한 장 (gonggan_docs.manual = {ymd, site, partner, items:[{name, qty, price}]}) → 목록 한 장
 function manualDoc(x) {
   const m = x.manual, date = new Date(+m.ymd.slice(0, 4), +m.ymd.slice(4, 6) - 1, +m.ymd.slice(6, 8));
@@ -54,7 +40,6 @@ export async function load(biz, force) {
     G.list = [...list.map((d) => ({ ...d, id: docId(d), total: d.items.reduce((a, x) => a + x.supply + x.vat, 0) })), ...manual]
       .filter((d) => (G.docs[d.id] || {}).status !== '삭제')                         // 지운 장은 안 보임 (10/23)
       .sort((a, b) => (b.ymd + b.slip).localeCompare(a.ymd + a.slip));
-    markNoFreight(G.list, new Set(sales.filter((r) => r.logi).map((r) => slipKey(r.slip))));
     G.loaded = biz;
   } catch (e) { G.err = e.message || String(e); }
   G.loading = false; ctx.rerender();
@@ -195,7 +180,7 @@ function rowHtml(d) {
     <td style="padding:12px 6px 12px 14px">${canDraft ? `<input type="checkbox" data-gb="pick" data-id="${esc(d.id)}" aria-label="선택" ${G.pick.has(d.id) ? 'checked' : ''} style="width:16px;height:16px;accent-color:#1D4F91">` : ''}</td>
     <td style="padding:12px 8px;white-space:nowrap"><b>${md(d.ymd)}</b><div style="font-size:11px;color:#6B6B6B">${esc((d.slips || [d.slip]).map((s) => s.slice(4)).join(', '))}</div></td>
     <td style="padding:12px 8px;white-space:nowrap">${esc(d.site || '')}</td>
-    <td style="padding:12px 8px"><div style="font-weight:600">${esc(itemTitle(d))}${d.noFreight && ctx.me() !== 'space1234' ? ' <span style="display:inline-block;margin-left:6px;padding:2px 8px;border-radius:10px;background:#FDECEC;color:#B42318;font-size:11px;font-weight:700;vertical-align:middle">운반비 없음</span>' : ''}</div>${st === '수정요청' && x.reason ? `<div style="margin-top:6px;max-width:340px;font-size:12px;line-height:1.5;color:#B42318;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden"><b>수정요청</b> ${esc(x.reason)}</div>` : ''}</td>
+    <td style="padding:12px 8px"><div style="font-weight:600">${esc(itemTitle(d))}</div>${st === '수정요청' && x.reason ? `<div style="margin-top:6px;max-width:340px;font-size:12px;line-height:1.5;color:#B42318;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden"><b>수정요청</b> ${esc(x.reason)}</div>` : ''}</td>
     <td style="padding:12px 8px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums">${won(d.total)}</td>
     <td style="padding:12px 8px;text-align:center">${okTag}</td>
     <td style="padding:12px 8px;text-align:center">${x.tax_name ? okTag : addBtn('addtax', d.id)}</td>
