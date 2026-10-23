@@ -29,7 +29,7 @@ export async function getGongganSales(biz) {
   return out;
 }
 export async function getGongganDocs(biz) {
-  const { data, error } = await sb.from('gonggan_docs').select('id,biz,status,tax_name,tax_no,manual,reason,drafted_at,updated_by,updated_at').eq('biz', biz).limit(5000);
+  const { data, error } = await sb.from('gonggan_docs').select('id,biz,status,tax_name,tax_no,manual,delivered,reason,drafted_at,updated_by,updated_at').eq('biz', biz).limit(5000);
   if (error) throw new Error(error.message);
   return data || [];
 }
