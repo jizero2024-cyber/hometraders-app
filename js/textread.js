@@ -219,7 +219,7 @@ const CATS = [
 const GRADES = [[/J-?GRADE|JAS/, 'JAS/J-GRADE'], [/PREM|PRIEM/, 'PREMIUM/SE'], [/2&BTR|2&B/, '2&BTR']];
 const cats = (s) => { const u = String(s || '').toUpperCase(); return CATS.filter(([rx]) => rx.test(u)).map(([, c]) => c); };
 const LEDGER_TAIL = /\s*\/\s*[\d,.]+\s*[*xX×]\s*[\d,.]+\s*$/;
-const TAG_TAIL = /\s*\[[^\]]*\]\s*$/;
+const TAG_TAIL = /\s*\[(?:[^\[\]]|\[[^\[\]]*\])*\]\s*$/;   // 안에 [ ] 가 한 번 더 있어도
 
 export function makeMatcher(ecountItems, itemMap) {
   const byName = new Map(ecountItems.map(([c, n]) => [n, c]));

@@ -16,6 +16,7 @@ const SUPPLIER = {
   bank: '은행명 : 기업은행  |  계좌번호 : 120-187273-04-013  |  예금주 : 주식회사 홈트레이더스',
 };
 const PLACES = { 공간제작소: '경기 화성시 우정읍 매향리 989' };   // 거래처별 인도 장소 (없으면 빈칸)
+const HOME_SITES = { 공간제작소: ['화성우정', '화성', '우정', '매향리'] };   // 거래처 자기 공장으로 가는 건 — 현장명으로 안 찍음 (10/23 대표)
 
 const nfc = (v) => String(v == null ? '' : v).normalize('NFC').trim();
 const key = (s) => nfc(s).replace(/\(주\)|주식회사|㈜|\s/g, '');
@@ -62,8 +63,10 @@ export async function readSheets(file) {
 }
 
 // ── 전표 읽기 (세 가지 모양) ────────────────────────────────
-const stripTag = (s) => nfc(s).replace(/\s*\[[^\]]*\]\s*$/, '').trim();
-const rawTag = (s) => { const m = /\[([^\]]*)\]\s*$/.exec(nfc(s)); return m ? m[1].trim() : ''; };
+// 품명 끝 태그 — 안에 [ ] 가 한 번 더 있어도 (…[1020/공간/화성우정 [2.8M 50M]]) 바깥 괄호까지 한 덩어리
+const TAG_END = /\s*\[((?:[^\[\]]|\[[^\[\]]*\])*)\]\s*$/;
+const stripTag = (s) => nfc(s).replace(TAG_END, '').trim();
+const rawTag = (s) => { const m = TAG_END.exec(nfc(s)); return m ? m[1].replace(/\s*\[[^\]]*\]/g, '').trim() : ''; };
 // 현장 태그 → 보기 좋은 현장명 (0629/뉴하우징홈/평택/김인숙건축주 → 평택 김인숙건축주)
 const siteOf = (tag, partner) => {
   const t = nfc(tag);
@@ -389,7 +392,9 @@ export function splitSheets(vouchers, opt) {
       if (lk && lumberAt[lk]) { lumberAt[lk].items.push(...g.items); return; }   // 같은 전표·같은 치수 구조재는 먼저 만든 장에 붙임
       const k = `${v.ymd}|${v.partner}`;
       seq[k] = (seq[k] || 0) + 1;
-      out.push({ slip: g.slip || v.slip, ymd: v.ymd, partner: v.partner, seq: seq[k], items: [...g.items], site: g.site || v.site || '' });
+      const site = g.site || v.site || '';
+      const home = HOME_SITES[key(v.partner)] || [];
+      out.push({ slip: g.slip || v.slip, ymd: v.ymd, partner: v.partner, seq: seq[k], items: [...g.items], site: home.includes(site.replace(/\s/g, '')) ? '' : site });
       if (lk) lumberAt[lk] = out[out.length - 1];
     });
   });
