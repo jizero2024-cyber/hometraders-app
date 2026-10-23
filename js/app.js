@@ -5655,9 +5655,30 @@ function aceRoute() {
   return 'home';
 }
 // 출고일보 전표 링크 → 전표 줄 (도우미가 켜져 있으면 도우미, 아니면 공유 DB slip_rows)
+//   + 출고 번호(공간제작소-261020-01)·전표 번호(20261020-3 · 10/20-3)도 — 공유 DB board_slips → slip_rows (판매전표만, 10/23 대표)
+const BOARD_NO = /[^\s,·]+-\d{6}-\d{2}/g;
 async function slipsFor(text) {
-  if (helperState.up) { try { return await helperFetch('/api/slip/links', { text }); } catch (e) { /* 공유 DB 로 */ } }
-  return chSlipsFromDb(text);
+  let r = { head: CH_SLIP_HEAD, slips: [] };
+  if (CH_SLIP_LINK.test(text)) {
+    r = null;
+    if (helperState.up) { try { r = await helperFetch('/api/slip/links', { text }); } catch (e) { r = null; } }
+    if (!r) r = await chSlipsFromDb(text);
+  }
+  const rest = text.replace(/https?:\/\/\S+/g, ' ');
+  const nos = [...new Set(rest.match(BOARD_NO) || [])];
+  const left = rest.replace(BOARD_NO, ' ');
+  const want = new Set([...left.matchAll(/(?<!\d)20(?:26|27)(\d{4})-(\d+)/g)].map((m) => `2026${m[1]}-${m[2]}`));
+  [...left.matchAll(/(?<![\d/])(\d{1,2})\/(\d{1,2})-(\d+)/g)].forEach((m) => want.add(`2026${m[1].padStart(2, '0')}${m[2].padStart(2, '0')}-${m[3]}`));
+  if (nos.length) {
+    const found = await S.getBoardSlips(nos);
+    nos.forEach((no) => { const b = found.find((x) => x.no === no); if (b) b.slips.forEach((x) => want.add(x)); else r.slips.push({ id: no, error: `출고 번호 ${no}: 이카운트에 넣은 판매전표가 아직 없어요` }); });
+  }
+  if (want.size) {
+    const got = (await S.getSlipRowsBySlip([...want])).filter((g) => g.kind === '판매');
+    [...want].forEach((sl) => { const g = got.find((x) => x.slip === sl); if (g) r.slips.push({ id: sl, ...g }); else r.slips.push({ id: sl, error: `판매전표 ${sl}: 공유 DB 에 아직 없어요 (출고일보에 전표 PDF가 올라오면 10분 안에 생겨요)` }); });
+  }
+  if (!r.slips.length) r.slips.push({ id: '-', error: '출고 번호(공간제작소-261020-01)·전표 번호(20261020-3)·전표 링크를 넣어 주세요' });
+  return r;
 }
 FM.bind(app, {
   rerender: render,

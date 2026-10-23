@@ -34,7 +34,7 @@ function page(back, title, body, right) {
 const noHelper = () => (ctx.helperUp() ? '' : '<div class="fm-warn">사무실 맥 도우미가 꺼져 있어요</div>');
 function inputCard(f, accept, extra, ph) {
   return `<section class="fm-in" id="fm-drop">
-    <textarea id="fm-text" class="fm-ta" rows="2" placeholder="${ph || '출고일보 전표 링크 붙여넣기'}">${esc(f.text)}</textarea>
+    <textarea id="fm-text" class="fm-ta" rows="2" placeholder="${ph || '출고 번호 · 전표 번호 · 전표 링크 (예: 공간제작소-261020-01)'}">${esc(f.text)}</textarea>
     <div class="fm-row">
       <button type="button" class="fm-btn ghost" data-fm="pick">파일 고르기</button><input type="file" id="fm-file" multiple accept="${accept}" hidden>
       ${f.files.map((x, i) => `<span class="fm-file">${esc(x.name)}<button type="button" data-fm="unpick" data-i="${i}" aria-label="빼기">✕</button></span>`).join('')}
@@ -64,7 +64,7 @@ function stmtScreen(route) {
 async function loadStmt(route) {
   const f = F[route];
   const text = f.text.trim();
-  if (!text && !f.files.length) { f.err = '전표 링크를 붙여넣거나 판매 엑셀을 골라 주세요'; ctx.rerender(); return; }
+  if (!text && !f.files.length) { f.err = '출고 번호·전표 번호·전표 링크를 넣거나 판매 엑셀을 골라 주세요'; ctx.rerender(); return; }
   f.busy = true; f.err = ''; ctx.rerender();
   const vouchers = [], errs = [];
   try {

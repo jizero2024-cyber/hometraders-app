@@ -224,6 +224,20 @@ export async function getSlipRows(ids) {
   if (error) throw new Error(/does not exist|relation|schema cache|could not find/i.test(error.message) ? '공유 DB 에 전표 표(slip_rows)가 아직 없어요.' : error.message);
   return data || [];
 }
+// 출고일보 번호(공간제작소-261020-01) → 판매전표 번호 (board_slips — 맥 도우미가 출고일보 입력 칸에서 올림, 10/23)
+export async function getBoardSlips(nos) {
+  if (!nos.length) return [];
+  const { data, error } = await sb.from('board_slips').select('no,slips,partner,ymd').in('no', nos);
+  if (error) throw new Error(/does not exist|relation|schema cache|could not find/i.test(error.message) ? '공유 DB 에 출고 번호 표(board_slips)가 아직 없어요.' : error.message);
+  return data || [];
+}
+export async function getSlipRowsBySlip(slips) {   // 전표 번호(20261020-3)로 — 같은 전표가 링크 둘로 올라온 것은 하나로
+  if (!slips.length) return [];
+  const { data, error } = await sb.from('slip_rows').select('kind,slip,partner,file,rows,warn').in('slip', slips);
+  if (error) throw new Error(error.message);
+  const seen = new Set();
+  return (data || []).filter((g) => { const k = `${g.kind}|${g.slip}`; if (seen.has(k)) return false; seen.add(k); return true; });
+}
 // ── 공간제작소 BMS (gonggan_sales · gonggan_docs, 2026-10-23) ──
 export async function getGongganSales(biz) {
   const out = [];
