@@ -4944,7 +4944,7 @@ window.addEventListener('popstate', () => { state.route = routeFromPath(); state
 
 function render() {
   queueMicrotask(syncUrl);   // 화면을 다 그린 뒤 정해진 route 로 (PC·휴대폰 route 바꿈 포함)
-  if (myAccount === 'gonggan' && !String(state.route).startsWith('gonggan')) state.route = 'gonggan';   // 공간제작소 계정은 이 화면만
+  if (myAccount === GONG_ID && !String(state.route).startsWith('gonggan')) state.route = 'gonggan';   // 공간제작소 계정은 이 화면만
   if (state.route === 'gonggan' || state.route === 'gonggan-ace') {   // 공간제작소 BMS (10/23) — 홈트레이더스·현구 과장님 같은 화면
     document.body.classList.remove('erp');
     GB.setBiz(state.route === 'gonggan-ace' ? 'ace' : 'homt');
@@ -5582,13 +5582,14 @@ function downloadJSON() {
   URL.revokeObjectURL(a.href);
 }
 
+const GONG_ID = 'space1234';   // 공간제작소(현구 과장님) 계정 — 로그인하면 공간제작소 화면만
 function showLogin(msg) {
-  if (location.pathname.startsWith('/gonggan')) {   // 공간제작소 화면 로그인 — 비밀번호만 (계정 gonggan)
+  if (location.pathname.startsWith('/gonggan')) {   // 공간제작소 화면 로그인 — 아이디·비밀번호 (공간제작소 계정 space1234, 10/23 대표)
     app.innerHTML = `
     <div class="gb-login" style="max-width:340px;margin:0 auto;padding:16vh 24px 0;text-align:center;font-family:Pretendard,'Noto Sans KR',system-ui,sans-serif">
       <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:28px"><img src="./icons/partner-gongan.png" alt="공간제작소" style="height:48px"><span aria-hidden="true" style="color:#8A8A8A">×</span><img src="./icons/logo-full.png" alt="HOME TRADERS" style="height:44px"></div>
       <form id="login-form" style="display:flex;flex-direction:column;gap:10px">
-        <input name="userid" type="hidden" value="gonggan">
+        <input name="userid" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="아이디" aria-label="아이디" style="padding:14px;border-radius:11px;background:#F3F4F6;border:0;font-size:16px">
         <input name="password" type="password" autocomplete="current-password" placeholder="비밀번호" aria-label="비밀번호" style="padding:14px;border-radius:11px;background:#F3F4F6;border:0;font-size:16px">
         <button class="btn" type="submit" style="margin-top:4px">로그인</button>
         <p id="login-err" style="color:#e05a52;font-size:13px;min-height:18px;margin:2px 0">${msg || ''}</p>
@@ -5618,7 +5619,7 @@ async function boot() {
   if (booted) { render(); return; }
   app.innerHTML = '<div style="padding:64px 24px;text-align:center;color:#888;font-size:15px">불러오는 중…</div>';
   // PC는 열 때마다 대화 화면부터 (예전엔 마지막 화면을 기억해 업무 현황이 다시 떠서 바뀐 걸 못 봄). 휴대폰은 기억한 화면 그대로
-  state.route = myAccount === 'gonggan' && !routeFromPath().startsWith('gonggan') ? 'gonggan' : routeFromPath();   // 열 때마다 첫 화면(에이스/홈트)부터 — 주소에 화면 이름(/homt·/chat …)이 있으면 그 화면. 에이스를 누르면 아래 aceRoute() 로 기존 ERP
+  state.route = myAccount === GONG_ID && !routeFromPath().startsWith('gonggan') ? 'gonggan' : routeFromPath();   // 열 때마다 첫 화면(에이스/홈트)부터 — 주소에 화면 이름(/homt·/chat …)이 있으면 그 화면. 에이스를 누르면 아래 aceRoute() 로 기존 ERP
   try { await S.init(); booted = true; render(); }
   catch (e) { app.innerHTML = `<div style="padding:48px 24px;text-align:center"><b>연결 오류</b><br><span style="color:#888;font-size:13px">${esc(e.message || String(e))}</span></div>`; }
 }
