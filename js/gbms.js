@@ -24,7 +24,7 @@ let ctx = { rerender: () => {}, goStart: () => {}, go: () => {}, me: () => '', s
 function manualDoc(x) {
   const m = x.manual, date = new Date(+m.ymd.slice(0, 4), +m.ymd.slice(4, 6) - 1, +m.ymd.slice(6, 8));
   const items = m.items.map((it) => { const supply = Math.round((Number(it.qty) || 0) * (Number(it.price) || 0)); return { date, name: it.name, qty: Number(it.qty) || 0, supply, vat: Math.round(supply * 0.1) }; });
-  return { id: x.id, ymd: m.ymd, slip: `${m.ymd}-직접`, seq: 1, partner: m.partner || '(주)공간제작소', site: m.site || '', items, manual: true, total: items.reduce((a, i) => a + i.supply + i.vat, 0) };
+  return { id: x.id, ymd: m.ymd, slip: `${m.ymd}-${m.no || 1}`, seq: m.no || 1, partner: m.partner || '(주)공간제작소', site: m.site || '', items, manual: true, total: items.reduce((a, i) => a + i.supply + i.vat, 0) };
 }
 const docId = (d) => `${d.ymd}|${(d.slips || [d.slip]).slice().sort().join(',')}|${(d.items[0] || {}).name || ''}`;
 export async function load(biz, force) {
@@ -202,7 +202,7 @@ function docBox(kind, d) {
   if (!src && kind === 'stmt') return `<figure style="margin:0;display:flex;flex-direction:column;gap:8px">${cap}<div style="aspect-ratio:1588/1408;border:1px solid #D9D9D9;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#6B6B6B;font-size:13px">불러오는 중…</div></figure>`;
   if (!src) return `<figure style="margin:0;display:flex;flex-direction:column;gap:8px">${cap}<button type="button" data-gb="replace" data-k="tax" style="aspect-ratio:1588/1408;border:2px dashed #B8B8B8;border-radius:8px;background:#F4F4F4;color:#4B4B4B;font:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer"><span style="font-size:32px">+</span><b>세금계산서 넣기</b></button></figure>`;
   const pdf = src.startsWith('data:application/pdf');
-  const del = kind === 'stmt' ? `<button type="button" data-gb="delstmt" aria-label="거래명세표 지우기" style="position:absolute;top:8px;right:46px;width:30px;height:30px;border-radius:15px;border:1px solid #F1B5AF;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">${TRASH}</button>` : kind === 'tax' ? `<button type="button" data-gb="deltax" aria-label="세금계산서 지우기" style="position:absolute;top:8px;right:46px;width:30px;height:30px;border-radius:15px;border:1px solid #F1B5AF;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">${TRASH}</button>` : '';   // 잘못 넣은 세금계산서 지우기 (10/23 대표)
+  const del = kind === 'stmt' && ctx.me() !== 'space1234' ? `<button type="button" data-gb="delstmt" aria-label="거래명세표 지우기" style="position:absolute;top:8px;right:46px;width:30px;height:30px;border-radius:15px;border:1px solid #F1B5AF;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">${TRASH}</button>` : kind === 'tax' ? `<button type="button" data-gb="deltax" aria-label="세금계산서 지우기" style="position:absolute;top:8px;right:46px;width:30px;height:30px;border-radius:15px;border:1px solid #F1B5AF;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">${TRASH}</button>` : '';   // 잘못 넣은 세금계산서 지우기 (10/23 대표)
   return `<figure style="margin:0;display:flex;flex-direction:column;gap:8px">${cap}<div style="position:relative;border:1px solid #D9D9D9;border-radius:6px;overflow:hidden;background:#fff">${pdf ? `<embed src="${src}" type="application/pdf" style="width:100%;aspect-ratio:1588/1408;display:block">` : `<button type="button" data-gb="zoom" data-k="${kind}" aria-label="${label} 크게 보기" style="display:block;width:100%;padding:0;border:0;background:none;cursor:zoom-in"><img src="${src}" alt="${label}" style="width:100%;height:auto;display:block"></button>`}${del}${pen}</div></figure>`;
 }
 function modalHtml(d) {
@@ -328,7 +328,8 @@ async function regSave() {
   const d = regDoc(), r = G.reg;
   if (!d.items.length) { r.err = '품명·수량이 있는 줄이 없어요'; ctx.rerender(); return; }
   const id = `m${Date.now().toString(36)}`;
-  const manual = { ymd: d.ymd, site: d.site, partner: d.partner, items: d.items.map((it) => ({ name: it.name, qty: it.qty, price: it.qty ? Math.round(it.supply / it.qty) : 0 })) };
+  const no = G.list.filter((x) => x.ymd === d.ymd).length + 1;   // 그날 몇 번째 장 (에이스 양식 문서번호 제 261020-2호)
+  const manual = { ymd: d.ymd, no, site: d.site, partner: d.partner, items: d.items.map((it) => ({ name: it.name, qty: it.qty, price: it.qty ? Math.round(it.supply / it.qty) : 0 })) };
   const err = await S.saveGongganDoc({ id, biz: G.biz, manual, status: null, updated_by: ctx.me(), updated_at: new Date().toISOString() });
   if (err) { r.err = '저장하지 못했어요 — ' + err; ctx.rerender(); return; }
   G.docs[id] = { id, biz: G.biz, manual, status: null };
