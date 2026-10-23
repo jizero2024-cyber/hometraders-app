@@ -35,3 +35,4 @@ create policy gonggan_sales_staff on public.gonggan_sales for all to authenticat
 drop policy if exists gonggan_docs_staff on public.gonggan_docs;
 create policy gonggan_docs_staff on public.gonggan_docs for all to authenticated
   using ((auth.jwt() ->> 'email') like '%@hometraders.local') with check ((auth.jwt() ->> 'email') like '%@hometraders.local');
+alter table public.gonggan_docs add column if not exists tax_no text;   -- 세금계산서 승인번호 (2026-10-23, 화면이 PDF 글자·그림 글자 인식으로 찾음)

@@ -51,6 +51,36 @@ async function ensureFull(id) {
   G.full[id] = { loading: true };
   try { G.full[id] = await S.getGongganDocFull(id) || {}; } catch (e) { G.full[id] = {}; }
   ctx.rerender();
+  const x = G.docs[id] || {};
+  if (G.full[id].tax_data && !x.tax_no) findTaxNo(id, G.full[id].tax_data);   // 예전에 넣은 세금계산서도 승인번호 찾기
+}
+// ── 세금계산서 승인번호 (20261013-10261013-99366706) — PDF 는 글자 그대로, 그림은 글자 인식 (10/23 대표) ──
+const PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+const JSPDF = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+const loadJs = (src, has) => (has() ? Promise.resolve(has()) : new Promise((ok, no) => { const el = document.createElement('script'); el.src = src; el.onload = () => ok(has()); el.onerror = () => no(new Error('도구를 못 받았어요 — 인터넷 연결 확인')); document.head.appendChild(el); }));
+const NO_RE = /(\d{8})\s*[-–—]\s*(\d{8})\s*[-–—]\s*(\d{8})/;
+async function textOf(dataUrl) {
+  if (dataUrl.startsWith('data:application/pdf')) {
+    const lib = await loadJs(PDFJS, () => window.pdfjsLib);
+    lib.GlobalWorkerOptions.workerSrc = PDFJS.replace('pdf.min.js', 'pdf.worker.min.js');
+    const bin = Uint8Array.from(atob(dataUrl.split(',')[1]), (c) => c.charCodeAt(0));
+    const pdf = await lib.getDocument({ data: bin }).promise;
+    const pg = await pdf.getPage(1);
+    return (await pg.getTextContent()).items.map((it) => it.str).join(' ');
+  }
+  const OCR = await import('./stmt-ocr.js');
+  const blob = await (await fetch(dataUrl)).blob();
+  return (await OCR.readImage(blob)).join(' ');
+}
+const finding = new Set();
+async function findTaxNo(id, dataUrl) {
+  if (finding.has(id)) return;
+  finding.add(id);
+  try {
+    const m = NO_RE.exec((await textOf(dataUrl)).replace(/[Oo]/g, '0'));
+    if (m) save(id, { tax_no: `${m[1]}-${m[2]}-${m[3]}` });
+  } catch (e) { /* 못 찾으면 손으로 */ }
+  finding.delete(id);
 }
 async function ensureImg(d) {
   if (G.img[d.id]) return;
@@ -150,7 +180,12 @@ function docBox(kind, d) {
   const f = G.full[d.id] || {};
   const src = kind === 'stmt' ? (f.stmt_data || (G.img[d.id] && G.img[d.id] !== 'loading' ? G.img[d.id] : '')) : f.tax_data;
   const label = kind === 'stmt' ? '거래명세표' : '세금계산서';
-  const cap = `<figcaption style="display:flex;justify-content:space-between;align-items:center"><b>${label}</b><span style="display:flex;gap:6px">${['복사', 'JPG 저장'].map((t, i) => `<button type="button" data-gb="${i ? 'jpg' : 'copy'}" data-k="${kind}" ${src ? '' : 'disabled'} style="height:30px;padding:0 10px;border:1px solid #E6E4DF;border-radius:6px;background:#fff;font:inherit;font-size:12px;cursor:pointer">${t}</button>`).join('')}</span></figcaption>`;
+  const no = kind === 'tax' && src ? (G.docs[d.id] || {}).tax_no || '' : '';
+  const noRow = kind === 'tax' && src ? `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:14px">
+      <span style="color:#5C5C5C">승인번호</span>
+      ${no ? `<b style="font-size:16px;letter-spacing:.2px">${esc(no)}</b>` : `<input data-gb="taxno" placeholder="${finding.has(d.id) ? '찾는 중…' : '20261013-10261013-99366706'}" style="height:32px;width:260px;border:1px solid #D0D0D0;border-radius:6px;padding:0 10px;font:inherit;font-size:14px">`}
+      <button type="button" data-gb="copyno" ${no ? '' : 'disabled'} style="height:32px;padding:0 12px;border:1px solid #1D4F91;border-radius:6px;background:#fff;color:#1D4F91;font:inherit;font-size:13px;font-weight:700;cursor:pointer">복사하기</button></div>` : '';
+  const cap = `${noRow}<figcaption style="display:flex;justify-content:space-between;align-items:center"><b>${label}</b><span style="display:flex;gap:6px">${[['copy', '복사'], ['jpg', 'JPG 저장'], ['pdf', 'PDF 저장']].map(([a, t]) => `<button type="button" data-gb="${a}" data-k="${kind}" ${src ? '' : 'disabled'} style="height:30px;padding:0 10px;border:1px solid #E6E4DF;border-radius:6px;background:#fff;font:inherit;font-size:12px;cursor:pointer">${t}</button>`).join('')}</span></figcaption>`;
   const pen = `<button type="button" data-gb="replace" data-k="${kind}" aria-label="${label} 바꾸기" style="position:absolute;top:8px;right:8px;width:30px;height:30px;border-radius:15px;border:1px solid #D5D8DD;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">${PEN}</button>`;
   if (!src && kind === 'stmt') return `<figure style="margin:0;display:flex;flex-direction:column;gap:8px">${cap}<div style="aspect-ratio:1588/1408;border:1px solid #D9D9D9;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#6B6B6B;font-size:13px">불러오는 중…</div></figure>`;
   if (!src) return `<figure style="margin:0;display:flex;flex-direction:column;gap:8px">${cap}<button type="button" data-gb="replace" data-k="tax" style="aspect-ratio:1588/1408;border:2px dashed #B8B8B8;border-radius:8px;background:#F4F4F4;color:#4B4B4B;font:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer"><span style="font-size:32px">+</span><b>세금계산서 넣기</b></button></figure>`;
@@ -203,7 +238,7 @@ async function attach(id, kind, file) {
   try {
     const data = await toStored(file);
     const prev = G.docs[id] || {};
-    if (kind === 'tax') save(id, { tax_data: data, tax_name: file.name || '세금계산서', status: prev.status === '수정요청' ? null : prev.status || null });
+    if (kind === 'tax') { await save(id, { tax_data: data, tax_name: file.name || '세금계산서', tax_no: null, status: prev.status === '수정요청' ? null : prev.status || null }); findTaxNo(id, data); }
     else save(id, { stmt_data: data });
   } catch (e) { alert(e.message || e); }
 }
@@ -220,6 +255,21 @@ async function saveJpg(d, kind) {
   const c = await canvasOf(src);
   const blob = await new Promise((ok) => c.toBlob(ok, 'image/jpeg', 0.92));
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = fileName(d, kind); a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+async function savePdf(d, kind) {   // PDF 로 저장 — 이미 PDF 면 그대로, 그림은 A4 한 장에 맞춰
+  const src = srcOf(d, kind); if (!src || src === 'loading') return;
+  const name = fileName(d, kind).replace(/\.jpg$/, '.pdf');
+  if (src.startsWith('data:application/pdf')) { const a = document.createElement('a'); a.href = src; a.download = name; a.click(); return; }
+  try {
+    const { jsPDF } = await loadJs(JSPDF, () => window.jspdf);
+    const c = await canvasOf(src);
+    const land = c.width > c.height * 1.15;
+    const doc = new jsPDF({ orientation: land ? 'landscape' : 'portrait', unit: 'mm', format: 'a4' });
+    const W = land ? 297 : 210, Hh = land ? 210 : 297, m = 8;
+    const k = Math.min((W - m * 2) / c.width, (Hh - m * 2) / c.height);
+    doc.addImage(c.toDataURL('image/jpeg', 0.92), 'JPEG', (W - c.width * k) / 2, m, c.width * k, c.height * k);
+    doc.save(name);
+  } catch (e) { alert('PDF 로 저장하지 못했어요 — ' + (e.message || e)); }
 }
 async function copyImg(d, kind) {
   const src = srcOf(d, kind); if (!src || src === 'loading' || src.startsWith('data:application/pdf')) return;
@@ -250,7 +300,7 @@ export function bind(app, c) {
     else if (a === 'page') { G.page = Number(t.dataset.v) || 1; ctx.rerender(); }
     else if (a === 'addtax') { G.open = id; pickFile(id, 'tax'); ctx.rerender(); }
     else if (a === 'replace' && cur) pickFile(cur.id, t.dataset.k);
-    else if (a === 'deltax' && cur) { if (confirm('세금계산서를 지울까요?')) save(cur.id, { tax_data: null, tax_name: null, status: null, drafted_at: null }); }   // 지우면 결재전으로
+    else if (a === 'deltax' && cur) { if (confirm('세금계산서를 지울까요?')) save(cur.id, { tax_data: null, tax_name: null, tax_no: null, status: null, drafted_at: null }); }   // 지우면 결재전으로
     else if (a === 'draft') save(id, { status: '최종완료', drafted_at: new Date().toISOString() });
     else if (a === 'bulk') { const ids = [...G.pick]; G.pick.clear(); ids.forEach((x) => save(x, { status: '최종완료', drafted_at: new Date().toISOString() })); }
     else if (a === 'confirm' && cur) { save(cur.id, { status: '최종완료', drafted_at: new Date().toISOString() }); G.open = null; }
@@ -259,12 +309,15 @@ export function bind(app, c) {
     else if (a === 'unzoom') { G.zoom = ''; ctx.rerender(); }
     else if (a === 'jpg' && cur) saveJpg(cur, t.dataset.k);
     else if (a === 'copy' && cur) copyImg(cur, t.dataset.k);
+    else if (a === 'pdf' && cur) savePdf(cur, t.dataset.k);
+    else if (a === 'copyno' && cur) { const v = (G.docs[cur.id] || {}).tax_no || ''; navigator.clipboard.writeText(v).then(() => { t.textContent = '복사됨'; setTimeout(() => { t.textContent = '복사하기'; }, 1500); }).catch(() => alert(v)); }
     else if (a === 'both' && cur) { saveJpg(cur, 'stmt'); setTimeout(() => saveJpg(cur, 'tax'), 600); }
   });
   app.addEventListener('change', (e) => {
     const t = e.target; if (!app.querySelector('.gb')) return;
     if (t.id === 'gb-file') { const f = t.files && t.files[0]; if (fileTarget) attach(fileTarget.id, fileTarget.kind, f); return; }
     const a = t.dataset && t.dataset.gb;
+    if (a === 'taxno') { const m = NO_RE.exec(t.value); const cur = G.open && G.list.find((d) => d.id === G.open); if (m && cur) save(cur.id, { tax_no: `${m[1]}-${m[2]}-${m[3]}` }); else if (t.value.trim()) alert('승인번호는 20261013-10261013-99366706 모양이에요'); return; }
     if (a === 'pick') { if (t.checked) G.pick.add(t.dataset.id); else G.pick.delete(t.dataset.id); ctx.rerender(); }
     else if (a === 'pickall') { const ids = filtered().filter((d) => statusOf(d) !== '최종완료').map((d) => d.id); if (t.checked) ids.forEach((x) => G.pick.add(x)); else G.pick.clear(); ctx.rerender(); }
     else if (a === 'site') { G.site = t.value; G.page = 1; ctx.rerender(); }
