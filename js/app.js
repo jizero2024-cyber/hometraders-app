@@ -8,6 +8,7 @@ import * as DL from './delivery.js';
 import * as SM from './stmt.js';
 import * as HD from './hdisp.js';
 import * as GB from './gbms.js';
+import * as HM from './home.js';
 
 // 창고 아이콘 세트 (무채색)
 const WH_ICONS = {
@@ -4929,7 +4930,7 @@ const TITLES = { home: ['홈트레이더스', '재고 · 출고 관리'], quote:
 
 // 주소에 화면 이름 — erp.hometraders.co.kr/homt · /chat · /ship … (10/22 대표). 첫 화면은 / .
 //   그 주소로 바로 열어도(즐겨찾기·공유) 그 화면, 뒤로가기는 앞 화면. 서버에 없는 주소는 404.html(=index.html)이 앱을 띄움.
-const routeOk = (r) => r === 'start' || r === 'homt' || r === 'chat' || r === 'gonggan' || r === 'gonggan-ace' || !!TITLES[r] || !!DESK_TITLES[r];
+const routeOk = (r) => r === 'start' || r === 'main' || r === 'stmt' || r === 'homt' || r === 'chat' || r === 'gonggan' || r === 'gonggan-ace' || !!TITLES[r] || !!DESK_TITLES[r];
 function routeFromPath() {
   const r = decodeURIComponent(location.pathname).replace(/^\/+|\/+$/g, '').replace(/\.html$/, '');
   return r && r !== 'index' && routeOk(r) ? r : 'start';
@@ -4949,6 +4950,11 @@ function render() {
     document.body.classList.remove('erp');
     GB.setBiz(state.route === 'gonggan-ace' ? 'ace' : 'homt');
     app.innerHTML = GB.screen();
+    return;
+  }
+  if (state.route === 'main' || state.route === 'stmt') {   // 홈트 새 첫 화면 (10/23) — 미송금 · 배차 요청 · 자료 넣기 · 거래명세표 …
+    document.body.classList.remove('erp');
+    app.innerHTML = HM.screen(state.route);
     return;
   }
   if (state.route === 'start' || state.route === 'homt') {   // 첫 화면(에이스/홈트) · 홈트 배차 요청 — PC·휴대폰 같은 화면
@@ -5641,17 +5647,32 @@ function aceRoute() {
   try { const r = sessionStorage.getItem('ht_route'); if (r && TITLES[r]) return r; } catch (e) { /* 무시 */ }
   return 'home';
 }
+HM.bind(app, {
+  rerender: render,
+  go: (r, mode) => {
+    state.sheet = null;
+    if (r === 'chat') {   // 홈트 도우미 — 버튼이 고른 일(거래명세표·납품확인서)로 새 작업
+      chLoad();
+      const j = chJob();
+      if (mode) { if (!j || j.msgs.length || j.items.length || j.sale || j.conv) chNewJob(mode); else j.mode = mode; }
+      ch.mode = mode || '';
+    }
+    state.route = r; render();
+  },
+  me: () => myName(),
+  helper: (path, body) => helperFetch(path, body),
+});
 GB.bind(app, {
   rerender: render,
-  goStart: () => { state.route = 'start'; state.sheet = null; render(); },
+  goStart: () => { state.route = 'main'; state.sheet = null; render(); },
   go: (r) => { state.route = r; state.sheet = null; render(); },
   me: () => myAccount,
 });
 HD.bind(app, {
   rerender: render,
   goAce: () => { state.route = aceRoute(); state.sheet = null; render(); },
-  goHomt: () => { state.route = 'homt'; state.sheet = null; render(); },
-  goStart: () => { state.route = 'start'; state.sheet = null; render(); },
+  goHomt: () => { state.route = 'main'; state.sheet = null; render(); },   // 첫 화면 홈트 쪽 → 새 첫 화면 (10/23)
+  goStart: () => { state.route = state.route === 'homt' ? 'main' : 'start'; state.sheet = null; render(); },
 });
 S.subscribe(render);
 S.onError((m) => alert('저장에 실패했어요 — 잠시 후 다시 시도해주세요.\n\n원인: ' + m));

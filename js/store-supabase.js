@@ -248,6 +248,26 @@ export async function saveGongganDoc(row) {   // 실패하면 글자, 되면 nul
   const { error } = await sb.from('gonggan_docs').upsert(row);
   return error ? error.message : null;
 }
+// ── 새 첫 화면 (site_inbox · fare_unpaid, 2026-10-23) ──
+const noTable = (e, what) => new Error(/does not exist|relation|schema cache|could not find/i.test(e.message) ? `공유 DB 에 ${what} 표가 아직 없어요.` : e.message);
+export async function getFareUnpaid() {
+  const { data, error } = await sb.from('fare_unpaid').select('id,section,sort,urgent,driver,phone,job,amount,bank,account,holder,todo,note,sent').order('sort');
+  if (error) throw noTable(error, '운임');
+  return data || [];
+}
+export async function markFareSent(id, by) {   // 실패하면 글자, 되면 null — 도우미가 엑셀 '보냄' 칸에 O
+  const { error } = await sb.from('fare_unpaid').update({ sent: true, sent_by: by, sent_at: new Date().toISOString() }).eq('id', id);
+  return error ? error.message : null;
+}
+export async function getInboxCounts() {
+  const { data, error } = await sb.from('site_inbox').select('status').in('status', ['wait', 'got', 'check']);
+  if (error) throw noTable(error, '자료');
+  return (data || []).reduce((a, r) => { a[r.status] = (a[r.status] || 0) + 1; return a; }, {});
+}
+export async function addInbox(row) {   // 실패하면 글자, 되면 null
+  const { error } = await sb.from('site_inbox').insert(row);
+  return error ? error.message : null;
+}
 // 실시간 구독은 딱 1회만. 이미 붙은 채널이 있으면 제거 후 재구독(재진입 안전) →
 // "cannot add postgres_changes callbacks after subscribe()" 방지.
 let _realtimeOn = false;

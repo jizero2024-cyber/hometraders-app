@@ -515,3 +515,69 @@ textarea{resize:vertical;line-height:1.5;}
 /* 공간제작소 BMS · 로그인 — 화면 전체 너비 (10/23) */
 #app:has(.gb), #app:has(.gb-login){max-width:none;margin:0;background:#F7F7F5}
 #app:has(.gb-login){background:#FFFFFF}
+
+/* ── 홈트 새 첫 화면 (10/23, js/home.js) ── */
+#app:has(.hm) { max-width: none; margin: 0; padding: 0; }
+.hm { min-height: 100vh; background: #F7F7F5; color: #1F2328; font-family: Pretendard, system-ui, sans-serif; }
+.hm-top { background: #fff; border-bottom: 1px solid #E6E4DF; }
+.hm-in { max-width: 1180px; margin: 0 auto; padding: 12px 16px; display: flex; align-items: center; gap: 12px; }
+.hm-in .sp { flex: 1; }
+.hm-logo { height: 36px; cursor: pointer; }
+.hm-back { border: 0; background: none; font-size: 28px; line-height: 1; padding: 0 6px; cursor: pointer; color: #1F2328; }
+.hm-me { font-size: 13px; }
+.hm-link { border: 0; background: none; font: inherit; font-size: 13px; color: #5C5C5C; cursor: pointer; }
+.hm-main { max-width: 1180px; margin: 0 auto; padding: 24px 16px 56px; display: flex; flex-direction: column; gap: 20px; box-sizing: border-box; }
+.hm-h1 { margin: 0; font-size: 24px; }
+.hm-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.hm-grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.hm-tile { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; min-height: 200px; padding: 18px; box-sizing: border-box;
+  border-radius: 20px; background: #fff; border: 1px solid #E6E4DF; color: #1F2328; font: inherit; cursor: pointer; text-align: center; transition: border-color .15s, box-shadow .15s; }
+.hm-tile:hover { border-color: #E8732C; box-shadow: 0 6px 18px rgba(232,115,44,.14); }
+.hm-tile b { font-size: 21px; }
+.hm-tile.wide { grid-column: span 2; }
+.hm-tile.big { min-height: 300px; }
+.hm-tile.big b { font-size: 24px; }
+.hm-tile.drop { border: 2px dashed #9DB7DD; background: #F6F9FE; }
+.hm-tile.drop.over { border-color: #1D4F91; background: #EAF1FB; }
+.hm-ic { width: 72px; height: 72px; border-radius: 20px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.hm-sub { font-size: 13px; color: #5C6B80; }
+.hm-badge { position: absolute; top: 14px; right: 14px; min-width: 30px; height: 30px; padding: 0 10px; box-sizing: border-box; border-radius: 15px; background: #E8732C; color: #fff; font-size: 14px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+.hm-toast { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); background: #1F2328; color: #fff; font-size: 13px; padding: 6px 12px; border-radius: 14px; white-space: nowrap; }
+/* 운송비 미송금 — 빨간 칸 (긴급, 10/23 대표) */
+.hm-fare { border: 2px solid #D92D20; border-radius: 16px; background: #FEF3F2; overflow: hidden; }
+.hm-fh { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: #D92D20; color: #fff; }
+.hm-fh b { font-size: 17px; }
+.hm-fh span { font-size: 15px; font-weight: 700; }
+.hm-fh .sp { flex: 1; }
+.hm-more { border: 1px solid rgba(255,255,255,.7); background: none; color: #fff; font: inherit; font-size: 13px; padding: 4px 10px; border-radius: 12px; cursor: pointer; }
+.hm-fl { display: flex; flex-direction: column; }
+.hm-fr { display: grid; grid-template-columns: 34px 170px 1fr 100px 260px 64px; align-items: center; gap: 10px; padding: 10px 16px; border-top: 1px solid #FBD5D1; font-size: 14px; background: #fff; }
+.hm-fr:first-child { border-top: 0; }
+.hm-urg { font-size: 16px; text-align: center; }
+.hm-who { display: flex; flex-direction: column; }
+.hm-who a { color: #6B6B6B; font-size: 12px; text-decoration: none; }
+.hm-amt { font-weight: 800; color: #B42318; text-align: right; }
+.hm-acc { font-size: 13px; color: #3F3F46; }
+.hm-acc i { color: #B42318; font-style: normal; font-weight: 600; }
+.hm-sent { height: 32px; border: 1px solid #D92D20; background: #fff; color: #D92D20; font: inherit; font-size: 13px; font-weight: 700; border-radius: 8px; cursor: pointer; }
+.hm-sent:hover { background: #D92D20; color: #fff; }
+/* 자재승인원 창 */
+.hm-ov { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
+.hm-modal { width: 100%; max-width: 460px; background: #fff; border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+.hm-modal label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: #3F3F46; }
+.hm-modal input, .hm-modal select { height: 40px; border: 1px solid #D0D0D0; border-radius: 8px; padding: 0 10px; font: inherit; font-size: 14px; }
+.hm-modal input[type=file] { height: auto; padding: 8px; }
+.hm-mh { display: flex; align-items: center; justify-content: space-between; }
+.hm-mh b { font-size: 18px; }
+.hm-x { border: 0; background: none; font-size: 18px; cursor: pointer; }
+.hm-ok { font-size: 13px; color: #1E6B34; }
+.hm-err { font-size: 13px; color: #B42318; }
+.hm-go { height: 44px; border: 0; border-radius: 10px; background: #E8732C; color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+.hm-go:disabled { opacity: .6; }
+@media (max-width: 900px) {
+  .hm-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .hm-grid2 { grid-template-columns: 1fr; }
+  .hm-tile { min-height: 150px; }
+  .hm-fr { grid-template-columns: 26px 1fr auto; grid-template-areas: "u w a" "u j j" "u c s"; }
+  .hm-urg { grid-area: u; } .hm-who { grid-area: w; } .hm-amt { grid-area: a; } .hm-job { grid-area: j; font-size: 13px; color: #5C5C5C; } .hm-acc { grid-area: c; } .hm-sent { grid-area: s; padding: 0 12px; }
+}
