@@ -183,7 +183,8 @@ function docBox(kind, d) {
   const no = kind === 'tax' && src ? (G.docs[d.id] || {}).tax_no || '' : '';
   const noRow = kind === 'tax' && src ? `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:14px">
       <span style="color:#5C5C5C">승인번호</span>
-      ${no ? `<b style="font-size:16px;letter-spacing:.2px">${esc(no)}</b>` : `<input data-gb="taxno" placeholder="${finding.has(d.id) ? '찾는 중…' : '20261013-10261013-99366706'}" style="height:32px;width:260px;border:1px solid #D0D0D0;border-radius:6px;padding:0 10px;font:inherit;font-size:14px">`}
+      ${no && !G.editNo ? `<b style="font-size:16px;letter-spacing:.2px">${esc(no)}</b><button type="button" data-gb="editno" aria-label="승인번호 고치기" style="width:28px;height:28px;border-radius:14px;border:1px solid #D5D8DD;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">${PEN}</button>`
+        : `<input data-gb="taxno" value="${esc(no)}" placeholder="${finding.has(d.id) ? '찾는 중…' : '20261013-10261013-99366706'}" style="height:32px;width:260px;border:1px solid #D0D0D0;border-radius:6px;padding:0 10px;font:inherit;font-size:14px">`}
       <button type="button" data-gb="copyno" ${no ? '' : 'disabled'} style="height:32px;padding:0 12px;border:1px solid #1D4F91;border-radius:6px;background:#fff;color:#1D4F91;font:inherit;font-size:13px;font-weight:700;cursor:pointer">복사하기</button></div>` : '';
   const cap = `${noRow}<figcaption style="display:flex;justify-content:space-between;align-items:center"><b>${label}</b><span style="display:flex;gap:6px">${[['copy', '복사'], ['jpg', 'JPG 저장'], ['pdf', 'PDF 저장']].map(([a, t]) => `<button type="button" data-gb="${a}" data-k="${kind}" ${src ? '' : 'disabled'} style="height:30px;padding:0 10px;border:1px solid #E6E4DF;border-radius:6px;background:#fff;font:inherit;font-size:12px;cursor:pointer">${t}</button>`).join('')}</span></figcaption>`;
   const pen = `<button type="button" data-gb="replace" data-k="${kind}" aria-label="${label} 바꾸기" style="position:absolute;top:8px;right:8px;width:30px;height:30px;border-radius:15px;border:1px solid #D5D8DD;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">${PEN}</button>`;
@@ -292,7 +293,7 @@ export function bind(app, c) {
     const a = t.dataset.gb, id = t.dataset.id, cur = G.open && G.list.find((d) => d.id === G.open);
     if (a === 'row') { if (e.target.closest('button, input, a, label, select')) return; G.open = id; G.reason = ''; G.zoom = ''; ctx.rerender(); }
     else if (a === 'overlay') { if (e.target === t) { G.open = null; ctx.rerender(); } }
-    else if (a === 'close') { G.open = null; G.zoom = ''; ctx.rerender(); }
+    else if (a === 'close') { G.open = null; G.zoom = ''; G.editNo = false; ctx.rerender(); }
     else if (a === 'biz') { setBiz(t.dataset.v); ctx.go(t.dataset.v === 'ace' ? 'gonggan-ace' : 'gonggan'); }
     else if (a === 'start') ctx.goStart();
     else if (a === 'month') { G.month = t.dataset.v; G.page = 1; ctx.rerender(); }
@@ -310,6 +311,7 @@ export function bind(app, c) {
     else if (a === 'jpg' && cur) saveJpg(cur, t.dataset.k);
     else if (a === 'copy' && cur) copyImg(cur, t.dataset.k);
     else if (a === 'pdf' && cur) savePdf(cur, t.dataset.k);
+    else if (a === 'editno') { G.editNo = true; ctx.rerender(); const el = app.querySelector('[data-gb="taxno"]'); if (el) el.focus(); }
     else if (a === 'copyno' && cur) { const v = (G.docs[cur.id] || {}).tax_no || ''; navigator.clipboard.writeText(v).then(() => { t.textContent = '복사됨'; setTimeout(() => { t.textContent = '복사하기'; }, 1500); }).catch(() => alert(v)); }
     else if (a === 'both' && cur) { saveJpg(cur, 'stmt'); setTimeout(() => saveJpg(cur, 'tax'), 600); }
   });
@@ -317,7 +319,7 @@ export function bind(app, c) {
     const t = e.target; if (!app.querySelector('.gb')) return;
     if (t.id === 'gb-file') { const f = t.files && t.files[0]; if (fileTarget) attach(fileTarget.id, fileTarget.kind, f); return; }
     const a = t.dataset && t.dataset.gb;
-    if (a === 'taxno') { const m = NO_RE.exec(t.value); const cur = G.open && G.list.find((d) => d.id === G.open); if (m && cur) save(cur.id, { tax_no: `${m[1]}-${m[2]}-${m[3]}` }); else if (t.value.trim()) alert('승인번호는 20261013-10261013-99366706 모양이에요'); return; }
+    if (a === 'taxno') { const m = NO_RE.exec(t.value); const cur = G.open && G.list.find((d) => d.id === G.open); if (m && cur) { G.editNo = false; save(cur.id, { tax_no: `${m[1]}-${m[2]}-${m[3]}` }); } else if (t.value.trim()) alert('승인번호는 20261013-10261013-99366706 모양이에요'); return; }
     if (a === 'pick') { if (t.checked) G.pick.add(t.dataset.id); else G.pick.delete(t.dataset.id); ctx.rerender(); }
     else if (a === 'pickall') { const ids = filtered().filter((d) => statusOf(d) !== '최종완료').map((d) => d.id); if (t.checked) ids.forEach((x) => G.pick.add(x)); else G.pick.clear(); ctx.rerender(); }
     else if (a === 'site') { G.site = t.value; G.page = 1; ctx.rerender(); }
