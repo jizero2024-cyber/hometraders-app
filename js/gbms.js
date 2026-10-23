@@ -420,7 +420,7 @@ async function pdfCanvas(dataUrl) {   // PDF 첫 쪽 → 그림 (세금계산서
   const pg = await pdf.getPage(1), vp = pg.getViewport({ scale: 2.5 });
   const c = document.createElement('canvas'); c.width = vp.width; c.height = vp.height;
   const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
-  await pg.render({ canvasContext: g, viewport: vp }).promise;
+  await pg.render({ canvasContext: g, viewport: vp, intent: 'print' }).promise;   // print = 화면 그리기 신호를 안 기다림 (창이 뒤에 있어도 그려짐)
   return c;
 }
 async function saveBothPdf(d) {   // 2장 한 번에 = 거래명세표 + 세금계산서를 PDF 한 파일로 (10/23 대표)
