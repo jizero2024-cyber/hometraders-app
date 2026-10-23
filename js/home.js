@@ -15,6 +15,8 @@ const IC = {
   stmt: svg('#1E6B34', '<path d="M6 3h9l4 4v14H6z"></path><path d="M9 11h7M9 15h7M9 7h3"></path>'),
   deliv: svg('#1E6B34', '<path d="M6 3h9l4 4v14H6z"></path><path d="M9 13l2.2 2.2L16 10.5"></path>'),
   pack: svg('#5B3FA8', '<path d="M4 6h6l2 2h8v11H4z"></path><path d="M9 14l2 2 4-4"></path>'),
+  won: svg('#B54708', '<rect x="3" y="6" width="18" height="12" rx="2"></rect><circle cx="12" cy="12" r="2.6"></circle><path d="M6.5 9v6M17.5 9v6"></path>'),
+  quote: svg('#3F3F46', '<path d="M6 3h9l4 4v14H6z"></path><path d="M9 9h3M9 13h7M9 17h5"></path><path d="M15 3v4h4"></path>'),
   more: svg('#3F3F46', '<rect x="4" y="4" width="6.5" height="6.5" rx="1.5"></rect><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"></rect><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"></rect><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"></rect>'),
 };
 const PRESETS = ['오웬스'];   // 드라이브 자재승인원/make_pack.py PRESETS 와 같게
@@ -78,11 +80,12 @@ function packModal() {
 
 export function screen(view) {
   load();
-  if (view === 'stmt') {
+  if (view === 'stmt') {   // 거래명세표 고르기 — 공간제작소 · 그 외 · 에이스 (10/23 대표)
     return `<div class="hm">${top('main')}<main class="hm-main"><h1 class="hm-h1">거래명세표</h1>
-      <div class="hm-grid2">
-        ${tile({ title: '공간제작소 명세', icon: '<img src="./icons/partner-gongan.png" alt="" style="width:62px;height:auto">', bg: '#FFF6D6', cls: 'big', attr: 'data-hm="go" data-r="gonggan"' })}
-        ${tile({ title: '그 외 명세', icon: IC.stmt, bg: '#EEF6EE', cls: 'big', sub: '이카운트 엑셀 · 전표 링크', attr: 'data-hm="go" data-r="chat" data-mode="stmt"' })}
+      <div class="hm-grid3">
+        ${tile({ title: '공간제작소 거래명세표', icon: '<img src="./icons/partner-gongan.png" alt="" style="width:62px;height:auto">', bg: '#FFF6D6', cls: 'big', attr: 'data-hm="go" data-r="stmt-gong"' })}
+        ${tile({ title: '그 외 명세표', icon: IC.stmt, bg: '#EEF6EE', cls: 'big', attr: 'data-hm="go" data-r="stmt-etc"' })}
+        ${tile({ title: '에이스 거래명세표', icon: IC.stmt, bg: '#F3F4F6', cls: 'big', attr: 'data-hm="go" data-r="stmt-ace"' })}
       </div></main></div>`;
   }
   const wait = (H.inbox.wait || 0) + (H.inbox.got || 0), chk = H.inbox.check || 0;
@@ -94,9 +97,10 @@ export function screen(view) {
         badge: chk ? `확인 ${chk}` : wait ? `대기 ${wait}` : '', badgeStyle: chk ? 'background:#D92D20' : 'background:#1D4F91', attr: 'id="hm-drop"',
         extra: `<input type="file" id="hm-file" multiple accept="image/*,.heic,.pdf,.xlsx,.xls,.csv,.txt" hidden>${H.toast ? `<span class="hm-toast">${esc(H.toast)}</span>` : ''}` })}
       ${tile({ title: '거래명세표', icon: IC.stmt, bg: '#EEF6EE', attr: 'data-hm="go" data-r="stmt"' })}
-      ${tile({ title: '납품확인서', icon: IC.deliv, bg: '#EEF6EE', attr: 'data-hm="go" data-r="chat" data-mode="deliv"' })}
+      ${tile({ title: '납품확인서', icon: IC.deliv, bg: '#EEF6EE', attr: 'data-hm="go" data-r="deliv"' })}
       ${tile({ title: '자재승인원', icon: IC.pack, bg: '#F2EEFB', attr: 'data-hm="pack"' })}
-      ${tile({ title: '그 밖의 서류', icon: IC.more, bg: '#F3F4F6', cls: 'wide', sub: '구매명세표 · 에이스명세표 · 견적서 · 입금표', attr: 'data-hm="go" data-r="chat"' })}
+      ${tile({ title: '입금표', icon: IC.won, bg: '#FFF4E5', attr: 'data-hm="href" data-href="./deposit.html"' })}
+      ${tile({ title: '견적서', icon: IC.quote, bg: '#F3F4F6', attr: 'data-hm="go" data-r="chat" data-mode="quote"' })}
     </div></main>${packModal()}</div>`;
 }
 
@@ -156,6 +160,7 @@ export function bind(app, c) {
     const t = e.target.closest('[data-hm]'); if (!t || !on()) return;
     const a = t.dataset.hm;
     if (a === 'go') ctx.go(t.dataset.r, t.dataset.mode);
+    else if (a === 'href') location.href = t.dataset.href;
     else if (a === 'fare-all') { H.fareAll = !H.fareAll; ctx.rerender(); }
     else if (a === 'sent') {
       const r = (H.fare || []).find((x) => x.id === t.dataset.id); if (!r) return;

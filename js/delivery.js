@@ -62,7 +62,11 @@ export function targetRows(lines, docDate) {
   return byDate;
 }
 
-function itemCols(r) {
+// 줄 → 양식 칸 (브랜드·용도·품명·등급·단위·비고). r.ov 에 손으로 고친 값이 있으면 그것 (납품확인서 화면 수동 수정, 10/23)
+export function itemCols(r) {
+  return { ...autoCols(r), ...(r.ov || {}) };
+}
+function autoCols(r) {
   const name = r.name;
   if (r.cat === '인슐레이션') {
     const toks = name.split(/[_\s]+/).map((t) => t.trim()).filter(Boolean);

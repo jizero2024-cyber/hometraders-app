@@ -9,6 +9,7 @@ import * as SM from './stmt.js';
 import * as HD from './hdisp.js';
 import * as GB from './gbms.js';
 import * as HM from './home.js';
+import * as FM from './forms.js';
 
 // 창고 아이콘 세트 (무채색)
 const WH_ICONS = {
@@ -4930,7 +4931,7 @@ const TITLES = { home: ['홈트레이더스', '재고 · 출고 관리'], quote:
 
 // 주소에 화면 이름 — erp.hometraders.co.kr/homt · /chat · /ship … (10/22 대표). 첫 화면은 / .
 //   그 주소로 바로 열어도(즐겨찾기·공유) 그 화면, 뒤로가기는 앞 화면. 서버에 없는 주소는 404.html(=index.html)이 앱을 띄움.
-const routeOk = (r) => r === 'start' || r === 'main' || r === 'stmt' || r === 'homt' || r === 'chat' || r === 'gonggan' || r === 'gonggan-ace' || !!TITLES[r] || !!DESK_TITLES[r];
+const routeOk = (r) => r === 'start' || r === 'main' || r === 'stmt' || FM.ROUTES.includes(r) || r === 'homt' || r === 'chat' || r === 'gonggan' || r === 'gonggan-ace' || !!TITLES[r] || !!DESK_TITLES[r];
 function routeFromPath() {
   const r = decodeURIComponent(location.pathname).replace(/^\/+|\/+$/g, '').replace(/\.html$/, '');
   return r && r !== 'index' && routeOk(r) ? r : 'start';
@@ -4950,6 +4951,11 @@ function render() {
     document.body.classList.remove('erp');
     GB.setBiz(state.route === 'gonggan-ace' ? 'ace' : 'homt');
     app.innerHTML = GB.screen();
+    return;
+  }
+  if (FM.ROUTES.includes(state.route)) {   // 간단 서류 화면 — 거래명세표 3종 · 납품확인서 (10/23)
+    document.body.classList.remove('erp');
+    app.innerHTML = FM.screen(state.route);
     return;
   }
   if (state.route === 'main' || state.route === 'stmt') {   // 홈트 새 첫 화면 (10/23) — 미송금 · 배차 요청 · 자료 넣기 · 거래명세표 …
@@ -5647,6 +5653,20 @@ function aceRoute() {
   try { const r = sessionStorage.getItem('ht_route'); if (r && TITLES[r]) return r; } catch (e) { /* 무시 */ }
   return 'home';
 }
+// 출고일보 전표 링크 → 전표 줄 (도우미가 켜져 있으면 도우미, 아니면 공유 DB slip_rows)
+async function slipsFor(text) {
+  if (helperState.up) { try { return await helperFetch('/api/slip/links', { text }); } catch (e) { /* 공유 DB 로 */ } }
+  return chSlipsFromDb(text);
+}
+FM.bind(app, {
+  rerender: render,
+  route: () => state.route,
+  go: (r) => { state.route = r; state.sheet = null; render(); },
+  me: () => myName(),
+  helper: (path, body) => helperFetch(path, body),
+  helperUp: () => { if (!helperState.checked || Date.now() - helperState.at > 60000) helperCheck(); return helperState.up; },
+  slips: slipsFor,
+});
 HM.bind(app, {
   rerender: render,
   go: (r, mode) => {

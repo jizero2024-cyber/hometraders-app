@@ -530,6 +530,7 @@ textarea{resize:vertical;line-height:1.5;}
 .hm-h1 { margin: 0; font-size: 24px; }
 .hm-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
 .hm-grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.hm-grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
 .hm-tile { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; min-height: 200px; padding: 18px; box-sizing: border-box;
   border-radius: 20px; background: #fff; border: 1px solid #E6E4DF; color: #1F2328; font: inherit; cursor: pointer; text-align: center; transition: border-color .15s, box-shadow .15s; }
 .hm-tile:hover { border-color: #E8732C; box-shadow: 0 6px 18px rgba(232,115,44,.14); }
@@ -576,8 +577,44 @@ textarea{resize:vertical;line-height:1.5;}
 .hm-go:disabled { opacity: .6; }
 @media (max-width: 900px) {
   .hm-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .hm-grid2 { grid-template-columns: 1fr; }
+  .hm-grid2, .hm-grid3 { grid-template-columns: 1fr; }
   .hm-tile { min-height: 150px; }
   .hm-fr { grid-template-columns: 26px 1fr auto; grid-template-areas: "u w a" "u j j" "u c s"; }
   .hm-urg { grid-area: u; } .hm-who { grid-area: w; } .hm-amt { grid-area: a; } .hm-job { grid-area: j; font-size: 13px; color: #5C5C5C; } .hm-acc { grid-area: c; } .hm-sent { grid-area: s; padding: 0 12px; }
+}
+
+/* ── 간단 서류 화면 (js/forms.js, 10/23) — 거래명세표 3종 · 납품확인서 ── */
+.fm .sp { flex: 1; }
+.fm-in, .fm-out { background: #fff; border: 1px solid #E6E4DF; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.fm-in textarea { width: 100%; box-sizing: border-box; border: 1px solid #D0D0D0; border-radius: 10px; padding: 10px 12px; font: inherit; font-size: 14px; resize: vertical; }
+.fm-row, .fm-oh, .fm-dh { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.fm-btn { height: 38px; padding: 0 16px; border: 0; border-radius: 10px; background: #E8732C; color: #fff; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; }
+.fm-btn.ghost { background: #fff; color: #3F3F46; border: 1px solid #D0D0D0; font-weight: 600; }
+.fm-btn.sm { height: 30px; padding: 0 10px; font-size: 13px; }
+.fm-btn:disabled { opacity: .6; }
+.fm-file { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: #F3F4F6; border-radius: 14px; font-size: 13px; }
+.fm-file button { border: 0; background: none; cursor: pointer; color: #6B6B6B; }
+.fm-oh b { font-size: 17px; }
+.fm-empty { padding: 24px; text-align: center; color: #6B6B6B; background: #fff; border: 1px solid #E6E4DF; border-radius: 16px; }
+.fm-doc { border-top: 1px solid #EFEDE8; padding-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+.fm-date { font-weight: 800; }
+.fm-slip { color: #6B6B6B; font-size: 13px; }
+.fm-site { height: 32px; min-width: 180px; border: 1px solid #D0D0D0; border-radius: 8px; padding: 0 10px; font: inherit; font-size: 14px; }
+.fm-amt { font-size: 15px; }
+.fm-it { display: grid; grid-template-columns: 1fr 70px 90px 110px; gap: 8px; align-items: center; font-size: 13px; }
+.fm-it span { text-align: right; color: #3F3F46; }
+.fm-it input, .fm-tr input, .fm-grid input { height: 32px; border: 1px solid #E0DED8; border-radius: 6px; padding: 0 8px; font: inherit; font-size: 13px; min-width: 0; box-sizing: border-box; }
+.fm-grid { display: grid; grid-template-columns: 160px 1fr 1fr auto; gap: 10px; align-items: end; }
+.fm-grid label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #5C5C5C; }
+.fm-tab { display: flex; flex-direction: column; gap: 4px; }
+.fm-th, .fm-tr { display: grid; grid-template-columns: 90px 80px 1fr 70px 70px 70px 180px 28px; gap: 6px; align-items: center; }
+.fm-th span { font-size: 12px; color: #6B6B6B; padding-left: 4px; }
+.fm-x { border: 0; background: none; color: #9A9A9A; cursor: pointer; font-size: 14px; }
+.fm-add { align-self: flex-start; border: 1px dashed #C9C6BF; background: #fff; border-radius: 8px; padding: 6px 12px; font: inherit; font-size: 13px; cursor: pointer; color: #3F3F46; }
+@media (max-width: 900px) {
+  .fm-grid { grid-template-columns: 1fr; }
+  .fm-th { display: none; }
+  .fm-tr { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .fm-it { grid-template-columns: 1fr 60px 90px; }
+  .fm-it span:last-child { display: none; }
 }
