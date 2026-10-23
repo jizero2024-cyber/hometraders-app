@@ -1,8 +1,8 @@
 // 오프라인 대비 캐시 — 네트워크 우선(온라인이면 항상 최신 코드), 오프라인이면 캐시.
-const CACHE = 'ht-v156';
+const CACHE = 'ht-v157';
 const ASSETS = [
   './', './index.html', './convert.html', './deposit.html', './css/app.css', './css/erp.css',
-  './js/app.js', './js/stmt.js', './js/stmt-ocr.js', './js/stmt-assets.js', './js/store-supabase.js', './js/data.js', './js/ecount-items.js', './js/textread.js', './js/delivery.js', './js/supabase-config.js', './js/partners-seed.js', './js/hdisp.js', './js/gbms.js', './js/home.js', './js/forms.js',
+  './js/app.js', './js/stmt.js', './js/stmt-ocr.js', './js/stmt-assets.js', './js/store-supabase.js', './js/data.js', './js/ecount-items.js', './js/textread.js', './js/delivery.js', './js/supabase-config.js', './js/partners-seed.js', './js/hdisp.js', './js/gbms.js', './js/gonggan-store.js', './js/gonggan-app.js', './gonggan/index.html', './js/home.js', './js/forms.js',
   './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/logo-full.png', './icons/confirm-logo.png', './icons/favicon.png', './icons/apple-touch-icon.png',
 ];
 
@@ -31,6 +31,6 @@ self.addEventListener('fetch', (e) => {
       const copy = res.clone();
       caches.open(CACHE).then((c) => c.put(e.request, copy)).catch(() => {});
       return res;
-    }).catch(() => caches.match(e.request).then((hit) => hit || caches.match('./index.html')))
+    }).catch(() => caches.match(e.request).then((hit) => hit || caches.match(url.pathname.startsWith('/gonggan') ? './gonggan/index.html' : './index.html')))   // 공간제작소 주소는 오프라인이어도 우리 앱으로 안 감
   );
 });

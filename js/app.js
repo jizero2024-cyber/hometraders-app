@@ -7,7 +7,6 @@ import { makeMatcher, readPastedText, quotePrev } from './textread.js';
 import * as DL from './delivery.js';
 import * as SM from './stmt.js';
 import * as HD from './hdisp.js';
-import * as GB from './gbms.js';
 import * as HM from './home.js';
 import * as FM from './forms.js';
 
@@ -4949,11 +4948,8 @@ function render() {
   //   다시 그리기가 돌아 기본 화면(PC = 홈트 도우미)이 떴음 — 공간제작소 쪽에 우리 업무툴이 보이면 절대 안 됨
   if (!booted || !myAccount) return;
   queueMicrotask(syncUrl);   // 화면을 다 그린 뒤 정해진 route 로 (PC·휴대폰 route 바꿈 포함)
-  if (myAccount === GONG_ID && !String(state.route).startsWith('gonggan')) state.route = 'gonggan';   // 공간제작소 계정은 이 화면만
-  if (state.route === 'gonggan' || state.route === 'gonggan-ace') {   // 공간제작소 BMS (10/23) — 홈트레이더스·현구 과장님 같은 화면
-    document.body.classList.remove('erp');
-    GB.setBiz(state.route === 'gonggan-ace' ? 'ace' : 'homt');
-    app.innerHTML = GB.screen();
+  if (myAccount === GONG_ID || String(state.route).startsWith('gonggan')) {   // 공간제작소는 따로 된 페이지(/gonggan/ — gonggan-app.js)에서만 (10/23 대표 "사이트 코드 분리")
+    location.replace(state.route === 'gonggan-ace' && myAccount !== GONG_ID ? '/gonggan-ace/' : '/gonggan/');
     return;
   }
   if (FM.ROUTES.includes(state.route)) {   // 간단 서류 화면 — 거래명세표 3종 · 납품확인서 (10/23)
@@ -5458,13 +5454,11 @@ app.addEventListener('submit', (e) => {
   const form = e.target;
   if (form.id === 'login-form') {
     const errEl = document.getElementById('login-err'); if (errEl) errEl.textContent = '로그인 중…';
-    const code = form.dataset.code ? form.password.value.trim() : '';   // 공간제작소 코드 로그인 — 코드가 아이디이자 비밀번호
-    S.signIn(code || form.userid.value.trim(), code || form.password.value).catch((err) => {
+    S.signIn(form.userid.value.trim(), form.password.value).catch((err) => {   // 공간제작소 코드 로그인은 /gonggan/ 페이지(gonggan-app.js)에서
       const raw = (err && (err.message || err.error_description || '')).toLowerCase();
-      let msg = code ? '코드를 확인해 주세요' : '로그인 실패 — 아이디/비밀번호를 확인하세요';
+      let msg = '로그인 실패 — 아이디/비밀번호를 확인하세요';
       if (raw.includes('not confirmed')) msg = '로그인 실패 — 계정 이메일 인증이 필요해요 (관리자 확인)';
       else if (raw.includes('invalid')) msg = '로그인 실패 — 아이디 또는 비밀번호가 틀렸어요';
-      if (code) msg = '코드를 확인해 주세요';
       if (errEl) errEl.textContent = msg;
       console.warn(err);
     });
@@ -5601,18 +5595,6 @@ function downloadJSON() {
 
 const GONG_ID = 'space1234';   // 공간제작소(현구 과장님) 계정 — 로그인하면 공간제작소 화면만
 function showLogin(msg) {
-  if (location.pathname.startsWith('/gonggan')) {   // 공간제작소 화면 로그인 — 코드 하나만 (코드 = 계정 아이디·비밀번호, 10/23 대표)
-    app.innerHTML = `
-    <div class="gb-login" style="position:fixed;inset:0;background:#fff;display:flex;flex-direction:column;align-items:center;padding:18vh 24px 0;box-sizing:border-box;font-family:Pretendard,'Noto Sans KR',system-ui,sans-serif">
-      <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:28px"><img src="./icons/partner-gongan.png" alt="공간제작소" style="height:48px"><span aria-hidden="true" style="color:#8A8A8A">×</span><img src="./icons/logo-full.png" alt="HOME TRADERS" style="height:44px"></div>
-      <form id="login-form" data-code="1" style="width:100%;max-width:320px;display:flex;flex-direction:column;gap:10px">
-        <input name="password" type="password" autocomplete="current-password" placeholder="코드" aria-label="코드" style="padding:14px;border-radius:11px;background:#F3F4F6;border:0;font-size:16px;text-align:center">
-        <button class="btn" type="submit" style="margin-top:4px">로그인</button>
-        <p id="login-err" style="color:#e05a52;font-size:13px;min-height:18px;margin:2px 0;text-align:center">${msg || ''}</p>
-      </form>
-    </div>`;
-    return;
-  }
   app.innerHTML = `
   <div style="max-width:340px;margin:12vh auto 0;padding:0 24px;text-align:center">
     <div style="width:56px;height:56px;border-radius:16px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-size:26px;font-weight:800;margin:0 auto 16px">H</div>
@@ -5635,8 +5617,8 @@ async function boot() {
   if (booted) { render(); return; }
   app.innerHTML = '<div style="padding:64px 24px;text-align:center;color:#888;font-size:15px">불러오는 중…</div>';
   // PC는 열 때마다 대화 화면부터 (예전엔 마지막 화면을 기억해 업무 현황이 다시 떠서 바뀐 걸 못 봄). 휴대폰은 기억한 화면 그대로
-  state.route = myAccount === GONG_ID && !routeFromPath().startsWith('gonggan') ? 'gonggan' : routeFromPath();   // 열 때마다 첫 화면(에이스/홈트)부터 — 주소에 화면 이름(/homt·/chat …)이 있으면 그 화면. 에이스를 누르면 아래 aceRoute() 로 기존 ERP
-  if (myAccount === GONG_ID) { booted = true; render(); return; }   // 공간제작소 계정은 우리 자료(거래처·품목·출고…)를 내려받지 않음 — 공간제작소 표만 (10/23 대표 "절대 연동 안 되게")
+  if (myAccount === GONG_ID || location.pathname.startsWith('/gonggan')) { location.replace(location.pathname.startsWith('/gonggan-ace') && myAccount !== GONG_ID ? '/gonggan-ace/' : '/gonggan/'); return; }   // 공간제작소 계정·주소 → 공간제작소 전용 페이지 (우리 앱 자료는 안 불러옴)
+  state.route = routeFromPath();   // 열 때마다 첫 화면(에이스/홈트)부터 — 주소에 화면 이름(/homt·/chat …)이 있으면 그 화면. 에이스를 누르면 아래 aceRoute() 로 기존 ERP
   try { await S.init(); booted = true; render(); }
   catch (e) { app.innerHTML = `<div style="padding:48px 24px;text-align:center"><b>연결 오류</b><br><span style="color:#888;font-size:13px">${esc(e.message || String(e))}</span></div>`; }
 }
@@ -5707,15 +5689,6 @@ HM.bind(app, {
   },
   me: () => myName(),
   helper: (path, body) => helperFetch(path, body),
-});
-GB.bind(app, {
-  rerender: render,
-  goStart: () => { state.route = 'main'; state.sheet = null; render(); },
-  go: (r) => { state.route = r; state.sheet = null; render(); },
-  me: () => myAccount,
-  slips: (text) => slipsFor(text),   // 직접 등록 — 출고 번호·전표·링크 불러오기
-  helper: (path, body) => helperFetch(path, body),
-  helperUp: () => { if (!helperState.checked || Date.now() - helperState.at > 60000) helperCheck(); return helperState.up; },
 });
 HD.bind(app, {
   rerender: render,
