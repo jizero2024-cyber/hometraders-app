@@ -5664,6 +5664,7 @@ FM.bind(app, {
   go: (r) => { state.route = r; state.sheet = null; render(); },
   me: () => myName(),
   helper: (path, body) => helperFetch(path, body),
+  helperFile: (p) => `${HELPER}/api/file?path=${encodeURIComponent(p)}`,
   helperUp: () => { if (!helperState.checked || Date.now() - helperState.at > 60000) helperCheck(); return helperState.up; },
   slips: slipsFor,
 });

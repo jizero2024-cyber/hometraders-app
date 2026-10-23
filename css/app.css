@@ -586,7 +586,6 @@ textarea{resize:vertical;line-height:1.5;}
 /* ── 간단 서류 화면 (js/forms.js, 10/23) — 거래명세표 3종 · 납품확인서 ── */
 .fm .sp { flex: 1; }
 .fm-in, .fm-out { background: #fff; border: 1px solid #E6E4DF; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
-.fm-in textarea { width: 100%; box-sizing: border-box; border: 1px solid #D0D0D0; border-radius: 10px; padding: 10px 12px; font: inherit; font-size: 14px; resize: vertical; }
 .fm-row, .fm-oh, .fm-dh { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .fm-btn { height: 38px; padding: 0 16px; border: 0; border-radius: 10px; background: #E8732C; color: #fff; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; }
 .fm-btn.ghost { background: #fff; color: #3F3F46; border: 1px solid #D0D0D0; font-weight: 600; }
@@ -618,6 +617,36 @@ textarea{resize:vertical;line-height:1.5;}
   .fm-it { grid-template-columns: 1fr 60px 90px; }
   .fm-it span:last-child { display: none; }
 }
+.fm-ta { width: 100%; box-sizing: border-box; background: #fff; color: #1F2328; border: 1px solid #D0D0D0; border-radius: 10px; padding: 10px 12px; font: inherit; font-size: 14px; resize: vertical; }
+#fm-drop.over { border-color: #E8732C; background: #FFF8F2; }
+.fm-warn { padding: 10px 14px; border-radius: 10px; background: #FEF3F2; color: #B42318; font-size: 14px; font-weight: 600; }
+.fm-form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.fm-form label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: #5C5C5C; }
+.fm-form .w2 { grid-column: span 2; }
+.fm-form input, .fm-form select { height: 40px; border: 1px solid #D0D0D0; border-radius: 10px; padding: 0 12px; font: inherit; font-size: 14px; color: #1F2328; background: #fff; min-width: 0; }
+.fm-form .fm-btn { justify-content: center; }
+.fm-th.q, .fm-tr.q { grid-template-columns: 1fr 140px 70px 80px 110px 28px; }
+.fm-frame { width: 100%; height: 760px; border: 0; background: transparent; }
+a.fm-btn { text-decoration: none; }
+@media (max-width: 900px) {
+  .fm-form { grid-template-columns: 1fr; }
+  .fm-form .w2 { grid-column: auto; }
+  .fm-tr.q { grid-template-columns: 1fr 1fr; }
+  .fm-frame { height: 1200px; }
+}
+.hm .sp { flex: 1; }
+/* 배차 요청도 서류 화면과 같은 색·칸 (10/23) */
+.hm .hd-page { max-width: 760px; padding: 16px 16px 48px; }
+.hm .hd-in { background: #fff; border-color: #D0D0D0; border-radius: 10px; }
+.hm .hd-chip.on { background: #E8732C; border-color: #E8732C; }
+.hm .hd-check input { accent-color: #E8732C; }
+.hm .hd-x, .hm .hd-direct { color: #C2410C; }
+.hm .hd-kind { color: #C2410C; background: #FDF0E6; }
+.hm .hd-go { background: #E8732C; border-radius: 10px; }
+.hm .hd-pre { background: #fff; border: 1px solid #E6E4DF; }
+.fm-grid input { height: 40px; border: 1px solid #D0D0D0; border-radius: 10px; padding: 0 12px; font-size: 14px; }
+.fm-it input, .fm-tr input { height: 36px; border-color: #D0D0D0; border-radius: 8px; }
+.fm-grid label { font-size: 13px; }
 /* 납품확인서 팝업 (첫 화면, 10/23) */
 .fm-modal { width: 100%; max-width: 820px; max-height: 92vh; overflow: auto; background: #F7F7F5; border-radius: 18px; padding: 18px; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px; }
 .fm-modal .hm-mh { position: sticky; top: -18px; margin: -18px -18px 0; padding: 14px 18px; background: #F7F7F5; z-index: 1; }

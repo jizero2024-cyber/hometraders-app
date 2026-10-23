@@ -1,27 +1,38 @@
 // 간단 서류 화면 (10/23 대표 — "자재승인원처럼 필요한 버튼과 입력란만, 수동 수정란")
 //   stmt-gong 공간제작소 · stmt-etc 그 외 · stmt-ace 에이스 거래명세표 : 출고일보 전표 링크·이카운트 판매 엑셀 → 거래명세표 (js/stmt.js), 현장명·품명 손으로 고침
 //   deliv     납품확인서 : 전표 링크·판매 엑셀·우리 견적서 엑셀·사진/PDF(도우미) → 납품확인서 (js/delivery.js), 칸마다 손으로 고침
+//   approval  자재승인원 : 제조사·현장명·출고일자·발행일자·납품확인서 PDF → 도우미 make_pack.py
+//   quote     견적서     : 카톡 글·발주서 사진/PDF/엑셀 → 도우미 판독(종전가) → 줄 고치기 → 도우미 견적서 엑셀
+//   deposit   입금표     : deposit.html (같은 머리 아래)
+//   화면 모양은 모두 같음 — 머리(‹ · 로고 · 이름) · 제목 · 불러오기 칸 · 결과 칸, 파일은 끌어다 놓기도 됨
 import * as SM from './stmt.js';
 import * as DL from './delivery.js';
 
-export const ROUTES = ['stmt-gong', 'stmt-etc', 'stmt-ace', 'deliv'];
+export const ROUTES = ['stmt-gong', 'stmt-etc', 'stmt-ace', 'deliv', 'approval', 'quote', 'deposit'];
 const ST = { 'stmt-gong': ['공간제작소 거래명세표', 'homt'], 'stmt-etc': ['그 외 명세표', 'homt'], 'stmt-ace': ['에이스 거래명세표', 'ace'] };
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const won = (n) => Math.round(Number(n) || 0).toLocaleString();
 const isGong = (p) => String(p || '').includes('공간제작소');
 const blank = () => ({ text: '', files: [], docs: null, err: '', busy: false });
-const F = { 'stmt-gong': blank(), 'stmt-etc': blank(), 'stmt-ace': blank(), deliv: { ...blank(), confirms: null } };
-let ctx = { rerender: () => {}, go: () => {}, me: () => '', helper: async () => ({}), helperUp: () => false, slips: async () => ({ slips: [] }) };
+const today = () => DL.isoDate(new Date());
+const F = { 'stmt-gong': blank(), 'stmt-etc': blank(), 'stmt-ace': blank(), deliv: { ...blank(), confirms: null },
+  approval: { presets: null, preset: '', site: '', ship: '', issue: '', file: null, busy: false, err: '', out: null },
+  quote: { ...blank(), doc: null, out: null } };
+let ctx = { rerender: () => {}, go: () => {}, me: () => '', helper: async () => ({}), helperUp: () => false, helperFile: () => '', slips: async () => ({ slips: [] }) };
 
-function top(title, right) {
+function top(back, right) {
   return `<header class="hm-top"><div class="hm-in">
-    <button type="button" class="hm-back" data-fm="go" data-r="${title === '납품확인서' ? 'main' : 'stmt'}">‹</button>
+    <button type="button" class="hm-back" data-fm="go" data-r="${back}">‹</button>
     <img src="./icons/logo-full.png" alt="HOME TRADERS" class="hm-logo" data-fm="go" data-r="main">
     <span class="sp"></span>${right || ''}<b class="hm-me">${esc(ctx.me())}</b></div></header>`;
 }
-function inputCard(f, accept, extra) {
-  return `<section class="fm-in">
-    <textarea id="fm-text" rows="2" placeholder="출고일보 전표 링크 붙여넣기">${esc(f.text)}</textarea>
+function page(back, title, body, right) {
+  return `<div class="hm fm">${top(back, right)}<main class="hm-main"><h1 class="hm-h1">${title}</h1>${body}</main></div>`;
+}
+const noHelper = () => (ctx.helperUp() ? '' : '<div class="fm-warn">사무실 맥 도우미가 꺼져 있어요</div>');
+function inputCard(f, accept, extra, ph) {
+  return `<section class="fm-in" id="fm-drop">
+    <textarea id="fm-text" class="fm-ta" rows="2" placeholder="${ph || '출고일보 전표 링크 붙여넣기'}">${esc(f.text)}</textarea>
     <div class="fm-row">
       <button type="button" class="fm-btn ghost" data-fm="pick">파일 고르기</button><input type="file" id="fm-file" multiple accept="${accept}" hidden>
       ${f.files.map((x, i) => `<span class="fm-file">${esc(x.name)}<button type="button" data-fm="unpick" data-i="${i}" aria-label="빼기">✕</button></span>`).join('')}
@@ -40,14 +51,12 @@ function stmtScreen(route) {
       <button type="button" class="fm-btn" data-fm="st-pdf">전부 인쇄 · PDF</button><button type="button" class="fm-btn ghost" data-fm="st-img">전부 이미지</button></div>
     ${docs.map((d, i) => `<div class="fm-doc">
       <div class="fm-dh"><span class="fm-date">${d.ymd.slice(4, 6)}/${d.ymd.slice(6)}</span><span class="fm-slip">${esc(d.slip)}</span>${gong ? '' : `<b>${esc(d.partner)}</b>`}
-        <input class="fm-site" data-fm-site="${i}" value="${esc(d.site || '')}" placeholder="현장명"><span class="sp"></span>
+        ${route === 'stmt-ace' ? '' : `<input class="fm-site" data-fm-site="${i}" value="${esc(d.site || '')}" placeholder="현장명">`}<span class="sp"></span>
         <b class="fm-amt">${won(d.items.reduce((a, x) => a + x.supply + x.vat, 0))}원</b>
         <button type="button" class="fm-btn sm" data-fm="st-pdf" data-i="${i}">PDF</button><button type="button" class="fm-btn sm ghost" data-fm="st-img" data-i="${i}">이미지</button></div>
       ${d.items.map((x, k) => `<div class="fm-it"><input data-fm-item="${i}" data-k="${k}" value="${esc(x.name)}"><span>${won(x.qty)}</span><span>${won(x.supply / x.qty)}</span><span>${won(x.supply)}</span></div>`).join('')}
     </div>`).join('')}</section>`;
-  return `<div class="hm fm">${top(title, gong ? '<button type="button" class="hm-link" data-fm="go" data-r="gonggan">BMS ›</button>' : '')}
-    <main class="hm-main"><h1 class="hm-h1">${title}</h1>
-    ${inputCard(f, '.xlsx,.xlsm,.xls')}${list}</main></div>`;
+  return page('stmt', title, inputCard(f, '.xlsx,.xlsm,.xls') + list, gong ? '<button type="button" class="hm-link" data-fm="go" data-r="gonggan">BMS ›</button>' : '');
 }
 
 async function loadStmt(route) {
@@ -95,7 +104,7 @@ function delivScreen() {
       <label class="fm-btn ghost" for="fm-stamp">${DL.getStamp() ? '도장 바꾸기' : '도장 고르기'}</label><input type="file" id="fm-stamp" accept="image/*" hidden>
       <button type="button" class="fm-btn" data-fm="dv-print">인쇄 · PDF</button></div>
     ${cs.map(card).join('')}</section>`;
-  return `${inputCard(f, '.xlsx,.xlsm,.xls,image/*,.heic,.pdf', '<button type="button" class="fm-btn ghost" data-fm="dv-new">빈 양식</button>')}${out}`;
+  return inputCard(f, '.xlsx,.xlsm,.xls,image/*,.heic,.pdf', '<button type="button" class="fm-btn ghost" data-fm="dv-new">빈 양식</button>') + out;
 }
 // 첫 화면에서 여는 납품확인서 팝업 (10/23 대표 "팝업 형태로") — /deliv 주소로 열면 전체 화면
 export function openDeliv() { F.deliv.open = true; }
@@ -159,8 +168,98 @@ function printDeliv() {
   DL.printConfirms(cs).catch((e) => { F.deliv.err = e.message || String(e); ctx.rerender(); });
 }
 
+// ── 자재승인원 ─────────────────────────────────────────
+function approvalScreen() {
+  const a = F.approval, up = ctx.helperUp();
+  if (up && !a.presets && !a.busy) {
+    a.busy = true;
+    ctx.helper('/api/approval/presets').then((j) => { a.presets = j.presets || []; a.preset = a.preset || (a.presets[0] || {}).key || ''; })
+      .catch((e) => { a.err = e.message; }).finally(() => { a.busy = false; ctx.rerender(); });
+  }
+  const body = `${noHelper()}<section class="fm-in"><div class="fm-form">
+    <label>제조사<select data-fm-a="preset">${(a.presets || []).map((p) => `<option value="${esc(p.key)}" ${a.preset === p.key ? 'selected' : ''}>${esc(p.key)} · ${esc(p.name)}</option>`).join('')}</select></label>
+    <label class="w2">현장명<input data-fm-a="site" value="${esc(a.site)}" placeholder="단양 단성중학교 (명산종합건재·주성건설)"></label>
+    <label>출고일자<input type="date" data-fm-a="ship" value="${esc(a.ship)}"></label>
+    <label>발행일자<input type="date" data-fm-a="issue" value="${esc(a.issue || today())}"></label>
+    <label>납품확인서<button type="button" class="fm-btn ghost" data-fm="ap-pick">${a.file ? esc(a.file.name) : 'PDF 고르기'}</button></label>
+    </div><input type="file" id="fm-ap-file" accept=".pdf,application/pdf" hidden>
+    <div class="fm-row"><span class="sp"></span><button type="button" class="fm-btn" data-fm="ap-make" ${a.busy || !up ? 'disabled' : ''}>${a.busy ? '만드는 중…' : '만들기'}</button></div>
+    ${a.err ? `<div class="hm-err">${esc(a.err)}</div>` : ''}</section>
+    ${a.out ? `<section class="fm-out"><div class="fm-oh"><b>${esc(a.out.name)}</b><span class="sp"></span><a class="fm-btn" href="${a.out.url}" download="${esc(a.out.name)}">내려받기</a></div></section>` : ''}`;
+  return page('main', '자재승인원', body);
+}
+async function makeApproval() {
+  const a = F.approval;
+  a.err = ''; a.out = null;
+  if (!a.site.trim()) a.err = '현장명을 적어 주세요';
+  else if (!a.file) a.err = '납품확인서 PDF 를 골라 주세요';
+  if (a.err) { ctx.rerender(); return; }
+  a.busy = true; ctx.rerender();
+  try {
+    const j = await ctx.helper('/api/approval/make', { preset: a.preset, site: a.site.trim(), dates: a.ship ? [a.ship] : [], issue: a.issue || today(), deliv: { name: a.file.name, data: await b64(a.file) } });
+    const bin = Uint8Array.from(atob(j.data), (c) => c.charCodeAt(0));
+    a.out = { name: j.name, url: URL.createObjectURL(new Blob([bin], { type: 'application/pdf' })) };
+  } catch (e) { a.err = e.message || String(e); }
+  a.busy = false; ctx.rerender();
+}
+
+// ── 견적서 ─────────────────────────────────────────────
+const QCOLS = [['raw_name', '품명'], ['spec', '규격'], ['unit', '단위'], ['qty', '수량'], ['price', '단가']];
+function quoteScreen() {
+  const q = F.quote, d = q.doc;
+  const total = d ? d.lines.reduce((a, l) => a + (Number(l.qty) || 0) * (Number(l.price) || 0), 0) : 0;
+  const out = !d ? '' : `<section class="fm-out">
+    <div class="fm-form">
+      <label>거래처<input data-fm-q="partner" value="${esc(d.partner)}"></label>
+      <label>현장 · 건축주<input data-fm-q="owner" value="${esc(d.owner)}"></label>
+      <label>견적일<input type="date" data-fm-q="doc_date" value="${esc(d.doc_date)}"></label>
+    </div>
+    <div class="fm-tab"><div class="fm-th q">${QCOLS.map(([, l]) => `<span>${l}</span>`).join('')}<span></span></div>
+      ${d.lines.map((l, k) => `<div class="fm-tr q">${QCOLS.map(([key]) => `<input data-fm-ql="${k}" data-f="${key}" value="${esc(l[key])}"${key === 'qty' || key === 'price' ? ' inputmode="decimal"' : ''}${key === 'price' && l.prevSrc ? ` title="${esc(l.prevSrc)}"` : ''}>`).join('')}
+        <button type="button" class="fm-x" data-fm="q-rdel" data-k="${k}" aria-label="줄 지우기">✕</button></div>`).join('')}
+      <button type="button" class="fm-add" data-fm="q-radd">＋ 줄</button></div>
+    <div class="fm-oh"><b id="fm-qtotal">${won(total * 1.1)}원</b><span>부가세 포함</span><span class="sp"></span>
+      ${q.out ? `<a class="fm-btn ghost" href="${ctx.helperFile(q.out)}">${esc(q.out.split('/').pop())}</a>` : ''}
+      <button type="button" class="fm-btn" data-fm="q-make" ${q.busy || !ctx.helperUp() ? 'disabled' : ''}>${q.busy ? '만드는 중…' : '견적서 만들기'}</button></div>
+  </section>`;
+  return page('main', '견적서', noHelper() + inputCard(q, '.xlsx,.xls,image/*,.heic,.pdf', '<button type="button" class="fm-btn ghost" data-fm="q-new">빈 양식</button>', '카톡 글 · 품목 목록 붙여넣기') + out);
+}
+async function loadQuote() {
+  const q = F.quote, text = q.text.trim();
+  if (!text && !q.files.length) { q.err = '품목 글을 붙여넣거나 파일을 골라 주세요'; ctx.rerender(); return; }
+  if (!ctx.helperUp()) { q.err = '사무실 맥 도우미가 켜져 있어야 읽어요'; ctx.rerender(); return; }
+  q.busy = true; q.err = ''; q.out = null; ctx.rerender();
+  try {
+    const j = text ? await ctx.helper('/api/doc/read', { text }) : await ctx.helper('/api/doc/read', { name: q.files[0].name, data: await b64(q.files[0].file) });
+    const d = j.doc || {};
+    q.doc = { partner: d.partner || '', owner: d.owner || '', manager: d.manager || '', site: d.site || '', doc_date: DL.isoDate(d.doc_date) || today(),
+      lines: (d.lines || []).map((l) => ({ raw_name: l.raw_name || l.name || '', spec: l.spec || '', unit: l.unit || '', qty: l.qty || '',
+        price: Number(l.price) || Number(l.unit_price) || (l.prev && Number(l.prev.price)) || '', prevSrc: l.prev && l.prev.price ? `${l.prev.src || '종전가'} ${l.prev.date || ''}` : '' })) };
+  } catch (e) { q.err = e.message || String(e); }
+  q.busy = false; ctx.rerender();
+}
+async function makeQuote() {
+  const q = F.quote, d = q.doc;
+  const lines = d.lines.filter((l) => String(l.raw_name).trim() && Number(l.qty) > 0).map((l) => ({ raw_name: l.raw_name, spec: l.spec, unit: l.unit, qty: Number(l.qty), price: Number(l.price) || 0 }));
+  if (!d.partner.trim()) { q.err = '거래처를 적어 주세요'; ctx.rerender(); return; }
+  if (!lines.length) { q.err = '품명·수량이 있는 줄이 없어요'; ctx.rerender(); return; }
+  q.busy = true; q.err = ''; ctx.rerender();
+  try { const r = await ctx.helper('/api/quote', { doc: { partner: d.partner, owner: d.owner, manager: d.manager, site: d.site, doc_date: d.doc_date }, lines }); q.out = r.out; }
+  catch (e) { q.err = e.message || String(e); }
+  q.busy = false; ctx.rerender();
+}
+
+// ── 입금표 ─────────────────────────────────────────────
+function depositScreen() {
+  return page('main', '입금표', '<iframe class="fm-frame" src="./deposit.html?embed=1" title="입금표"></iframe>');
+}
+
 export function screen(route) {
-  return route === 'deliv' ? `<div class="hm fm">${top('납품확인서')}<main class="hm-main"><h1 class="hm-h1">납품확인서</h1>${delivScreen()}</main></div>` : stmtScreen(route);
+  if (route === 'deliv') return page('main', '납품확인서', delivScreen());
+  if (route === 'approval') return approvalScreen();
+  if (route === 'quote') return quoteScreen();
+  if (route === 'deposit') return depositScreen();
+  return stmtScreen(route);
 }
 
 export function bind(app, c) {
@@ -173,7 +272,13 @@ export function bind(app, c) {
     else if (a === 'dv-close' || (a === 'dv-close-bg' && e.target === t)) { F.deliv.open = false; ctx.rerender(); }
     else if (a === 'pick') document.getElementById('fm-file').click();
     else if (a === 'unpick') { f.files.splice(i, 1); ctx.rerender(); }
-    else if (a === 'load') { f.text = (document.getElementById('fm-text') || {}).value || ''; if (r === 'deliv') loadDeliv(); else loadStmt(r); }
+    else if (a === 'load') { f.text = (document.getElementById('fm-text') || {}).value || ''; if (r === 'deliv') loadDeliv(); else if (r === 'quote') loadQuote(); else loadStmt(r); }
+    else if (a === 'ap-pick') document.getElementById('fm-ap-file').click();
+    else if (a === 'ap-make') makeApproval();
+    else if (a === 'q-new') { f.doc = { partner: '', owner: '', manager: '', site: '', doc_date: today(), lines: [{ raw_name: '', spec: '', unit: '', qty: '', price: '' }] }; f.out = null; ctx.rerender(); }
+    else if (a === 'q-radd') { f.doc.lines.push({ raw_name: '', spec: '', unit: '', qty: '', price: '' }); ctx.rerender(); }
+    else if (a === 'q-rdel') { f.doc.lines.splice(Number(t.dataset.k), 1); ctx.rerender(); }
+    else if (a === 'q-make') makeQuote();
     else if (a === 'st-pdf') SM.printSheets(Number.isNaN(i) ? f.docs : [f.docs[i]], ST[r][1]);
     else if (a === 'st-img') { f.busy = true; ctx.rerender(); try { await SM.saveImages(Number.isNaN(i) ? f.docs : [f.docs[i]], null, ST[r][1]); } catch (err) { f.err = err.message || String(err); } f.busy = false; ctx.rerender(); }
     else if (a === 'dv-new') { f.confirms = [...(f.confirms || []), { manual: true, date: DL.isoDate(new Date()), client: '', place: '', what: '', rows: [{ cat: '', name: '', unit: 'ROLL', qty: '', ov: {} }] }]; ctx.rerender(); }
@@ -189,14 +294,33 @@ export function bind(app, c) {
     else if (d.fmSite !== undefined) f.docs[Number(d.fmSite)].site = el.value;
     else if (d.fmItem !== undefined) f.docs[Number(d.fmItem)].items[Number(d.k)].name = el.value;
     else if (d.fmC !== undefined) f.confirms[Number(d.fmC)][d.k] = el.value;
+    else if (d.fmA !== undefined) F.approval[d.fmA] = el.value;
+    else if (d.fmQ !== undefined) f.doc[d.fmQ] = el.value;
+    else if (d.fmQl !== undefined) {
+      f.doc.lines[Number(d.fmQl)][d.f] = d.f === 'qty' || d.f === 'price' ? el.value.replace(/[^\d.]/g, '') : el.value;
+      const tot = document.getElementById('fm-qtotal');   // 합계만 바로 (칸을 다시 그리면 입력 중인 글자가 끊김)
+      if (tot) tot.textContent = `${won(f.doc.lines.reduce((x, l) => x + (Number(l.qty) || 0) * (Number(l.price) || 0), 0) * 1.1)}원`;
+    }
     else if (d.fmR !== undefined) {
       const row = f.confirms[Number(d.fmR)].rows[Number(d.k)];
       if (d.f === 'qty') row.qty = el.value.replace(/[^\d.]/g, '');
       else { row.ov = { ...(row.ov || {}), [d.f]: el.value }; if (d.f === 'prod' && !row.name) row.name = el.value; }
     }
   });
+  app.addEventListener('dragover', (e) => { const d = cur() && e.target.closest && e.target.closest('#fm-drop'); if (d) { e.preventDefault(); d.classList.add('over'); } });
+  app.addEventListener('dragleave', (e) => { const d = e.target.closest && e.target.closest('#fm-drop'); if (d) d.classList.remove('over'); });
+  app.addEventListener('drop', (e) => {
+    const r = cur(), d = r && e.target.closest && e.target.closest('#fm-drop'); if (!d) return;
+    e.preventDefault(); d.classList.remove('over');
+    const files = [...(e.dataTransfer.files || [])], text = e.dataTransfer.getData('text/plain');
+    if (files.length) F[r].files.push(...files.map((file) => ({ name: file.name, file })));
+    else if (text.trim()) F[r].text = [F[r].text, text].filter(Boolean).join('\n');
+    ctx.rerender();
+  });
   app.addEventListener('change', async (e) => {
     const r = cur(); if (!r) return;
+    if (e.target.dataset.fmA) { F.approval[e.target.dataset.fmA] = e.target.value; return; }
+    if (e.target.id === 'fm-ap-file' && e.target.files[0]) { F.approval.file = e.target.files[0]; e.target.value = ''; ctx.rerender(); return; }
     if (e.target.id === 'fm-file') { F[r].files.push(...[...e.target.files].map((file) => ({ name: file.name, file }))); e.target.value = ''; ctx.rerender(); }
     else if (e.target.id === 'fm-stamp' && e.target.files[0]) {
       try { await DL.setStamp(e.target.files[0]); } catch (err) { F.deliv.err = err.message; }

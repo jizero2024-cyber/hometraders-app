@@ -1,12 +1,13 @@
 // 홈트 새 첫 화면 (2026-10-23, 시안 https://claude.ai/artifact/73p2e2adSEoEeCTJ7QnjHY)
 // 맨 위 빨간 칸 = 기사 운임 미송금 (fare_unpaid — 맥 도우미가 출고일보 폴더 '기사_운임_미송금_정리' 엑셀에서 올림. '보냄' 누르면 엑셀 보냄 칸에 O)
-// 버튼: 배차 요청 · 자료 넣기(site_inbox — 출고일보 업데이트 때 판매·구매입력) · 거래명세표(공간제작소 명세 / 그 외 명세) · 납품확인서 · 자재승인원 · 그 밖의 서류
+// 버튼: 배차 요청 · 자료 넣기(site_inbox — 출고일보 업데이트 때 판매·구매입력) · 거래명세표(공간제작소 · 그 외 · 에이스) · 납품확인서 · 자재승인원 · 견적서 · 입금표
+//   서류 화면은 모두 js/forms.js (같은 머리·카드·버튼)
 import * as S from './store-supabase.js';
 import * as FM from './forms.js';
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const won = (n) => Math.round(Number(n) || 0).toLocaleString();
-const H = { fare: null, fareErr: '', inbox: {}, inboxErr: '', at: 0, loading: false, fareAll: false, toast: '', busy: false, pack: null };
+const H = { fare: null, fareErr: '', inbox: {}, inboxErr: '', at: 0, loading: false, fareAll: false, toast: '', busy: false, box: false, text: '' };
 let ctx = { rerender: () => {}, go: () => {}, me: () => '', helper: async () => ({}) };
 
 const svg = (stroke, d) => `<svg viewBox="0 0 24 24" style="width:38px;height:38px;fill:none;stroke:${stroke};stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round">${d}</svg>`;
@@ -18,9 +19,7 @@ const IC = {
   pack: svg('#5B3FA8', '<path d="M4 6h6l2 2h8v11H4z"></path><path d="M9 14l2 2 4-4"></path>'),
   won: svg('#B54708', '<rect x="3" y="6" width="18" height="12" rx="2"></rect><circle cx="12" cy="12" r="2.6"></circle><path d="M6.5 9v6M17.5 9v6"></path>'),
   quote: svg('#3F3F46', '<path d="M6 3h9l4 4v14H6z"></path><path d="M9 9h3M9 13h7M9 17h5"></path><path d="M15 3v4h4"></path>'),
-  more: svg('#3F3F46', '<rect x="4" y="4" width="6.5" height="6.5" rx="1.5"></rect><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"></rect><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"></rect><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"></rect>'),
 };
-const PRESETS = ['오웬스'];   // 드라이브 자재승인원/make_pack.py PRESETS 와 같게
 
 export function load(force) {
   if (H.loading || (!force && Date.now() - H.at < 60000)) return;
@@ -65,18 +64,13 @@ function tile(o) {
     <span class="hm-ic" style="background:${o.bg}">${o.icon}</span><b>${o.title}</b>${o.sub ? `<span class="hm-sub">${o.sub}</span>` : ''}${o.extra || ''}</${o.tag || 'button'}>`;
 }
 
-function packModal() {
-  const p = H.pack;
-  if (!p) return '';
-  return `<div class="hm-ov" data-hm="pack-close-bg"><div class="hm-modal" role="dialog" aria-label="자재승인원">
-    <div class="hm-mh"><b>자재승인원</b><button type="button" class="hm-x" data-hm="pack-close" aria-label="닫기">✕</button></div>
-    <label>제조사<select data-hm-in="preset">${PRESETS.map((x) => `<option ${p.preset === x ? 'selected' : ''}>${x}</option>`).join('')}</select></label>
-    <label>현장명<input data-hm-in="site" value="${esc(p.site)}" placeholder="단양 단성중학교 (명산종합건재·주성건설)"></label>
-    <label>출고일자<input data-hm-in="dates" value="${esc(p.dates)}" placeholder="2026-10-06"></label>
-    <label>납품확인서 PDF<input type="file" id="hm-pack-file" accept=".pdf,application/pdf"></label>
-    ${p.fileName ? `<div class="hm-ok">${esc(p.fileName)}</div>` : ''}
-    ${p.err ? `<div class="hm-err">${esc(p.err)}</div>` : ''}
-    <button type="button" class="hm-go" data-hm="pack-make" ${p.busy ? 'disabled' : ''}>${p.busy ? '만드는 중…' : 'PDF 만들기'}</button></div></div>`;
+function boxModal() {   // 자료 넣기 — 카톡 글 붙여넣기 칸 + 파일 (휴대폰은 Cmd+V 가 없어서)
+  if (!H.box) return '';
+  return `<div class="hm-ov" data-hm="box-bg"><div class="hm-modal" role="dialog" aria-label="자료 넣기">
+    <div class="hm-mh"><b>자료 넣기</b><button type="button" class="hm-x" data-hm="box-close" aria-label="닫기">✕</button></div>
+    <textarea id="hm-text" class="fm-ta" rows="7" placeholder="카톡 글 붙여넣기">${esc(H.text)}</textarea>
+    <div class="fm-row"><button type="button" class="fm-btn ghost" data-hm="pick">파일 고르기</button><span class="sp"></span>
+      <button type="button" class="fm-btn" data-hm="put" ${H.busy ? 'disabled' : ''}>넣기</button></div></div></div>`;
 }
 
 export function screen(view) {
@@ -93,15 +87,15 @@ export function screen(view) {
   return `<div class="hm">${top('')}<main class="hm-main">
     <div class="hm-grid">
       ${tile({ title: '배차 요청', icon: IC.truck, bg: '#FDF0E6', attr: 'data-hm="go" data-r="homt"' })}
-      ${tile({ tag: 'label', title: '자료 넣기', icon: IC.up, bg: '#EAF1FB', cls: 'drop wide', sub: '카톡 글 · 거래명세표 · 발주서 · 사진 · PDF · 엑셀 — 끌어다 놓기 · Cmd+V',
-        badge: chk ? `확인 ${chk}` : wait ? `대기 ${wait}` : '', badgeStyle: chk ? 'background:#D92D20' : 'background:#1D4F91', attr: 'id="hm-drop"',
-        extra: `<input type="file" id="hm-file" multiple accept="image/*,.heic,.pdf,.xlsx,.xls,.csv,.txt" hidden>${H.toast ? `<span class="hm-toast">${esc(H.toast)}</span>` : ''}` })}
+      ${tile({ title: '자료 넣기', icon: IC.up, bg: '#EAF1FB', cls: 'drop wide', sub: '카톡 글 · 거래명세표 · 발주서 · 사진 · PDF · 엑셀',
+        badge: chk ? `확인 ${chk}` : wait ? `대기 ${wait}` : '', badgeStyle: chk ? 'background:#D92D20' : 'background:#1D4F91', attr: 'id="hm-drop" data-hm="box"',
+        extra: H.toast ? `<span class="hm-toast">${esc(H.toast)}</span>` : '' })}
       ${tile({ title: '거래명세표', icon: IC.stmt, bg: '#EEF6EE', attr: 'data-hm="go" data-r="stmt"' })}
       ${tile({ title: '납품확인서', icon: IC.deliv, bg: '#EEF6EE', attr: 'data-hm="deliv"' })}
-      ${tile({ title: '자재승인원', icon: IC.pack, bg: '#F2EEFB', attr: 'data-hm="pack"' })}
-      ${tile({ title: '입금표', icon: IC.won, bg: '#FFF4E5', attr: 'data-hm="href" data-href="./deposit.html"' })}
-      ${tile({ title: '견적서', icon: IC.quote, bg: '#F3F4F6', attr: 'data-hm="go" data-r="chat" data-mode="quote"' })}
-    </div>${farePanel()}</main>${packModal()}${FM.delivPopup()}</div>`;
+      ${tile({ title: '자재승인원', icon: IC.pack, bg: '#F2EEFB', attr: 'data-hm="go" data-r="approval"' })}
+      ${tile({ title: '견적서', icon: IC.quote, bg: '#F3F4F6', attr: 'data-hm="go" data-r="quote"' })}
+      ${tile({ title: '입금표', icon: IC.won, bg: '#FFF4E5', attr: 'data-hm="go" data-r="deposit"' })}
+    </div>${farePanel()}</main>${boxModal()}${FM.delivPopup()}<input type="file" id="hm-file" multiple accept="image/*,.heic,.pdf,.xlsx,.xls,.csv,.txt" hidden></div>`;
 }
 
 // ── 자료 넣기 ─────────────────────────────────────────
@@ -133,24 +127,10 @@ async function putInbox(items) {
     } catch (e) { err = e.message || String(e); }
   }
   H.busy = false;
+  if (!err) { H.box = false; H.text = ''; }
   H.toast = err ? `못 넣었어요 — ${err}` : `${ok}건 넣었어요`;
   load(true);
   setTimeout(() => { H.toast = ''; ctx.rerender(); }, 4000);
-}
-
-async function makePack() {
-  const p = H.pack;
-  if (!p.site.trim() || !p.file) { p.err = '현장명과 납품확인서 PDF 를 넣어 주세요'; ctx.rerender(); return; }
-  p.busy = true; p.err = ''; ctx.rerender();
-  try {
-    const j = await ctx.helper('/api/approval/make', { preset: p.preset, site: p.site.trim(), dates: p.dates.match(/20\d\d-\d\d-\d\d/g) || [],
-      deliv: { name: p.file.name, data: (await readUrl(p.file)).split(',')[1] } });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([Uint8Array.from(atob(j.data), (c) => c.charCodeAt(0))], { type: 'application/pdf' }));
-    a.download = j.name; a.click();
-    H.pack = null;
-  } catch (e) { p.err = /fetch|network/i.test(e.message) ? '사무실 맥 도우미가 켜져 있어야 만들 수 있어요' : e.message; p.busy = false; }
-  ctx.rerender();
 }
 
 export function bind(app, c) {
@@ -160,24 +140,22 @@ export function bind(app, c) {
     const t = e.target.closest('[data-hm]'); if (!t || !on()) return;
     const a = t.dataset.hm;
     if (a === 'go') ctx.go(t.dataset.r, t.dataset.mode);
-    else if (a === 'href') location.href = t.dataset.href;
     else if (a === 'fare-all') { H.fareAll = !H.fareAll; ctx.rerender(); }
     else if (a === 'sent') {
       const r = (H.fare || []).find((x) => x.id === t.dataset.id); if (!r) return;
       if (!confirm(`${r.driver} ${r.amount ? won(r.amount) + '원' : ''} — 보냄으로 표시할까요?`)) return;
       S.markFareSent(r.id, ctx.me()).then((err) => { if (err) alert('저장 못 했어요 — ' + err); else { r.sent = true; ctx.rerender(); } });
     }
-    else if (a === 'deliv') { FM.openDeliv(); ctx.rerender(); }
-    else if (a === 'pack') { H.pack = { preset: PRESETS[0], site: '', dates: '', file: null, fileName: '', err: '', busy: false }; ctx.rerender(); }
-    else if (a === 'pack-close' || (a === 'pack-close-bg' && e.target === t)) { H.pack = null; ctx.rerender(); }
-    else if (a === 'pack-make') makePack();
+    else if (a === 'deliv') { FM.openDeliv(); ctx.rerender(); }   // 납품확인서는 첫 화면 팝업 (10/23 대표) — /deliv 주소는 전체 화면
+    else if (a === 'box') { H.box = true; ctx.rerender(); setTimeout(() => { const x = document.getElementById('hm-text'); if (x) x.focus(); }, 0); }
+    else if (a === 'box-close' || (a === 'box-bg' && e.target === t)) { H.box = false; ctx.rerender(); }
+    else if (a === 'pick') document.getElementById('hm-file').click();
+    else if (a === 'put') { const v = (document.getElementById('hm-text') || {}).value || ''; if (v.trim()) putInbox([v]); }
   });
-  app.addEventListener('input', (e) => { const k = e.target.dataset && e.target.dataset.hmIn; if (k && H.pack) H.pack[k] = e.target.value; });
+  app.addEventListener('input', (e) => { if (e.target.id === 'hm-text') H.text = e.target.value; });
   app.addEventListener('change', (e) => {
     if (!on()) return;
-    const k = e.target.dataset && e.target.dataset.hmIn; if (k && H.pack) { H.pack[k] = e.target.value; return; }
     if (e.target.id === 'hm-file') { putInbox([...e.target.files]); e.target.value = ''; }
-    if (e.target.id === 'hm-pack-file' && H.pack) { H.pack.file = e.target.files[0] || null; H.pack.fileName = H.pack.file ? H.pack.file.name : ''; ctx.rerender(); }
   });
   app.addEventListener('dragover', (e) => { const d = e.target.closest && e.target.closest('#hm-drop'); if (d) { e.preventDefault(); d.classList.add('over'); } });
   app.addEventListener('dragleave', (e) => { const d = e.target.closest && e.target.closest('#hm-drop'); if (d) d.classList.remove('over'); });
@@ -188,7 +166,7 @@ export function bind(app, c) {
     putInbox(files.length ? files : text.trim() ? [text] : []);
   });
   document.addEventListener('paste', (e) => {   // 첫 화면에서 Cmd+V = 자료 넣기 (입력칸 안은 제외)
-    if (!app.querySelector('#hm-drop') || H.pack || app.querySelector('.fm-pop') || e.target.closest('input, textarea, [contenteditable]')) return;
+    if (!app.querySelector('#hm-drop') || app.querySelector('.fm-pop') || e.target.closest('input, textarea, [contenteditable]')) return;
     const files = [...(e.clipboardData.files || [])], text = e.clipboardData.getData('text/plain');
     if (files.length || text.trim()) { e.preventDefault(); putInbox(files.length ? files : [text]); }
   });

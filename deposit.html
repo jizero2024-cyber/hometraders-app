@@ -83,22 +83,36 @@
     .sheet { box-shadow: none; padding: 0; }
     #form { margin: 0 auto; zoom: 1.15; }
   }
+  /* 사이트 서류 화면과 같은 모양 (10/23) — 글꼴·입력칸·버튼 */
+  body { font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; background: #F7F7F5; }
+  .panel { border: 1px solid #E6E4DF; box-shadow: none; border-radius: 16px; }
+  .panel input { font-size: 15px; height: 42px; padding: 0 12px; border: 1px solid #D0D0D0; border-radius: 10px; }
+  .panel input#amount { font-size: 20px; }
+  .hangul { color: #5C5C5C; }
+  .btns button { height: 42px; padding: 0; border-radius: 10px; font-size: 14px; }
+  .b-print { background: #E8732C; }
+  .b-png { background: #fff; color: #3F3F46; border: 1px solid #D0D0D0 !important; }
+  .sheet { border: 1px solid #E6E4DF; box-shadow: none; }
+  body.embed { background: transparent; }
+  body.embed .wrap { padding: 0; justify-content: flex-start; }
+  body.embed .panel h2 { display: none; }
 </style>
 </head>
 <body>
+<script>if (/[?&]embed=1/.test(location.search)) document.body.classList.add('embed');</script>
 <div class="wrap">
   <div class="panel">
     <h2>입금표 작성</h2>
+
+    <label for="to">받는 곳</label>
+    <input id="to" value="원익큐브">
 
     <label for="amount">금액 (원)</label>
     <input id="amount" inputmode="numeric" autocomplete="off" placeholder="3,762,000" autofocus>
     <div class="hangul" id="hangul"></div>
 
-    <label for="date">작성일 (상계처리 날짜)</label>
+    <label for="date">작성일</label>
     <input id="date" type="date">
-
-    <label for="to">받는 곳</label>
-    <input id="to" value="원익큐브">
 
     <label for="memo">내용</label>
     <input id="memo" value="상계처리">
@@ -107,7 +121,7 @@
       <button class="b-print" onclick="issue('print')">인쇄 / PDF</button>
       <button class="b-png" onclick="issue('png')">그림 저장</button>
     </div>
-    <div class="drive" id="drive">발행하면 구글 드라이브 입금표 폴더에도 저장돼요</div>
+    <div class="drive" id="drive"></div>
   </div>
 
   <div class="sheet">
