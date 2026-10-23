@@ -203,12 +203,12 @@ function docBox(kind, d) {
   if (!src) return `<figure style="margin:0;display:flex;flex-direction:column;gap:8px">${cap}<button type="button" data-gb="replace" data-k="tax" style="aspect-ratio:1588/1408;border:2px dashed #B8B8B8;border-radius:8px;background:#F4F4F4;color:#4B4B4B;font:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer"><span style="font-size:32px">+</span><b>세금계산서 넣기</b></button></figure>`;
   const pdf = src.startsWith('data:application/pdf');
   const del = kind === 'stmt' && ctx.me() !== 'space1234' ? `<button type="button" data-gb="delstmt" aria-label="거래명세표 지우기" style="position:absolute;top:8px;right:46px;width:30px;height:30px;border-radius:15px;border:1px solid #F1B5AF;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">${TRASH}</button>` : kind === 'tax' ? `<button type="button" data-gb="deltax" aria-label="세금계산서 지우기" style="position:absolute;top:8px;right:46px;width:30px;height:30px;border-radius:15px;border:1px solid #F1B5AF;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">${TRASH}</button>` : '';   // 잘못 넣은 세금계산서 지우기 (10/23 대표)
-  return `<figure style="margin:0;display:flex;flex-direction:column;gap:8px">${cap}<div style="position:relative;border:1px solid #D9D9D9;border-radius:6px;overflow:hidden;background:#fff">${pdf ? `<embed src="${src}" type="application/pdf" style="width:100%;aspect-ratio:1588/1408;display:block">` : `<button type="button" data-gb="zoom" data-k="${kind}" aria-label="${label} 크게 보기" style="display:block;width:100%;padding:0;border:0;background:none;cursor:zoom-in"><img src="${src}" alt="${label}" style="width:100%;height:auto;display:block"></button>`}${del}${pen}</div></figure>`;
+  return `<figure style="margin:0;display:flex;flex-direction:column;gap:8px">${cap}<div style="position:relative;border:1px solid #D9D9D9;border-radius:6px;overflow:hidden;background:#fff">${pdf && !pdfView(d.id, src) ? '<div style="aspect-ratio:1588/1100;display:flex;align-items:center;justify-content:center;color:#6B6B6B;font-size:13px">불러오는 중…</div>' : `<button type="button" data-gb="zoom" data-k="${kind}" aria-label="${label} 크게 보기" style="display:block;width:100%;padding:0;border:0;background:none;cursor:zoom-in"><img src="${pdf ? pdfView(d.id, src) : src}" alt="${label}" style="width:100%;height:auto;display:block"></button>`}${del}${pen}</div></figure>`;
 }
 function modalHtml(d) {
   ensureImg(d); ensureFull(d.id);
   const st = statusOf(d), x = G.docs[d.id] || {};
-  const zoomSrc = G.zoom === 'stmt' ? ((G.full[d.id] || {}).stmt_data || G.img[d.id]) : G.zoom === 'tax' ? (G.full[d.id] || {}).tax_data : '';
+  const zoomSrc = G.zoom === 'stmt' ? ((G.full[d.id] || {}).stmt_data || G.img[d.id]) : G.zoom === 'tax' ? viewSrc(d, 'tax') : '';
   return `<div data-gb="overlay" style="position:fixed;inset:0;background:rgba(17,20,24,.45);display:flex;align-items:flex-start;justify-content:center;padding:20px 16px;box-sizing:border-box;overflow-y:auto;z-index:50">
     <div role="dialog" aria-modal="true" aria-label="거래명세표 · 세금계산서" style="width:100%;max-width:1360px;background:#fff;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.25);padding:20px 22px 22px;box-sizing:border-box;display:flex;flex-direction:column;gap:16px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
@@ -363,11 +363,22 @@ async function canvasOf(src) {
   const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(im, 0, 0); return c;
 }
 const srcOf = (d, kind) => (kind === 'stmt' ? ((G.full[d.id] || {}).stmt_data || G.img[d.id]) : (G.full[d.id] || {}).tax_data);
+// PDF 세금계산서는 첫 쪽을 그림으로 그려서 보여 줌 — 브라우저 PDF 보기(도구 줄·축소)가 끼지 않게 (10/23 대표 "왜 이렇게 떠")
+const pdfImg = {};
+function pdfView(id, src) {
+  const v = pdfImg[id];
+  if (v && v.src === src) return v.url;
+  if (!v || v.src !== src) {
+    pdfImg[id] = { src, url: '' };
+    pdfCanvas(src).then((c) => { pdfImg[id] = { src, url: c.toDataURL('image/jpeg', 0.92) }; ctx.rerender(); }).catch(() => { /* 못 그리면 불러오는 중 그대로 */ });
+  }
+  return '';
+}
+const viewSrc = (d, kind) => { const s0 = srcOf(d, kind); return s0 && s0.startsWith('data:application/pdf') ? pdfView(d.id, s0) : s0; };   // 보기·복사·JPG 용 그림
 const fileName = (d, kind) => `${d.ymd.slice(2)}_${(d.site || '공간제작소').replace(/[\\/:*?"<>|]/g, ' ')}_${kind === 'stmt' ? '거래명세표' : '세금계산서'}.jpg`;
 async function saveJpg(d, kind) {
   const src = srcOf(d, kind); if (!src || src === 'loading') return;
-  if (src.startsWith('data:application/pdf')) { const a = document.createElement('a'); a.href = src; a.download = fileName(d, kind).replace(/\.jpg$/, '.pdf'); a.click(); return; }
-  const c = await canvasOf(src);
+  const c = src.startsWith('data:application/pdf') ? await pdfCanvas(src) : await canvasOf(src);
   const blob = await new Promise((ok) => c.toBlob(ok, 'image/jpeg', 0.92));
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = fileName(d, kind); a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
@@ -430,7 +441,7 @@ async function saveBothPdf(d) {   // 2장 한 번에 = 거래명세표 + 세금�
   } catch (e) { alert('PDF 로 저장하지 못했어요 — ' + (e.message || e)); }
 }
 async function copyImg(d, kind) {
-  const src = srcOf(d, kind); if (!src || src === 'loading' || src.startsWith('data:application/pdf')) return;
+  const src = viewSrc(d, kind); if (!src || src === 'loading') return;
   try {
     const c = await canvasOf(src);
     const blob = await new Promise((ok) => c.toBlob(ok, 'image/png'));
