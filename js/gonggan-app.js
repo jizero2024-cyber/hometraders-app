@@ -6,6 +6,7 @@ import * as GB from './gbms.js';
 
 const app = document.getElementById('app');
 const GONG_ID = 'space1234';
+const CLOSED = true;   // 공간제작소 계정 닫힘 (10/23 대표) — DB 에서도 막혀 있음(policy gonggan_closed)
 const HELPER = 'http://127.0.0.1:4180';   // 사무실 맥 도우미 — 직원이 직접 등록할 때 PDF·사진 읽기
 let me = '';
 let booted = false;
@@ -39,8 +40,14 @@ app.addEventListener('submit', (e) => {
 
 async function boot() {
   const session = await S.getSession();
-  if (!session) { booted = false; me = ''; showLogin(); return; }
+  if (!session) { booted = false; me = ''; if (!document.getElementById('gg-login')) showLogin(); return; }
   me = ((session.user && session.user.email) || '').split('@')[0];
+  if (me === GONG_ID && CLOSED) {   // 지금은 공간제작소 계정으로 못 들어옴 (10/23 대표 "나만 들어갈 수 있게") — 다시 열 때 CLOSED = false
+    booted = false; me = '';
+    await S.signOut();
+    showLogin('코드를 확인해 주세요');
+    return;
+  }
   booted = true;
   render();
 }
