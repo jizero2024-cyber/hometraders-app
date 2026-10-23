@@ -196,7 +196,7 @@ function docBox(kind, d) {
       <span style="color:#5C5C5C">승인번호</span>
       ${no && !G.editNo ? `<b style="font-size:16px;letter-spacing:.2px">${esc(no)}</b><button type="button" data-gb="editno" aria-label="승인번호 고치기" style="width:28px;height:28px;border-radius:14px;border:1px solid #D5D8DD;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">${PEN}</button>`
         : `<input data-gb="taxno" value="${esc(no)}" placeholder="${finding.has(d.id) ? '찾는 중…' : '20261013-10261013-99366706'}" style="height:32px;width:260px;border:1px solid #D0D0D0;border-radius:6px;padding:0 10px;font:inherit;font-size:14px">`}
-      <button type="button" data-gb="copyno" ${no ? '' : 'disabled'} style="height:32px;padding:0 12px;border:1px solid #1D4F91;border-radius:6px;background:#fff;color:#1D4F91;font:inherit;font-size:13px;font-weight:700;cursor:pointer">복사하기</button></div>` : '';
+      <button type="button" data-gb="copyno" ${no ? '' : 'disabled'} style="height:32px;padding:0 12px;border:1px solid #1D4F91;border-radius:6px;background:#fff;color:#1D4F91;font:inherit;font-size:13px;font-weight:700;cursor:pointer">${G.copied ? '복사됨 ✓' : '복사하기'}</button></div>` : '';
   const cap = `${noRow}<figcaption style="display:flex;justify-content:space-between;align-items:center"><b>${label}</b><span style="display:flex;gap:6px">${[['copy', '복사'], ['jpg', 'JPG 저장'], ['pdf', 'PDF 저장']].map(([a, t]) => `<button type="button" data-gb="${a}" data-k="${kind}" ${src ? '' : 'disabled'} style="height:30px;padding:0 10px;border:1px solid #E6E4DF;border-radius:6px;background:#fff;font:inherit;font-size:12px;cursor:pointer">${t}</button>`).join('')}</span></figcaption>`;
   const pen = `<button type="button" data-gb="replace" data-k="${kind}" aria-label="${label} 바꾸기" style="position:absolute;top:8px;right:8px;width:30px;height:30px;border-radius:15px;border:1px solid #D5D8DD;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">${PEN}</button>`;
   if (!src && kind === 'stmt') return `<figure style="margin:0;display:flex;flex-direction:column;gap:8px">${cap}<div style="aspect-ratio:1588/1408;border:1px solid #D9D9D9;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#6B6B6B;font-size:13px">불러오는 중…</div></figure>`;
@@ -370,6 +370,22 @@ async function saveJpg(d, kind) {
   const blob = await new Promise((ok) => c.toBlob(ok, 'image/jpeg', 0.92));
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = fileName(d, kind); a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
+// 글자 복사 — 클립보드 권한이 막혀 있어도 되게 (숨긴 칸 → 복사 명령), 눌렀다는 표시는 2초 (10/23 승인번호)
+async function copyText(v) {
+  if (!v) return;
+  let ok = false;
+  try { await navigator.clipboard.writeText(v); ok = true; } catch (_) { /* 아래로 */ }
+  if (!ok) {
+    const ta = document.createElement('textarea');
+    ta.value = v; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+    document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, v.length);
+    try { ok = document.execCommand('copy'); } catch (_) { ok = false; }
+    ta.remove();
+  }
+  if (!ok) { prompt('복사하지 못했어요 — 아래 번호를 직접 복사하세요', v); return; }
+  G.copied = Date.now(); ctx.rerender();
+  setTimeout(() => { if (Date.now() - G.copied >= 1900) { G.copied = 0; ctx.rerender(); } }, 2000);
+}
 async function savePdf(d, kind) {   // PDF 로 저장 — 이미 PDF 면 그대로, 그림은 A4 한 장에 맞춰
   const src = srcOf(d, kind); if (!src || src === 'loading') return;
   const name = fileName(d, kind).replace(/\.jpg$/, '.pdf');
@@ -465,7 +481,7 @@ export function bind(app, c) {
     else if (a === 'copy' && cur) copyImg(cur, t.dataset.k);
     else if (a === 'pdf' && cur) savePdf(cur, t.dataset.k);
     else if (a === 'editno') { G.editNo = true; ctx.rerender(); const el = app.querySelector('[data-gb="taxno"]'); if (el) el.focus(); }
-    else if (a === 'copyno' && cur) { const v = (G.docs[cur.id] || {}).tax_no || ''; navigator.clipboard.writeText(v).then(() => { t.textContent = '복사됨'; setTimeout(() => { t.textContent = '복사하기'; }, 1500); }).catch(() => alert(v)); }
+    else if (a === 'copyno' && cur) copyText((G.docs[cur.id] || {}).tax_no || '');
     else if (a === 'both' && cur) saveBothPdf(cur);
   });
   app.addEventListener('change', (e) => {
