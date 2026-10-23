@@ -181,8 +181,8 @@ function rowHtml(d) {
     <td style="padding:12px 8px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums">${won(d.total)}</td>
     <td style="padding:12px 8px;text-align:center">${okTag}</td>
     <td style="padding:12px 8px;text-align:center">${x.tax_name ? okTag : addBtn('addtax', d.id)}</td>
-    <td style="padding:12px 8px;text-align:center;white-space:nowrap">${statusPick(d.id, st)}${x.delivered ? `<div style="margin-top:5px;font-size:11px;font-weight:700;color:#1E6B34">✓ ${esc(x.delivered)} 전달완료</div>` : ''}</td>
-    <td style="padding:12px 14px 12px 8px;text-align:center;white-space:nowrap;font-size:13px;color:#3F3F46">${d.reg ? md(d.reg.replace(/-/g, '')) : ''}</td>
+    <td style="padding:12px 8px;text-align:center;white-space:nowrap">${statusPick(d.id, st)}</td>
+    <td style="padding:12px 14px 12px 8px;text-align:center;white-space:nowrap;font-size:13px;color:#3F3F46">${x.delivered ? `<span style="font-weight:700;color:#1E6B34">✓ ${esc(x.delivered)} 전달완료</span>` : d.reg ? md(d.reg.replace(/-/g, '')) : ''}</td>
   </tr>`;
 }
 function docBox(kind, d) {
