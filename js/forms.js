@@ -52,13 +52,13 @@ function stmtScreen(route) {
     <div class="fm-oh"><b>${docs.length}장</b><span>${won(sum)}원</span><span class="sp"></span>
       <button type="button" class="fm-btn" data-fm="st-pdf">전부 인쇄 · PDF</button><button type="button" class="fm-btn ghost" data-fm="st-img">전부 이미지</button></div>
     ${docs.map((d, i) => `<div class="fm-doc">
-      <div class="fm-dh"><span class="fm-date">${d.ymd.slice(4, 6)}/${d.ymd.slice(6)}</span><span class="fm-slip">${esc(d.slip)}</span>${gong ? '' : `<b>${esc(d.partner)}</b>`}
+      <div class="fm-dh"><span class="fm-date">${d.ymd.slice(4, 6)}/${d.ymd.slice(6)}</span><span class="fm-slip">${esc(d.slip)}</span>${gong ? '' : `<input class="fm-site fm-partner" data-fm-partner="${i}" value="${esc(d.partner)}" placeholder="받는 곳">`}
         ${route === 'stmt-ace' ? '' : `<input class="fm-site" data-fm-site="${i}" value="${esc(d.site || '')}" placeholder="현장명">`}<span class="sp"></span>
         <b class="fm-amt">${won(d.items.reduce((a, x) => a + x.supply + x.vat, 0))}원</b>
         <button type="button" class="fm-btn sm" data-fm="st-pdf" data-i="${i}">PDF</button><button type="button" class="fm-btn sm ghost" data-fm="st-img" data-i="${i}">이미지</button></div>
       ${d.items.map((x, k) => `<div class="fm-it"><input data-fm-item="${i}" data-k="${k}" value="${esc(x.name)}"><span>${won(x.qty)}</span><span>${won(x.supply / x.qty)}</span><span>${won(x.supply)}</span></div>`).join('')}
     </div>`).join('')}</section>`;
-  return page('stmt', title, inputCard(f, '.xlsx,.xlsm,.xls') + list, gong ? '<button type="button" class="hm-link" data-fm="go" data-r="gonggan">BMS ›</button>' : '');
+  return page('stmt', title, inputCard(f, '.xlsx,.xlsm,.xls,.csv,.pdf,image/*,.heic') + list, gong ? '<button type="button" class="hm-link" data-fm="go" data-r="gonggan">BMS ›</button>' : '');
 }
 
 async function loadStmt(route) {
@@ -75,7 +75,19 @@ async function loadStmt(route) {
       if (sale.length) vouchers.push(...SM.parseSales([[r.head, ...sale.flatMap((s) => s.rows)]]));
     }
     for (const x of f.files) {
-      try { vouchers.push(...SM.parseSales(await SM.readSheets(x.file))); } catch (e) { errs.push(`${x.name}: ${e.message || e}`); }
+      try {
+        if (/\.(xlsx|xlsm|xls|csv)$/i.test(x.name)) { vouchers.push(...SM.parseSales(await SM.readSheets(x.file))); continue; }
+        // 전표 PDF · 거래명세표 PDF/사진 (에이스 건을 홈트로 잘못 올린 것 → 에이스 양식으로, 10/23 대표) — 사무실 맥 도우미가 읽음
+        if (!ctx.helperUp()) { errs.push(`${x.name}: PDF·사진은 사무실 맥 도우미가 켜져 있어야 읽어요`); continue; }
+        const data = await b64(x.file);
+        let j = null;
+        if (/\.pdf$/i.test(x.name)) { try { j = await ctx.helper('/api/slip/pdf', { data }); } catch (_) { j = null; } }   // 이카운트 전표 PDF 는 칸 그대로
+        if (j && j.slip && j.slip.rows && j.slip.rows.length) { vouchers.push(...SM.parseSales([[j.head, ...j.slip.rows]])); continue; }
+        const r = await ctx.helper('/api/doc/read', { name: x.name, data });   // 그 밖의 명세표·사진은 AI 로
+        const v = SM.voucherFromDoc(r.doc);
+        if (/홈트레이더스|에이스/.test(v.partner)) v.partner = (r.doc && (r.doc.owner || r.doc.site)) || '';   // 우리가 낸 명세표면 공급자 말고 받는 곳
+        vouchers.push(v);
+      } catch (e) { errs.push(`${x.name}: ${e.message || e}`); }
     }
     let docs = vouchers.length ? SM.splitSheets(vouchers, {}) : [];
     docs = docs.filter((d) => (route === 'stmt-gong' ? isGong(d.partner) : true));
@@ -309,6 +321,7 @@ export function bind(app, c) {
     const el = e.target, f = F[r], d = el.dataset;
     if (el.id === 'fm-text') f.text = el.value;
     else if (d.fmSite !== undefined) f.docs[Number(d.fmSite)].site = el.value;
+    else if (d.fmPartner !== undefined) f.docs[Number(d.fmPartner)].partner = el.value;
     else if (d.fmItem !== undefined) f.docs[Number(d.fmItem)].items[Number(d.k)].name = el.value;
     else if (d.fmC !== undefined) f.confirms[Number(d.fmC)][d.k] = el.value;
     else if (d.fmA !== undefined) F.approval[d.fmA] = el.value;

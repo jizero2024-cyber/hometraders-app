@@ -5713,6 +5713,9 @@ GB.bind(app, {
   goStart: () => { state.route = 'main'; state.sheet = null; render(); },
   go: (r) => { state.route = r; state.sheet = null; render(); },
   me: () => myAccount,
+  slips: (text) => slipsFor(text),   // 직접 등록 — 출고 번호·전표·링크 불러오기
+  helper: (path, body) => helperFetch(path, body),
+  helperUp: () => { if (!helperState.checked || Date.now() - helperState.at > 60000) helperCheck(); return helperState.up; },
 });
 HD.bind(app, {
   rerender: render,

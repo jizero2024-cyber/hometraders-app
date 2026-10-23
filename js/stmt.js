@@ -626,6 +626,9 @@ export const sheetTitle = (doc, style) => {
 
 // ── 도우미(AI)가 읽은 문서 → 전표 한 장 (캡처·PDF용) ────────
 export function fromDoc(doc) {
+  return splitSheets([voucherFromDoc(doc)]);
+}
+export function voucherFromDoc(doc) {   // 도우미가 읽은 문서 → 전표 1건 (장 나누기 전)
   const d = doc || {};
   const iso = nfc(d.doc_date) || new Date().toISOString().slice(0, 10);
   const m = /(20\d\d)[-./년\s]*(\d{1,2})[-./월\s]*(\d{1,2})/.exec(iso) || [];
@@ -639,7 +642,7 @@ export function fromDoc(doc) {
     return { date: new Date(y, mo - 1, dd), name: stripTag(l.ours || l.raw_name || l.name || ''), qty, supply, vat };
   }).filter((it) => it.name && it.qty > 0 && it.supply > 0);
   if (!items.length) throw new Error('읽은 문서에서 품목·금액을 못 찾았어요 — 수량과 단가(또는 공급가액)가 보이는 사진인지 확인하세요.');
-  return splitSheets([{ slip: `${ymd}-1`, ymd, partner: nfc(d.partner) || '거래처미상', items }]);
+  return { slip: `${ymd}-1`, ymd, partner: nfc(d.partner) || '거래처미상', items };
 }
 
 // ── 이미지(PNG)로 저장 — 카톡·문자로 바로 보내기 ────────────
