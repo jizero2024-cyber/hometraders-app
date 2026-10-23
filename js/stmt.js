@@ -354,6 +354,16 @@ const isCeramic = (i) => /세라믹사이딩|아이큐브/.test(i.name.replace(/
 const isFreight = (i) => i.name.replace(/\s/g, '').includes('운반비');
 const isSilicone = (i) => i.name.replace(/\s/g, '').startsWith('실리콘');
 
+// 공간제작소: 운반비는 따로 한 장이 아니라 그 출고 명세표에 한 줄로 (10/23 대표 — 세라믹사이딩처럼).
+//   운반비만 있는 장이 생기면 그 운반비 줄을 같은 출고의 첫 장(구조재면 첫 치수 장)에 붙임
+function freightIntoSheet(groups) {
+  const alone = groups.filter((g) => g.items.length && g.items.every(isFreight));
+  const rest = groups.filter((g) => !alone.includes(g) && g.items.length);
+  if (!alone.length || !rest.length) return groups;
+  rest[0].items.push(...alone.flatMap((g) => g.items));
+  return rest;
+}
+
 export function splitSheets(vouchers, opt) {
   const out = [], seq = {}, lumberAt = {};
   const oneEach = !!(opt && opt.perVoucher);        // 구매명세서는 거래처와 상관없이 전표 1건당 1장
@@ -365,6 +375,7 @@ export function splitSheets(vouchers, opt) {
     } else if (v.merged && perItem(v.partner)) {    // 같은 날·같은 현장 묶음 (공간제작소) → 세라믹사이딩·부자재·실리콘·운반비 한 장. 구조재만 치수별
       groups = [{ items: v.items.filter((i) => !isLumber(i)), site: v.site }]
         .concat(v.items.filter(isLumber).map((i) => ({ items: [i], site: v.site, slip: i.slip, lumber: lumberSize(i) })));
+      groups = freightIntoSheet(groups);
     } else if (v.merged) {                          // 같은 날·같은 현장 묶음 (그 밖의 거래처) → 모든 품목 한 장
       groups = [{ items: v.items, site: v.site }];
     } else if (perSite(v.partner)) {                       // 현장별 (뉴하우징 등)
@@ -381,8 +392,8 @@ export function splitSheets(vouchers, opt) {
     } else if (perItem(v.partner)) {                // 품목별 (공간제작소)
       const cer = v.items.filter(isCeramic);
       const bundle = cer.length ? cer.concat(v.items.filter((i) => isFreight(i) || isSilicone(i))) : [];   // 아이큐브 + 실리콘 + 운반비 한 장
-      groups = (bundle.length >= 2 ? [{ items: bundle }] : bundle.map((i) => ({ items: [i] })))
-        .concat(v.items.filter((i) => !bundle.includes(i)).map((i) => ({ items: [i], lumber: isLumber(i) ? lumberSize(i) : '' })));
+      groups = freightIntoSheet((bundle.length >= 2 ? [{ items: bundle }] : bundle.map((i) => ({ items: [i] })))
+        .concat(v.items.filter((i) => !bundle.includes(i)).map((i) => ({ items: [i], lumber: isLumber(i) ? lumberSize(i) : '' }))));
     } else {                                        // 전표당 한 장 (그 밖의 거래처)
       groups = [{ items: v.items }];
     }

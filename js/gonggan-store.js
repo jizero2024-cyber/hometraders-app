@@ -22,7 +22,7 @@ const noTable = (e, what) => new Error(/does not exist|relation|schema cache|cou
 export async function getGongganSales(biz) {
   const out = [];
   for (let from = 0; ; from += 1000) {
-    const { data, error } = await sb.from('gonggan_sales').select('id,ymd,slip,partner,name,qty,price,supply,vat').eq('biz', biz).order('id').range(from, from + 999);
+    const { data, error } = await sb.from('gonggan_sales').select('id,ymd,slip,partner,name,qty,price,supply,vat,logi').eq('biz', biz).order('id').range(from, from + 999);
     if (error) throw noTable(error, '공간제작소');
     out.push(...(data || [])); if (!data || data.length < 1000) break;
   }

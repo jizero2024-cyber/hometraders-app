@@ -20,6 +20,21 @@ const G = { biz: 'homt', loaded: '', loading: false, err: '', list: [], docs: {}
 let ctx = { rerender: () => {}, goStart: () => {}, go: () => {}, me: () => '', slips: async () => ({ slips: [] }), helper: async () => ({}), helperUp: () => false };
 
 // ── 데이터 ─────────────────────────────────────────
+// 세라믹사이딩 출고(같은 날·같은 현장, 현장이 없으면 전표)는 운반비를 무조건 청구 — 공간로직스 차로 나간 출고만 빼고.
+//   구조재는 지금은 운반비 안 받음 (10/23 대표).
+//   운반비 줄이 하나도 없는 출고의 장에 noFreight 표시 → 직원 화면에만 빨갛게 (공간제작소 계정엔 안 보임)
+const slipKey = (slip) => { const m = /(20\d\d)\/(\d{1,2})\/(\d{1,2})\s*-\s*(\d+)/.exec(String(slip)); return m ? `${m[1]}${m[2].padStart(2, '0')}${m[3].padStart(2, '0')}-${m[4]}` : String(slip); };
+const hasFreight = (d) => d.items.some((x) => x.name.replace(/\s/g, '').includes('운반비'));
+function markNoFreight(list, logi) {
+  const by = {};
+  list.filter((d) => !d.manual).forEach((d) => { const k = d.site ? `${d.ymd}|${d.site}` : `${d.ymd}|${(d.slips || [d.slip]).join(',')}`; (by[k] = by[k] || []).push(d); });
+  Object.values(by).forEach((ds) => {
+    const isLogi = ds.some((d) => (d.slips || [d.slip]).some((sl) => logi.has(sl)));
+    const ceramic = ds.some((d) => d.items.some((x) => /세라믹사이딩|아이큐브/.test(x.name.replace(/\s/g, ''))));
+    const miss = ceramic && !isLogi && !ds.some(hasFreight);
+    ds.forEach((d) => { d.noFreight = miss; });
+  });
+}
 // 직접 등록한 장 (gonggan_docs.manual = {ymd, site, partner, items:[{name, qty, price}]}) → 목록 한 장
 function manualDoc(x) {
   const m = x.manual, date = new Date(+m.ymd.slice(0, 4), +m.ymd.slice(4, 6) - 1, +m.ymd.slice(6, 8));
@@ -39,11 +54,12 @@ export async function load(biz, force) {
     G.list = [...list.map((d) => ({ ...d, id: docId(d), total: d.items.reduce((a, x) => a + x.supply + x.vat, 0) })), ...manual]
       .filter((d) => (G.docs[d.id] || {}).status !== '삭제')                         // 지운 장은 안 보임 (10/23)
       .sort((a, b) => (b.ymd + b.slip).localeCompare(a.ymd + a.slip));
+    markNoFreight(G.list, new Set(sales.filter((r) => r.logi).map((r) => slipKey(r.slip))));
     G.loaded = biz;
   } catch (e) { G.err = e.message || String(e); }
   G.loading = false; ctx.rerender();
 }
-const statusOf = (d) => { const x = G.docs[d.id] || {}; return x.status === '최종완료' || x.status === '수정요청' ? x.status : (x.tax_name ? '기안중' : '결재전'); };
+const statusOf = (d) => { const x = G.docs[d.id] || {}; return ['최종완료', '수정요청', '기안중'].includes(x.status) ? x.status : '결재전'; };   // 세금계산서를 넣어도 결재전 (10/23 대표)
 async function save(id, patch) {
   const prev = G.docs[id] || { id, biz: G.biz };
   const row = { ...prev, ...patch, id, biz: G.biz, updated_by: ctx.me(), updated_at: new Date().toISOString() };
@@ -179,7 +195,7 @@ function rowHtml(d) {
     <td style="padding:12px 6px 12px 14px">${canDraft ? `<input type="checkbox" data-gb="pick" data-id="${esc(d.id)}" aria-label="선택" ${G.pick.has(d.id) ? 'checked' : ''} style="width:16px;height:16px;accent-color:#1D4F91">` : ''}</td>
     <td style="padding:12px 8px;white-space:nowrap"><b>${md(d.ymd)}</b><div style="font-size:11px;color:#6B6B6B">${esc((d.slips || [d.slip]).map((s) => s.slice(4)).join(', '))}</div></td>
     <td style="padding:12px 8px;white-space:nowrap">${esc(d.site || '')}</td>
-    <td style="padding:12px 8px"><div style="font-weight:600">${esc(itemTitle(d))}</div>${st === '수정요청' && x.reason ? `<div style="margin-top:6px;max-width:340px;font-size:12px;line-height:1.5;color:#B42318;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden"><b>수정요청</b> ${esc(x.reason)}</div>` : ''}</td>
+    <td style="padding:12px 8px"><div style="font-weight:600">${esc(itemTitle(d))}${d.noFreight && ctx.me() !== 'space1234' ? ' <span style="display:inline-block;margin-left:6px;padding:2px 8px;border-radius:10px;background:#FDECEC;color:#B42318;font-size:11px;font-weight:700;vertical-align:middle">운반비 없음</span>' : ''}</div>${st === '수정요청' && x.reason ? `<div style="margin-top:6px;max-width:340px;font-size:12px;line-height:1.5;color:#B42318;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden"><b>수정요청</b> ${esc(x.reason)}</div>` : ''}</td>
     <td style="padding:12px 8px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums">${won(d.total)}</td>
     <td style="padding:12px 8px;text-align:center">${okTag}</td>
     <td style="padding:12px 8px;text-align:center">${x.tax_name ? okTag : addBtn('addtax', d.id)}</td>
@@ -200,10 +216,10 @@ function docBox(kind, d) {
   const cap = `${noRow}<figcaption style="display:flex;justify-content:space-between;align-items:center"><b>${label}</b><span style="display:flex;gap:6px">${[['copy', '복사'], ['pdf', 'PDF 저장']].map(([a, t]) => `<button type="button" data-gb="${a}" data-k="${kind}" ${src ? '' : 'disabled'} style="height:30px;padding:0 10px;border:1px solid #E6E4DF;border-radius:6px;background:#fff;font:inherit;font-size:12px;cursor:pointer">${t}</button>`).join('')}</span></figcaption>`;
   const pen = `<button type="button" data-gb="replace" data-k="${kind}" aria-label="${label} 바꾸기" style="position:absolute;bottom:8px;right:8px;width:30px;height:30px;border-radius:15px;border:1px solid #D5D8DD;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">${PEN}</button>`;
   if (!src && kind === 'stmt') return `<figure style="margin:0;display:flex;flex-direction:column;gap:8px">${cap}<div style="aspect-ratio:1588/1400;border:1px solid #D9D9D9;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#6B6B6B;font-size:13px">불러오는 중…</div></figure>`;
-  if (!src) return `<figure style="margin:0;display:flex;flex-direction:column;gap:8px">${cap}<button type="button" data-gb="replace" data-k="tax" style="aspect-ratio:1588/1400;border:2px dashed #B8B8B8;border-radius:8px;background:#F4F4F4;color:#4B4B4B;font:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer"><span style="font-size:32px">+</span><b>세금계산서 넣기</b></button></figure>`;
+  if (!src) return `<figure style="margin:0;display:flex;flex-direction:column;gap:8px">${cap}<button type="button" data-gb="replace" data-k="tax" data-gb-drop="tax" style="aspect-ratio:1588/1400;border:2px dashed #B8B8B8;border-radius:8px;background:#F4F4F4;color:#4B4B4B;font:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer"><span style="font-size:32px">+</span><b>세금계산서 넣기</b><span style="font-size:12px;color:#8A8A8A">끌어다 놓기 · Cmd+V</span></button></figure>`;
   const pdf = src.startsWith('data:application/pdf');
   const del = kind === 'stmt' && ctx.me() !== 'space1234' ? `<button type="button" data-gb="delstmt" aria-label="거래명세표 지우기" style="position:absolute;bottom:8px;right:46px;width:30px;height:30px;border-radius:15px;border:1px solid #F1B5AF;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">${TRASH}</button>` : kind === 'tax' ? `<button type="button" data-gb="deltax" aria-label="세금계산서 지우기" style="position:absolute;bottom:8px;right:46px;width:30px;height:30px;border-radius:15px;border:1px solid #F1B5AF;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">${TRASH}</button>` : '';   // 잘못 넣은 세금계산서 지우기 (10/23 대표)
-  return `<figure style="margin:0;display:flex;flex-direction:column;gap:8px">${cap}<div style="position:relative;aspect-ratio:1588/1400;border:1px solid #D9D9D9;border-radius:6px;overflow:hidden;background:#fff">${pdf && !pdfView(d.id, src) ? '<div style="height:100%;display:flex;align-items:center;justify-content:center;color:#6B6B6B;font-size:13px">불러오는 중…</div>' : `<button type="button" data-gb="zoom" data-k="${kind}" aria-label="${label} 크게 보기" style="display:flex;align-items:flex-start;justify-content:center;width:100%;height:100%;padding:0;border:0;background:none;cursor:zoom-in"><img src="${pdf ? pdfView(d.id, src) : src}" alt="${label}" style="max-width:100%;max-height:100%;object-fit:contain;display:block"></button>`}${del}${pen}</div></figure>`;
+  return `<figure style="margin:0;display:flex;flex-direction:column;gap:8px">${cap}<div ${kind === 'tax' ? 'data-gb-drop="tax"' : ''} style="position:relative;aspect-ratio:1588/1400;border:1px solid #D9D9D9;border-radius:6px;overflow:hidden;background:#fff">${pdf && !pdfView(d.id, src) ? '<div style="height:100%;display:flex;align-items:center;justify-content:center;color:#6B6B6B;font-size:13px">불러오는 중…</div>' : `<button type="button" data-gb="zoom" data-k="${kind}" aria-label="${label} 크게 보기" style="display:flex;align-items:flex-start;justify-content:center;width:100%;height:100%;padding:0;border:0;background:none;cursor:zoom-in"><img src="${pdf ? pdfView(d.id, src) : src}" alt="${label}" style="max-width:100%;max-height:100%;object-fit:contain;display:block"></button>`}${del}${pen}</div></figure>`;
 }
 function modalHtml(d) {
   ensureImg(d); ensureFull(d.id);
@@ -519,6 +535,16 @@ export function bind(app, c) {
       set(`gb-reg-amt-${k}`, Number(row.qty) * Number(row.price) ? won(Number(row.qty) * Number(row.price)) : ''); set('gb-reg-sup', won(sup)); set('gb-reg-vat', won(sup * 0.1)); set('gb-reg-tot', `${won(sup * 1.1)}원`);
     }
     else if (t.dataset.gb === 'q') { G.q = t.value.slice(0, 60); G.page = 1; clearTimeout(G.qt); G.qt = setTimeout(() => { ctx.rerender(); const el = document.querySelector('[data-gb="q"]'); if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }, 250); }
+  });
+  // 세금계산서 파일을 팝업의 세금계산서 칸에 끌어다 놓기 (10/23 대표 — 파일 고르기만 되던 것)
+  const dropBox = (e) => G.open && e.target.closest && e.target.closest('[data-gb-drop="tax"]');
+  app.addEventListener('dragover', (e) => { const b = dropBox(e); if (!b) return; e.preventDefault(); b.style.outline = '3px solid #1D4F91'; });
+  app.addEventListener('dragleave', (e) => { const b = dropBox(e); if (b) b.style.outline = ''; });
+  app.addEventListener('drop', (e) => {
+    const b = dropBox(e); if (!b) return;
+    e.preventDefault(); b.style.outline = '';
+    const f = [...((e.dataTransfer && e.dataTransfer.files) || [])].find((x) => /^image\/|pdf$/.test(x.type) || /\.pdf$/i.test(x.name));
+    if (f) attach(G.open, 'tax', f); else alert('그림(사진·캡처)이나 PDF 파일만 넣을 수 있어요');
   });
   window.addEventListener('paste', (e) => {      // 팝업이 열려 있으면 캡처 붙여넣기 = 세금계산서
     if (!G.open || !app.querySelector('.gb')) return;
