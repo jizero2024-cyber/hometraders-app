@@ -21,7 +21,7 @@ function top(title, right) {
 }
 function inputCard(f, accept, extra) {
   return `<section class="fm-in">
-    <textarea id="fm-text" rows="3" placeholder="출고일보 전표 링크 붙여넣기">${esc(f.text)}</textarea>
+    <textarea id="fm-text" rows="2" placeholder="출고일보 전표 링크 붙여넣기">${esc(f.text)}</textarea>
     <div class="fm-row">
       <button type="button" class="fm-btn ghost" data-fm="pick">파일 고르기</button><input type="file" id="fm-file" multiple accept="${accept}" hidden>
       ${f.files.map((x, i) => `<span class="fm-file">${esc(x.name)}<button type="button" data-fm="unpick" data-i="${i}" aria-label="빼기">✕</button></span>`).join('')}
