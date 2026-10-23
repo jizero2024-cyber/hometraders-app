@@ -17,7 +17,7 @@ const blank = () => ({ text: '', files: [], docs: null, err: '', busy: false });
 const today = () => DL.isoDate(new Date());
 const F = { 'stmt-gong': blank(), 'stmt-etc': blank(), 'stmt-ace': blank(), deliv: { ...blank(), confirms: null },
   approval: { presets: null, preset: '', site: '', ship: '', issue: '', file: null, busy: false, err: '', out: null },
-  quote: { ...blank(), doc: null, out: null } };
+  quote: { ...blank(), doc: null, out: null }, deposit: {} };
 let ctx = { rerender: () => {}, go: () => {}, me: () => '', helper: async () => ({}), helperUp: () => false, helperFile: () => '', slips: async () => ({ slips: [] }) };
 
 function top(back, right) {
@@ -26,7 +26,9 @@ function top(back, right) {
     <img src="./icons/logo-full.png" alt="HOME TRADERS" class="hm-logo" data-fm="go" data-r="main">
     <span class="sp"></span>${right || ''}<b class="hm-me">${esc(ctx.me())}</b></div></header>`;
 }
+let inPop = false;   // 팝업 안에 그릴 땐 머리·제목 없이 본문만
 function page(back, title, body, right) {
+  if (inPop) return body;
   return `<div class="hm fm">${top(back, right)}<main class="hm-main"><h1 class="hm-h1">${title}</h1>${body}</main></div>`;
 }
 const noHelper = () => (ctx.helperUp() ? '' : '<div class="fm-warn">사무실 맥 도우미가 꺼져 있어요</div>');
@@ -106,13 +108,19 @@ function delivScreen() {
     ${cs.map(card).join('')}</section>`;
   return inputCard(f, '.xlsx,.xlsm,.xls,image/*,.heic,.pdf', '<button type="button" class="fm-btn ghost" data-fm="dv-new">빈 양식</button>') + out;
 }
-// 첫 화면에서 여는 납품확인서 팝업 (10/23 대표 "팝업 형태로") — /deliv 주소로 열면 전체 화면
-export function openDeliv() { F.deliv.open = true; }
-export function delivPopup() {
-  if (!F.deliv.open) return '';
-  return `<div class="hm-ov fm fm-pop" data-fm="dv-close-bg"><div class="fm-modal" role="dialog" aria-label="납품확인서">
-    <div class="hm-mh"><b>납품확인서</b><button type="button" class="hm-x" data-fm="dv-close" aria-label="닫기">✕</button></div>
-    ${delivScreen()}</div></div>`;
+// 팝업 (10/23 대표 "팝업 형태로") — 첫 화면·거래명세표 화면 버튼은 모두 팝업. 주소(/deliv · /quote …)로 열면 전체 화면
+const TITLE = { ...Object.fromEntries(Object.entries(ST).map(([k, v]) => [k, v[0]])), deliv: '납품확인서', approval: '자재승인원', quote: '견적서', deposit: '입금표' };
+export function open(route) { ROUTES.forEach((r) => { F[r].open = r === route; }); }
+export function popup() {
+  const r = ROUTES.find((x) => F[x].open);
+  if (!r) return '';
+  inPop = true;
+  let body;
+  try { body = screen(r); } finally { inPop = false; }
+  const bms = r === 'stmt-gong' ? '<button type="button" class="hm-link" data-fm="go" data-r="gonggan">BMS ›</button>' : '';
+  return `<div class="hm-ov fm fm-pop" data-fm="pop-close-bg" data-r="${r}"><div class="fm-modal ${r === 'quote' ? 'wide' : ''}" role="dialog" aria-label="${TITLE[r]}">
+    <div class="hm-mh"><b>${TITLE[r]}</b><span class="sp"></span>${bms}<button type="button" class="hm-x" data-fm="pop-close" aria-label="닫기">✕</button></div>
+    ${body}</div></div>`;
 }
 
 const b64 = (file) => new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1]); r.onerror = () => no(r.error); r.readAsDataURL(file); });
@@ -204,25 +212,34 @@ async function makeApproval() {
 }
 
 // ── 견적서 ─────────────────────────────────────────────
+// 한 화면에서: ① 붙여넣기·파일 → ② 거래처·현장·날짜 한 줄 → ③ 품목 표(금액 바로 계산, 종전가는 단가 아래 작게) → ④ 합계·만들기 (아래 고정)
 const QCOLS = [['raw_name', '품명'], ['spec', '규격'], ['unit', '단위'], ['qty', '수량'], ['price', '단가']];
+const qAmt = (l) => (Number(l.qty) || 0) * (Number(l.price) || 0);
+const qSum = (d) => d.lines.reduce((a, l) => a + qAmt(l), 0);
 function quoteScreen() {
   const q = F.quote, d = q.doc;
-  const total = d ? d.lines.reduce((a, l) => a + (Number(l.qty) || 0) * (Number(l.price) || 0), 0) : 0;
-  const out = !d ? '' : `<section class="fm-out">
-    <div class="fm-form">
-      <label>거래처<input data-fm-q="partner" value="${esc(d.partner)}"></label>
-      <label>현장 · 건축주<input data-fm-q="owner" value="${esc(d.owner)}"></label>
+  const step1 = inputCard(q, '.xlsx,.xls,image/*,.heic,.pdf', '<button type="button" class="fm-btn ghost" data-fm="q-new">빈 양식</button>', '카톡 글 · 품목 목록 붙여넣기 (발주서 사진·PDF·엑셀은 파일로)');
+  if (!d) return page('main', '견적서', noHelper() + step1);
+  const sup = qSum(d);
+  const out = `<section class="fm-out fm-q">
+    <div class="fm-qh">
+      <label>거래처<input data-fm-q="partner" value="${esc(d.partner)}" placeholder="거래처"></label>
+      <label>현장 · 건축주<input data-fm-q="owner" value="${esc(d.owner)}" placeholder="현장"></label>
       <label>견적일<input type="date" data-fm-q="doc_date" value="${esc(d.doc_date)}"></label>
     </div>
-    <div class="fm-tab"><div class="fm-th q">${QCOLS.map(([, l]) => `<span>${l}</span>`).join('')}<span></span></div>
-      ${d.lines.map((l, k) => `<div class="fm-tr q">${QCOLS.map(([key]) => `<input data-fm-ql="${k}" data-f="${key}" value="${esc(l[key])}"${key === 'qty' || key === 'price' ? ' inputmode="decimal"' : ''}${key === 'price' && l.prevSrc ? ` title="${esc(l.prevSrc)}"` : ''}>`).join('')}
+    <div class="fm-tab"><div class="fm-th q">${QCOLS.map(([, l]) => `<span>${l}</span>`).join('')}<span class="r">금액</span><span></span></div>
+      ${d.lines.map((l, k) => `<div class="fm-tr q">${QCOLS.map(([key]) => `<div class="fm-cell"><input data-fm-ql="${k}" data-f="${key}" value="${esc(l[key])}"${key === 'qty' || key === 'price' ? ' inputmode="decimal" class="n"' : ''}>${key === 'price' && l.prevSrc ? `<small>${esc(l.prevSrc)}</small>` : ''}</div>`).join('')}
+        <span class="fm-amt r" id="fm-qamt-${k}">${qAmt(l) ? won(qAmt(l)) : ''}</span>
         <button type="button" class="fm-x" data-fm="q-rdel" data-k="${k}" aria-label="줄 지우기">✕</button></div>`).join('')}
       <button type="button" class="fm-add" data-fm="q-radd">＋ 줄</button></div>
-    <div class="fm-oh"><b id="fm-qtotal">${won(total * 1.1)}원</b><span>부가세 포함</span><span class="sp"></span>
+    <div class="fm-qf">
+      <span>공급가 <b id="fm-qsup">${won(sup)}</b></span><span>부가세 <b id="fm-qvat">${won(sup * 0.1)}</b></span><span class="tot">합계 <b id="fm-qtotal">${won(sup * 1.1)}원</b></span>
+      <span class="sp"></span>
       ${q.out ? `<a class="fm-btn ghost" href="${ctx.helperFile(q.out)}">${esc(q.out.split('/').pop())}</a>` : ''}
       <button type="button" class="fm-btn" data-fm="q-make" ${q.busy || !ctx.helperUp() ? 'disabled' : ''}>${q.busy ? '만드는 중…' : '견적서 만들기'}</button></div>
+    ${q.err ? `<div class="hm-err">${esc(q.err)}</div>` : ''}
   </section>`;
-  return page('main', '견적서', noHelper() + inputCard(q, '.xlsx,.xls,image/*,.heic,.pdf', '<button type="button" class="fm-btn ghost" data-fm="q-new">빈 양식</button>', '카톡 글 · 품목 목록 붙여넣기') + out);
+  return page('main', '견적서', noHelper() + `<details class="fm-again"><summary>다른 자료로 다시 불러오기</summary>${step1}</details>` + out);
 }
 async function loadQuote() {
   const q = F.quote, text = q.text.trim();
@@ -264,12 +281,12 @@ export function screen(route) {
 
 export function bind(app, c) {
   ctx = c;
-  const cur = () => (app.querySelector('.fm-pop') ? 'deliv' : ROUTES.find((r) => app.querySelector('.fm') && ctx.route() === r));
+  const cur = () => { const p = app.querySelector('.fm-pop'); return p ? p.dataset.r : ROUTES.find((r) => app.querySelector('.fm') && ctx.route() === r); };
   app.addEventListener('click', async (e) => {
     const t = e.target.closest('[data-fm]'); const r = cur(); if (!t || !r) return;
     const a = t.dataset.fm, f = F[r], i = Number(t.dataset.i);
-    if (a === 'go') ctx.go(t.dataset.r);
-    else if (a === 'dv-close' || (a === 'dv-close-bg' && e.target === t)) { F.deliv.open = false; ctx.rerender(); }
+    if (a === 'go') { open(''); ctx.go(t.dataset.r); }
+    else if (a === 'pop-close' || (a === 'pop-close-bg' && e.target === t)) { F[r].open = false; ctx.rerender(); }
     else if (a === 'pick') document.getElementById('fm-file').click();
     else if (a === 'unpick') { f.files.splice(i, 1); ctx.rerender(); }
     else if (a === 'load') { f.text = (document.getElementById('fm-text') || {}).value || ''; if (r === 'deliv') loadDeliv(); else if (r === 'quote') loadQuote(); else loadStmt(r); }
@@ -298,8 +315,8 @@ export function bind(app, c) {
     else if (d.fmQ !== undefined) f.doc[d.fmQ] = el.value;
     else if (d.fmQl !== undefined) {
       f.doc.lines[Number(d.fmQl)][d.f] = d.f === 'qty' || d.f === 'price' ? el.value.replace(/[^\d.]/g, '') : el.value;
-      const tot = document.getElementById('fm-qtotal');   // 합계만 바로 (칸을 다시 그리면 입력 중인 글자가 끊김)
-      if (tot) tot.textContent = `${won(f.doc.lines.reduce((x, l) => x + (Number(l.qty) || 0) * (Number(l.price) || 0), 0) * 1.1)}원`;
+      const k = Number(d.fmQl), sup = qSum(f.doc), set = (id, v) => { const x = document.getElementById(id); if (x) x.textContent = v; };   // 금액·합계만 바로 (칸을 다시 그리면 입력 중인 글자가 끊김)
+      set(`fm-qamt-${k}`, qAmt(f.doc.lines[k]) ? won(qAmt(f.doc.lines[k])) : ''); set('fm-qsup', won(sup)); set('fm-qvat', won(sup * 0.1)); set('fm-qtotal', `${won(sup * 1.1)}원`);
     }
     else if (d.fmR !== undefined) {
       const row = f.confirms[Number(d.fmR)].rows[Number(d.k)];

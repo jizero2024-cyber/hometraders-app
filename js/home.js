@@ -7,7 +7,7 @@ import * as FM from './forms.js';
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const won = (n) => Math.round(Number(n) || 0).toLocaleString();
-const H = { fare: null, fareErr: '', inbox: {}, inboxErr: '', at: 0, loading: false, fareAll: false, toast: '', busy: false, box: false, text: '' };
+const H = { fare: null, fareErr: '', inbox: {}, inboxErr: '', at: 0, loading: false, fareAll: false, toast: '', busy: false, box: false, text: '', frame: null };
 let ctx = { rerender: () => {}, go: () => {}, me: () => '', helper: async () => ({}) };
 
 const svg = (stroke, d) => `<svg viewBox="0 0 24 24" style="width:38px;height:38px;fill:none;stroke:${stroke};stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round">${d}</svg>`;
@@ -64,6 +64,14 @@ function tile(o) {
     <span class="hm-ic" style="background:${o.bg}">${o.icon}</span><b>${o.title}</b>${o.sub ? `<span class="hm-sub">${o.sub}</span>` : ''}${o.extra || ''}</${o.tag || 'button'}>`;
 }
 
+// 배차 요청 팝업 (10/23 대표) — 이미 있는 /homt 화면을 그대로 띄움 (?embed=1 = 위 줄 없이)
+function framePopup() {
+  if (!H.frame) return '';
+  return `<div class="hm-ov" data-hm="frame-close-bg"><div class="hm-frame" role="dialog" aria-label="${esc(H.frame.title)}">
+    <div class="hm-mh"><b>${esc(H.frame.title)}</b><button type="button" class="hm-x" data-hm="frame-close" aria-label="닫기">✕</button></div>
+    <iframe src="${esc(H.frame.src)}" title="${esc(H.frame.title)}"></iframe></div></div>`;
+}
+
 function boxModal() {   // 자료 넣기 — 카톡 글 붙여넣기 칸 + 파일 (휴대폰은 Cmd+V 가 없어서)
   if (!H.box) return '';
   return `<div class="hm-ov" data-hm="box-bg"><div class="hm-modal" role="dialog" aria-label="자료 넣기">
@@ -78,24 +86,24 @@ export function screen(view) {
   if (view === 'stmt') {   // 거래명세표 고르기 — 공간제작소 · 그 외 · 에이스 (10/23 대표)
     return `<div class="hm">${top('main')}<main class="hm-main"><h1 class="hm-h1">거래명세표</h1>
       <div class="hm-grid3">
-        ${tile({ title: '공간제작소 거래명세표', icon: '<img src="./icons/partner-gongan.png" alt="" style="width:62px;height:auto">', bg: '#FFF6D6', cls: 'big', attr: 'data-hm="go" data-r="stmt-gong"' })}
-        ${tile({ title: '그 외 명세표', icon: IC.stmt, bg: '#EEF6EE', cls: 'big', attr: 'data-hm="go" data-r="stmt-etc"' })}
-        ${tile({ title: '에이스 거래명세표', icon: IC.stmt, bg: '#F3F4F6', cls: 'big', attr: 'data-hm="go" data-r="stmt-ace"' })}
-      </div></main></div>`;
+        ${tile({ title: '공간제작소 거래명세표', icon: '<img src="./icons/partner-gongan.png" alt="" style="width:62px;height:auto">', bg: '#FFF6D6', cls: 'big', attr: 'data-hm="form" data-r="stmt-gong"' })}
+        ${tile({ title: '그 외 명세표', icon: IC.stmt, bg: '#EEF6EE', cls: 'big', attr: 'data-hm="form" data-r="stmt-etc"' })}
+        ${tile({ title: '에이스 거래명세표', icon: IC.stmt, bg: '#F3F4F6', cls: 'big', attr: 'data-hm="form" data-r="stmt-ace"' })}
+      </div></main>${FM.popup()}</div>`;
   }
   const wait = (H.inbox.wait || 0) + (H.inbox.got || 0), chk = H.inbox.check || 0;
   return `<div class="hm">${top('')}<main class="hm-main">
     <div class="hm-grid">
-      ${tile({ title: '배차 요청', icon: IC.truck, bg: '#FDF0E6', attr: 'data-hm="go" data-r="homt"' })}
+      ${tile({ title: '배차 요청', icon: IC.truck, bg: '#FDF0E6', attr: 'data-hm="frame" data-src="/homt?embed=1" data-title="배차 요청"' })}
       ${tile({ title: '자료 넣기', icon: IC.up, bg: '#EAF1FB', cls: 'drop wide', sub: '카톡 글 · 거래명세표 · 발주서 · 사진 · PDF · 엑셀',
         badge: chk ? `확인 ${chk}` : wait ? `대기 ${wait}` : '', badgeStyle: chk ? 'background:#D92D20' : 'background:#1D4F91', attr: 'id="hm-drop" data-hm="box"',
         extra: H.toast ? `<span class="hm-toast">${esc(H.toast)}</span>` : '' })}
       ${tile({ title: '거래명세표', icon: IC.stmt, bg: '#EEF6EE', attr: 'data-hm="go" data-r="stmt"' })}
-      ${tile({ title: '납품확인서', icon: IC.deliv, bg: '#EEF6EE', attr: 'data-hm="deliv"' })}
-      ${tile({ title: '자재승인원', icon: IC.pack, bg: '#F2EEFB', attr: 'data-hm="go" data-r="approval"' })}
-      ${tile({ title: '견적서', icon: IC.quote, bg: '#F3F4F6', attr: 'data-hm="go" data-r="quote"' })}
-      ${tile({ title: '입금표', icon: IC.won, bg: '#FFF4E5', attr: 'data-hm="go" data-r="deposit"' })}
-    </div>${farePanel()}</main>${boxModal()}${FM.delivPopup()}<input type="file" id="hm-file" multiple accept="image/*,.heic,.pdf,.xlsx,.xls,.csv,.txt" hidden></div>`;
+      ${tile({ title: '납품확인서', icon: IC.deliv, bg: '#EEF6EE', attr: 'data-hm="form" data-r="deliv"' })}
+      ${tile({ title: '자재승인원', icon: IC.pack, bg: '#F2EEFB', attr: 'data-hm="form" data-r="approval"' })}
+      ${tile({ title: '견적서', icon: IC.quote, bg: '#F3F4F6', attr: 'data-hm="form" data-r="quote"' })}
+      ${tile({ title: '입금표', icon: IC.won, bg: '#FFF4E5', attr: 'data-hm="form" data-r="deposit"' })}
+    </div>${farePanel()}</main>${boxModal()}${FM.popup()}${framePopup()}<input type="file" id="hm-file" multiple accept="image/*,.heic,.pdf,.xlsx,.xls,.csv,.txt" hidden></div>`;
 }
 
 // ── 자료 넣기 ─────────────────────────────────────────
@@ -139,14 +147,16 @@ export function bind(app, c) {
   app.addEventListener('click', (e) => {
     const t = e.target.closest('[data-hm]'); if (!t || !on()) return;
     const a = t.dataset.hm;
-    if (a === 'go') ctx.go(t.dataset.r, t.dataset.mode);
+    if (a === 'go') { FM.open(''); H.frame = null; ctx.go(t.dataset.r, t.dataset.mode); }   // 화면을 옮기면 열린 팝업은 닫음
     else if (a === 'fare-all') { H.fareAll = !H.fareAll; ctx.rerender(); }
     else if (a === 'sent') {
       const r = (H.fare || []).find((x) => x.id === t.dataset.id); if (!r) return;
       if (!confirm(`${r.driver} ${r.amount ? won(r.amount) + '원' : ''} — 보냄으로 표시할까요?`)) return;
       S.markFareSent(r.id, ctx.me()).then((err) => { if (err) alert('저장 못 했어요 — ' + err); else { r.sent = true; ctx.rerender(); } });
     }
-    else if (a === 'deliv') { FM.openDeliv(); ctx.rerender(); }   // 납품확인서는 첫 화면 팝업 (10/23 대표) — /deliv 주소는 전체 화면
+    else if (a === 'form') { FM.open(t.dataset.r); ctx.rerender(); }   // 서류는 모두 팝업 (10/23 대표) — 주소(/deliv · /quote …)로 열면 전체 화면
+    else if (a === 'frame') { H.frame = { src: t.dataset.src, title: t.dataset.title }; ctx.rerender(); }
+    else if (a === 'frame-close' || (a === 'frame-close-bg' && e.target === t)) { H.frame = null; ctx.rerender(); }
     else if (a === 'box') { H.box = true; ctx.rerender(); setTimeout(() => { const x = document.getElementById('hm-text'); if (x) x.focus(); }, 0); }
     else if (a === 'box-close' || (a === 'box-bg' && e.target === t)) { H.box = false; ctx.rerender(); }
     else if (a === 'pick') document.getElementById('hm-file').click();
@@ -166,7 +176,7 @@ export function bind(app, c) {
     putInbox(files.length ? files : text.trim() ? [text] : []);
   });
   document.addEventListener('paste', (e) => {   // 첫 화면에서 Cmd+V = 자료 넣기 (입력칸 안은 제외)
-    if (!app.querySelector('#hm-drop') || app.querySelector('.fm-pop') || e.target.closest('input, textarea, [contenteditable]')) return;
+    if (!app.querySelector('#hm-drop') || app.querySelector('.fm-pop') || H.frame || e.target.closest('input, textarea, [contenteditable]')) return;
     const files = [...(e.clipboardData.files || [])], text = e.clipboardData.getData('text/plain');
     if (files.length || text.trim()) { e.preventDefault(); putInbox(files.length ? files : [text]); }
   });

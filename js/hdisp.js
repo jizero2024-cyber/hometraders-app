@@ -136,11 +136,12 @@ export function dispatchText() {
   return L.join('\n');
 }
 
+const EMBED = new URLSearchParams(location.search).has('embed');   // 첫 화면 팝업 안(/homt?embed=1) — 머리·제목 없이
 export function homtScreen() {
   const chip = (k, v, on) => `<button type="button" class="hd-chip ${on ? 'on' : ''}" data-hd="set" data-k="${k}" data-v="${esc(v)}">${esc(v)}</button>`;
-  return `<div class="hm"><header class="hm-top"><div class="hm-in">
-    <button type="button" class="hm-back" data-hd="back" aria-label="뒤로">‹</button><img src="./icons/logo-full.png" alt="HOME TRADERS" class="hm-logo" data-hd="back"></div></header>
-    <div class="hd-page"><h1 class="hm-h1" style="margin:12px 0 16px">배차 요청</h1>
+  return `<div class="hm">${EMBED ? '' : `<header class="hm-top"><div class="hm-in">
+    <button type="button" class="hm-back" data-hd="back" aria-label="뒤로">‹</button><img src="./icons/logo-full.png" alt="HOME TRADERS" class="hm-logo" data-hd="back"></div></header>`}
+    <div class="hd-page">${EMBED ? '' : '<h1 class="hm-h1" style="margin:12px 0 16px">배차 요청</h1>'}
     ${placeField('from', '상차지')}
     ${placeField('to', '하차지')}
     <div class="hd-field"><label class="hd-check"><input type="checkbox" data-hd="say" ${F.say ? 'checked' : ''}> 상차지에 우리 물건이라고 말해 주세요</label>
