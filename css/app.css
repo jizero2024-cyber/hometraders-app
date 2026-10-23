@@ -683,3 +683,6 @@ a.fm-btn { text-decoration: none; }
   .fm-th.q { display: none; }
   .fm-tr.q { grid-template-columns: 1fr 1fr 1fr; }
 }
+/* 출고일보 바로가기 (첫 화면 머리, 10/23) */
+.hm-sheet { display: inline-flex; align-items: center; height: 34px; padding: 0 14px; border-radius: 17px; background: #E8F5EC; color: #1E6B34; border: 1px solid #BFE0C9; font-size: 13px; font-weight: 700; text-decoration: none; white-space: nowrap; }
+.hm-sheet:hover { background: #D7EEDF; color: #1E6B34; }

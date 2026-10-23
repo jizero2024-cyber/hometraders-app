@@ -30,11 +30,12 @@ export function load(force) {
   }).finally(() => { H.loading = false; ctx.rerender(); });
 }
 
+const BOARD_SHEET = 'https://docs.google.com/spreadsheets/d/1yBcId-iFWtdmt_og2rA71mbmnicyvoZI/edit';   // 드라이브 홈트레이더스_출고일보/출고일보/출고일보.xlsx — build_board 가 같은 파일을 덮어써서 링크 고정 (10/23 대표 바로가기)
 function top(back) {
   return `<header class="hm-top"><div class="hm-in">
     ${back ? `<button type="button" class="hm-back" data-hm="go" data-r="${back}">‹</button>` : ''}
     <img src="./icons/logo-full.png" alt="HOME TRADERS" class="hm-logo" data-hm="go" data-r="main">
-    <span class="sp"></span><b class="hm-me">${esc(ctx.me())}</b>
+    <span class="sp"></span><a class="hm-sheet" href="${BOARD_SHEET}" target="_blank" rel="noopener">출고일보 ↗</a><b class="hm-me">${esc(ctx.me())}</b>
     <button type="button" class="hm-link" data-hm="go" data-r="start">처음 화면</button></div></header>`;
 }
 
