@@ -95,8 +95,15 @@ function delivScreen() {
       <label class="fm-btn ghost" for="fm-stamp">${DL.getStamp() ? '도장 바꾸기' : '도장 고르기'}</label><input type="file" id="fm-stamp" accept="image/*" hidden>
       <button type="button" class="fm-btn" data-fm="dv-print">인쇄 · PDF</button></div>
     ${cs.map(card).join('')}</section>`;
-  return `<div class="hm fm">${top('납품확인서')}<main class="hm-main"><h1 class="hm-h1">납품확인서</h1>
-    ${inputCard(f, '.xlsx,.xlsm,.xls,image/*,.heic,.pdf', '<button type="button" class="fm-btn ghost" data-fm="dv-new">빈 양식</button>')}${out}</main></div>`;
+  return `${inputCard(f, '.xlsx,.xlsm,.xls,image/*,.heic,.pdf', '<button type="button" class="fm-btn ghost" data-fm="dv-new">빈 양식</button>')}${out}`;
+}
+// 첫 화면에서 여는 납품확인서 팝업 (10/23 대표 "팝업 형태로") — /deliv 주소로 열면 전체 화면
+export function openDeliv() { F.deliv.open = true; }
+export function delivPopup() {
+  if (!F.deliv.open) return '';
+  return `<div class="hm-ov fm fm-pop" data-fm="dv-close-bg"><div class="fm-modal" role="dialog" aria-label="납품확인서">
+    <div class="hm-mh"><b>납품확인서</b><button type="button" class="hm-x" data-fm="dv-close" aria-label="닫기">✕</button></div>
+    ${delivScreen()}</div></div>`;
 }
 
 const b64 = (file) => new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1]); r.onerror = () => no(r.error); r.readAsDataURL(file); });
@@ -153,16 +160,17 @@ function printDeliv() {
 }
 
 export function screen(route) {
-  return route === 'deliv' ? delivScreen() : stmtScreen(route);
+  return route === 'deliv' ? `<div class="hm fm">${top('납품확인서')}<main class="hm-main"><h1 class="hm-h1">납품확인서</h1>${delivScreen()}</main></div>` : stmtScreen(route);
 }
 
 export function bind(app, c) {
   ctx = c;
-  const cur = () => ROUTES.find((r) => app.querySelector('.fm') && ctx.route() === r);
+  const cur = () => (app.querySelector('.fm-pop') ? 'deliv' : ROUTES.find((r) => app.querySelector('.fm') && ctx.route() === r));
   app.addEventListener('click', async (e) => {
     const t = e.target.closest('[data-fm]'); const r = cur(); if (!t || !r) return;
     const a = t.dataset.fm, f = F[r], i = Number(t.dataset.i);
     if (a === 'go') ctx.go(t.dataset.r);
+    else if (a === 'dv-close' || (a === 'dv-close-bg' && e.target === t)) { F.deliv.open = false; ctx.rerender(); }
     else if (a === 'pick') document.getElementById('fm-file').click();
     else if (a === 'unpick') { f.files.splice(i, 1); ctx.rerender(); }
     else if (a === 'load') { f.text = (document.getElementById('fm-text') || {}).value || ''; if (r === 'deliv') loadDeliv(); else loadStmt(r); }

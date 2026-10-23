@@ -2,6 +2,7 @@
 // 맨 위 빨간 칸 = 기사 운임 미송금 (fare_unpaid — 맥 도우미가 출고일보 폴더 '기사_운임_미송금_정리' 엑셀에서 올림. '보냄' 누르면 엑셀 보냄 칸에 O)
 // 버튼: 배차 요청 · 자료 넣기(site_inbox — 출고일보 업데이트 때 판매·구매입력) · 거래명세표(공간제작소 명세 / 그 외 명세) · 납품확인서 · 자재승인원 · 그 밖의 서류
 import * as S from './store-supabase.js';
+import * as FM from './forms.js';
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const won = (n) => Math.round(Number(n) || 0).toLocaleString();
@@ -90,18 +91,17 @@ export function screen(view) {
   }
   const wait = (H.inbox.wait || 0) + (H.inbox.got || 0), chk = H.inbox.check || 0;
   return `<div class="hm">${top('')}<main class="hm-main">
-    ${farePanel()}
     <div class="hm-grid">
       ${tile({ title: '배차 요청', icon: IC.truck, bg: '#FDF0E6', attr: 'data-hm="go" data-r="homt"' })}
       ${tile({ tag: 'label', title: '자료 넣기', icon: IC.up, bg: '#EAF1FB', cls: 'drop wide', sub: '카톡 글 · 거래명세표 · 발주서 · 사진 · PDF · 엑셀 — 끌어다 놓기 · Cmd+V',
         badge: chk ? `확인 ${chk}` : wait ? `대기 ${wait}` : '', badgeStyle: chk ? 'background:#D92D20' : 'background:#1D4F91', attr: 'id="hm-drop"',
         extra: `<input type="file" id="hm-file" multiple accept="image/*,.heic,.pdf,.xlsx,.xls,.csv,.txt" hidden>${H.toast ? `<span class="hm-toast">${esc(H.toast)}</span>` : ''}` })}
       ${tile({ title: '거래명세표', icon: IC.stmt, bg: '#EEF6EE', attr: 'data-hm="go" data-r="stmt"' })}
-      ${tile({ title: '납품확인서', icon: IC.deliv, bg: '#EEF6EE', attr: 'data-hm="go" data-r="deliv"' })}
+      ${tile({ title: '납품확인서', icon: IC.deliv, bg: '#EEF6EE', attr: 'data-hm="deliv"' })}
       ${tile({ title: '자재승인원', icon: IC.pack, bg: '#F2EEFB', attr: 'data-hm="pack"' })}
       ${tile({ title: '입금표', icon: IC.won, bg: '#FFF4E5', attr: 'data-hm="href" data-href="./deposit.html"' })}
       ${tile({ title: '견적서', icon: IC.quote, bg: '#F3F4F6', attr: 'data-hm="go" data-r="chat" data-mode="quote"' })}
-    </div></main>${packModal()}</div>`;
+    </div>${farePanel()}</main>${packModal()}${FM.delivPopup()}</div>`;
 }
 
 // ── 자료 넣기 ─────────────────────────────────────────
@@ -167,6 +167,7 @@ export function bind(app, c) {
       if (!confirm(`${r.driver} ${r.amount ? won(r.amount) + '원' : ''} — 보냄으로 표시할까요?`)) return;
       S.markFareSent(r.id, ctx.me()).then((err) => { if (err) alert('저장 못 했어요 — ' + err); else { r.sent = true; ctx.rerender(); } });
     }
+    else if (a === 'deliv') { FM.openDeliv(); ctx.rerender(); }
     else if (a === 'pack') { H.pack = { preset: PRESETS[0], site: '', dates: '', file: null, fileName: '', err: '', busy: false }; ctx.rerender(); }
     else if (a === 'pack-close' || (a === 'pack-close-bg' && e.target === t)) { H.pack = null; ctx.rerender(); }
     else if (a === 'pack-make') makePack();
@@ -187,7 +188,7 @@ export function bind(app, c) {
     putInbox(files.length ? files : text.trim() ? [text] : []);
   });
   document.addEventListener('paste', (e) => {   // 첫 화면에서 Cmd+V = 자료 넣기 (입력칸 안은 제외)
-    if (!app.querySelector('#hm-drop') || H.pack || e.target.closest('input, textarea, [contenteditable]')) return;
+    if (!app.querySelector('#hm-drop') || H.pack || app.querySelector('.fm-pop') || e.target.closest('input, textarea, [contenteditable]')) return;
     const files = [...(e.clipboardData.files || [])], text = e.clipboardData.getData('text/plain');
     if (files.length || text.trim()) { e.preventDefault(); putInbox(files.length ? files : [text]); }
   });
