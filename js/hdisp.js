@@ -139,7 +139,7 @@ export function dispatchText() {
 export function homtScreen() {
   const chip = (k, v, on) => `<button type="button" class="hd-chip ${on ? 'on' : ''}" data-hd="set" data-k="${k}" data-v="${esc(v)}">${esc(v)}</button>`;
   return `<div class="hd-page">
-    <div class="hd-top"><button type="button" class="hd-back" data-hd="back">‹ 처음으로</button><b>홈트 배차 요청</b><span></span></div>
+    <div class="hd-top"><button type="button" class="hd-back" data-hd="back">‹ 처음으로</button><b>홈트 배차 요청</b><a href="/gonggan" style="font-size:14px;color:#9A3412;text-decoration:none;font-weight:600">공간제작소 명세 ›</a></div>
     ${placeField('from', '상차지')}
     ${placeField('to', '하차지')}
     <div class="hd-field"><label class="hd-check"><input type="checkbox" data-hd="say" ${F.say ? 'checked' : ''}> 상차지에 우리 물건이라고 말해 주세요</label>

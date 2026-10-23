@@ -224,6 +224,30 @@ export async function getSlipRows(ids) {
   if (error) throw new Error(/does not exist|relation|schema cache|could not find/i.test(error.message) ? '공유 DB 에 전표 표(slip_rows)가 아직 없어요.' : error.message);
   return data || [];
 }
+// ── 공간제작소 BMS (gonggan_sales · gonggan_docs, 2026-10-23) ──
+export async function getGongganSales(biz) {
+  const out = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await sb.from('gonggan_sales').select('id,ymd,slip,partner,name,qty,price,supply,vat').eq('biz', biz).order('id').range(from, from + 999);
+    if (error) throw new Error(/does not exist|relation|schema cache|could not find/i.test(error.message) ? '공유 DB 에 공간제작소 표가 아직 없어요.' : error.message);
+    out.push(...(data || [])); if (!data || data.length < 1000) break;
+  }
+  return out;
+}
+export async function getGongganDocs(biz) {
+  const { data, error } = await sb.from('gonggan_docs').select('id,biz,status,tax_name,reason,drafted_at,updated_by,updated_at').eq('biz', biz).limit(5000);
+  if (error) throw new Error(error.message);
+  return data || [];
+}
+export async function getGongganDocFull(id) {
+  const { data, error } = await sb.from('gonggan_docs').select('tax_data,stmt_data').eq('id', id).maybeSingle();
+  if (error) throw new Error(error.message);
+  return data || {};
+}
+export async function saveGongganDoc(row) {   // 실패하면 글자, 되면 null
+  const { error } = await sb.from('gonggan_docs').upsert(row);
+  return error ? error.message : null;
+}
 // 실시간 구독은 딱 1회만. 이미 붙은 채널이 있으면 제거 후 재구독(재진입 안전) →
 // "cannot add postgres_changes callbacks after subscribe()" 방지.
 let _realtimeOn = false;

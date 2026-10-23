@@ -7,6 +7,7 @@ import { makeMatcher, readPastedText, quotePrev } from './textread.js';
 import * as DL from './delivery.js';
 import * as SM from './stmt.js';
 import * as HD from './hdisp.js';
+import * as GB from './gbms.js';
 
 // 창고 아이콘 세트 (무채색)
 const WH_ICONS = {
@@ -1995,7 +1996,7 @@ const DESK_MENU = [
   ['현황', [['dash', '업무 현황']]],
   ['판매·재고', [['sale', '판매입력 (붙여넣기)'], ['silicone', '실리콘 재고'], ['stock', '재고 현황'], ['', '출고 입력', 'new-ship'], ['ships', '출고 조회'], ['dispatch', '배차 관리'], ['invoices', '거래명세서']]],
   ['매입·문서', [['review', '스밭비서 입력 확인'], ['docread', '문서 인식 (발주서·명세표)'], ['buy', '구매명세서'], ['', '입고 입력', 'add-inbound'], ['inbound', '입고 조회']]],
-  ['기타', [['quotes', '견적서 조회'], ['', '견적서 입력', 'add-quote'], ['delivdocs', '납품확인서'], ['partners', '거래처 등록'], ['items', '품목 등록'], ['whs', '창고 등록'], ['ecount', '이카운트 품목 조회'], ['itemmap', '품목 매핑 사전'], ['settings', '환경설정']]],
+  ['기타', [['quotes', '견적서 조회'], ['', '견적서 입력', 'add-quote'], ['delivdocs', '납품확인서'], ['gonggan', '공간제작소 명세'], ['partners', '거래처 등록'], ['items', '품목 등록'], ['whs', '창고 등록'], ['ecount', '이카운트 품목 조회'], ['itemmap', '품목 매핑 사전'], ['settings', '환경설정']]],
 ];
 const DESK_TITLES = {};
 DESK_MENU.forEach(([g, items]) => items.forEach(([r, l]) => { if (r) DESK_TITLES[r] = [l, g]; }));
@@ -4928,7 +4929,7 @@ const TITLES = { home: ['홈트레이더스', '재고 · 출고 관리'], quote:
 
 // 주소에 화면 이름 — erp.hometraders.co.kr/homt · /chat · /ship … (10/22 대표). 첫 화면은 / .
 //   그 주소로 바로 열어도(즐겨찾기·공유) 그 화면, 뒤로가기는 앞 화면. 서버에 없는 주소는 404.html(=index.html)이 앱을 띄움.
-const routeOk = (r) => r === 'start' || r === 'homt' || r === 'chat' || !!TITLES[r] || !!DESK_TITLES[r];
+const routeOk = (r) => r === 'start' || r === 'homt' || r === 'chat' || r === 'gonggan' || r === 'gonggan-ace' || !!TITLES[r] || !!DESK_TITLES[r];
 function routeFromPath() {
   const r = decodeURIComponent(location.pathname).replace(/^\/+|\/+$/g, '').replace(/\.html$/, '');
   return r && r !== 'index' && routeOk(r) ? r : 'start';
@@ -4943,6 +4944,13 @@ window.addEventListener('popstate', () => { state.route = routeFromPath(); state
 
 function render() {
   queueMicrotask(syncUrl);   // 화면을 다 그린 뒤 정해진 route 로 (PC·휴대폰 route 바꿈 포함)
+  if (myAccount === 'gonggan' && !String(state.route).startsWith('gonggan')) state.route = 'gonggan';   // 공간제작소 계정은 이 화면만
+  if (state.route === 'gonggan' || state.route === 'gonggan-ace') {   // 공간제작소 BMS (10/23) — 홈트레이더스·현구 과장님 같은 화면
+    document.body.classList.remove('erp');
+    GB.setBiz(state.route === 'gonggan-ace' ? 'ace' : 'homt');
+    app.innerHTML = GB.screen();
+    return;
+  }
   if (state.route === 'start' || state.route === 'homt') {   // 첫 화면(에이스/홈트) · 홈트 배차 요청 — PC·휴대폰 같은 화면
     document.body.classList.remove('erp');
     app.innerHTML = state.route === 'start' ? HD.startScreen() : HD.homtScreen();
@@ -5575,6 +5583,19 @@ function downloadJSON() {
 }
 
 function showLogin(msg) {
+  if (location.pathname.startsWith('/gonggan')) {   // 공간제작소 화면 로그인 — 비밀번호만 (계정 gonggan)
+    app.innerHTML = `
+    <div class="gb-login" style="max-width:340px;margin:0 auto;padding:16vh 24px 0;text-align:center;font-family:Pretendard,'Noto Sans KR',system-ui,sans-serif">
+      <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:28px"><img src="./icons/partner-gongan.png" alt="공간제작소" style="height:48px"><span aria-hidden="true" style="color:#8A8A8A">×</span><img src="./icons/logo-full.png" alt="HOME TRADERS" style="height:44px"></div>
+      <form id="login-form" style="display:flex;flex-direction:column;gap:10px">
+        <input name="userid" type="hidden" value="gonggan">
+        <input name="password" type="password" autocomplete="current-password" placeholder="비밀번호" aria-label="비밀번호" style="padding:14px;border-radius:11px;background:#F3F4F6;border:0;font-size:16px">
+        <button class="btn" type="submit" style="margin-top:4px">로그인</button>
+        <p id="login-err" style="color:#e05a52;font-size:13px;min-height:18px;margin:2px 0">${msg || ''}</p>
+      </form>
+    </div>`;
+    return;
+  }
   app.innerHTML = `
   <div style="max-width:340px;margin:12vh auto 0;padding:0 24px;text-align:center">
     <div style="width:56px;height:56px;border-radius:16px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-size:26px;font-weight:800;margin:0 auto 16px">H</div>
@@ -5597,7 +5618,7 @@ async function boot() {
   if (booted) { render(); return; }
   app.innerHTML = '<div style="padding:64px 24px;text-align:center;color:#888;font-size:15px">불러오는 중…</div>';
   // PC는 열 때마다 대화 화면부터 (예전엔 마지막 화면을 기억해 업무 현황이 다시 떠서 바뀐 걸 못 봄). 휴대폰은 기억한 화면 그대로
-  state.route = routeFromPath();   // 열 때마다 첫 화면(에이스/홈트)부터 — 주소에 화면 이름(/homt·/chat …)이 있으면 그 화면. 에이스를 누르면 아래 aceRoute() 로 기존 ERP
+  state.route = myAccount === 'gonggan' && !routeFromPath().startsWith('gonggan') ? 'gonggan' : routeFromPath();   // 열 때마다 첫 화면(에이스/홈트)부터 — 주소에 화면 이름(/homt·/chat …)이 있으면 그 화면. 에이스를 누르면 아래 aceRoute() 로 기존 ERP
   try { await S.init(); booted = true; render(); }
   catch (e) { app.innerHTML = `<div style="padding:48px 24px;text-align:center"><b>연결 오류</b><br><span style="color:#888;font-size:13px">${esc(e.message || String(e))}</span></div>`; }
 }
@@ -5618,6 +5639,12 @@ function aceRoute() {
   try { const r = sessionStorage.getItem('ht_route'); if (r && TITLES[r]) return r; } catch (e) { /* 무시 */ }
   return 'home';
 }
+GB.bind(app, {
+  rerender: render,
+  goStart: () => { state.route = 'start'; state.sheet = null; render(); },
+  go: (r) => { state.route = r; state.sheet = null; render(); },
+  me: () => myAccount,
+});
 HD.bind(app, {
   rerender: render,
   goAce: () => { state.route = aceRoute(); state.sheet = null; render(); },

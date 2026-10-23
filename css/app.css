@@ -511,3 +511,7 @@ textarea{resize:vertical;line-height:1.5;}
 .hd-pre { white-space: pre-wrap; background: var(--surface-2, #f8f9fb); border-radius: 11px; padding: 12px 13px; font-family: inherit; font-size: 14px; line-height: 1.55; margin: 0; }
 .hd-go { width: 100%; border: 0; border-radius: 12px; padding: 15px; font: inherit; font-size: 16px; font-weight: 700; background: #e8740c; color: #fff; cursor: pointer; }
 .appbar .logo[data-hd] { cursor: pointer; }
+
+/* 공간제작소 BMS · 로그인 — 화면 전체 너비 (10/23) */
+#app:has(.gb), #app:has(.gb-login){max-width:none;margin:0;background:#F7F7F5}
+#app:has(.gb-login){background:#FFFFFF}
