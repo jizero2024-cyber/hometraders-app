@@ -152,8 +152,8 @@ export function screen() {
       <table style="width:100%;min-width:1000px;border-collapse:collapse;font-size:13px">
         <thead><tr style="background:#FAFAF8;color:#5C5C5C;text-align:left">
           <th style="padding:12px 8px 12px 16px;font-weight:600">출고일</th><th style="padding:12px 8px;font-weight:600">현장</th><th style="padding:12px 8px;font-weight:600">품목명</th>
-          <th style="padding:12px 8px;font-weight:600;text-align:right;white-space:nowrap">합계 (VAT 포함)</th><th style="padding:12px 8px;font-weight:600;text-align:center">거래명세표</th>
-          <th style="padding:12px 8px;font-weight:600;text-align:center">세금계산서</th><th style="padding:12px 8px;font-weight:600;text-align:center">상태</th><th style="padding:12px 14px 12px 8px;font-weight:600;text-align:center;white-space:nowrap">등록일</th>
+          <th style="padding:12px 8px;font-weight:600;text-align:right;white-space:nowrap">합계 (VAT 포함)</th><th style="padding:12px 8px;font-weight:600;text-align:center;white-space:nowrap">거래명세표</th>
+          <th style="padding:12px 8px;font-weight:600;text-align:center;white-space:nowrap">세금계산서</th><th style="padding:12px 8px;font-weight:600;text-align:center">상태</th><th style="padding:12px 14px 12px 8px;font-weight:600;text-align:center;white-space:nowrap">등록일</th>
         </tr></thead>
         <tbody>${rows.map(rowHtml).join('') || `<tr><td colspan="8" style="padding:40px;text-align:center;color:#6B6B6B">${G.loading ? '불러오는 중…' : '없어요'}</td></tr>`}</tbody>
       </table>
@@ -171,7 +171,7 @@ export function screen() {
 }
 const navStyle = (on) => `display:flex;justify-content:space-between;padding:10px;border-radius:8px;border:0;font:inherit;font-size:14px;cursor:pointer;text-align:left;${on ? 'background:#FDF0E6;color:#9A3412;font-weight:700' : 'background:none;color:#1F2328'}`;
 const addBtn = (act, id) => `<button type="button" data-gb="${act}" data-id="${esc(id)}" style="width:92px;height:34px;border-radius:8px;border:1.5px dashed #B8B8B8;background:#F4F4F4;color:#4B4B4B;font:inherit;font-weight:700;font-size:13px;cursor:pointer">+ 넣기</button>`;
-const okTag = '<span style="display:inline-block;padding:6px 10px;border-radius:6px;background:#EEF6EE;color:#1E6B34;font-size:12px;font-weight:600">첨부됨</span>';
+const okTag = '<span style="display:inline-block;padding:6px 10px;border-radius:6px;background:#EEF6EE;color:#1E6B34;font-size:12px;font-weight:600;white-space:nowrap">첨부됨</span>';
 function rowHtml(d) {
   const st = statusOf(d), x = G.docs[d.id] || {};
   return `<tr data-gb="row" data-id="${esc(d.id)}" style="cursor:pointer;border-top:1px solid #EFEDE8;${x.tax_name ? '' : 'background:#FFFCF8'}">
