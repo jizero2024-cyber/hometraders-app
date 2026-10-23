@@ -134,7 +134,7 @@ export function screen() {
   const months = [...new Set(G.list.map((d) => d.ymd.slice(4, 6)))].sort();
   const sites = [...new Set(G.list.map((d) => d.site).filter(Boolean))].sort();
   const cnt = (k) => base.filter((d) => k === '전체' || statusOf(d) === k).length;
-  const draftable = rows.filter((d) => statusOf(d) !== '최종완료');
+  const draftable = rows.filter((d) => !['기안중', '최종완료'].includes(statusOf(d)));   // 체크·일괄 = 기안 확정할 장
   const picked = draftable.filter((d) => G.pick.has(d.id));
   const tab = (on) => `height:38px;padding:0 16px;border-radius:19px;font:inherit;font-size:14px;cursor:pointer;${on ? 'background:#1F2328;color:#fff;border:1px solid #1F2328;font-weight:700' : 'background:#fff;color:#1F2328;border:1px solid #E6E4DF'}`;
   const open = G.open && G.list.find((d) => d.id === G.open);
@@ -190,7 +190,7 @@ const addBtn = (act, id) => `<button type="button" data-gb="${act}" data-id="${e
 const okTag = '<span style="display:inline-block;padding:6px 10px;border-radius:6px;background:#EEF6EE;color:#1E6B34;font-size:12px;font-weight:600">첨부됨</span>';
 function rowHtml(d) {
   const st = statusOf(d), x = G.docs[d.id] || {};
-  const canDraft = st !== '최종완료';
+  const canDraft = !['기안중', '최종완료'].includes(st);
   return `<tr data-gb="row" data-id="${esc(d.id)}" style="cursor:pointer;border-top:1px solid #EFEDE8;${x.tax_name ? '' : 'background:#FFFCF8'}">
     <td style="padding:12px 6px 12px 14px">${canDraft ? `<input type="checkbox" data-gb="pick" data-id="${esc(d.id)}" aria-label="선택" ${G.pick.has(d.id) ? 'checked' : ''} style="width:16px;height:16px;accent-color:#1D4F91">` : ''}</td>
     <td style="padding:12px 8px;white-space:nowrap"><b>${md(d.ymd)}</b><div style="font-size:11px;color:#6B6B6B">${esc((d.slips || [d.slip]).map((s) => s.slice(4)).join(', '))}</div></td>
@@ -200,7 +200,7 @@ function rowHtml(d) {
     <td style="padding:12px 8px;text-align:center">${okTag}</td>
     <td style="padding:12px 8px;text-align:center">${x.tax_name ? okTag : addBtn('addtax', d.id)}</td>
     <td style="padding:12px 8px;text-align:center;white-space:nowrap"><span style="display:inline-block;white-space:nowrap;padding:4px 10px;border-radius:12px;font-size:12px;font-weight:700;${BADGE[st]}">${st}</span></td>
-    <td style="padding:12px 14px 12px 8px;text-align:center">${canDraft ? `<button type="button" data-gb="draft" data-id="${esc(d.id)}" style="height:32px;padding:0 12px;border-radius:6px;border:1px solid #1D4F91;background:#fff;color:#1D4F91;font:inherit;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">기안 확정</button>` : '<span style="font-size:12px;color:#1E6B34;font-weight:600">완료</span>'}</td>
+    <td style="padding:12px 14px 12px 8px;text-align:center">${canDraft ? `<button type="button" data-gb="draft" data-id="${esc(d.id)}" style="height:32px;padding:0 12px;border-radius:6px;border:1px solid #1D4F91;background:#fff;color:#1D4F91;font:inherit;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">기안 확정</button>` : st === '기안중' ? `<button type="button" data-gb="final" data-id="${esc(d.id)}" style="height:32px;padding:0 12px;border-radius:6px;border:1px solid #1E6B34;background:#1E6B34;color:#fff;font:inherit;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">최종완료</button>` : '<span style="font-size:12px;color:#1E6B34;font-weight:600">완료</span>'}</td>
   </tr>`;
 }
 function docBox(kind, d) {
@@ -242,7 +242,9 @@ function modalHtml(d) {
           <textarea data-gb="reason" rows="1" placeholder="예: 세금계산서 작성일자가 출고일과 달라요" style="height:44px;min-height:44px;resize:vertical;border:1px solid #3F3F46;border-radius:10px;padding:10px 12px;font:inherit;font-size:14px;font-weight:400;background:#fff;box-sizing:border-box">${esc(G.reason)}</textarea></label>
         <div style="display:flex;gap:8px;align-items:flex-end">
           <button type="button" data-gb="reject" style="height:44px;min-width:128px;padding:0 18px;border-radius:8px;border:1px solid #B42318;background:#fff;color:#B42318;font:inherit;font-size:15px;font-weight:700;cursor:pointer">수정요청</button>
-          <button type="button" data-gb="confirm" ${st === '최종완료' ? 'disabled' : ''} style="height:44px;min-width:128px;padding:0 18px;border-radius:8px;font:inherit;font-size:15px;font-weight:700;${st === '최종완료' ? 'background:#EEF6EE;color:#1E6B34;border:1px solid #CFE6D3' : 'background:#1D4F91;color:#fff;border:1px solid #1D4F91;cursor:pointer'}">기안 확정</button>
+          ${st === '최종완료' ? '<button type="button" disabled style="height:44px;min-width:128px;padding:0 18px;border-radius:8px;font:inherit;font-size:15px;font-weight:700;background:#EEF6EE;color:#1E6B34;border:1px solid #CFE6D3">최종완료</button>'
+            : st === '기안중' ? '<button type="button" data-gb="final" style="height:44px;min-width:128px;padding:0 18px;border-radius:8px;font:inherit;font-size:15px;font-weight:700;background:#1E6B34;color:#fff;border:1px solid #1E6B34;cursor:pointer">최종완료</button>'
+            : '<button type="button" data-gb="confirm" style="height:44px;min-width:128px;padding:0 18px;border-radius:8px;font:inherit;font-size:15px;font-weight:700;background:#1D4F91;color:#fff;border:1px solid #1D4F91;cursor:pointer">기안 확정</button>'}
         </div>
       </div>
     </div>
@@ -499,9 +501,10 @@ export function bind(app, c) {
       else if (confirm('이 거래명세표를 목록에서 지울까요?')) { save(cur.id, { status: '삭제' }); G.list = G.list.filter((d) => d.id !== cur.id); G.open = null; ctx.rerender(); }
     }
     else if (a === 'deltax' && cur) { if (confirm('세금계산서를 지울까요?')) save(cur.id, { tax_data: null, tax_name: null, tax_no: null, status: null, drafted_at: null }); }   // 지우면 결재전으로
-    else if (a === 'draft') save(id, { status: '최종완료', drafted_at: new Date().toISOString() });
-    else if (a === 'bulk') { const ids = [...G.pick]; G.pick.clear(); ids.forEach((x) => save(x, { status: '최종완료', drafted_at: new Date().toISOString() })); }
-    else if (a === 'confirm' && cur) { save(cur.id, { status: '최종완료', drafted_at: new Date().toISOString() }); G.open = null; }
+    else if (a === 'draft') save(id, { status: '기안중', drafted_at: new Date().toISOString() });   // 기안 확정 = 기안중 (10/23 대표)
+    else if (a === 'bulk') { const ids = [...G.pick]; G.pick.clear(); ids.forEach((x) => save(x, { status: '기안중', drafted_at: new Date().toISOString() })); }
+    else if (a === 'confirm' && cur) { save(cur.id, { status: '기안중', drafted_at: new Date().toISOString() }); G.open = null; }
+    else if (a === 'final' && (id || cur)) { save(id || cur.id, { status: '최종완료' }); if (!id) G.open = null; }   // 기안 결재가 끝나면 최종완료
     else if (a === 'reject' && cur) { save(cur.id, { status: '수정요청', reason: G.reason.trim() || '수정요청' }); G.open = null; G.reason = ''; }
     else if (a === 'zoom') { G.zoom = t.dataset.k; ctx.rerender(); }
     else if (a === 'unzoom') { G.zoom = ''; ctx.rerender(); }
@@ -519,7 +522,7 @@ export function bind(app, c) {
     const a = t.dataset && t.dataset.gb;
     if (a === 'taxno') { const m = NO_RE.exec(t.value); const cur = G.open && G.list.find((d) => d.id === G.open); if (m && cur) { G.editNo = false; save(cur.id, { tax_no: `${m[1]}-${m[2]}-${m[3]}` }); } else if (t.value.trim()) alert('승인번호는 20261013-10261013-99366706 모양이에요'); return; }
     if (a === 'pick') { if (t.checked) G.pick.add(t.dataset.id); else G.pick.delete(t.dataset.id); ctx.rerender(); }
-    else if (a === 'pickall') { const ids = filtered().filter((d) => statusOf(d) !== '최종완료').map((d) => d.id); if (t.checked) ids.forEach((x) => G.pick.add(x)); else G.pick.clear(); ctx.rerender(); }
+    else if (a === 'pickall') { const ids = filtered().filter((d) => !['기안중', '최종완료'].includes(statusOf(d))).map((d) => d.id); if (t.checked) ids.forEach((x) => G.pick.add(x)); else G.pick.clear(); ctx.rerender(); }
     else if (a === 'site') { G.site = t.value; G.page = 1; ctx.rerender(); }
     else if (a === 'size') { G.size = Number(t.value) || 20; G.page = 1; ctx.rerender(); }
   });
