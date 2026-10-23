@@ -4945,6 +4945,9 @@ function syncUrl() {
 window.addEventListener('popstate', () => { state.route = routeFromPath(); state.sheet = null; urlReplace = true; render(); });
 
 function render() {
+  // 로그인·준비 전엔 아무 화면도 그리지 않음 (로그인 화면 그대로). 10/23: /gonggan 로그인 화면에서 창 크기가 바뀌자(1024px 경계)
+  //   다시 그리기가 돌아 기본 화면(PC = 홈트 도우미)이 떴음 — 공간제작소 쪽에 우리 업무툴이 보이면 절대 안 됨
+  if (!booted || !myAccount) return;
   queueMicrotask(syncUrl);   // 화면을 다 그린 뒤 정해진 route 로 (PC·휴대폰 route 바꿈 포함)
   if (myAccount === GONG_ID && !String(state.route).startsWith('gonggan')) state.route = 'gonggan';   // 공간제작소 계정은 이 화면만
   if (state.route === 'gonggan' || state.route === 'gonggan-ace') {   // 공간제작소 BMS (10/23) — 홈트레이더스·현구 과장님 같은 화면
@@ -5627,7 +5630,7 @@ function showLogin(msg) {
 let booted = false;
 async function boot() {
   const session = await S.getSession();
-  if (!session) { booted = false; showLogin(); return; }
+  if (!session) { booted = false; myAccount = ''; showLogin(); return; }
   myAccount = ((session.user && session.user.email) || '').split('@')[0];
   if (booted) { render(); return; }
   app.innerHTML = '<div style="padding:64px 24px;text-align:center;color:#888;font-size:15px">불러오는 중…</div>';
