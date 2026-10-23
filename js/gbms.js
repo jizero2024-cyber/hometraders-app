@@ -10,6 +10,7 @@ const HEAD = ['일자-No.', '거래처명', '품목명(규격)', '수량', '단�
 const STATUS = ['전체', '결재전', '기안중', '수정요청', '최종완료'];
 const BADGE = { 결재전: 'background:#FFF1E6;color:#B4471A', 기안중: 'background:#EAF1FB;color:#1D4F91', 수정요청: 'background:#FDECEC;color:#B42318', 최종완료: 'background:#EEF6EE;color:#1E6B34' };
 const PEN = '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M10.5 2.5l3 3L6 13H3v-3z" fill="none" stroke="#1F2328" stroke-width="1.6" stroke-linejoin="round"></path></svg>';
+const TRASH = '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8.5h5.8l.6-8.5" fill="none" stroke="#D92D20" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
 const X = '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" fill="none" stroke="#1F2328" stroke-width="1.8" stroke-linecap="round"></path></svg>';
 const DOWN = '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v8M4.5 7L8 10.5 11.5 7M3 13h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
 const CHEV = '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" style="position:absolute;right:14px;top:12px;pointer-events:none"><path d="M4 6l4 4 4-4" fill="none" stroke="#1F2328" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
@@ -154,7 +155,8 @@ function docBox(kind, d) {
   if (!src && kind === 'stmt') return `<figure style="margin:0;display:flex;flex-direction:column;gap:8px">${cap}<div style="aspect-ratio:1588/1408;border:1px solid #D9D9D9;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#6B6B6B;font-size:13px">불러오는 중…</div></figure>`;
   if (!src) return `<figure style="margin:0;display:flex;flex-direction:column;gap:8px">${cap}<button type="button" data-gb="replace" data-k="tax" style="aspect-ratio:1588/1408;border:2px dashed #B8B8B8;border-radius:8px;background:#F4F4F4;color:#4B4B4B;font:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer"><span style="font-size:32px">+</span><b>세금계산서 넣기</b></button></figure>`;
   const pdf = src.startsWith('data:application/pdf');
-  return `<figure style="margin:0;display:flex;flex-direction:column;gap:8px">${cap}<div style="position:relative;border:1px solid #D9D9D9;border-radius:6px;overflow:hidden;background:#fff">${pdf ? `<embed src="${src}" type="application/pdf" style="width:100%;aspect-ratio:1588/1408;display:block">` : `<button type="button" data-gb="zoom" data-k="${kind}" aria-label="${label} 크게 보기" style="display:block;width:100%;padding:0;border:0;background:none;cursor:zoom-in"><img src="${src}" alt="${label}" style="width:100%;height:auto;display:block"></button>`}${pen}</div></figure>`;
+  const del = kind === 'tax' ? `<button type="button" data-gb="deltax" aria-label="세금계산서 지우기" style="position:absolute;top:8px;right:46px;width:30px;height:30px;border-radius:15px;border:1px solid #F1B5AF;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">${TRASH}</button>` : '';   // 잘못 넣은 세금계산서 지우기 (10/23 대표)
+  return `<figure style="margin:0;display:flex;flex-direction:column;gap:8px">${cap}<div style="position:relative;border:1px solid #D9D9D9;border-radius:6px;overflow:hidden;background:#fff">${pdf ? `<embed src="${src}" type="application/pdf" style="width:100%;aspect-ratio:1588/1408;display:block">` : `<button type="button" data-gb="zoom" data-k="${kind}" aria-label="${label} 크게 보기" style="display:block;width:100%;padding:0;border:0;background:none;cursor:zoom-in"><img src="${src}" alt="${label}" style="width:100%;height:auto;display:block"></button>`}${del}${pen}</div></figure>`;
 }
 function modalHtml(d) {
   ensureImg(d); ensureFull(d.id);
@@ -248,6 +250,7 @@ export function bind(app, c) {
     else if (a === 'page') { G.page = Number(t.dataset.v) || 1; ctx.rerender(); }
     else if (a === 'addtax') { G.open = id; pickFile(id, 'tax'); ctx.rerender(); }
     else if (a === 'replace' && cur) pickFile(cur.id, t.dataset.k);
+    else if (a === 'deltax' && cur) { if (confirm('세금계산서를 지울까요?')) save(cur.id, { tax_data: null, tax_name: null, status: null, drafted_at: null }); }   // 지우면 결재전으로
     else if (a === 'draft') save(id, { status: '최종완료', drafted_at: new Date().toISOString() });
     else if (a === 'bulk') { const ids = [...G.pick]; G.pick.clear(); ids.forEach((x) => save(x, { status: '최종완료', drafted_at: new Date().toISOString() })); }
     else if (a === 'confirm' && cur) { save(cur.id, { status: '최종완료', drafted_at: new Date().toISOString() }); G.open = null; }
