@@ -64,12 +64,19 @@ function tile(o) {
     <span class="hm-ic" style="background:${o.bg}">${o.icon}</span><b>${o.title}</b>${o.sub ? `<span class="hm-sub">${o.sub}</span>` : ''}${o.extra || ''}</${o.tag || 'button'}>`;
 }
 
-// 배차 요청 팝업 (10/23 대표) — 이미 있는 /homt 화면을 그대로 띄움 (?embed=1 = 위 줄 없이)
-function framePopup() {
-  if (!H.frame) return '';
-  return `<div class="hm-ov" data-hm="frame-close-bg"><div class="hm-frame" role="dialog" aria-label="${esc(H.frame.title)}">
-    <div class="hm-mh"><b>${esc(H.frame.title)}</b><button type="button" class="hm-x" data-hm="frame-close" aria-label="닫기">✕</button></div>
-    <iframe src="${esc(H.frame.src)}" title="${esc(H.frame.title)}"></iframe></div></div>`;
+// 배차 요청 · 입금표 팝업 (10/23 대표) — 이미 있는 화면(/homt · deposit.html)을 창으로 띄움 (?embed=1 = 위 줄 없이).
+//   첫 화면은 자주 다시 그려져서(미송금·대기함 새로고침) 창을 그 안에 두면 매번 새로 열려 깜빡임 → body 에 따로 붙임
+function closeFrame() { const ov = document.querySelector('.hm-frame-ov'); if (ov) ov.remove(); H.frame = null; }
+function openFrame(title, src) {
+  closeFrame();
+  const ov = document.createElement('div');
+  ov.className = 'hm-ov hm-frame-ov';
+  ov.innerHTML = `<div class="hm-frame" role="dialog" aria-label="${esc(title)}">
+    <div class="hm-mh"><b>${esc(title)}</b><button type="button" class="hm-x" data-x="1" aria-label="닫기">✕</button></div>
+    <iframe src="${esc(src)}" title="${esc(title)}"></iframe></div>`;
+  ov.addEventListener('click', (e) => { if (e.target === ov || e.target.closest('[data-x]')) closeFrame(); });
+  document.body.appendChild(ov);
+  H.frame = { title, src };
 }
 
 function boxModal() {   // 자료 넣기 — 카톡 글 붙여넣기 칸 + 파일 (휴대폰은 Cmd+V 가 없어서)
@@ -102,8 +109,8 @@ export function screen(view) {
       ${tile({ title: '납품확인서', icon: IC.deliv, bg: '#EEF6EE', attr: 'data-hm="form" data-r="deliv"' })}
       ${tile({ title: '자재승인원', icon: IC.pack, bg: '#F2EEFB', attr: 'data-hm="form" data-r="approval"' })}
       ${tile({ title: '견적서', icon: IC.quote, bg: '#F3F4F6', attr: 'data-hm="form" data-r="quote"' })}
-      ${tile({ title: '입금표', icon: IC.won, bg: '#FFF4E5', attr: 'data-hm="form" data-r="deposit"' })}
-    </div>${farePanel()}</main>${boxModal()}${FM.popup()}${framePopup()}<input type="file" id="hm-file" multiple accept="image/*,.heic,.pdf,.xlsx,.xls,.csv,.txt" hidden></div>`;
+      ${tile({ title: '입금표', icon: IC.won, bg: '#FFF4E5', attr: 'data-hm="frame" data-src="./deposit.html?embed=1" data-title="입금표"' })}
+    </div>${farePanel()}</main>${boxModal()}${FM.popup()}<input type="file" id="hm-file" multiple accept="image/*,.heic,.pdf,.xlsx,.xls,.csv,.txt" hidden></div>`;
 }
 
 // ── 자료 넣기 ─────────────────────────────────────────
@@ -147,7 +154,7 @@ export function bind(app, c) {
   app.addEventListener('click', (e) => {
     const t = e.target.closest('[data-hm]'); if (!t || !on()) return;
     const a = t.dataset.hm;
-    if (a === 'go') { FM.open(''); H.frame = null; ctx.go(t.dataset.r, t.dataset.mode); }   // 화면을 옮기면 열린 팝업은 닫음
+    if (a === 'go') { FM.open(''); closeFrame(); ctx.go(t.dataset.r, t.dataset.mode); }   // 화면을 옮기면 열린 팝업은 닫음
     else if (a === 'fare-all') { H.fareAll = !H.fareAll; ctx.rerender(); }
     else if (a === 'sent') {
       const r = (H.fare || []).find((x) => x.id === t.dataset.id); if (!r) return;
@@ -155,8 +162,7 @@ export function bind(app, c) {
       S.markFareSent(r.id, ctx.me()).then((err) => { if (err) alert('저장 못 했어요 — ' + err); else { r.sent = true; ctx.rerender(); } });
     }
     else if (a === 'form') { FM.open(t.dataset.r); ctx.rerender(); }   // 서류는 모두 팝업 (10/23 대표) — 주소(/deliv · /quote …)로 열면 전체 화면
-    else if (a === 'frame') { H.frame = { src: t.dataset.src, title: t.dataset.title }; ctx.rerender(); }
-    else if (a === 'frame-close' || (a === 'frame-close-bg' && e.target === t)) { H.frame = null; ctx.rerender(); }
+    else if (a === 'frame') openFrame(t.dataset.title, t.dataset.src);
     else if (a === 'box') { H.box = true; ctx.rerender(); setTimeout(() => { const x = document.getElementById('hm-text'); if (x) x.focus(); }, 0); }
     else if (a === 'box-close' || (a === 'box-bg' && e.target === t)) { H.box = false; ctx.rerender(); }
     else if (a === 'pick') document.getElementById('hm-file').click();
