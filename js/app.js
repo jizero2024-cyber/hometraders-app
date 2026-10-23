@@ -5633,6 +5633,7 @@ async function boot() {
   app.innerHTML = '<div style="padding:64px 24px;text-align:center;color:#888;font-size:15px">불러오는 중…</div>';
   // PC는 열 때마다 대화 화면부터 (예전엔 마지막 화면을 기억해 업무 현황이 다시 떠서 바뀐 걸 못 봄). 휴대폰은 기억한 화면 그대로
   state.route = myAccount === GONG_ID && !routeFromPath().startsWith('gonggan') ? 'gonggan' : routeFromPath();   // 열 때마다 첫 화면(에이스/홈트)부터 — 주소에 화면 이름(/homt·/chat …)이 있으면 그 화면. 에이스를 누르면 아래 aceRoute() 로 기존 ERP
+  if (myAccount === GONG_ID) { booted = true; render(); return; }   // 공간제작소 계정은 우리 자료(거래처·품목·출고…)를 내려받지 않음 — 공간제작소 표만 (10/23 대표 "절대 연동 안 되게")
   try { await S.init(); booted = true; render(); }
   catch (e) { app.innerHTML = `<div style="padding:48px 24px;text-align:center"><b>연결 오류</b><br><span style="color:#888;font-size:13px">${esc(e.message || String(e))}</span></div>`; }
 }
