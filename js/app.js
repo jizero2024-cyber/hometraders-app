@@ -5443,11 +5443,13 @@ app.addEventListener('submit', (e) => {
   const form = e.target;
   if (form.id === 'login-form') {
     const errEl = document.getElementById('login-err'); if (errEl) errEl.textContent = '로그인 중…';
-    S.signIn(form.userid.value.trim(), form.password.value).catch((err) => {
+    const code = form.dataset.code ? form.password.value.trim() : '';   // 공간제작소 코드 로그인 — 코드가 아이디이자 비밀번호
+    S.signIn(code || form.userid.value.trim(), code || form.password.value).catch((err) => {
       const raw = (err && (err.message || err.error_description || '')).toLowerCase();
-      let msg = '로그인 실패 — 아이디/비밀번호를 확인하세요';
+      let msg = code ? '코드를 확인해 주세요' : '로그인 실패 — 아이디/비밀번호를 확인하세요';
       if (raw.includes('not confirmed')) msg = '로그인 실패 — 계정 이메일 인증이 필요해요 (관리자 확인)';
       else if (raw.includes('invalid')) msg = '로그인 실패 — 아이디 또는 비밀번호가 틀렸어요';
+      if (code) msg = '코드를 확인해 주세요';
       if (errEl) errEl.textContent = msg;
       console.warn(err);
     });
@@ -5584,15 +5586,14 @@ function downloadJSON() {
 
 const GONG_ID = 'space1234';   // 공간제작소(현구 과장님) 계정 — 로그인하면 공간제작소 화면만
 function showLogin(msg) {
-  if (location.pathname.startsWith('/gonggan')) {   // 공간제작소 화면 로그인 — 아이디·비밀번호 (공간제작소 계정 space1234, 10/23 대표)
+  if (location.pathname.startsWith('/gonggan')) {   // 공간제작소 화면 로그인 — 코드 하나만 (코드 = 계정 아이디·비밀번호, 10/23 대표)
     app.innerHTML = `
-    <div class="gb-login" style="max-width:340px;margin:0 auto;padding:16vh 24px 0;text-align:center;font-family:Pretendard,'Noto Sans KR',system-ui,sans-serif">
+    <div class="gb-login" style="position:fixed;inset:0;background:#fff;display:flex;flex-direction:column;align-items:center;padding:18vh 24px 0;box-sizing:border-box;font-family:Pretendard,'Noto Sans KR',system-ui,sans-serif">
       <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:28px"><img src="./icons/partner-gongan.png" alt="공간제작소" style="height:48px"><span aria-hidden="true" style="color:#8A8A8A">×</span><img src="./icons/logo-full.png" alt="HOME TRADERS" style="height:44px"></div>
-      <form id="login-form" style="display:flex;flex-direction:column;gap:10px">
-        <input name="userid" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="아이디" aria-label="아이디" style="padding:14px;border-radius:11px;background:#F3F4F6;border:0;font-size:16px">
-        <input name="password" type="password" autocomplete="current-password" placeholder="비밀번호" aria-label="비밀번호" style="padding:14px;border-radius:11px;background:#F3F4F6;border:0;font-size:16px">
+      <form id="login-form" data-code="1" style="width:100%;max-width:320px;display:flex;flex-direction:column;gap:10px">
+        <input name="password" type="password" autocomplete="current-password" placeholder="코드" aria-label="코드" style="padding:14px;border-radius:11px;background:#F3F4F6;border:0;font-size:16px;text-align:center">
         <button class="btn" type="submit" style="margin-top:4px">로그인</button>
-        <p id="login-err" style="color:#e05a52;font-size:13px;min-height:18px;margin:2px 0">${msg || ''}</p>
+        <p id="login-err" style="color:#e05a52;font-size:13px;min-height:18px;margin:2px 0;text-align:center">${msg || ''}</p>
       </form>
     </div>`;
     return;
