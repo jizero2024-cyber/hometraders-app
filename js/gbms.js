@@ -20,12 +20,13 @@ const G = { biz: 'homt', loaded: '', loading: false, err: '', list: [], docs: {}
 let ctx = { rerender: () => {}, goStart: () => {}, go: () => {}, me: () => '', slips: async () => ({ slips: [] }), helper: async () => ({}), helperUp: () => false };
 
 // ── 데이터 ─────────────────────────────────────────
+const slipKey = (slip) => { const m = /(20\d\d)\/(\d{1,2})\/(\d{1,2})\s*-\s*(\d+)/.exec(String(slip)); return m ? `${m[1]}${m[2].padStart(2, '0')}${m[3].padStart(2, '0')}-${m[4]}` : String(slip); };
 // 운반비 빠진 출고는 화면에 표시하지 않음 — 공간제작소와 같이 보는 화면 (10/23 대표). 누락은 출고일보 작업(ROUTINE)에서 이카운트에 넣음
 // 직접 등록한 장 (gonggan_docs.manual = {ymd, site, partner, items:[{name, qty, price}]}) → 목록 한 장
 function manualDoc(x) {
   const m = x.manual, date = new Date(+m.ymd.slice(0, 4), +m.ymd.slice(4, 6) - 1, +m.ymd.slice(6, 8));
   const items = m.items.map((it) => { const supply = Math.round((Number(it.qty) || 0) * (Number(it.price) || 0)); return { date, name: it.name, qty: Number(it.qty) || 0, supply, vat: Math.round(supply * 0.1) }; });
-  return { id: x.id, ymd: m.ymd, slip: `${m.ymd}-${m.no || 1}`, seq: m.no || 1, partner: m.partner || '(주)공간제작소', site: m.site || '', items, manual: true, total: items.reduce((a, i) => a + i.supply + i.vat, 0) };
+  return { id: x.id, reg: m.reg || '', ymd: m.ymd, slip: `${m.ymd}-${m.no || 1}`, seq: m.no || 1, partner: m.partner || '(주)공간제작소', site: m.site || '', items, manual: true, total: items.reduce((a, i) => a + i.supply + i.vat, 0) };
 }
 const docId = (d) => `${d.ymd}|${(d.slips || [d.slip]).slice().sort().join(',')}|${(d.items[0] || {}).name || ''}`;
 export async function load(biz, force) {
@@ -36,8 +37,11 @@ export async function load(biz, force) {
     const rows = sales.map((r) => [r.slip, r.partner, r.name, r.qty, r.price, r.supply, r.vat]);
     const list = rows.length ? SM.splitSheets(SM.parseSales([[HEAD, ...rows]]), {}) : [];
     G.docs = Object.fromEntries(docs.map((x) => [x.id, x]));
+    const regOf = {};
+    sales.forEach((r) => { const k = slipKey(r.slip); if (r.reg && (!regOf[k] || r.reg < regOf[k])) regOf[k] = r.reg; });
     const manual = docs.filter((x) => x.manual && x.manual.items).map(manualDoc);   // 직접 등록한 장 (10/23)
     G.list = [...list.map((d) => ({ ...d, id: docId(d), total: d.items.reduce((a, x) => a + x.supply + x.vat, 0) })), ...manual]
+      .map((d) => ({ ...d, reg: d.manual ? (d.reg || '') : (d.slips || [d.slip]).map((sl) => regOf[sl]).filter(Boolean).sort()[0] || '' }))
       .filter((d) => (G.docs[d.id] || {}).status !== '삭제')                         // 지운 장은 안 보임 (10/23)
       .sort((a, b) => (b.ymd + b.slip).localeCompare(a.ymd + a.slip));
     G.loaded = biz;
@@ -149,9 +153,9 @@ export function screen() {
         <thead><tr style="background:#FAFAF8;color:#5C5C5C;text-align:left">
           <th style="padding:12px 8px 12px 16px;font-weight:600">출고일</th><th style="padding:12px 8px;font-weight:600">현장</th><th style="padding:12px 8px;font-weight:600">품목명</th>
           <th style="padding:12px 8px;font-weight:600;text-align:right;white-space:nowrap">합계 (VAT 포함)</th><th style="padding:12px 8px;font-weight:600;text-align:center">거래명세표</th>
-          <th style="padding:12px 8px;font-weight:600;text-align:center">세금계산서</th><th style="padding:12px 14px 12px 8px;font-weight:600;text-align:center">상태</th>
+          <th style="padding:12px 8px;font-weight:600;text-align:center">세금계산서</th><th style="padding:12px 8px;font-weight:600;text-align:center">상태</th><th style="padding:12px 14px 12px 8px;font-weight:600;text-align:center;white-space:nowrap">등록일</th>
         </tr></thead>
-        <tbody>${rows.map(rowHtml).join('') || `<tr><td colspan="7" style="padding:40px;text-align:center;color:#6B6B6B">${G.loading ? '불러오는 중…' : '없어요'}</td></tr>`}</tbody>
+        <tbody>${rows.map(rowHtml).join('') || `<tr><td colspan="8" style="padding:40px;text-align:center;color:#6B6B6B">${G.loading ? '불러오는 중…' : '없어요'}</td></tr>`}</tbody>
       </table>
     </div>
     <nav aria-label="페이지" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
@@ -177,7 +181,8 @@ function rowHtml(d) {
     <td style="padding:12px 8px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums">${won(d.total)}</td>
     <td style="padding:12px 8px;text-align:center">${okTag}</td>
     <td style="padding:12px 8px;text-align:center">${x.tax_name ? okTag : addBtn('addtax', d.id)}</td>
-    <td style="padding:12px 14px 12px 8px;text-align:center;white-space:nowrap">${statusPick(d.id, st)}${x.delivered ? `<div style="margin-top:5px;font-size:11px;font-weight:700;color:#1E6B34">✓ ${esc(x.delivered)} 전달완료</div>` : ''}</td>
+    <td style="padding:12px 8px;text-align:center;white-space:nowrap">${statusPick(d.id, st)}${x.delivered ? `<div style="margin-top:5px;font-size:11px;font-weight:700;color:#1E6B34">✓ ${esc(x.delivered)} 전달완료</div>` : ''}</td>
+    <td style="padding:12px 14px 12px 8px;text-align:center;white-space:nowrap;font-size:13px;color:#3F3F46">${d.reg ? md(d.reg.replace(/-/g, '')) : ''}</td>
   </tr>`;
 }
 function docBox(kind, d) {
@@ -321,7 +326,7 @@ async function regSave() {
   if (!d.items.length) { r.err = '품명·수량이 있는 줄이 없어요'; ctx.rerender(); return; }
   const id = `m${Date.now().toString(36)}`;
   const no = G.list.filter((x) => x.ymd === d.ymd).length + 1;   // 그날 몇 번째 장 (에이스 양식 문서번호 제 261020-2호)
-  const manual = { ymd: d.ymd, no, site: d.site, partner: d.partner, items: d.items.map((it) => ({ name: it.name, qty: it.qty, price: it.qty ? Math.round(it.supply / it.qty) : 0 })) };
+  const manual = { ymd: d.ymd, no, reg: new Date().toLocaleDateString('sv-SE'), site: d.site, partner: d.partner, items: d.items.map((it) => ({ name: it.name, qty: it.qty, price: it.qty ? Math.round(it.supply / it.qty) : 0 })) };
   const err = await S.saveGongganDoc({ id, biz: G.biz, manual, status: null, updated_by: ctx.me(), updated_at: new Date().toISOString() });
   if (err) { r.err = '저장하지 못했어요 — ' + err; ctx.rerender(); return; }
   G.docs[id] = { id, biz: G.biz, manual, status: null };
