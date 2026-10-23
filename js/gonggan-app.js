@@ -34,7 +34,7 @@ app.addEventListener('submit', (e) => {
   e.preventDefault();
   const code = e.target.code.value.trim(), err = document.getElementById('gg-err');
   if (err) err.textContent = '로그인 중…';
-  S.signIn(code, code).catch(() => { if (err) err.textContent = '코드를 확인해 주세요'; });   // 코드 = 공간제작소 계정 아이디·비밀번호
+  S.signIn(GONG_ID, code).catch(() => { if (err) err.textContent = '코드를 확인해 주세요'; });   // 아이디는 space1234 고정, 코드 = 비밀번호 (10/23 대표: 비밀번호를 바꿔도 코드만 새로)
 });
 
 async function boot() {
