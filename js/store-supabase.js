@@ -492,7 +492,20 @@ export async function resetAll() { /* 공유 DB에서는 비활성 (안전) */ }
 export async function bulkUpsert(tbl, rows) { if (rows && rows.length) await put(tbl, rows); await refetch(tbl); }
 
 // ── 로그인/인증 ──────────────────────────────────────
-export async function getSession() { const { data } = await sb.auth.getSession(); return data.session; }
+// DB 정책 login_after_1430: 이 시각(10/25 14:30) 전에 받은 로그인 열쇠로는 자료가 0건으로 보임 → 그런 로그인은 끊고 로그인 화면으로 (10/25 대표 "내역이 다 삭제됐어")
+const MIN_IAT = 1792906200;
+const tokenIat = (t) => { try { return JSON.parse(atob(t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).iat || 0; } catch { return 0; } };
+export async function getSession() {
+  const { data } = await sb.auth.getSession();
+  const s = data.session;
+  if (s && tokenIat(s.access_token) < MIN_IAT) {
+    const { data: r } = await sb.auth.refreshSession().catch(() => ({ data: {} }));
+    if (r && r.session && tokenIat(r.session.access_token) >= MIN_IAT) return r.session;
+    await sb.auth.signOut().catch(() => {});
+    return null;
+  }
+  return s;
+}
 export async function currentUser() { const { data } = await sb.auth.getUser(); return data.user; }
 export function onAuthChange(cb) { sb.auth.onAuthStateChange((_e, session) => cb(session)); }
 // 아이디 로그인: 순수 아이디(admin 등)는 내부 이메일(admin@hometraders.local)로 매핑.

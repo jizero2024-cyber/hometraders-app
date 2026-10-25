@@ -8,7 +8,20 @@ const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 export const ID_DOMAIN = '@hometraders.local';
 
 // ── 로그인 ──
-export async function getSession() { const { data } = await sb.auth.getSession(); return data.session; }
+// DB 정책 login_after_1430: 이 시각(10/25 14:30) 전에 받은 로그인 열쇠로는 자료가 0건으로 보임 → 그런 로그인은 끊고 로그인 화면으로 (10/25 대표 "내역이 다 삭제됐어")
+const MIN_IAT = 1792906200;
+const tokenIat = (t) => { try { return JSON.parse(atob(t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).iat || 0; } catch { return 0; } };
+export async function getSession() {
+  const { data } = await sb.auth.getSession();
+  const s = data.session;
+  if (s && tokenIat(s.access_token) < MIN_IAT) {
+    const { data: r } = await sb.auth.refreshSession().catch(() => ({ data: {} }));
+    if (r && r.session && tokenIat(r.session.access_token) >= MIN_IAT) return r.session;
+    await sb.auth.signOut().catch(() => {});
+    return null;
+  }
+  return s;
+}
 export function onAuthChange(cb) { sb.auth.onAuthStateChange((_e, session) => cb(session)); }
 export async function signIn(id, password) {
   const email = id.includes('@') ? id.trim() : id.trim().toLowerCase() + ID_DOMAIN;
