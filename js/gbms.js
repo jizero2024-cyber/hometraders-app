@@ -2,7 +2,7 @@
 // 줄 = 이카운트 판매현황의 공간제작소 판매 줄(gonggan_sales, 맥 도우미가 올림) → 거래명세표 변환기(stmt.js)로 장마다 나눔.
 // 장마다 상태·세금계산서·수정요청 사유 = gonggan_docs. 홈트레이더스·현구 과장님 같은 화면.
 import * as S from './gonggan-store.js?v=4';   // 우리 업무 앱 저장소와 따로 (10/23)
-import * as SM from './stmt.js?v=99';
+import * as SM from './stmt.js?v=100';
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const won = (n) => Math.round(Number(n) || 0).toLocaleString();
@@ -37,6 +37,8 @@ export async function load(biz, force) {
   G.biz = biz; G.loading = true; G.err = '';
   try {
     const [sales, docs] = await Promise.all([S.getGongganSales(biz), S.getGongganDocs(biz)]);
+    const lineNo = (id) => { const p = String(id).split('|')[1] || ''; return /^\d+$/.test(p) ? +p : 1e6; };   // 전표 줄 순서대로 (1, 2, … 10 — 붙인 실리콘·운반비는 뒤)
+    sales.sort((a, b) => String(a.id).split('|')[0].localeCompare(String(b.id).split('|')[0]) || lineNo(a.id) - lineNo(b.id));
     const rows = sales.map((r) => [r.slip, r.partner, r.name, r.qty, r.price, r.supply, r.vat]);
     const list = rows.length ? SM.splitSheets(SM.parseSales([[HEAD, ...rows]]), {}) : [];
     G.docs = Object.fromEntries(docs.map((x) => [x.id, x]));

@@ -332,7 +332,8 @@ function mergeSameSite(vouchers) {
   vouchers.forEach((v) => {
     const siteOfItem = (it) => nfc(it.site) || siteOf(it.tag, v.partner);
     const found = [...new Set(v.items.map(siteOfItem).filter((s) => siteKey(s)))];
-    const only = found.length === 1 ? found[0] : '';   // 전표에 현장이 한 곳뿐이면 태그 없는 품목도 같은 현장
+    const roots = found.filter((s) => !found.some((o) => o !== s && siteKey(s).startsWith(siteKey(o))));   // '진주' 와 '진주 원익(여주) 3.5톤' 은 한 현장 (10/26)
+    const only = roots.length === 1 ? roots[0] : '';   // 전표에 현장이 한 곳뿐이면 태그 없는 품목도 같은 현장
     const rest = [];
     v.items.forEach((it) => {
       const site = siteKey(siteOfItem(it)) ? siteOfItem(it) : only;
@@ -387,7 +388,8 @@ export function splitSheets(vouchers, opt) {
     } else if (perSite(v.partner)) {                       // 현장별 (뉴하우징 등)
       const siteOfItem = (it) => nfc(it.site) || siteOf(it.tag, v.partner);   // 판매전표는 규격 칸, 원장은 품명 뒤 태그
       const found = [...new Set(v.items.map(siteOfItem).filter(Boolean))];
-      const only = found.length === 1 ? found[0] : '';   // 전표에 현장이 한 곳뿐이면 태그 없는 품목도 같은 현장
+      const roots = found.filter((s) => !found.some((o) => o !== s && siteKey(s).startsWith(siteKey(o))));   // '진주' 와 '진주 원익(여주) 3.5톤' 은 한 현장 (10/26)
+    const only = roots.length === 1 ? roots[0] : '';   // 전표에 현장이 한 곳뿐이면 태그 없는 품목도 같은 현장
       const by = new Map();
       v.items.forEach((it) => {
         const k = siteOfItem(it) || only || '현장미상';
