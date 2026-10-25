@@ -207,6 +207,15 @@ function docBox(kind, d) {
   const pen = `<button type="button" data-gb="replace" data-k="${kind}" aria-label="${label} 바꾸기" style="position:absolute;bottom:8px;right:8px;width:30px;height:30px;border-radius:15px;border:1px solid #D5D8DD;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">${PEN}</button>`;
   if (!src && kind === 'stmt') return `<figure data-gb="panel" data-k="${kind}" style="margin:0;display:flex;flex-direction:column;gap:8px;${G.panel === kind ? 'outline:2px solid #1D4F91;outline-offset:6px;border-radius:6px' : ''}">${cap}<div style="aspect-ratio:1588/1400;border:1px solid #D9D9D9;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#6B6B6B;font-size:13px">불러오는 중…</div></figure>`;
   if (!src) return `<figure data-gb="panel" data-k="${kind}" style="margin:0;display:flex;flex-direction:column;gap:8px;${G.panel === kind ? 'outline:2px solid #1D4F91;outline-offset:6px;border-radius:6px' : ''}">${cap}<button type="button" data-gb="replace" data-k="tax" data-gb-drop="tax" style="aspect-ratio:1588/1400;border:2px dashed #B8B8B8;border-radius:8px;background:#F4F4F4;color:#4B4B4B;font:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer"><span style="font-size:32px">+</span><b>세금계산서 넣기</b><span style="font-size:12px;color:#8A8A8A">끌어다 놓기 · Cmd+V</span></button></figure>`;
+  const P = G.pending && G.pending.id === d.id && G.pending.kind === kind ? G.pending : null;
+  if (P) {
+    const isPdf = P.data.startsWith('data:application/pdf');
+    return `<figure data-gb="panel" data-k="${kind}" style="margin:0;display:flex;flex-direction:column;gap:8px;outline:2px solid #1D4F91;outline-offset:6px;border-radius:6px">${kind === 'tax' ? '<div style="min-height:32px"></div>' : ''}<figcaption style="display:flex;justify-content:space-between;align-items:center"><b>${label}</b><span style="font-size:12px;color:#6B6B6B">${esc(P.name)}</span></figcaption>
+      <div style="aspect-ratio:1588/1400;border:1px solid #D9D9D9;border-radius:6px;overflow:hidden;background:#F7F7F5;display:flex;align-items:center;justify-content:center">${isPdf ? `<b style="color:#3F3F46">PDF · ${esc(P.name)}</b>` : `<img src="${P.data}" alt="" style="width:100%;height:100%;object-fit:contain">`}</div>
+      <div style="display:flex;align-items:center;gap:8px;justify-content:flex-end;flex-wrap:wrap">${kind === 'stmt' ? `<label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#5C5C5C;margin-right:auto">합계금액 <input data-gb="pend-total" inputmode="numeric" value="${esc(P.total ? Number(P.total).toLocaleString() : '')}" style="height:34px;width:150px;border:1px solid #D0D0D0;border-radius:6px;padding:0 10px;font:inherit;font-size:14px;text-align:right"> 원</label>` : ''}
+        <button type="button" data-gb="pend-cancel" style="height:36px;padding:0 16px;border:1px solid #D5D8DD;border-radius:8px;background:#fff;font:inherit;font-size:14px;cursor:pointer">취소</button>
+        <button type="button" data-gb="pend-save" style="height:36px;padding:0 20px;border:0;border-radius:8px;background:#1F2328;color:#fff;font:inherit;font-size:14px;font-weight:700;cursor:pointer">저장</button></div></figure>`;
+  }
   const pdf = src.startsWith('data:application/pdf');
   const staff = true;   // 10/26 대표: 공간제작소 계정도 지우기 됨 (계정 나누면 다시 막을 수 있게 남겨 둠)
   const canDelStmt = staff && (!!f.stmt_data || !!((G.docs[d.id] || {}).manual || {}).items);   // 이카운트에서 온 원래 명세표는 지우지 않음 (휴지통에 장이 통째로 사라졌던 일, 10/26)
@@ -355,16 +364,24 @@ async function toStored(file) {     // 그림은 2200px 안쪽 JPG 로 줄여서
   const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(im, 0, 0, c.width, c.height);
   return c.toDataURL('image/jpeg', 0.88);
 }
-async function attach(id, kind, file) {
+async function attach(id, kind, file) {   // 올린 사진은 바로 저장하지 않고 미리보기 + [저장]·[취소] (10/26 대표 "사진 올리고 저장하기 버튼")
   if (!file) return;
   try {
-    const data = await toStored(file);
+    const cur = G.list.find((d) => d.id === id);
+    G.pending = { id, kind, name: file.name || '', data: await toStored(file), total: cur ? Math.round(cur.total) : '' };
+    G.panel = kind; ctx.rerender();
+  } catch (e) { alert(e.message || e); }
+}
+async function commitPending() {
+  const p = G.pending; if (!p) return;
+  const { id, kind, data } = p, file = { name: p.name };
+  G.pending = null;
+  try {
     const prev = G.docs[id] || {};
     if (kind === 'tax') { await save(id, { tax_data: data, tax_name: file.name || '세금계산서', tax_no: null, status: prev.status === '수정요청' ? null : prev.status || null }); findTaxNo(id, data); }
     else {
       const cur = G.list.find((d) => d.id === id);
-      const v = prompt('합계금액 (부가세 포함)', cur ? String(Math.round(cur.total)) : '');
-      const n = Number(String(v || '').replace(/[^\d]/g, ''));
+      const n = Number(String(p.total || '').replace(/[^\d]/g, ''));
       if (n && cur) cur.total = n;
       save(id, { stmt_data: data, ...(n ? { manual: { ...(prev.manual || {}), total: n } } : {}) });   // 직접 등록한 장은 품목은 그대로, 합계만
     }
@@ -473,9 +490,11 @@ export function bind(app, c) {
     const t = e.target.closest('[data-gb]'); if (!t || !app.querySelector('.gb')) return;
     const a = t.dataset.gb, id = t.dataset.id, cur = G.open && G.list.find((d) => d.id === G.open);
     if (a === 'row') { if (e.target.closest('button, input, a, label, select')) return; G.open = id; G.reason = ''; G.zoom = ''; G.panel = 'tax'; ctx.rerender(); }
+    else if (a === 'pend-save') commitPending();
+    else if (a === 'pend-cancel') { G.pending = null; ctx.rerender(); }
     else if (a === 'panel') { if (G.panel !== t.dataset.k) { G.panel = t.dataset.k; ctx.rerender(); } }   // 누른 칸 = Ctrl+C·V 대상 (10/26)
-    else if (a === 'overlay') { if (e.target === t) { G.open = null; ctx.rerender(); } }
-    else if (a === 'close') { G.open = null; G.zoom = ''; G.editNo = false; ctx.rerender(); }
+    else if (a === 'overlay') { if (e.target === t) { G.open = null; G.pending = null; ctx.rerender(); } }
+    else if (a === 'close') { G.open = null; G.zoom = ''; G.editNo = false; G.pending = null; ctx.rerender(); }
     else if (a === 'biz') { setBiz(t.dataset.v); ctx.go(t.dataset.v === 'ace' ? 'gonggan-ace' : 'gonggan'); }
     else if (a === 'start') ctx.goStart();
     else if (a === 'logout') ctx.logout();
@@ -538,6 +557,7 @@ export function bind(app, c) {
   app.addEventListener('input', (e) => {
     const t = e.target; if (!app.querySelector('.gb')) return;
     if (t.dataset.gb === 'reason') G.reason = t.value.slice(0, 300);
+    else if (t.dataset.gb === 'pend-total' && G.pending) G.pending.total = t.value.replace(/[^\d]/g, '');   // 다시 그리지 않음 (입력 중 커서 유지)
     else if (t.dataset.gb === 'reg-text' && G.reg) G.reg.text = t.value;
     else if (t.dataset.gb === 'reg-f' && G.reg) G.reg[t.dataset.k] = t.value;
     else if (t.dataset.gb === 'reg-r' && G.reg) {   // 금액·합계만 바로 (칸을 다시 그리면 입력 중인 글자가 끊김)
