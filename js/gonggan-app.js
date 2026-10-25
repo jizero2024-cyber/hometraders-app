@@ -6,8 +6,8 @@ import * as GB from './gbms.js';
 
 const app = document.getElementById('app');
 const GONG_ID = 'space1234';
-const GONG_MIN_LOGIN = '2026-10-25T05:20:00Z';   // 공간제작소 계정: 이 시각(10/25 14:20) 전에 로그인한 기기는 다시 로그인해야 함 — 비밀번호 바꿀 때마다 이 값을 지금으로
-const CLOSED = true;   // 공간제작소 계정 닫기 스위치 (10/23 닫음 → 10/25 대표 "이제 열어줘"). 닫을 땐 true + DB 정책 gonggan_closed
+const GONG_MIN_LOGIN = '2026-10-25T05:37:00Z';   // 공간제작소 계정: 이 시각(10/25 14:37 — 비밀번호 바꾼 뒤) 전에 로그인한 기기는 다시 로그인해야 함 — 비밀번호 바꿀 때마다 이 값을 지금으로
+const CLOSED = false;   // 공간제작소 계정 닫기 스위치 (10/23 닫음 → 10/25 대표 "이제 열어줘"). 닫을 땐 true + DB 정책 gonggan_closed
 const HELPER = 'http://127.0.0.1:4180';   // 사무실 맥 도우미 — 직원이 직접 등록할 때 PDF·사진 읽기
 let me = '';
 let booted = false;
