@@ -28,6 +28,7 @@ const num = (v) => {
   return Number.isFinite(n) ? n : null;
 };
 const won = (n) => Math.round(Number(n) || 0).toLocaleString();
+const unitWon = (it) => Math.floor((Number(it.supply) || 0) / (Number(it.qty) || 1) + 1e-6).toLocaleString();   // 단가 = 공급가액 ÷ 수량, 소수점은 버림 — 올리지 않음 (10/26 대표)
 const esc2 = (s) => nfc(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 // ── 엑셀 읽기 ───────────────────────────────────────────────
@@ -451,7 +452,7 @@ function aceHtml(doc) {
   const rows = doc.items.map((it, i) => `<tr>
       <td class="c">${i + 1}</td><td class="nm">${esc2(it.name).replace(/([_*(])/g, '$1&#8203;')}</td>
       <td class="c">${esc2(it.spec || '')}</td><td class="c">${esc2(it.bd || '')}</td>
-      <td class="n">${won(it.qty)}</td><td class="n">${won(it.supply / it.qty)}</td>
+      <td class="n">${won(it.qty)}</td><td class="n">${unitWon(it)}</td>
       <td class="n">${won(it.supply)}</td><td class="n">${won(it.vat)}</td></tr>`).join('')
     + ('<tr>' + '<td></td>'.repeat(8) + '</tr>').repeat(Math.max(0, 11 - doc.items.length));
   return `<section class="sheet ace">
@@ -491,7 +492,7 @@ function sheetHtml(doc) {
   const rows = doc.items.map((it, i) => `<tr>
       <td class="c">${i + 1}</td><td class="c">${it.date.getMonth() + 1}월 ${it.date.getDate()}일</td>
       <td class="nm">${esc2(it.name).replace(/([_*(])/g, '$1&#8203;')}</td><td class="c">개</td><td class="n">${won(it.qty)}</td>
-      <td class="n">${won(it.supply / it.qty)}</td><td class="n">${won(it.supply)}</td><td class="n">${won(it.vat)}</td>
+      <td class="n">${unitWon(it)}</td><td class="n">${won(it.supply)}</td><td class="n">${won(it.vat)}</td>
       <td class="n">${won(it.supply + it.vat)}</td><td class="c"></td></tr>`).join('')
     + ('<tr>' + '<td></td>'.repeat(10) + '</tr>').repeat(Math.max(0, ITEM_ROWS - doc.items.length));
   return `<section class="sheet">
@@ -531,7 +532,7 @@ function buyHtml(doc) {
   const rows = doc.items.map((it, i) => `<tr>
       <td class="c">${i + 1}</td><td class="c">${it.date.getMonth() + 1}월 ${it.date.getDate()}일</td>
       <td class="nm">${esc2(it.name).replace(/([_*(])/g, '$1&#8203;')}</td><td class="c">개</td><td class="n">${won(it.qty)}</td>
-      <td class="n">${won(it.supply / it.qty)}</td><td class="n">${won(it.supply)}</td><td class="n">${won(it.vat)}</td>
+      <td class="n">${unitWon(it)}</td><td class="n">${won(it.supply)}</td><td class="n">${won(it.vat)}</td>
       <td class="n">${won(it.supply + it.vat)}</td><td class="c"></td></tr>`).join('')
     + ('<tr>' + '<td></td>'.repeat(10) + '</tr>').repeat(Math.max(0, ITEM_ROWS - doc.items.length));
   return `<section class="sheet">
