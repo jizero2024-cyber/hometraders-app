@@ -6,7 +6,7 @@ import * as GB from './gbms.js';
 
 const app = document.getElementById('app');
 const GONG_ID = 'space1234';
-const CLOSED = true;   // 공간제작소 계정 닫힘 (10/23 대표) — DB 에서도 막혀 있음(policy gonggan_closed)
+const CLOSED = false;   // 공간제작소 계정 닫기 스위치 (10/23 닫음 → 10/25 대표 "이제 열어줘"). 닫을 땐 true + DB 정책 gonggan_closed
 const HELPER = 'http://127.0.0.1:4180';   // 사무실 맥 도우미 — 직원이 직접 등록할 때 PDF·사진 읽기
 let me = '';
 let booted = false;
