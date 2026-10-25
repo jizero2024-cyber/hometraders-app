@@ -337,7 +337,12 @@ function mergeSameSite(vouchers) {
     v.items.forEach((it) => {
       const site = siteKey(siteOfItem(it)) ? siteOfItem(it) : only;
       if (!site || (HOME_SITES[key(v.partner)] || []).some((h) => nfc(site).replace(/\s/g, '').includes(h))) { rest.push(it); return; }   // 거래처 창고(공간제작소 = 화성 우정읍)로 가는 건 같은 날이어도 전표(구매처)마다 따로 (10/26 대표). 세라믹 현장은 같은 날·같은 현장이면 한 장
-      const k = `${v.ymd}|${key(v.partner)}|${siteKey(site)}`;
+      let k = `${v.ymd}|${key(v.partner)}|${siteKey(site)}`;
+      if (!by[k]) {                                    // 같은 날 현장 이름이 앞부분부터 같으면 같은 현장 (철원 ↔ 철원 창신(용인양지) 철원현장 1.4톤 — 운반비 줄 규격, 10/26 대표)
+        const pre = `${v.ymd}|${key(v.partner)}|`;
+        const hit = Object.keys(by).find((x) => x.startsWith(pre) && (siteKey(site).startsWith(x.slice(pre.length)) || x.slice(pre.length).startsWith(siteKey(site))));
+        if (hit) k = hit;
+      }
       const item = { ...it, slip: v.slip };            // 따로 뽑는 품목(공간 구조재)은 제 전표번호로
       if (!by[k]) { by[k] = { ...v, items: [], site, slips: [], merged: true }; out.push(by[k]); }
       by[k].items.push(item);
