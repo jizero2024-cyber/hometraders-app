@@ -335,7 +335,7 @@ function mergeSameSite(vouchers) {
     const rest = [];
     v.items.forEach((it) => {
       const site = siteKey(siteOfItem(it)) ? siteOfItem(it) : only;
-      if (!site) { rest.push(it); return; }
+      if (!site || (HOME_SITES[key(v.partner)] || []).some((h) => nfc(site).replace(/\s/g, '').includes(h))) { rest.push(it); return; }   // 거래처 창고(공간제작소 = 화성 우정읍)로 가는 건 같은 날이어도 전표(구매처)마다 따로 (10/26 대표). 세라믹 현장은 같은 날·같은 현장이면 한 장
       const k = `${v.ymd}|${key(v.partner)}|${siteKey(site)}`;
       const item = { ...it, slip: v.slip };            // 따로 뽑는 품목(공간 구조재)은 제 전표번호로
       if (!by[k]) { by[k] = { ...v, items: [], site, slips: [], merged: true }; out.push(by[k]); }
