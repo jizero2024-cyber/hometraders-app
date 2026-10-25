@@ -29,6 +29,9 @@ function manualDoc(x) {
   return { id: x.id, reg: m.reg || '', ymd: m.ymd, slip: `${m.ymd}-${m.no || 1}`, seq: m.no || 1, partner: m.partner || '(주)공간제작소', site: m.site || '', items, manual: true, total: items.reduce((a, i) => a + i.supply + i.vat, 0) };
 }
 const docId = (d) => `${d.ymd}|${(d.slips || [d.slip]).slice().sort().join(',')}|${(d.items[0] || {}).name || ''}`;
+// 거래명세표 그림을 바꿔 넣을 때 적은 합계 (gonggan_docs.manual = {total}) — 목록·제목 합계를 그 값으로 (10/26 공간제작소 수정요청)
+const itemsTotal = (d) => d.items.reduce((a, x) => a + x.supply + x.vat, 0);
+const ovTotal = (id) => { const m = (G.docs[id] || {}).manual; return m && !m.items && m.total ? Number(m.total) : null; };
 export async function load(biz, force) {
   if (G.loading || (G.loaded === biz && !force)) return;
   G.biz = biz; G.loading = true; G.err = '';
@@ -42,7 +45,7 @@ export async function load(biz, force) {
     const noOf = {};                                      // 판매전표 → 출고일보 출고번호 (10/26 대표 "맨 왼쪽에 표시")
     sales.forEach((r) => { const k = slipKey(r.slip); if (r.board_no && !noOf[k]) noOf[k] = r.board_no; });
     const manual = docs.filter((x) => x.manual && x.manual.items).map(manualDoc);   // 직접 등록한 장 (10/23)
-    G.list = [...list.map((d) => ({ ...d, id: docId(d), total: d.items.reduce((a, x) => a + x.supply + x.vat, 0) })), ...manual]
+    G.list = [...list.map((d) => ({ ...d, id: docId(d), total: ovTotal(docId(d)) ?? itemsTotal(d) })), ...manual]
       .map((d) => ({ ...d, reg: d.manual ? (d.reg || '') : (d.slips || [d.slip]).map((sl) => regOf[sl]).filter(Boolean).sort()[0] || '', no: (d.slips || [d.slip]).map((sl) => noOf[slipKey(sl)]).find(Boolean) || '' }))
       .filter((d) => (G.docs[d.id] || {}).status !== '삭제')                         // 지운 장은 안 보임 (10/23)
       .sort((a, b) => (b.ymd + b.slip).localeCompare(a.ymd + a.slip));
@@ -356,7 +359,14 @@ async function attach(id, kind, file) {
     const data = await toStored(file);
     const prev = G.docs[id] || {};
     if (kind === 'tax') { await save(id, { tax_data: data, tax_name: file.name || '세금계산서', tax_no: null, status: prev.status === '수정요청' ? null : prev.status || null }); findTaxNo(id, data); }
-    else save(id, { stmt_data: data });
+    else {
+      const cur = G.list.find((d) => d.id === id);
+      const own = prev.manual && prev.manual.items;          // 직접 등록한 장은 품목 합계 그대로
+      const v = own ? '' : prompt('합계금액 (부가세 포함)', cur ? String(Math.round(cur.total)) : '');
+      const n = Number(String(v || '').replace(/[^\d]/g, ''));
+      if (n && cur) cur.total = n;
+      save(id, { stmt_data: data, ...(n ? { manual: { total: n } } : {}) });
+    }
   } catch (e) { alert(e.message || e); }
 }
 async function canvasOf(src) {
@@ -482,7 +492,7 @@ export function bind(app, c) {
     else if (a === 'reg-preview' && G.reg) regPreview();
     else if (a === 'reg-save' && G.reg) regSave();
     else if (a === 'delstmt' && cur) {   // 거래명세표 지우기 (10/23) — 바꾼 명세표면 원래대로, 아니면 이 장을 목록에서 지움
-      if ((G.full[cur.id] || {}).stmt_data) { if (confirm('바꿔 넣은 거래명세표를 지우고 원래 명세표로 돌릴까요?')) save(cur.id, { stmt_data: null }); }
+      if ((G.full[cur.id] || {}).stmt_data) { if (confirm('바꿔 넣은 거래명세표를 지우고 원래 명세표로 돌릴까요?')) { const own = ((G.docs[cur.id] || {}).manual || {}).items; if (!own) cur.total = itemsTotal(cur); save(cur.id, { stmt_data: null, ...(own ? {} : { manual: null }) }); } }
       else if (confirm('이 거래명세표를 목록에서 지울까요?')) { save(cur.id, { status: '삭제' }); G.list = G.list.filter((d) => d.id !== cur.id); G.open = null; ctx.rerender(); }
     }
     else if (a === 'deltax' && cur) { if (confirm('세금계산서를 지울까요?')) save(cur.id, { tax_data: null, tax_name: null, tax_no: null, status: null, drafted_at: null }); }   // 지우면 결재전으로
