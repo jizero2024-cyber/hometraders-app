@@ -49,7 +49,7 @@ export async function load(biz, force) {
   G.loading = false; ctx.rerender();
 }
 // 상태 직접 바꾸기 (10/23 대표 "기안중 결재전 이런 식으로") — 색 띠 모양 그대로 고르는 칸
-const statusPick = (id, st) => `<select data-gb="setstatus" data-id="${esc(id)}" aria-label="상태 바꾸기" style="appearance:none;-webkit-appearance:none;border:0;cursor:pointer;padding:4px 10px;border-radius:12px;font:inherit;font-size:12px;font-weight:700;text-align:center;${BADGE[st]}">${STATUS.slice(1).map((k) => `<option ${k === st ? 'selected' : ''}>${k}</option>`).join('')}</select>`;
+const statusPick = (id, st) => `<select data-gb="setstatus" data-id="${esc(id)}" aria-label="상태 바꾸기" style="appearance:none;-webkit-appearance:none;border:0;cursor:pointer;padding:4px 10px;border-radius:12px;font:inherit;font-size:12px;font-weight:700;text-align:center;${BADGE[st]}">${STATUS.slice(1).map((k) => `<option style="color:#1F2328;background:#fff" ${k === st ? 'selected' : ''}>${k}</option>`).join('')}</select>`;
 const statusOf = (d) => { const x = G.docs[d.id] || {}; return ['최종완료', '수정요청', '기안중'].includes(x.status) ? x.status : '결재전'; };   // 세금계산서를 넣어도 결재전 (10/23 대표)
 async function save(id, patch) {
   const prev = G.docs[id] || { id, biz: G.biz };
