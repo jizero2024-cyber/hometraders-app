@@ -125,6 +125,15 @@ function koreanMoney(num) {
 function ymdK(ds) { const [y, m, d] = (ds || '').split('-'); return y ? `${y}년 ${+m}월 ${+d}일` : ''; }
 
 const app = document.getElementById('app');
+// 공간제작소 주소에서 우리 앱이 실행됐으면(옛 오프라인 저장본이 이 앱을 대신 보여 준 경우) — 아무것도 그리지 않고, 저장본을 지운 뒤 서버의 공간제작소 페이지로 (10/25)
+const IN_GONGGAN = location.pathname.startsWith('/gonggan');
+if (IN_GONGGAN) {
+  const go = () => location.replace((location.pathname.startsWith('/gonggan-ace') ? '/gonggan-ace/' : '/gonggan/') + '?fresh=' + Date.now());
+  Promise.resolve(navigator.serviceWorker && navigator.serviceWorker.getRegistrations())
+    .then((rs) => Promise.all((rs || []).map((r) => r.unregister())))
+    .then(() => (window.caches ? caches.keys().then((ks) => Promise.all(ks.map((k) => caches.delete(k)))) : null))
+    .catch(() => {}).finally(go);
+}
 let shipPrefill = null;
 let qLines = [];      // 견적 품목 작성 중 임시 배열
 let qEditId = null;
@@ -4946,7 +4955,7 @@ window.addEventListener('popstate', () => { state.route = routeFromPath(); state
 function render() {
   // 로그인·준비 전엔 아무 화면도 그리지 않음 (로그인 화면 그대로). 10/23: /gonggan 로그인 화면에서 창 크기가 바뀌자(1024px 경계)
   //   다시 그리기가 돌아 기본 화면(PC = 홈트 도우미)이 떴음 — 공간제작소 쪽에 우리 업무툴이 보이면 절대 안 됨
-  if (!booted || !myAccount) return;
+  if (!booted || !myAccount || IN_GONGGAN) return;
   queueMicrotask(syncUrl);   // 화면을 다 그린 뒤 정해진 route 로 (PC·휴대폰 route 바꿈 포함)
   if (myAccount === GONG_ID || String(state.route).startsWith('gonggan')) {   // 공간제작소는 따로 된 페이지(/gonggan/ — gonggan-app.js)에서만 (10/23 대표 "사이트 코드 분리")
     location.replace(state.route === 'gonggan-ace' && myAccount !== GONG_ID ? '/gonggan-ace/' : '/gonggan/');
@@ -5611,6 +5620,7 @@ function showLogin(msg) {
 
 let booted = false;
 async function boot() {
+  if (IN_GONGGAN) return;   // 위에서 공간제작소 페이지로 보내는 중
   const session = await S.getSession();
   if (!session) { booted = false; myAccount = ''; showLogin(); return; }
   myAccount = ((session.user && session.user.email) || '').split('@')[0];

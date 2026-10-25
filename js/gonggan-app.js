@@ -110,5 +110,7 @@ GB.bind(app, {
   helperUp,
 });
 window.addEventListener('popstate', render);
+// 이 기기의 오프라인 저장소를 지움 — 옛 저장본이 공간제작소 주소에 우리 앱을 대신 보여 주던 일 다시 없게 (10/25). 우리 앱은 다음에 열 때 다시 만듦
+if (navigator.serviceWorker) navigator.serviceWorker.getRegistrations().then((rs) => rs.forEach((r) => r.unregister())).catch(() => {});
 S.onAuthChange(() => boot());
 boot();
