@@ -133,6 +133,7 @@ export function screen() {
     <button type="button" data-gb="biz" data-v="homt" style="${navStyle(!isAce)}"><span>홈트레이더스</span><span>${isAce ? '' : G.list.length}</span></button>
     <button type="button" data-gb="biz" data-v="ace" style="${navStyle(isAce)}"><span>에이스</span><span>${isAce ? G.list.length : ''}</span></button>
     ${ctx.me() === 'space1234' ? '' : '<button type="button" data-gb="start" style="margin-top:auto;border:0;background:none;text-align:left;padding:14px 8px 4px;font:inherit;font-size:12px;color:#6B6B6B;cursor:pointer">‹ 처음 화면</button>'}
+    <button type="button" data-gb="logout" style="${ctx.me() === 'space1234' ? 'margin-top:auto;' : ''}border:0;background:none;text-align:left;padding:10px 8px 4px;font:inherit;font-size:12px;color:#9A9A9A;cursor:pointer">로그아웃</button>
   </nav>
   <main style="flex:999 1 560px;min-width:0;padding:28px 32px 48px;box-sizing:border-box;display:flex;flex-direction:column;gap:18px">
     <h1 style="margin:0;font-size:22px">공간제작소 거래명세표 · 세금계산서 <span style="display:inline-block;vertical-align:middle;margin-left:8px;padding:3px 10px;border-radius:12px;font-size:13px;${isAce ? 'background:#E8EDF4;color:#1F3A5F' : 'background:#FDF0E6;color:#9A3412'}">${isAce ? '에이스' : '홈트레이더스'}</span></h1>
@@ -461,6 +462,7 @@ export function bind(app, c) {
     else if (a === 'close') { G.open = null; G.zoom = ''; G.editNo = false; ctx.rerender(); }
     else if (a === 'biz') { setBiz(t.dataset.v); ctx.go(t.dataset.v === 'ace' ? 'gonggan-ace' : 'gonggan'); }
     else if (a === 'start') ctx.goStart();
+    else if (a === 'logout') ctx.logout();
     else if (a === 'month') { G.month = t.dataset.v; G.page = 1; ctx.rerender(); }
     else if (a === 'status') { G.status = t.dataset.v; G.page = 1; ctx.rerender(); }
     else if (a === 'page') { G.page = Number(t.dataset.v) || 1; ctx.rerender(); }

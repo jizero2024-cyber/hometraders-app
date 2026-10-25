@@ -2,7 +2,7 @@
 //   이 페이지는 우리 업무 앱 코드를 하나도 불러오지 않음: 로그인 · 공간제작소 명세(gbms.js) · 거래명세표 그리기(stmt.js) 만.
 //   공간제작소 계정(space1234)은 코드 하나로 로그인. 직원 계정도 같은 화면 (직원만: 직접 등록 · 처음 화면 · 거래명세표 지우기).
 import * as S from './gonggan-store.js?v=2';
-import * as GB from './gbms.js';
+import * as GB from './gbms.js?v=2';
 
 const app = document.getElementById('app');
 const GONG_ID = 'space1234';
@@ -105,6 +105,7 @@ GB.bind(app, {
   goStart: () => { if (me !== GONG_ID) location.href = '/main'; },   // 직원만 (공간제작소 계정엔 버튼이 없음)
   go: (r) => { history.pushState(null, '', r === 'gonggan-ace' ? '/gonggan-ace/' : '/gonggan/'); render(); },
   me: () => me,
+  logout: () => { booted = false; me = ''; S.signOut().finally(() => showLogin()); },   // 같은 기기에서 직원 계정으로 바꿔 들어갈 때 (10/25)
   slips: (text) => (me === GONG_ID ? Promise.resolve({ head: SLIP_HEAD, slips: [] }) : slipsFor(text)),
   helper: (path, body) => (me === GONG_ID ? Promise.reject(new Error('사용할 수 없어요')) : helperFetch(path, body)),
   helperUp,
