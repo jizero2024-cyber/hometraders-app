@@ -6,6 +6,7 @@ import * as GB from './gbms.js';
 
 const app = document.getElementById('app');
 const GONG_ID = 'space1234';
+const GONG_MIN_LOGIN = '2026-10-25T05:20:00Z';   // 공간제작소 계정: 이 시각(10/25 14:20) 전에 로그인한 기기는 다시 로그인해야 함 — 비밀번호 바꿀 때마다 이 값을 지금으로
 const CLOSED = false;   // 공간제작소 계정 닫기 스위치 (10/23 닫음 → 10/25 대표 "이제 열어줘"). 닫을 땐 true + DB 정책 gonggan_closed
 const HELPER = 'http://127.0.0.1:4180';   // 사무실 맥 도우미 — 직원이 직접 등록할 때 PDF·사진 읽기
 let me = '';
@@ -42,6 +43,13 @@ async function boot() {
   const session = await S.getSession();
   if (!session) { booted = false; me = ''; if (!document.getElementById('gg-login')) showLogin(); return; }
   me = ((session.user && session.user.email) || '').split('@')[0];
+  const signedAt = Date.parse((session.user && session.user.last_sign_in_at) || '') || 0;
+  if (me === GONG_ID && signedAt < Date.parse(GONG_MIN_LOGIN)) {   // 이 시각 전에 들어온 공간제작소 로그인은 끊음 — 비밀번호 바꾼 뒤 예전 로그인이 남은 기기 (10/25 대표)
+    booted = false; me = '';
+    await S.signOut();
+    showLogin('코드를 확인해 주세요');
+    return;
+  }
   if (me === GONG_ID && CLOSED) {   // 지금은 공간제작소 계정으로 못 들어옴 (10/23 대표 "나만 들어갈 수 있게") — 다시 열 때 CLOSED = false
     booted = false; me = '';
     await S.signOut();
