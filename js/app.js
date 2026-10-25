@@ -5627,7 +5627,8 @@ async function boot() {
   if (booted) { render(); return; }
   app.innerHTML = '<div style="padding:64px 24px;text-align:center;color:#888;font-size:15px">불러오는 중…</div>';
   // PC는 열 때마다 대화 화면부터 (예전엔 마지막 화면을 기억해 업무 현황이 다시 떠서 바뀐 걸 못 봄). 휴대폰은 기억한 화면 그대로
-  if (myAccount === GONG_ID || location.pathname.startsWith('/gonggan')) { location.replace(location.pathname.startsWith('/gonggan-ace') && myAccount !== GONG_ID ? '/gonggan-ace/' : '/gonggan/'); return; }   // 공간제작소 계정·주소 → 공간제작소 전용 페이지 (우리 앱 자료는 안 불러옴)
+  if (myAccount === GONG_ID) { booted = false; myAccount = ''; showLogin(); return; }   // 공간제작소 계정으로 로그인된 기기에서 업무툴 주소 → 돌려보내지 않고 직원 로그인 화면 (10/25 대표). 자료는 DB 가 막음
+  if (location.pathname.startsWith('/gonggan')) { location.replace(location.pathname.startsWith('/gonggan-ace') ? '/gonggan-ace/' : '/gonggan/'); return; }
   state.route = routeFromPath();   // 열 때마다 첫 화면(에이스/홈트)부터 — 주소에 화면 이름(/homt·/chat …)이 있으면 그 화면. 에이스를 누르면 아래 aceRoute() 로 기존 ERP
   try { await S.init(); booted = true; render(); }
   catch (e) { app.innerHTML = `<div style="padding:48px 24px;text-align:center"><b>연결 오류</b><br><span style="color:#888;font-size:13px">${esc(e.message || String(e))}</span></div>`; }
