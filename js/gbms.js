@@ -205,11 +205,13 @@ function docBox(kind, d) {
       <button type="button" data-gb="copyno" ${no ? '' : 'disabled'} style="height:32px;padding:0 12px;border:1px solid #1D4F91;border-radius:6px;background:#fff;color:#1D4F91;font:inherit;font-size:13px;font-weight:700;cursor:pointer">${G.copied ? '복사됨 ✓' : '복사하기'}</button></div>` : '<div style="min-height:32px"></div>';   // 거래명세표 쪽도 같은 높이 → 두 그림 위아래 맞춤 (10/23 대표)
   const cap = `${noRow}<figcaption style="display:flex;justify-content:space-between;align-items:center"><b>${label}</b><span style="display:flex;gap:6px">${[['copy', '복사'], ['pdf', 'PDF 저장']].map(([a, t]) => `<button type="button" data-gb="${a}" data-k="${kind}" ${src ? '' : 'disabled'} style="height:30px;padding:0 10px;border:1px solid #E6E4DF;border-radius:6px;background:#fff;font:inherit;font-size:12px;cursor:pointer">${t}</button>`).join('')}</span></figcaption>`;
   const pen = `<button type="button" data-gb="replace" data-k="${kind}" aria-label="${label} 바꾸기" style="position:absolute;bottom:8px;right:8px;width:30px;height:30px;border-radius:15px;border:1px solid #D5D8DD;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">${PEN}</button>`;
-  if (!src && kind === 'stmt') return `<figure style="margin:0;display:flex;flex-direction:column;gap:8px">${cap}<div style="aspect-ratio:1588/1400;border:1px solid #D9D9D9;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#6B6B6B;font-size:13px">불러오는 중…</div></figure>`;
-  if (!src) return `<figure style="margin:0;display:flex;flex-direction:column;gap:8px">${cap}<button type="button" data-gb="replace" data-k="tax" data-gb-drop="tax" style="aspect-ratio:1588/1400;border:2px dashed #B8B8B8;border-radius:8px;background:#F4F4F4;color:#4B4B4B;font:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer"><span style="font-size:32px">+</span><b>세금계산서 넣기</b><span style="font-size:12px;color:#8A8A8A">끌어다 놓기 · Cmd+V</span></button></figure>`;
+  if (!src && kind === 'stmt') return `<figure data-gb="panel" data-k="${kind}" style="margin:0;display:flex;flex-direction:column;gap:8px;${G.panel === kind ? 'outline:2px solid #1D4F91;outline-offset:6px;border-radius:6px' : ''}">${cap}<div style="aspect-ratio:1588/1400;border:1px solid #D9D9D9;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#6B6B6B;font-size:13px">불러오는 중…</div></figure>`;
+  if (!src) return `<figure data-gb="panel" data-k="${kind}" style="margin:0;display:flex;flex-direction:column;gap:8px;${G.panel === kind ? 'outline:2px solid #1D4F91;outline-offset:6px;border-radius:6px' : ''}">${cap}<button type="button" data-gb="replace" data-k="tax" data-gb-drop="tax" style="aspect-ratio:1588/1400;border:2px dashed #B8B8B8;border-radius:8px;background:#F4F4F4;color:#4B4B4B;font:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer"><span style="font-size:32px">+</span><b>세금계산서 넣기</b><span style="font-size:12px;color:#8A8A8A">끌어다 놓기 · Cmd+V</span></button></figure>`;
   const pdf = src.startsWith('data:application/pdf');
-  const del = kind === 'stmt' && ctx.me() !== 'space1234' ? `<button type="button" data-gb="delstmt" aria-label="거래명세표 지우기" style="position:absolute;bottom:8px;right:46px;width:30px;height:30px;border-radius:15px;border:1px solid #F1B5AF;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">${TRASH}</button>` : kind === 'tax' ? `<button type="button" data-gb="deltax" aria-label="세금계산서 지우기" style="position:absolute;bottom:8px;right:46px;width:30px;height:30px;border-radius:15px;border:1px solid #F1B5AF;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">${TRASH}</button>` : '';   // 잘못 넣은 세금계산서 지우기 (10/23 대표)
-  return `<figure style="margin:0;display:flex;flex-direction:column;gap:8px">${cap}<div ${kind === 'tax' ? 'data-gb-drop="tax"' : ''} style="position:relative;aspect-ratio:1588/1400;border:1px solid #D9D9D9;border-radius:6px;overflow:hidden;background:#fff">${pdf && !pdfView(d.id, src) ? '<div style="height:100%;display:flex;align-items:center;justify-content:center;color:#6B6B6B;font-size:13px">불러오는 중…</div>' : `<button type="button" data-gb="zoom" data-k="${kind}" aria-label="${label} 크게 보기" style="display:flex;align-items:flex-start;justify-content:center;width:100%;height:100%;padding:0;border:0;background:none;cursor:zoom-in"><img src="${pdf ? pdfView(d.id, src) : src}" alt="${label}" style="max-width:100%;max-height:100%;object-fit:contain;display:block"></button>`}${del}${pen}</div></figure>`;
+  const staff = ctx.me() !== 'space1234';   // 지우기 버튼은 우리 직원만 (10/26 대표 — 공간제작소 계정은 못 지움)
+  const canDelStmt = staff && (!!f.stmt_data || !!((G.docs[d.id] || {}).manual || {}).items);   // 이카운트에서 온 원래 명세표는 지우지 않음 (휴지통에 장이 통째로 사라졌던 일, 10/26)
+  const del = kind === 'stmt' && canDelStmt ? `<button type="button" data-gb="delstmt" aria-label="거래명세표 지우기" style="position:absolute;bottom:8px;right:46px;width:30px;height:30px;border-radius:15px;border:1px solid #F1B5AF;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">${TRASH}</button>` : kind === 'tax' && staff ? `<button type="button" data-gb="deltax" aria-label="세금계산서 지우기" style="position:absolute;bottom:8px;right:46px;width:30px;height:30px;border-radius:15px;border:1px solid #F1B5AF;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">${TRASH}</button>` : '';   // 잘못 넣은 세금계산서 지우기 (10/23 대표)
+  return `<figure data-gb="panel" data-k="${kind}" style="margin:0;display:flex;flex-direction:column;gap:8px;${G.panel === kind ? 'outline:2px solid #1D4F91;outline-offset:6px;border-radius:6px' : ''}">${cap}<div ${kind === 'tax' ? 'data-gb-drop="tax"' : ''} style="position:relative;aspect-ratio:1588/1400;border:1px solid #D9D9D9;border-radius:6px;overflow:hidden;background:#fff">${pdf && !pdfView(d.id, src) ? '<div style="height:100%;display:flex;align-items:center;justify-content:center;color:#6B6B6B;font-size:13px">불러오는 중…</div>' : `<button type="button" data-gb="zoom" data-k="${kind}" aria-label="${label} 크게 보기" style="display:flex;align-items:flex-start;justify-content:center;width:100%;height:100%;padding:0;border:0;background:none;cursor:zoom-in"><img src="${pdf ? pdfView(d.id, src) : src}" alt="${label}" style="max-width:100%;max-height:100%;object-fit:contain;display:block"></button>`}${del}${pen}</div></figure>`;
 }
 function modalHtml(d) {
   ensureImg(d); ensureFull(d.id);
@@ -470,7 +472,8 @@ export function bind(app, c) {
   app.addEventListener('click', (e) => {
     const t = e.target.closest('[data-gb]'); if (!t || !app.querySelector('.gb')) return;
     const a = t.dataset.gb, id = t.dataset.id, cur = G.open && G.list.find((d) => d.id === G.open);
-    if (a === 'row') { if (e.target.closest('button, input, a, label, select')) return; G.open = id; G.reason = ''; G.zoom = ''; ctx.rerender(); }
+    if (a === 'row') { if (e.target.closest('button, input, a, label, select')) return; G.open = id; G.reason = ''; G.zoom = ''; G.panel = 'tax'; ctx.rerender(); }
+    else if (a === 'panel') { if (G.panel !== t.dataset.k) { G.panel = t.dataset.k; ctx.rerender(); } }   // 누른 칸 = Ctrl+C·V 대상 (10/26)
     else if (a === 'overlay') { if (e.target === t) { G.open = null; ctx.rerender(); } }
     else if (a === 'close') { G.open = null; G.zoom = ''; G.editNo = false; ctx.rerender(); }
     else if (a === 'biz') { setBiz(t.dataset.v); ctx.go(t.dataset.v === 'ace' ? 'gonggan-ace' : 'gonggan'); }
@@ -508,10 +511,10 @@ export function bind(app, c) {
       save(cur.id, { manual: Object.keys(m).length ? m : null });
     }
     else if (a === 'delstmt' && cur) {   // 거래명세표 지우기 (10/23) — 바꾼 명세표면 원래대로, 아니면 이 장을 목록에서 지움
-      if ((G.full[cur.id] || {}).stmt_data) { if (confirm('바꿔 넣은 거래명세표를 지우고 원래 명세표로 돌릴까요?')) { const m = (G.docs[cur.id] || {}).manual || {}; const { total, ...rest } = m; cur.total = m.items ? manualDoc({ ...G.docs[cur.id], manual: rest }).total : itemsTotal(cur); save(cur.id, { stmt_data: null, manual: m.items ? rest : null }); } }
-      else if (confirm('이 거래명세표를 목록에서 지울까요?')) { save(cur.id, { status: '삭제' }); G.list = G.list.filter((d) => d.id !== cur.id); G.open = null; ctx.rerender(); }
+      if ((G.full[cur.id] || {}).stmt_data) { if (confirm('삭제하시겠습니까? (바꿔 넣은 거래명세표를 지우고 원래 명세표로 돌아감)')) { const m = (G.docs[cur.id] || {}).manual || {}; const { total, ...rest } = m; cur.total = m.items ? manualDoc({ ...G.docs[cur.id], manual: rest }).total : itemsTotal(cur); save(cur.id, { stmt_data: null, manual: m.items ? rest : null }); } }
+      else if (((G.docs[cur.id] || {}).manual || {}).items && confirm('삭제하시겠습니까?')) { save(cur.id, { status: '삭제' }); G.list = G.list.filter((d) => d.id !== cur.id); G.open = null; ctx.rerender(); }
     }
-    else if (a === 'deltax' && cur) { if (confirm('세금계산서를 지울까요?')) save(cur.id, { tax_data: null, tax_name: null, tax_no: null, status: null, drafted_at: null }); }   // 지우면 결재전으로
+    else if (a === 'deltax' && cur) { if (confirm('삭제하시겠습니까?')) save(cur.id, { tax_data: null, tax_name: null, tax_no: null, status: null, drafted_at: null }); }   // 지우면 결재전으로
     else if (a === 'reject' && cur) { save(cur.id, { status: '수정요청', reason: G.reason.trim() || '수정요청' }); G.open = null; G.reason = ''; }
     else if (a === 'zoom') { G.zoom = t.dataset.k; ctx.rerender(); }
     else if (a === 'unzoom') { G.zoom = ''; ctx.rerender(); }
@@ -555,9 +558,16 @@ export function bind(app, c) {
     const f = [...((e.dataTransfer && e.dataTransfer.files) || [])].find((x) => /^image\/|pdf$/.test(x.type) || /\.pdf$/i.test(x.name));
     if (f) attach(G.open, 'tax', f); else alert('그림(사진·캡처)이나 PDF 파일만 넣을 수 있어요');
   });
-  window.addEventListener('paste', (e) => {      // 팝업이 열려 있으면 캡처 붙여넣기 = 세금계산서
+  window.addEventListener('paste', (e) => {      // 팝업이 열려 있으면 캡처 붙여넣기 — 누른 칸(거래명세표는 직원만), 기본은 세금계산서
     if (!G.open || !app.querySelector('.gb')) return;
-    const f = [...((e.clipboardData && e.clipboardData.files) || [])][0]; if (!f) return;
-    e.preventDefault(); attach(G.open, 'tax', f);
+    const cd = e.clipboardData || {};
+    const f = [...(cd.files || [])][0] || ([...(cd.items || [])].find((i) => i.kind === 'file') || { getAsFile: () => null }).getAsFile(); if (!f) return;
+    e.preventDefault(); attach(G.open, G.panel === 'stmt' && ctx.me() !== 'space1234' ? 'stmt' : 'tax', f);
+  });
+  window.addEventListener('keydown', (e) => {    // 누른 칸에서 Ctrl+C(⌘C) = 그 그림 복사 (10/26)
+    if (!G.open || !G.panel || !(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== 'c' || !app.querySelector('.gb')) return;
+    if (/INPUT|TEXTAREA|SELECT/.test((document.activeElement || {}).tagName || '') || String(window.getSelection() || '')) return;
+    const cur = G.list.find((d) => d.id === G.open); if (!cur) return;
+    e.preventDefault(); copyImg(cur, G.panel);
   });
 }
