@@ -1,7 +1,7 @@
 // 공간제작소 BMS — 거래명세표 · 세금계산서 · 기안 (2026-10-23, 시안 https://claude.ai/artifact/Kmkve915nhwknjJYE76xGE)
 // 줄 = 이카운트 판매현황의 공간제작소 판매 줄(gonggan_sales, 맥 도우미가 올림) → 거래명세표 변환기(stmt.js)로 장마다 나눔.
 // 장마다 상태·세금계산서·수정요청 사유 = gonggan_docs. 홈트레이더스·현구 과장님 같은 화면.
-import * as S from './gonggan-store.js?v=3';   // 우리 업무 앱 저장소와 따로 (10/23)
+import * as S from './gonggan-store.js?v=4';   // 우리 업무 앱 저장소와 따로 (10/23)
 import * as SM from './stmt.js';
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -39,9 +39,11 @@ export async function load(biz, force) {
     G.docs = Object.fromEntries(docs.map((x) => [x.id, x]));
     const regOf = {};
     sales.forEach((r) => { const k = slipKey(r.slip); if (r.reg && (!regOf[k] || r.reg < regOf[k])) regOf[k] = r.reg; });
+    const noOf = {};                                      // 판매전표 → 출고일보 출고번호 (10/26 대표 "맨 왼쪽에 표시")
+    sales.forEach((r) => { const k = slipKey(r.slip); if (r.board_no && !noOf[k]) noOf[k] = r.board_no; });
     const manual = docs.filter((x) => x.manual && x.manual.items).map(manualDoc);   // 직접 등록한 장 (10/23)
     G.list = [...list.map((d) => ({ ...d, id: docId(d), total: d.items.reduce((a, x) => a + x.supply + x.vat, 0) })), ...manual]
-      .map((d) => ({ ...d, reg: d.manual ? (d.reg || '') : (d.slips || [d.slip]).map((sl) => regOf[sl]).filter(Boolean).sort()[0] || '' }))
+      .map((d) => ({ ...d, reg: d.manual ? (d.reg || '') : (d.slips || [d.slip]).map((sl) => regOf[sl]).filter(Boolean).sort()[0] || '', no: (d.slips || [d.slip]).map((sl) => noOf[slipKey(sl)]).find(Boolean) || '' }))
       .filter((d) => (G.docs[d.id] || {}).status !== '삭제')                         // 지운 장은 안 보임 (10/23)
       .sort((a, b) => (b.ymd + b.slip).localeCompare(a.ymd + a.slip));
     G.loaded = biz;
@@ -113,7 +115,7 @@ function filtered() {
   const q = G.q.trim().toLowerCase();
   return G.list.filter((d) => (G.month === '전체' || d.ymd.slice(4, 6) === G.month)
     && (!G.site || d.site === G.site)
-    && (!q || `${d.site} ${d.slip} ${(d.slips || []).join(' ')} ${d.items.map((x) => x.name).join(' ')}`.toLowerCase().includes(q)));
+    && (!q || `${d.site} ${d.no || ''} ${d.slip} ${(d.slips || []).join(' ')} ${d.items.map((x) => x.name).join(' ')}`.toLowerCase().includes(q)));
 }
 export function screen() {
   const isAce = G.biz === 'ace';
@@ -178,7 +180,7 @@ const paidTag = (ymd) => `<span style="display:inline-flex;align-items:center;ga
 function rowHtml(d) {
   const st = statusOf(d), x = G.docs[d.id] || {};
   return `<tr data-gb="row" data-id="${esc(d.id)}" style="cursor:pointer;border-top:1px solid #EFEDE8;${x.tax_name ? '' : 'background:#FFFCF8'}">
-    <td style="padding:12px 8px 12px 16px;white-space:nowrap"><b>${md(d.ymd)}</b><div style="font-size:11px;color:#6B6B6B">${esc((d.slips || [d.slip]).map((s) => s.slice(4)).join(', '))}</div></td>
+    <td style="padding:12px 8px 12px 16px;white-space:nowrap"><b>${md(d.ymd)}</b><div style="font-size:11px;color:#6B6B6B">${esc(d.no || (d.slips || [d.slip]).map((s) => s.slice(4)).join(', '))}</div></td>
     <td style="padding:12px 8px;white-space:nowrap">${esc(d.site || '')}</td>
     <td style="padding:12px 8px"><div style="font-weight:600">${esc(itemTitle(d))}</div>${st === '수정요청' && x.reason ? `<div style="margin-top:6px;max-width:340px;font-size:12px;line-height:1.5;color:#B42318;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden"><b>수정요청</b> ${esc(x.reason)}</div>` : ''}</td>
     <td style="padding:12px 8px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums">${won(d.total)}</td>

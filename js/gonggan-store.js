@@ -35,7 +35,9 @@ const noTable = (e, what) => new Error(/does not exist|relation|schema cache|cou
 export async function getGongganSales(biz) {
   const out = [];
   for (let from = 0; ; from += 1000) {
-    const { data, error } = await sb.from('gonggan_sales').select('id,ymd,slip,partner,name,qty,price,supply,vat,logi,reg').eq('biz', biz).order('id').range(from, from + 999);
+    const cols = 'id,ymd,slip,partner,name,qty,price,supply,vat,logi,reg';
+    let { data, error } = await sb.from('gonggan_sales').select(cols + ',board_no').eq('biz', biz).order('id').range(from, from + 999);   // board_no = 출고일보 출고번호 (10/26) — 칸이 아직 없으면 빼고 다시
+    if (error && /board_no/.test(error.message)) ({ data, error } = await sb.from('gonggan_sales').select(cols).eq('biz', biz).order('id').range(from, from + 999));
     if (error) throw noTable(error, '공간제작소');
     out.push(...(data || [])); if (!data || data.length < 1000) break;
   }
