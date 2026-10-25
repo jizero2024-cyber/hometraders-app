@@ -1,7 +1,7 @@
 // 공간제작소 BMS — 거래명세표 · 세금계산서 · 기안 (2026-10-23, 시안 https://claude.ai/artifact/Kmkve915nhwknjJYE76xGE)
 // 줄 = 이카운트 판매현황의 공간제작소 판매 줄(gonggan_sales, 맥 도우미가 올림) → 거래명세표 변환기(stmt.js)로 장마다 나눔.
 // 장마다 상태·세금계산서·수정요청 사유 = gonggan_docs. 홈트레이더스·현구 과장님 같은 화면.
-import * as S from './gonggan-store.js?v=2';   // 우리 업무 앱 저장소와 따로 (10/23)
+import * as S from './gonggan-store.js?v=3';   // 우리 업무 앱 저장소와 따로 (10/23)
 import * as SM from './stmt.js';
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -173,6 +173,8 @@ export function screen() {
 const navStyle = (on) => `display:flex;justify-content:space-between;padding:10px;border-radius:8px;border:0;font:inherit;font-size:14px;cursor:pointer;text-align:left;${on ? 'background:#FDF0E6;color:#9A3412;font-weight:700' : 'background:none;color:#1F2328'}`;
 const addBtn = (act, id) => `<button type="button" data-gb="${act}" data-id="${esc(id)}" style="width:92px;height:34px;border-radius:8px;border:1.5px dashed #B8B8B8;background:#F4F4F4;color:#4B4B4B;font:inherit;font-weight:700;font-size:13px;cursor:pointer">+ 넣기</button>`;
 const okTag = '<span style="display:inline-block;padding:6px 10px;border-radius:6px;background:#EEF6EE;color:#1E6B34;font-size:12px;font-weight:600;white-space:nowrap">첨부됨</span>';
+// 입금 확인 (10/25 대표 — 통장 입금 금액·날짜를 명세표 합계와 맞춘 것) — 상태 아래 초록 체크 + 입금일
+const paidTag = (ymd) => `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px 3px 4px;border-radius:10px;background:#EEF6EE;color:#1E6B34;font-size:11px;font-weight:700;white-space:nowrap"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7.5" fill="#22A04B"></circle><path d="M4.6 8.3l2.2 2.2 4.6-4.8" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>${md(String(ymd).replace(/-/g, ''))} 입금</span>`;
 function rowHtml(d) {
   const st = statusOf(d), x = G.docs[d.id] || {};
   return `<tr data-gb="row" data-id="${esc(d.id)}" style="cursor:pointer;border-top:1px solid #EFEDE8;${x.tax_name ? '' : 'background:#FFFCF8'}">
@@ -182,7 +184,7 @@ function rowHtml(d) {
     <td style="padding:12px 8px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums">${won(d.total)}</td>
     <td style="padding:12px 8px;text-align:center">${okTag}</td>
     <td style="padding:12px 8px;text-align:center">${x.tax_name ? okTag : addBtn('addtax', d.id)}</td>
-    <td style="padding:12px 8px;text-align:center;white-space:nowrap">${statusPick(d.id, st)}</td>
+    <td style="padding:12px 8px;text-align:center;white-space:nowrap">${statusPick(d.id, st)}${x.paid ? `<div style="margin-top:6px">${paidTag(x.paid)}</div>` : ''}</td>
     <td style="padding:12px 14px 12px 8px;text-align:center;white-space:nowrap;font-size:13px;color:#3F3F46">${x.delivered ? `<span style="font-weight:700;color:#1E6B34">✓ ${esc(x.delivered)} 전달완료</span>` : d.reg ? md(d.reg.replace(/-/g, '')) : ''}</td>
   </tr>`;
 }
@@ -212,7 +214,7 @@ function modalHtml(d) {
     <div role="dialog" aria-modal="true" aria-label="거래명세표 · 세금계산서" style="width:100%;max-width:1360px;background:#fff;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.25);padding:20px 22px 22px;box-sizing:border-box;display:flex;flex-direction:column;gap:16px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
         <div style="display:flex;flex-direction:column;gap:6px"><b style="font-size:17px">${md(d.ymd)} · ${esc(d.site || '')} · ${esc(itemTitle(d))}</b>
-          <span style="display:flex;align-items:center;gap:8px;font-size:13px;color:#5C5C5C">합계 ${won(d.total)}원 ${statusPick(d.id, st)}${x.delivered ? `<span style="font-size:12px;font-weight:700;color:#1E6B34">✓ ${esc(x.delivered)} 전달완료</span>` : ''}</span></div>
+          <span style="display:flex;align-items:center;gap:8px;font-size:13px;color:#5C5C5C">합계 ${won(d.total)}원 ${statusPick(d.id, st)}${x.paid ? paidTag(x.paid) : ''}${x.delivered ? `<span style="font-size:12px;font-weight:700;color:#1E6B34">✓ ${esc(x.delivered)} 전달완료</span>` : ''}</span></div>
         <div style="display:flex;gap:8px;align-items:center">
           <button type="button" data-gb="both" style="height:40px;padding:0 16px;border:1px solid #1F2328;border-radius:8px;background:#fff;color:#1F2328;font:inherit;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">${DOWN}2장 한 번에 다운로드</button>
           <button type="button" data-gb="close" aria-label="닫기" style="width:40px;height:40px;border:1px solid #E6E4DF;border-radius:20px;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">${X}</button>
