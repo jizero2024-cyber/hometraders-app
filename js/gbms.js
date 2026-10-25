@@ -46,7 +46,7 @@ export async function load(biz, force) {
     sales.forEach((r) => { const k = slipKey(r.slip); if (r.board_no && !noOf[k]) noOf[k] = r.board_no; });
     const manual = docs.filter((x) => x.manual && x.manual.items).map(manualDoc);   // 직접 등록한 장 (10/23)
     G.list = [...list.map((d) => ({ ...d, id: docId(d), total: ovTotal(docId(d)) ?? itemsTotal(d) })), ...manual]
-      .map((d) => ({ ...d, reg: d.manual ? (d.reg || '') : (d.slips || [d.slip]).map((sl) => regOf[sl]).filter(Boolean).sort()[0] || '', no: d.manual ? '' : (d.slips || [d.slip]).map((sl) => noOf[slipKey(sl)]).find(Boolean) || '' }))   // 직접 등록한 장은 번호가 이카운트 전표가 아님
+      .map((d) => ({ ...d, site0: d.site, site: ((G.docs[d.id] || {}).manual || {}).site || d.site, reg: d.manual ? (d.reg || '') : (d.slips || [d.slip]).map((sl) => regOf[sl]).filter(Boolean).sort()[0] || '', no: d.manual ? '' : (d.slips || [d.slip]).map((sl) => noOf[slipKey(sl)]).find(Boolean) || '' }))   // 직접 등록한 장은 번호가 이카운트 전표가 아님
       .filter((d) => (G.docs[d.id] || {}).status !== '삭제')                         // 지운 장은 안 보임 (10/23)
       .sort((a, b) => (b.ymd + b.slip).localeCompare(a.ymd + a.slip));
     G.loaded = biz;
@@ -218,7 +218,7 @@ function modalHtml(d) {
   return `<div data-gb="overlay" style="position:fixed;inset:0;background:rgba(17,20,24,.45);display:flex;align-items:flex-start;justify-content:center;padding:20px 16px;box-sizing:border-box;overflow-y:auto;z-index:50">
     <div role="dialog" aria-modal="true" aria-label="거래명세표 · 세금계산서" style="width:100%;max-width:1360px;background:#fff;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.25);padding:20px 22px 22px;box-sizing:border-box;display:flex;flex-direction:column;gap:16px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
-        <div style="display:flex;flex-direction:column;gap:6px"><b style="font-size:17px">${md(d.ymd)} · ${esc(d.site || '')} · ${esc(itemTitle(d))} <button type="button" data-gb="edittitle" aria-label="제목 고치기" style="border:0;background:none;padding:2px;cursor:pointer;display:inline-flex;vertical-align:middle">${PEN}</button></b>
+        <div style="display:flex;flex-direction:column;gap:6px"><b style="font-size:17px">${md(d.ymd)} · ${esc(d.site || '')} <button type="button" data-gb="editsite" aria-label="현장명 고치기" style="border:0;background:none;padding:2px;cursor:pointer;display:inline-flex;vertical-align:middle">${PEN}</button> · ${esc(itemTitle(d))} <button type="button" data-gb="edittitle" aria-label="제목 고치기" style="border:0;background:none;padding:2px;cursor:pointer;display:inline-flex;vertical-align:middle">${PEN}</button></b>
           <span style="display:flex;align-items:center;gap:8px;font-size:13px;color:#5C5C5C">합계 ${won(d.total)}원 <button type="button" data-gb="edittotal" aria-label="합계 고치기" style="border:0;background:none;padding:2px;cursor:pointer;display:inline-flex;vertical-align:middle">${PEN}</button> ${statusPick(d.id, st)}${x.paid ? paidTag(x.paid) : ''}${x.delivered ? `<span style="font-size:12px;font-weight:700;color:#1E6B34">✓ ${esc(x.delivered)} 전달완료</span>` : ''}</span></div>
         <div style="display:flex;gap:8px;align-items:center">
           <button type="button" data-gb="both" style="height:40px;padding:0 16px;border:1px solid #1F2328;border-radius:8px;background:#fff;color:#1F2328;font:inherit;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">${DOWN}2장 한 번에 다운로드</button>
@@ -490,6 +490,14 @@ export function bind(app, c) {
     else if (a === 'reg-rdel' && G.reg) { G.reg.rows.splice(Number(t.dataset.k), 1); if (!G.reg.rows.length) G.reg.rows.push({ name: '', qty: '', price: '' }); ctx.rerender(); }
     else if (a === 'reg-preview' && G.reg) regPreview();
     else if (a === 'reg-save' && G.reg) regSave();
+    else if (a === 'editsite' && cur) {   // 현장명 손으로 고치기 (10/26 대표) — 비우면 이카운트 규격 꼬리표의 현장
+      const m = { ...((G.docs[cur.id] || {}).manual || {}) };
+      const v = prompt('현장명', cur.site || '');
+      if (v === null) return;
+      if (v.trim()) m.site = v.trim(); else delete m.site;
+      cur.site = m.site || (m.items ? '' : (cur.site0 ?? ''));
+      save(cur.id, { manual: Object.keys(m).length ? m : null });
+    }
     else if ((a === 'edittitle' || a === 'edittotal') && cur) {   // 제목·합계 손으로 고치기 (10/26 공간제작소 수정요청) — 비우면 원래대로
       const m = { ...((G.docs[cur.id] || {}).manual || {}) }, k = a === 'edittitle' ? 'title' : 'total';
       const v = prompt(a === 'edittitle' ? '제목' : '합계금액 (부가세 포함)', a === 'edittitle' ? itemTitle(cur) : String(Math.round(cur.total)));
