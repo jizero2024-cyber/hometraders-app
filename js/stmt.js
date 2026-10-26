@@ -380,7 +380,8 @@ export function splitSheets(vouchers, opt) {
     if (oneEach) {
       groups = [{ items: v.items }];
     } else if (v.merged && perItem(v.partner)) {    // 같은 날·같은 현장 묶음 (공간제작소) → 세라믹사이딩·부자재·실리콘·운반비 한 장. 구조재만 치수별
-      groups = [{ items: v.items.filter((i) => !isLumber(i)), site: v.site }]
+      const rank = (i) => (isCeramic(i) && !/부자재/.test(i.name) ? 0 : isCeramic(i) ? 1 : isSilicone(i) ? 2 : isFreight(i) ? 3 : 1);   // 세라믹 판재·코너 → 부자재 → 실리콘 → 운반비 (10/27 — 실리콘 전표 번호가 앞이어도 세라믹이 맨 앞)
+      groups = [{ items: v.items.filter((i) => !isLumber(i)).map((i, k) => [i, k]).sort((a, b) => rank(a[0]) - rank(b[0]) || a[1] - b[1]).map((x) => x[0]), site: v.site }]
         .concat(v.items.filter(isLumber).map((i) => ({ items: [i], site: v.site, slip: i.slip, lumber: lumberSize(i) })));
       groups = freightIntoSheet(groups);
     } else if (v.merged) {                          // 같은 날·같은 현장 묶음 (그 밖의 거래처) → 모든 품목 한 장
