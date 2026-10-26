@@ -5,10 +5,10 @@ import * as S from './store-supabase.js?v=3';
 import { ECOUNT_ITEMS } from './ecount-items.js';
 import { makeMatcher, readPastedText, quotePrev } from './textread.js';
 import * as DL from './delivery.js';
-import * as SM from './stmt.js?v=102';
+import * as SM from './stmt.js?v=103';
 import * as HD from './hdisp.js?v=3';
-import * as HM from './home.js?v=5';
-import * as FM from './forms.js?v=5';
+import * as HM from './home.js?v=6';
+import * as FM from './forms.js?v=6';
 
 // 창고 아이콘 세트 (무채색)
 const WH_ICONS = {

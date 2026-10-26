@@ -379,10 +379,14 @@ export function splitSheets(vouchers, opt) {
     const by = new Map(), rest = [];
     vouchers.forEach((v) => {
       if (perItem(v.partner) || perSite(v.partner)) { rest.push(v); return; }
-      const k = `${v.ymd}|${key(v.partner)}`;
-      if (!by.has(k)) by.set(k, { ...v, items: [], sites: new Set(), slips: [] });
-      const g = by.get(k);
-      g.items.push(...v.items); g.slips.push(...(v.slips || [v.slip])); if (v.site) g.sites.add(v.site);
+      const parts = v.img ? v.items.map((it) => [imgSite(it.tag), it]) : [['', null]];   // 사진: 현장마다 따로, 현장 없는 줄은 그날 한 장
+      parts.forEach(([site, it]) => {
+        const k = `${v.ymd}|${key(v.partner)}${site ? '|' + siteKey(site) : ''}`;
+        if (!by.has(k)) by.set(k, { ...v, items: [], sites: new Set(), slips: [] });
+        const g = by.get(k);
+        if (it) g.items.push(it); else g.items.push(...v.items);
+        g.slips.push(...(v.slips || [v.slip])); if (site) g.sites.add(site); else if (!v.img && v.site) g.sites.add(v.site);
+      });
     });
     vouchers = [...by.values()].map((g) => ({ ...g, merged: true, site: g.sites.size === 1 ? [...g.sites][0] : '', slips: [...new Set(g.slips)] })).concat(rest)
       .sort((a, b) => a.ymd.localeCompare(b.ymd));
@@ -671,11 +675,25 @@ export function voucherFromDoc(doc) {   // 도우미가 읽은 문서 → 전표
     let supply = num(l.supply) != null ? num(l.supply) : (num(l.amount) != null ? num(l.amount) : qty * (num(l.price) || 0));
     supply = Math.round(supply || 0);
     const vat = num(l.vat) != null ? Math.round(num(l.vat)) : Math.round(supply * 0.1);
-    return { date: new Date(y, mo - 1, dd), name: stripTag(l.ours || l.raw_name || l.name || ''), qty, supply, vat };
+    const ld = /^(20\d\d)-(\d\d)-(\d\d)$/.exec(nfc(l.date) || '');   // 줄마다 일자 칸이 있으면 그 날 (10/27 — 사진도 날짜·현장별로)
+    const raw = l.raw_name || l.name || '';
+    return { date: ld ? new Date(+ld[1], +ld[2] - 1, +ld[3]) : new Date(y, mo - 1, dd), name: stripTag(l.ours || raw), tag: rawTag(raw), qty, supply, vat };
   }).filter((it) => it.name && it.qty > 0 && it.supply > 0);
   if (!items.length) throw new Error('읽은 문서에서 품목·금액을 못 찾았어요 — 수량과 단가(또는 공급가액)가 보이는 사진인지 확인하세요.');
-  return { slip: `${ymd}-1`, ymd, partner: nfc(d.partner) || '거래처미상', items };
+  return { slip: `${ymd}-1`, ymd, partner: nfc(d.partner) || '거래처미상', items, img: true };
 }
+// 사진에서 읽은 전표 → 줄 일자별로 나눔 (그 외 명세표: 날짜 + 현장별, 현장 없으면 날짜별 한 장 — 10/27 대표)
+export function splitByDate(v) {
+  const by = new Map();
+  v.items.forEach((it) => {
+    const ymd = `${it.date.getFullYear()}${String(it.date.getMonth() + 1).padStart(2, '0')}${String(it.date.getDate()).padStart(2, '0')}`;
+    if (!by.has(ymd)) by.set(ymd, { ...v, ymd, slip: `${ymd}-1`, items: [] });
+    by.get(ymd).items.push(it);
+  });
+  return [...by.values()];
+}
+// 사진 줄의 현장 = 꼬리표 [MMDD/약칭/현장/담당] 의 3번째부터, '…님' 같은 사람 이름은 뺌 ('0908/사사집/전종건소장님' → 현장 없음, '0909/사사집/충주/…' → 충주)
+const imgSite = (tag) => { const t = nfc(tag); return /^\d{4}\//.test(t) ? t.split('/').slice(2).map((x) => x.trim()).filter((x) => x && !/(님|소장|과장|대리|부장|실장|팀장|사장|대표)$/.test(x)).join(' ') : ''; };
 
 // ── 이미지(PNG)로 저장 — 카톡·문자로 바로 보내기 ────────────
 const A4_W = 794;                                   // A4 가로 210mm ≈ 794px (96dpi)

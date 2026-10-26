@@ -6,7 +6,7 @@
 //   deposit   입금표     : deposit.html (같은 머리 아래)
 //   esong     전자 송장  : 출고 번호·전표·판매 엑셀 → 품목 고치기 → 링크 (받는 분이 휴대폰으로 체크·서명, /songjang/ · js/songjang.js, 10/26)
 //   화면 모양은 모두 같음 — 머리(‹ · 로고 · 이름) · 제목 · 불러오기 칸 · 결과 칸, 파일은 끌어다 놓기도 됨
-import * as SM from './stmt.js?v=102';
+import * as SM from './stmt.js?v=103';
 import * as DL from './delivery.js';
 import * as S from './store-supabase.js?v=3';
 
@@ -88,7 +88,7 @@ async function loadStmt(route) {
         const r = await ctx.helper('/api/doc/read', { name: x.name, data });   // 그 밖의 명세표·사진은 AI 로
         const v = SM.voucherFromDoc(r.doc);
         if (/홈트레이더스|에이스/.test(v.partner)) v.partner = (r.doc && (r.doc.owner || r.doc.site)) || '';   // 우리가 낸 명세표면 공급자 말고 받는 곳
-        vouchers.push(v);
+        vouchers.push(...(route === 'stmt-gong' ? [v] : SM.splitByDate(v)));   // 그 외: 줄 일자별 → 아래에서 날짜 + 현장별
       } catch (e) { errs.push(`${x.name}: ${e.message || e}`); }
     }
     let docs = vouchers.length ? SM.splitSheets(vouchers, { byDate: route !== 'stmt-gong' }) : [];   // 공간제작소만 품목·현장별로 나눔, 나머지는 일자별 한 장
