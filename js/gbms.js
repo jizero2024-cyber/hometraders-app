@@ -186,9 +186,9 @@ export function screen() {
         <thead><tr style="background:#FAFAF8;color:#5C5C5C;text-align:left">
           <th style="padding:12px 8px 12px 16px;font-weight:600">출고일</th><th style="padding:12px 8px;font-weight:600">현장</th><th style="padding:12px 8px;font-weight:600">품목명</th>
           <th style="padding:12px 8px;font-weight:600;text-align:right;white-space:nowrap">합계 (VAT 포함)</th><th style="padding:12px 8px;font-weight:600;text-align:center;white-space:nowrap">거래명세표</th>
-          <th style="padding:12px 8px;font-weight:600;text-align:center;white-space:nowrap">세금계산서</th><th style="padding:12px 8px;font-weight:600;text-align:center">상태</th><th style="padding:12px 14px 12px 8px;font-weight:600;text-align:center;white-space:nowrap">등록일</th>
+          <th style="padding:12px 8px;font-weight:600;text-align:center;white-space:nowrap">세금계산서</th><th style="padding:12px 8px;font-weight:600;text-align:center">상태</th><th style="padding:12px 14px 12px 8px;font-weight:600;text-align:center;white-space:nowrap">등록일</th><th style="width:44px"></th>
         </tr></thead>
-        <tbody>${rows.map(rowHtml).join('') || `<tr><td colspan="8" style="padding:40px;text-align:center;color:#6B6B6B">${G.loading ? '불러오는 중…' : '없어요'}</td></tr>`}</tbody>
+        <tbody>${rows.map(rowHtml).join('') || `<tr><td colspan="9" style="padding:40px;text-align:center;color:#6B6B6B">${G.loading ? '불러오는 중…' : '없어요'}</td></tr>`}</tbody>
       </table>
     </div>
     <nav aria-label="페이지" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
@@ -216,7 +216,7 @@ function cardHtml(d) {
     <div style="font-weight:600;font-size:14px;line-height:1.4">${esc(itemTitle(d))}</div>
     ${st === '수정요청' && x.reason ? `<div style="font-size:12px;color:#B42318"><b>수정요청</b> ${esc(x.reason)}</div>` : ''}
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><span style="display:flex;gap:4px;flex-wrap:wrap">${chip(!(x.manual || {}).stmtDel, '명세표')}${chip(!!x.tax_name, '계산서')}${x.paid ? paidTag(x.paid) : ''}</span><b style="font-size:15px;font-variant-numeric:tabular-nums">${won(d.total)}원</b></div>
-    ${d.no ? `<div style="font-size:11px;color:#9A9A9A">${esc(d.no)}</div>` : ''}
+    <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:11px;color:#9A9A9A">${esc(d.no || '')}</span><button type="button" data-gb="delrow" data-id="${esc(d.id)}" aria-label="목록에서 삭제" title="목록에서 삭제" style="width:30px;height:30px;border-radius:15px;border:1px solid #F1B5AF;background:#fff;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0">${TRASH}</button></div>
   </div>`;
 }
 function rowHtml(d) {
@@ -230,6 +230,7 @@ function rowHtml(d) {
     <td style="padding:12px 8px;text-align:center">${x.tax_name ? okTag : addBtn('addtax', d.id)}</td>
     <td style="padding:12px 8px;text-align:center;white-space:nowrap">${statusPick(d.id, st)}${x.paid ? `<div style="margin-top:6px">${paidTag(x.paid)}</div>` : ''}</td>
     <td style="padding:12px 14px 12px 8px;text-align:center;white-space:nowrap;font-size:13px;color:#3F3F46">${x.delivered ? `<span style="font-weight:700;color:#1E6B34">✓ ${esc(x.delivered)} 전달완료</span>` : d.reg ? md(d.reg.replace(/-/g, '')) : ''}</td>
+    <td style="padding:12px 12px 12px 0;text-align:center"><button type="button" data-gb="delrow" data-id="${esc(d.id)}" aria-label="목록에서 삭제" title="목록에서 삭제" style="width:30px;height:30px;border-radius:15px;border:1px solid #F1B5AF;background:#fff;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0">${TRASH}</button></td>
   </tr>`;
 }
 function docBox(kind, d) {
@@ -591,10 +592,10 @@ export function bind(app, c) {
     else if (a === 'delstmt' && cur) {   // 거래명세표 지우기 — 그림만 비우고(stmt_data 'none') 목록 줄·상태·세금계산서는 그대로. 바꿀 때 적은 합계도 풂
       if (confirm('삭제하시겠습니까?')) { const m = { ...((G.docs[cur.id] || {}).manual || {}) }; const had = 'total' in m; delete m.total; if (had) cur.total = m.items ? manualDoc({ ...G.docs[cur.id], manual: m }).total : itemsTotal(cur); m.stmtDel = true; G.panel = 'stmt'; save(cur.id, { stmt_data: 'none', manual: m }); }
     }
-    else if (a === 'delrow' && cur) {   // 목록 줄 통째로 지우기 — 중복된 장 (10/27 대표). status '삭제' 로 숨김(표에는 남아 되살릴 수 있음, 이카운트 조회가 다시 올려도 안 보임)
-      const x = G.docs[cur.id] || {};
+    else if (a === 'delrow' && (id ? G.list.find((d) => d.id === id) : cur)) {   // 목록 줄 통째로 지우기 — 중복된 장 (10/27 대표). status '삭제' 로 숨김(표에는 남아 되살릴 수 있음, 이카운트 조회가 다시 올려도 안 보임)
+      const cur = id ? G.list.find((d) => d.id === id) : G.list.find((d) => d.id === G.open), x = G.docs[cur.id] || {};
       if (!confirm(`이 장을 목록에서 삭제하시겠습니까?\n${md(cur.ymd)} ${cur.site || ''} ${won(cur.total)}원${x.paid ? '\n(입금 확인된 장이에요)' : ''}`)) return;
-      G.list = G.list.filter((d) => d.id !== cur.id); G.open = null; G.pend = null;
+      G.list = G.list.filter((d) => d.id !== cur.id); if (G.open === cur.id) { G.open = null; G.pend = null; }
       save(cur.id, { status: '삭제' });
     }
     else if (a === 'deltax' && cur) { if (confirm('삭제하시겠습니까?')) save(cur.id, { tax_data: null, tax_name: null, tax_no: null, status: null, drafted_at: null }); }   // 지우면 결재전으로
