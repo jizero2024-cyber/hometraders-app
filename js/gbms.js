@@ -278,6 +278,7 @@ function modalHtml(d) {
           <span style="display:flex;align-items:center;gap:8px;font-size:13px;color:#5C5C5C">합계 ${won(d.total)}원 <button type="button" data-gb="edittotal" aria-label="합계 고치기" style="border:0;background:none;padding:2px;cursor:pointer;display:inline-flex;vertical-align:middle">${PEN}</button> ${statusPick(d.id, st)}${x.paid ? paidTag(x.paid) : ''}${x.delivered ? `<span style="font-size:12px;font-weight:700;color:#1E6B34">✓ ${esc(x.delivered)} 전달완료</span>` : ''}</span></div>
         <div style="display:flex;gap:8px;align-items:center">
           ${hasPend() ? `<button type="button" data-gb="pend-save" style="height:40px;padding:0 22px;border:0;border-radius:8px;background:#1F2328;color:#fff;font:inherit;font-size:15px;font-weight:800;cursor:pointer">저장</button>` : ''}
+          <button type="button" data-gb="delrow" aria-label="목록에서 삭제" title="목록에서 삭제" style="width:40px;height:40px;border:1px solid #F1B5AF;border-radius:8px;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">${TRASH}</button>
           <button type="button" data-gb="both" style="height:40px;padding:0 16px;border:1px solid #1F2328;border-radius:8px;background:#fff;color:#1F2328;font:inherit;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">${DOWN}2장 한 번에 다운로드</button>
           <button type="button" data-gb="close" aria-label="닫기" style="width:40px;height:40px;border:1px solid #E6E4DF;border-radius:20px;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">${X}</button>
         </div>
@@ -589,6 +590,12 @@ export function bind(app, c) {
     }
     else if (a === 'delstmt' && cur) {   // 거래명세표 지우기 — 그림만 비우고(stmt_data 'none') 목록 줄·상태·세금계산서는 그대로. 바꿀 때 적은 합계도 풂
       if (confirm('삭제하시겠습니까?')) { const m = { ...((G.docs[cur.id] || {}).manual || {}) }; const had = 'total' in m; delete m.total; if (had) cur.total = m.items ? manualDoc({ ...G.docs[cur.id], manual: m }).total : itemsTotal(cur); m.stmtDel = true; G.panel = 'stmt'; save(cur.id, { stmt_data: 'none', manual: m }); }
+    }
+    else if (a === 'delrow' && cur) {   // 목록 줄 통째로 지우기 — 중복된 장 (10/27 대표). status '삭제' 로 숨김(표에는 남아 되살릴 수 있음, 이카운트 조회가 다시 올려도 안 보임)
+      const x = G.docs[cur.id] || {};
+      if (!confirm(`이 장을 목록에서 삭제하시겠습니까?\n${md(cur.ymd)} ${cur.site || ''} ${won(cur.total)}원${x.paid ? '\n(입금 확인된 장이에요)' : ''}`)) return;
+      G.list = G.list.filter((d) => d.id !== cur.id); G.open = null; G.pend = null;
+      save(cur.id, { status: '삭제' });
     }
     else if (a === 'deltax' && cur) { if (confirm('삭제하시겠습니까?')) save(cur.id, { tax_data: null, tax_name: null, tax_no: null, status: null, drafted_at: null }); }   // 지우면 결재전으로
     else if (a === 'reject' && cur) { save(cur.id, { status: '수정요청', reason: G.reason.trim() || '수정요청' }); G.open = null; G.reason = ''; }
