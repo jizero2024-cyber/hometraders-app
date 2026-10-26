@@ -688,3 +688,49 @@ a.fm-btn { text-decoration: none; }
 .hm-sheet:hover { background: #D7EEDF; color: #1E6B34; }
 .hm-sheet.fare { background: #FEF3F2; color: #B42318; border-color: #F5C2C0; }
 .hm-sheet.fare:hover { background: #FDE4E1; color: #B42318; }
+/* ── 휴대폰 (10/26 대표 "모바일 반응형으로 직관적이고 보기 편하게") — 375~430px ── */
+@media (max-width: 560px) {
+  .hm-in { flex-wrap: wrap; gap: 8px; padding: 10px 12px; }
+  .hm-logo { height: 26px; }
+  .hm-me { display: none; }
+  .hm-sheet { height: 32px; padding: 0 12px; font-size: 12px; }
+  .hm-link { font-size: 12px; }
+  .hm-main { padding: 14px 12px 40px; gap: 14px; }
+  .hm-h1 { font-size: 20px; }
+  .hm-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .hm-grid3 { gap: 10px; }
+  .hm-tile { min-height: 116px; padding: 12px 10px; gap: 8px; border-radius: 14px; }
+  .hm-tile b { font-size: 16px; }
+  .hm-tile.big { min-height: 140px; }
+  .hm-tile.big b { font-size: 18px; }
+  .hm-tile.wide { grid-column: span 2; min-height: 96px; flex-direction: row; justify-content: flex-start; padding: 14px 16px; text-align: left; flex-wrap: wrap; }
+  .hm-tile.wide .hm-sub { flex-basis: 100%; font-size: 11px; }
+  .hm-ic { width: 48px; height: 48px; border-radius: 14px; }
+  .hm-ic svg { width: 28px !important; height: 28px !important; }
+  .hm-ic img { width: 44px !important; }
+  .hm-badge { top: 8px; right: 8px; height: 24px; min-width: 24px; padding: 0 8px; border-radius: 12px; font-size: 12px; line-height: 24px; }
+  .hm-toast { bottom: 6px; font-size: 12px; }
+  /* 운송비 미송금 — 한 건을 카드처럼 세 줄로 */
+  .hm-fh { flex-wrap: wrap; gap: 6px 10px; padding: 10px 12px; }
+  .hm-fh b { font-size: 15px; } .hm-fh span { font-size: 13px; }
+  .hm-fr { grid-template-columns: 22px 1fr auto; grid-template-areas: "u w a" "u j j" "u c c" "u s s"; gap: 4px 8px; padding: 10px 12px; font-size: 13px; }
+  .hm-acc { word-break: break-all; }
+  .hm-sent { height: 38px; width: 100%; }
+  /* 팝업은 화면 꽉 차게 */
+  .hm-ov { padding: 0; align-items: stretch; }
+  .hm-modal { max-width: none; border-radius: 0; min-height: 100%; padding: 16px 14px; }
+  .hm-frame { max-width: none; height: 100%; border-radius: 0; }
+  .fm-modal, .fm-modal.wide { max-width: none; max-height: none; height: 100%; border-radius: 0; padding: 14px 12px; }
+  .fm-modal .hm-mh { top: -14px; margin: -14px -12px 0; padding: 12px; }
+  .hm-x { font-size: 22px; padding: 4px 8px; }
+  .fm-btn { height: 42px; }
+  .fm-btn.sm { height: 34px; }
+  .fm-pop .fm-grid, .fm-grid, .fm-qh, .fm-form { grid-template-columns: 1fr; }
+  .fm-pop .fm-th, .fm-th, .fm-th.q { display: none; }
+  .fm-pop .fm-tr, .fm-tr { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; padding: 8px 0; border-bottom: 1px solid #EFEDE8; }
+  .fm-tr.q { grid-template-columns: 1fr 1fr; }
+  .fm-it { grid-template-columns: 1fr 52px 84px; }
+  .fm-it input, .fm-tr input, .fm-grid input, .fm-form input, .fm-form select { height: 42px; font-size: 16px; }
+  .fm-qf { gap: 10px; }
+  .fm-frame, .fm-pop .fm-frame { height: 1400px; }
+}
