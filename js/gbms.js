@@ -139,6 +139,7 @@ export function screen() {
 @media (max-width:760px){
  .gb .gb-nav{flex:1 1 100%!important;max-width:none!important;flex-direction:row!important;align-items:center;gap:6px!important;padding:8px 12px!important;border-right:0!important;border-bottom:1px solid #E6E4DF;position:sticky;top:0;z-index:5}
  .gb .gb-nav button{padding:8px 12px!important;margin:0!important;font-size:13px!important}
+ .gb .gb-nav button span+span{margin-left:6px;opacity:.7}
  .gb .gb-nav [data-gb="logout"],.gb .gb-nav [data-gb="start"]{margin-left:auto!important;padding:8px 4px!important}
  .gb .gb-nav [data-gb="start"]~[data-gb="logout"]{margin-left:0!important}
  .gb .gb-logo{padding:0 6px 0 0!important}.gb .gb-logo img{height:26px!important}.gb .gb-logo img+span+img{display:none}.gb .gb-logo span{display:none}
