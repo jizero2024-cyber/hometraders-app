@@ -635,11 +635,11 @@ export function bind(app, c) {
     const f = [...((e.dataTransfer && e.dataTransfer.files) || [])].find((x) => /^image\/|pdf$/.test(x.type) || /\.pdf$/i.test(x.name));
     if (f) attach(G.open, 'tax', f); else alert('그림(사진·캡처)이나 PDF 파일만 넣을 수 있어요');
   });
-  window.addEventListener('paste', (e) => {      // 팝업이 열려 있으면 캡처 붙여넣기 — 누른 칸(거래명세표는 직원만), 기본은 세금계산서
+  window.addEventListener('paste', (e) => {      // 팝업이 열려 있으면 캡처 붙여넣기 — 누른 칸(명세표·세금계산서), 기본은 세금계산서
     if (!G.open || !app.querySelector('.gb')) return;
     const cd = e.clipboardData || {};
     const f = [...(cd.files || [])][0] || ([...(cd.items || [])].find((i) => i.kind === 'file') || { getAsFile: () => null }).getAsFile(); if (!f) return;
-    e.preventDefault(); attach(G.open, G.panel === 'stmt' && ctx.me() !== 'space1234' ? 'stmt' : 'tax', f);
+    e.preventDefault(); attach(G.open, G.panel === 'stmt' ? 'stmt' : 'tax', f);   // 누른 칸으로 — 이미 있으면 교체 (10/27 대표, 공간제작소 계정도)
   });
   window.addEventListener('beforeunload', (e) => { if (hasPend()) { e.preventDefault(); e.returnValue = ''; } });   // 저장 안 한 사진이 있으면 브라우저 창을 닫을 때도 물어봄
   window.addEventListener('keydown', (e) => {    // 누른 칸에서 Ctrl+C(⌘C) = 그 그림 복사 (10/26)
