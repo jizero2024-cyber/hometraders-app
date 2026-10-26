@@ -134,29 +134,49 @@ export function screen() {
   const cnt = (k) => base.filter((d) => k === '전체' || statusOf(d) === k).length;
   const tab = (on) => `height:38px;padding:0 16px;border-radius:19px;font:inherit;font-size:14px;cursor:pointer;${on ? 'background:#1F2328;color:#fff;border:1px solid #1F2328;font-weight:700' : 'background:#fff;color:#1F2328;border:1px solid #E6E4DF'}`;
   const open = G.open && G.list.find((d) => d.id === G.open);
-  return `<div class="gb" style="font-family:Pretendard,'Noto Sans KR',system-ui,sans-serif;color:#1F2328;background:#F7F7F5;min-height:100vh;display:flex;flex-wrap:wrap">
-  <nav aria-label="메뉴" style="flex:1 1 220px;max-width:240px;background:#fff;border-right:1px solid #E6E4DF;padding:20px 14px;box-sizing:border-box;display:flex;flex-direction:column;gap:4px">
-    <div style="display:flex;align-items:center;gap:10px;padding:4px 8px 18px"><img src="/icons/partner-gongan.png" alt="공간제작소" style="height:40px"><span aria-hidden="true" style="color:#8A8A8A">×</span><img src="/icons/logo-full.png" alt="HOME TRADERS" style="height:36px"></div>
+  return `<div class="gb" style="font-family:Pretendard,'Noto Sans KR',system-ui,sans-serif;color:#1F2328;background:#F7F7F5;min-height:100vh;display:flex;flex-wrap:wrap"><style>
+.gb .gb-cards{display:none}
+@media (max-width:760px){
+ .gb .gb-nav{flex:1 1 100%!important;max-width:none!important;flex-direction:row!important;align-items:center;gap:6px!important;padding:8px 12px!important;border-right:0!important;border-bottom:1px solid #E6E4DF;position:sticky;top:0;z-index:5}
+ .gb .gb-nav button{padding:8px 12px!important;margin:0!important;font-size:13px!important}
+ .gb .gb-nav [data-gb="logout"],.gb .gb-nav [data-gb="start"]{margin-left:auto!important;padding:8px 4px!important}
+ .gb .gb-nav [data-gb="start"]~[data-gb="logout"]{margin-left:0!important}
+ .gb .gb-logo{padding:0 6px 0 0!important}.gb .gb-logo img{height:26px!important}.gb .gb-logo img+span+img{display:none}.gb .gb-logo span{display:none}
+ .gb .gb-main{padding:14px 12px 40px!important;gap:12px!important}
+ .gb .gb-h1{font-size:17px!important}
+ .gb .gb-months{flex-wrap:nowrap!important;overflow-x:auto;padding-bottom:2px}.gb .gb-months button{flex:0 0 auto;height:34px!important;font-size:13px!important}
+ .gb .gb-stat{gap:6px!important}.gb .gb-stat button{padding:8px 4px!important;align-items:center!important;text-align:center!important}
+ .gb .gb-stat button *{font-size:11px!important}.gb .gb-stat button b,.gb .gb-stat button strong{font-size:18px!important}
+ .gb .gb-table{display:none}.gb .gb-cards{display:flex;flex-direction:column;gap:10px}
+ .gb .gb-ov{padding:0!important}.gb .gb-dlg{border-radius:0!important;min-height:100vh;padding:14px 12px 18px!important;max-width:none!important}
+ .gb .gb-dlg>div:first-child{flex-direction:column!important}
+ .gb .gb-two{grid-template-columns:1fr!important}
+ .gb .gb-dlg button,.gb .gb-dlg select{min-height:40px}
+}
+</style>
+  <nav class="gb-nav" aria-label="메뉴" style="flex:1 1 220px;max-width:240px;background:#fff;border-right:1px solid #E6E4DF;padding:20px 14px;box-sizing:border-box;display:flex;flex-direction:column;gap:4px">
+    <div class="gb-logo" style="display:flex;align-items:center;gap:10px;padding:4px 8px 18px"><img src="/icons/partner-gongan.png" alt="공간제작소" style="height:40px"><span aria-hidden="true" style="color:#8A8A8A">×</span><img src="/icons/logo-full.png" alt="HOME TRADERS" style="height:36px"></div>
     <button type="button" data-gb="biz" data-v="homt" style="${navStyle(!isAce)}"><span>홈트레이더스</span><span>${isAce ? '' : G.list.length}</span></button>
     <button type="button" data-gb="biz" data-v="ace" style="${navStyle(isAce)}"><span>에이스</span><span>${isAce ? G.list.length : ''}</span></button>
     ${ctx.me() === 'space1234' ? '' : '<button type="button" data-gb="start" style="margin-top:auto;border:0;background:none;text-align:left;padding:14px 8px 4px;font:inherit;font-size:12px;color:#6B6B6B;cursor:pointer">‹ 처음 화면</button>'}
     <button type="button" data-gb="logout" style="${ctx.me() === 'space1234' ? 'margin-top:auto;' : ''}border:0;background:none;text-align:left;padding:10px 8px 4px;font:inherit;font-size:12px;color:#9A9A9A;cursor:pointer">로그아웃</button>
   </nav>
-  <main style="flex:999 1 560px;min-width:0;padding:28px 32px 48px;box-sizing:border-box;display:flex;flex-direction:column;gap:18px">
-    <h1 style="margin:0;font-size:22px">공간제작소 거래명세표 · 세금계산서 <span style="display:inline-block;vertical-align:middle;margin-left:8px;padding:3px 10px;border-radius:12px;font-size:13px;${isAce ? 'background:#E8EDF4;color:#1F3A5F' : 'background:#FDF0E6;color:#9A3412'}">${isAce ? '에이스' : '홈트레이더스'}</span></h1>
+  <main class="gb-main" style="flex:999 1 560px;min-width:0;padding:28px 32px 48px;box-sizing:border-box;display:flex;flex-direction:column;gap:18px">
+    <h1 class="gb-h1" style="margin:0;font-size:22px">공간제작소 거래명세표 · 세금계산서 <span style="display:inline-block;vertical-align:middle;margin-left:8px;padding:3px 10px;border-radius:12px;font-size:13px;${isAce ? 'background:#E8EDF4;color:#1F3A5F' : 'background:#FDF0E6;color:#9A3412'}">${isAce ? '에이스' : '홈트레이더스'}</span></h1>
     ${G.err ? `<div style="padding:12px 14px;border-radius:8px;background:#FDECEC;color:#7A1A12;font-size:13px">${esc(G.err)}</div>` : ''}
-    <div role="tablist" aria-label="월" style="display:flex;gap:6px;flex-wrap:wrap">
+    <div class="gb-months" role="tablist" aria-label="월" style="display:flex;gap:6px;flex-wrap:wrap">
       ${months.map((m) => `<button type="button" role="tab" data-gb="month" data-v="${m}" style="${tab(G.month === m)}">2026년 ${Number(m)}월 <span style="opacity:.7;margin-left:4px">${G.list.filter((d) => d.ymd.slice(4, 6) === m).length}</span></button>`).join('')}
       <button type="button" role="tab" data-gb="month" data-v="전체" style="${tab(G.month === '전체')}">전체보기 <span style="opacity:.7;margin-left:4px">${G.list.length}</span></button>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px">
+    <div class="gb-stat" style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px">
       ${STATUS.map((k) => `<button type="button" data-gb="status" data-v="${k}" style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:14px 16px;border-radius:12px;font:inherit;text-align:left;cursor:pointer;background:#fff;${G.status === k ? 'border:2px solid #E8732C' : 'border:1px solid #E6E4DF'}"><span style="font-size:13px;color:#5C5C5C">${k === '전체' ? '전체보기' : k}</span><b style="font-size:26px">${cnt(k)}<span style="font-size:14px;font-weight:500;margin-left:3px">건</span></b></button>`).join('')}
     </div>
     <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
       <span style="position:relative;display:inline-flex"><select data-gb="site" aria-label="현장" style="height:38px;border:1px solid #E6E4DF;border-radius:8px;padding:0 40px 0 14px;font:inherit;font-size:13px;background:#fff;appearance:none;-webkit-appearance:none;cursor:pointer"><option value="">전체 현장</option>${sites.map((x) => `<option ${G.site === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>${CHEV}</span>
       <input data-gb="q" aria-label="검색" value="${esc(G.q)}" placeholder="현장, 전표번호, 품목으로 검색…" style="flex:1 1 260px;height:38px;border:1px solid #E6E4DF;border-radius:8px;padding:0 12px;font:inherit;font-size:13px;background:#fff">
     </div>
-    <div style="background:#fff;border:1px solid #E6E4DF;border-radius:12px;overflow-x:auto">
+    <div class="gb-cards">${rows.map(cardHtml).join('') || `<div style="padding:40px;text-align:center;color:#6B6B6B">${G.loading ? '불러오는 중…' : '없어요'}</div>`}</div>
+    <div class="gb-table" style="background:#fff;border:1px solid #E6E4DF;border-radius:12px;overflow-x:auto">
       <table style="width:100%;min-width:1000px;border-collapse:collapse;font-size:13px">
         <thead><tr style="background:#FAFAF8;color:#5C5C5C;text-align:left">
           <th style="padding:12px 8px 12px 16px;font-weight:600">출고일</th><th style="padding:12px 8px;font-weight:600">현장</th><th style="padding:12px 8px;font-weight:600">품목명</th>
@@ -182,6 +202,18 @@ const addBtn = (act, id) => `<button type="button" data-gb="${act}" data-id="${e
 const okTag = '<span style="display:inline-block;padding:6px 10px;border-radius:6px;background:#EEF6EE;color:#1E6B34;font-size:12px;font-weight:600;white-space:nowrap">첨부됨</span>';
 // 입금 확인 (10/25 대표 — 통장 입금 금액·날짜를 명세표 합계와 맞춘 것) — 상태 아래 검정 라벨 체크 + 입금일
 const paidTag = (ymd) => `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px 3px 4px;border-radius:10px;background:#1F2328;color:#fff;font-size:11px;font-weight:700;white-space:nowrap"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7.5" fill="#fff"></circle><path d="M4.6 8.3l2.2 2.2 4.6-4.8" fill="none" stroke="#1F2328" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>${md(String(ymd).replace(/-/g, ''))} 입금</span>`;
+// 휴대폰 목록 카드 (10/26 대표 "모바일에서 직관적으로") — 누르면 상세
+function cardHtml(d) {
+  const st = statusOf(d), x = G.docs[d.id] || {};
+  const chip = (on, t) => `<span style="font-size:11px;padding:3px 8px;border-radius:10px;${on ? 'background:#EEF6EE;color:#1E6B34' : 'background:#F3F4F6;color:#8A8A8A'}">${on ? '✓ ' : ''}${t}</span>`;
+  return `<div data-gb="row" data-id="${esc(d.id)}" style="background:#fff;border:1px solid #E6E4DF;border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;cursor:pointer">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span style="font-size:12px;color:#6B6B6B"><b style="color:#1F2328;font-size:14px">${md(d.ymd)}</b> ${esc(d.site || '')}</span>${statusPick(d.id, st)}</div>
+    <div style="font-weight:600;font-size:14px;line-height:1.4">${esc(itemTitle(d))}</div>
+    ${st === '수정요청' && x.reason ? `<div style="font-size:12px;color:#B42318"><b>수정요청</b> ${esc(x.reason)}</div>` : ''}
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><span style="display:flex;gap:4px;flex-wrap:wrap">${chip(true, '명세표')}${chip(!!x.tax_name, '계산서')}${x.paid ? paidTag(x.paid) : ''}</span><b style="font-size:15px;font-variant-numeric:tabular-nums">${won(d.total)}원</b></div>
+    ${d.no ? `<div style="font-size:11px;color:#9A9A9A">${esc(d.no)}</div>` : ''}
+  </div>`;
+}
 function rowHtml(d) {
   const st = statusOf(d), x = G.docs[d.id] || {};
   return `<tr data-gb="row" data-id="${esc(d.id)}" style="cursor:pointer;border-top:1px solid #EFEDE8;${x.tax_name ? '' : 'background:#FFFCF8'}">
@@ -228,8 +260,8 @@ function modalHtml(d) {
   ensureImg(d); ensureFull(d.id);
   const st = statusOf(d), x = G.docs[d.id] || {};
   const zoomSrc = G.zoom === 'stmt' ? ((G.full[d.id] || {}).stmt_data || G.img[d.id]) : G.zoom === 'tax' ? viewSrc(d, 'tax') : '';
-  return `<div data-gb="overlay" style="position:fixed;inset:0;background:rgba(17,20,24,.45);display:flex;align-items:flex-start;justify-content:center;padding:20px 16px;box-sizing:border-box;overflow-y:auto;z-index:50">
-    <div role="dialog" aria-modal="true" aria-label="거래명세표 · 세금계산서" style="width:100%;max-width:1360px;background:#fff;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.25);padding:20px 22px 22px;box-sizing:border-box;display:flex;flex-direction:column;gap:16px">
+  return `<div class="gb-ov" data-gb="overlay" style="position:fixed;inset:0;background:rgba(17,20,24,.45);display:flex;align-items:flex-start;justify-content:center;padding:20px 16px;box-sizing:border-box;overflow-y:auto;z-index:50">
+    <div class="gb-dlg" role="dialog" aria-modal="true" aria-label="거래명세표 · 세금계산서" style="width:100%;max-width:1360px;background:#fff;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.25);padding:20px 22px 22px;box-sizing:border-box;display:flex;flex-direction:column;gap:16px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
         <div style="display:flex;flex-direction:column;gap:6px"><b style="font-size:17px">${md(d.ymd)} · ${esc(d.site || '')} <button type="button" data-gb="editsite" aria-label="현장명 고치기" style="border:0;background:none;padding:2px;cursor:pointer;display:inline-flex;vertical-align:middle">${PEN}</button> · ${esc(itemTitle(d))} <button type="button" data-gb="edittitle" aria-label="제목 고치기" style="border:0;background:none;padding:2px;cursor:pointer;display:inline-flex;vertical-align:middle">${PEN}</button></b>
           <span style="display:flex;align-items:center;gap:8px;font-size:13px;color:#5C5C5C">합계 ${won(d.total)}원 <button type="button" data-gb="edittotal" aria-label="합계 고치기" style="border:0;background:none;padding:2px;cursor:pointer;display:inline-flex;vertical-align:middle">${PEN}</button> ${statusPick(d.id, st)}${x.paid ? paidTag(x.paid) : ''}${x.delivered ? `<span style="font-size:12px;font-weight:700;color:#1E6B34">✓ ${esc(x.delivered)} 전달완료</span>` : ''}</span></div>
@@ -238,7 +270,7 @@ function modalHtml(d) {
           <button type="button" data-gb="close" aria-label="닫기" style="width:40px;height:40px;border:1px solid #E6E4DF;border-radius:20px;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">${X}</button>
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px">${docBox('stmt', d)}${docBox('tax', d)}</div>
+      <div class="gb-two" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px">${docBox('stmt', d)}${docBox('tax', d)}</div>
       ${st === '수정요청' && x.reason ? `<div style="padding:12px 14px;border-radius:8px;background:#FDECEC;border:1px solid #F5C2C0;color:#7A1A12;font-size:13px;line-height:1.5"><b>수정요청</b><br>${esc(x.reason)}</div>` : ''}
       <div style="margin:4px -22px -22px;padding:18px 22px 22px;background:#F3F4F6;border-radius:0 0 14px 14px;display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px">
         <label style="flex:1 1 480px;display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#3F3F46">수정요청 사유
