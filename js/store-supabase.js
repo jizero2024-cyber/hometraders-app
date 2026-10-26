@@ -274,13 +274,33 @@ export async function markFareSent(id, by) {   // 실패하면 글자, 되면 nu
   return error ? error.message : null;
 }
 export async function getInboxCounts() {
-  const { data, error } = await sb.from('site_inbox').select('status').in('status', ['wait', 'got', 'check']);
+  const { data, error } = await sb.from('site_inbox').select('status').neq('kind', 'read').in('status', ['wait', 'got', 'check']);   // 'read' = 사진 읽기 부탁 (자료 아님)
   if (error) throw noTable(error, '자료');
   return (data || []).reduce((a, r) => { a[r.status] = (a[r.status] || 0) + 1; return a; }, {});
 }
 export async function addSongjang(row) {   // 전자 송장 한 장 (10/26) — 실패하면 글자, 되면 null
   const { error } = await sb.from('e_songjang').insert(row);
   return error ? error.message : null;
+}
+// 사무실 맥 도우미에 바로 못 닿을 때(다른 컴퓨터·폰·사파리) — site_inbox 에 'read' 로 올리면 맥 도우미가 읽고 note 에 결과 (10/27 대표)
+export async function relayHelper(path, body, by) {
+  const id = 'read_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  const { error } = await sb.from('site_inbox').insert({ id, kind: 'read', name: (body && body.name) || path, status: 'wait', body: JSON.stringify({ path, body }), created_by: by || null });
+  if (error) throw new Error(error.message);
+  const t0 = Date.now();
+  try {
+    while (Date.now() - t0 < 240000) {
+      await new Promise((ok) => setTimeout(ok, 1500));
+      const { data } = await sb.from('site_inbox').select('status,note').eq('id', id).maybeSingle();
+      if (data && (data.status === 'done' || data.status === 'check')) {
+        let j; try { j = JSON.parse(data.note || '{}'); } catch (_) { j = { ok: false, error: '결과를 읽지 못했어요' }; }
+        if (!j.ok) throw new Error(j.error || '읽지 못했어요');
+        return j;
+      }
+      if (data && data.status === 'wait' && Date.now() - t0 > 30000) throw new Error('사무실 맥이 꺼져 있거나 도우미가 안 돌아요');
+    }
+    throw new Error('사무실 맥이 너무 오래 걸려요');
+  } finally { sb.from('site_inbox').delete().eq('id', id).then(() => {}); }
 }
 export async function addInbox(row) {   // 실패하면 글자, 되면 null
   const { error } = await sb.from('site_inbox').insert(row);

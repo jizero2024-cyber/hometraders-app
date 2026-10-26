@@ -8,7 +8,7 @@
 //   화면 모양은 모두 같음 — 머리(‹ · 로고 · 이름) · 제목 · 불러오기 칸 · 결과 칸, 파일은 끌어다 놓기도 됨
 import * as SM from './stmt.js';
 import * as DL from './delivery.js';
-import * as S from './store-supabase.js';
+import * as S from './store-supabase.js?v=2';
 
 export const ROUTES = ['stmt-gong', 'stmt-etc', 'stmt-ace', 'deliv', 'approval', 'quote', 'deposit', 'esong'];
 const ST = { 'stmt-gong': ['공간제작소 거래명세표', 'homt'], 'stmt-etc': ['그 외 명세표', 'homt'], 'stmt-ace': ['에이스 거래명세표', 'ace'] };
@@ -33,7 +33,7 @@ function page(back, title, body, right) {
   if (inPop) return body;
   return `<div class="hm fm">${top(back, right)}<main class="hm-main"><h1 class="hm-h1">${title}</h1>${body}</main></div>`;
 }
-const noHelper = () => (ctx.helperUp() ? '' : '<div class="fm-warn">사무실 맥 도우미가 꺼져 있어요</div>');
+const noHelper = () => '';   // 다른 컴퓨터에서도 사무실 맥이 대신 읽음 (10/27)
 function inputCard(f, accept, extra, ph) {
   return `<section class="fm-in" id="fm-drop">
     <textarea id="fm-text" class="fm-ta" rows="2" placeholder="${ph || '출고 번호 · 전표 번호 · 전표 링크 (예: 공간제작소-261020-01)'}">${esc(f.text)}</textarea>

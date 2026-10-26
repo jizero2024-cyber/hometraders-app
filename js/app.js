@@ -1,14 +1,14 @@
 import {
   CATEGORIES, UNITS, WH_ICON_KEYS, swatchFor, SILICONE_COLORS,
 } from './data.js?v=2';
-import * as S from './store-supabase.js';
+import * as S from './store-supabase.js?v=2';
 import { ECOUNT_ITEMS } from './ecount-items.js';
 import { makeMatcher, readPastedText, quotePrev } from './textread.js';
 import * as DL from './delivery.js';
 import * as SM from './stmt.js';
-import * as HD from './hdisp.js';
-import * as HM from './home.js?v=3';
-import * as FM from './forms.js?v=3';
+import * as HD from './hdisp.js?v=2';
+import * as HM from './home.js?v=4';
+import * as FM from './forms.js?v=4';
 
 // 창고 아이콘 세트 (무채색)
 const WH_ICONS = {
@@ -2808,6 +2808,10 @@ async function helperFetch(path, body) {
   const j = await r.json().catch(() => ({ ok: false, error: '도우미 응답을 읽지 못했어요.' }));
   if (!j.ok) throw new Error(j.error || '도우미 오류');
   return j;
+}
+async function helperPing() {   // 첫 확인 전이면 직접 물어봄 (2초)
+  try { const c = new AbortController(); const t = setTimeout(() => c.abort(), 2000); const r = await fetch(HELPER + '/api/health', { signal: c.signal }); clearTimeout(t); const j = await r.json(); helperState = { checked: true, up: true, info: j, at: Date.now() }; } catch (_) { helperState = { checked: true, up: false, info: null, at: Date.now() }; }
+  return helperState.up;
 }
 function helperCheck() {
   helperState.at = Date.now();  // 재확인 주기 기준 — 재조회 전에 찍어 무한 렌더 루프 방지
@@ -5681,11 +5685,15 @@ FM.bind(app, {
   route: () => state.route,
   go: (r) => { state.route = r; state.sheet = null; render(); },
   me: () => myName(),
-  helper: (path, body) => helperFetch(path, body),
+  helper: async (path, body) => {   // 이 맥 도우미에 바로 닿으면 바로, 아니면 사무실 맥이 공유 DB 로 대신 (10/27)
+    if (helperState.up || await helperPing()) return helperFetch(path, body);
+    return S.relayHelper(path, body, myName());
+  },
   helperFile: (p) => `${HELPER}/api/file?path=${encodeURIComponent(p)}`,
   helperUp: () => { if (!helperState.checked || Date.now() - helperState.at > 60000) helperCheck(); return helperState.up; },
   slips: slipsFor,
-  helperReady: async () => {   // 첫 확인이 끝나기 전에 붙여넣으면 '꺼져 있다'로 나오던 것 (10/27) — 직접 물어보고 기다림
+  helperReady: async () => true,   // 바로 못 닿아도 사무실 맥이 대신 읽음
+  helperReady_old: async () => {   // 첫 확인이 끝나기 전에 붙여넣으면 '꺼져 있다'로 나오던 것 (10/27) — 직접 물어보고 기다림
     if (helperState.up) return true;
     try { const j = await helperFetch('/api/health'); helperState = { checked: true, up: true, info: j, at: Date.now() }; } catch (_) { helperState = { checked: true, up: false, info: null, at: Date.now() }; }
     return helperState.up;
