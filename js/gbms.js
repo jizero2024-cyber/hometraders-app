@@ -249,8 +249,12 @@ function docBox(kind, d) {
   const P = G.pending && G.pending.id === d.id && G.pending.kind === kind ? G.pending : null;
   if (P) {
     const isPdf = P.data.startsWith('data:application/pdf');
+    if (isPdf && !P.img && !P.drawing) {   // PDF 도 첫 쪽을 그림으로 미리보기 (10/27 대표 "PDF 넣었을 때 왜 이렇게 떠")
+      P.drawing = true;
+      pdfCanvas(P.data).then((c) => { P.img = c.toDataURL('image/jpeg', 0.9); ctx.rerender(); }).catch(() => { P.img = ''; P.drawing = false; });
+    }
     return `<figure data-gb="panel" data-k="${kind}" style="margin:0;display:flex;flex-direction:column;gap:8px;outline:2px solid #1D4F91;outline-offset:6px;border-radius:6px">${kind === 'tax' ? '<div style="min-height:32px"></div>' : ''}<figcaption style="display:flex;justify-content:space-between;align-items:center"><b>${label}</b><span style="font-size:12px;color:#6B6B6B">${esc(P.name)}</span></figcaption>
-      <div style="aspect-ratio:1588/1400;border:1px solid #D9D9D9;border-radius:6px;overflow:hidden;background:#F7F7F5;display:flex;align-items:center;justify-content:center">${isPdf ? `<b style="color:#3F3F46">PDF · ${esc(P.name)}</b>` : `<img src="${P.data}" alt="" style="width:100%;height:100%;object-fit:contain">`}</div>
+      <div style="aspect-ratio:1588/1400;border:1px solid #D9D9D9;border-radius:6px;overflow:hidden;background:#F7F7F5;display:flex;align-items:center;justify-content:center">${isPdf ? (P.img ? `<img src="${P.img}" alt="" style="width:100%;height:100%;object-fit:contain;background:#fff">` : `<span style="color:#6B6B6B;font-size:13px">불러오는 중…</span>`) : `<img src="${P.data}" alt="" style="width:100%;height:100%;object-fit:contain">`}</div>
       <div style="display:flex;align-items:center;gap:8px;justify-content:flex-end;flex-wrap:wrap">${kind === 'stmt' ? `<label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#5C5C5C;margin-right:auto">합계금액 <input data-gb="pend-total" inputmode="numeric" value="${esc(P.total ? Number(P.total).toLocaleString() : '')}" style="height:34px;width:150px;border:1px solid #D0D0D0;border-radius:6px;padding:0 10px;font:inherit;font-size:14px;text-align:right"> 원</label>` : ''}
         <button type="button" data-gb="pend-cancel" style="height:36px;padding:0 16px;border:1px solid #D5D8DD;border-radius:8px;background:#fff;font:inherit;font-size:14px;cursor:pointer">취소</button>
         <button type="button" data-gb="pend-save" style="height:36px;padding:0 20px;border:0;border-radius:8px;background:#1F2328;color:#fff;font:inherit;font-size:14px;font-weight:700;cursor:pointer">저장</button></div></figure>`;
