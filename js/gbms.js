@@ -255,7 +255,7 @@ function docBox(kind, d) {
         <button type="button" data-gb="pend-save" style="height:36px;padding:0 20px;border:0;border-radius:8px;background:#1F2328;color:#fff;font:inherit;font-size:14px;font-weight:700;cursor:pointer">저장</button></div></figure>`;
   }
   if (!src && kind === 'stmt') return `<figure data-gb="panel" data-k="${kind}" style="margin:0;display:flex;flex-direction:column;gap:8px;${G.panel === kind ? 'outline:2px solid #1D4F91;outline-offset:6px;border-radius:6px' : ''}">${cap}<div style="aspect-ratio:1588/1400;border:1px solid #D9D9D9;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#6B6B6B;font-size:13px">불러오는 중…</div></figure>`;
-  if (!src) return `<figure data-gb="panel" data-k="${kind}" style="margin:0;display:flex;flex-direction:column;gap:8px;${G.panel === kind ? 'outline:2px solid #1D4F91;outline-offset:6px;border-radius:6px' : ''}">${cap}<button type="button" data-gb="replace" data-k="tax" data-gb-drop="tax" style="aspect-ratio:1588/1400;border:2px dashed #B8B8B8;border-radius:8px;background:#F4F4F4;color:#4B4B4B;font:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer"><span style="font-size:32px">+</span><b>세금계산서 넣기</b><span style="font-size:12px;color:#8A8A8A">끌어다 놓기 · Cmd+V</span></button></figure>`;
+  if (!src) return `<figure data-gb="panel" data-k="${kind}" style="margin:0;display:flex;flex-direction:column;gap:8px;${G.panel === kind ? 'outline:2px solid #1D4F91;outline-offset:6px;border-radius:6px' : ''}">${cap}<div data-gb="panel" data-k="tax" data-gb-drop="tax" tabindex="0" style="aspect-ratio:1588/1400;border:2px dashed ${G.panel === 'tax' ? '#1D4F91' : '#B8B8B8'};border-radius:8px;background:${G.panel === 'tax' ? '#EEF3FB' : '#F4F4F4'};color:#4B4B4B;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;cursor:pointer;outline:none"><b>세금계산서 넣기</b><span style="font-size:13px;color:#6B6B6B">누르고 Ctrl+V (⌘V) · 끌어다 놓기</span><button type="button" data-gb="replace" data-k="tax" style="height:36px;padding:0 16px;border:1px solid #B8B8B8;border-radius:8px;background:#fff;font:inherit;font-size:13px;cursor:pointer">파일 고르기</button></div></figure>`;   // 빈 칸을 누르면 파일 창 대신 이 칸이 골라짐 → 바로 Ctrl+V (10/27 대표 "세금계산서를 클릭하고 복붙하면 되게")
   const pdf = src.startsWith('data:application/pdf');
   const staff = true;   // 10/26 대표: 공간제작소 계정도 지우기 됨 (계정 나누면 다시 막을 수 있게 남겨 둠)
   const canDelStmt = staff && !!f.stmt_data;   // 바꿔 넣은 명세표 그림만 지움 — 목록 줄은 지우지 않음 (10/27 대표 "문서 삭제할 때 목록까지 삭제되면 안 돼")
@@ -574,7 +574,7 @@ export function bind(app, c) {
     }
     else if (a === 'deltax' && cur) { if (confirm('삭제하시겠습니까?')) save(cur.id, { tax_data: null, tax_name: null, tax_no: null, status: null, drafted_at: null }); }   // 지우면 결재전으로
     else if (a === 'reject' && cur) { save(cur.id, { status: '수정요청', reason: G.reason.trim() || '수정요청' }); G.open = null; G.reason = ''; }
-    else if (a === 'zoom') { G.zoom = t.dataset.k; ctx.rerender(); }
+    else if (a === 'zoom') { if (G.panel !== t.dataset.k) { G.panel = t.dataset.k; ctx.rerender(); } else if (e.detail >= 2 || G.panelAt && Date.now() - G.panelAt < 400) { G.zoom = t.dataset.k; ctx.rerender(); } G.panelAt = Date.now(); }   // 한 번 = 칸 고르기(Ctrl+V 대상), 두 번 = 크게 보기 (10/27)
     else if (a === 'unzoom') { G.zoom = ''; ctx.rerender(); }
     else if (a === 'jpg' && cur) saveJpg(cur, t.dataset.k);
     else if (a === 'copy' && cur) copyImg(cur, t.dataset.k);
