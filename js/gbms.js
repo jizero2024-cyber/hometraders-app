@@ -246,7 +246,7 @@ function docBox(kind, d) {
   const cap = `${noRow}<figcaption style="display:flex;justify-content:space-between;align-items:center"><b>${label}</b><span style="display:flex;gap:6px">${[['copy', '복사'], ['pdf', 'PDF 저장']].map(([a, t]) => `<button type="button" data-gb="${a}" data-k="${kind}" ${src ? '' : 'disabled'} style="height:30px;padding:0 10px;border:1px solid #E6E4DF;border-radius:6px;background:#fff;font:inherit;font-size:12px;cursor:pointer">${t}</button>`).join('')}</span></figcaption>`;
   const pen = `<button type="button" data-gb="replace" data-k="${kind}" aria-label="${label} 바꾸기" style="position:absolute;bottom:8px;right:8px;width:30px;height:30px;border-radius:15px;border:1px solid #D5D8DD;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">${PEN}</button>`;
   // 올린 사진 미리보기는 빈 칸·원래 그림보다 먼저 (10/27 — 세금계산서가 없는 장에서 붙여넣기가 안 보이던 것)
-  const P = G.pending && G.pending.id === d.id && G.pending.kind === kind ? G.pending : null;
+  const P = G.pend && G.pend.id === d.id ? G.pend[kind] : null;
   if (P) {
     const isPdf = P.data.startsWith('data:application/pdf');
     if (isPdf && !P.img && !P.drawing) {   // PDF 도 첫 쪽을 그림으로 미리보기 (10/27 대표 "PDF 넣었을 때 왜 이렇게 떠")
@@ -256,8 +256,7 @@ function docBox(kind, d) {
     return `<figure data-gb="panel" data-k="${kind}" style="margin:0;display:flex;flex-direction:column;gap:8px;outline:2px solid #1D4F91;outline-offset:6px;border-radius:6px">${kind === 'tax' ? '<div style="min-height:32px"></div>' : ''}<figcaption style="display:flex;justify-content:space-between;align-items:center"><b>${label}</b><span style="font-size:12px;color:#6B6B6B">${esc(P.name)}</span></figcaption>
       <div style="aspect-ratio:1588/1400;border:1px solid #D9D9D9;border-radius:6px;overflow:hidden;background:#F7F7F5;display:flex;align-items:center;justify-content:center">${isPdf ? (P.img ? `<img src="${P.img}" alt="" style="width:100%;height:100%;object-fit:contain;background:#fff">` : `<span style="color:#6B6B6B;font-size:13px">불러오는 중…</span>`) : `<img src="${P.data}" alt="" style="width:100%;height:100%;object-fit:contain">`}</div>
       <div style="display:flex;align-items:center;gap:8px;justify-content:flex-end;flex-wrap:wrap">${kind === 'stmt' ? `<label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#5C5C5C;margin-right:auto">합계금액 <input data-gb="pend-total" inputmode="numeric" value="${esc(P.total ? Number(P.total).toLocaleString() : '')}" style="height:34px;width:150px;border:1px solid #D0D0D0;border-radius:6px;padding:0 10px;font:inherit;font-size:14px;text-align:right"> 원</label>` : ''}
-        <button type="button" data-gb="pend-cancel" style="height:36px;padding:0 16px;border:1px solid #D5D8DD;border-radius:8px;background:#fff;font:inherit;font-size:14px;cursor:pointer">취소</button>
-        <button type="button" data-gb="pend-save" style="height:36px;padding:0 20px;border:0;border-radius:8px;background:#1F2328;color:#fff;font:inherit;font-size:14px;font-weight:700;cursor:pointer">저장</button></div></figure>`;
+        <button type="button" data-gb="pend-cancel" data-k="${kind}" style="height:36px;padding:0 16px;border:1px solid #D5D8DD;border-radius:8px;background:#fff;font:inherit;font-size:14px;cursor:pointer">빼기</button></div></figure>`;
   }
   if (hid) return `<figure data-gb="panel" data-k="stmt" style="margin:0;display:flex;flex-direction:column;gap:8px">${cap}<div data-gb="panel" data-k="stmt" tabindex="0" style="aspect-ratio:1588/1400;border:2px dashed ${G.panel === 'stmt' ? '#1D4F91' : '#B8B8B8'};border-radius:8px;background:${G.panel === 'stmt' ? '#EEF3FB' : '#F4F4F4'};color:#4B4B4B;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;cursor:pointer;outline:none"><b>거래명세표 넣기</b><span style="font-size:13px;color:#6B6B6B">누르고 Ctrl+V (⌘V)</span><span style="display:flex;gap:8px"><button type="button" data-gb="replace" data-k="stmt" style="height:36px;padding:0 16px;border:1px solid #B8B8B8;border-radius:8px;background:#fff;font:inherit;font-size:13px;cursor:pointer">파일 고르기</button></span></div></figure>`;
   if (!src && kind === 'stmt') return `<figure data-gb="panel" data-k="${kind}" style="margin:0;display:flex;flex-direction:column;gap:8px;${G.panel === kind ? 'outline:2px solid #1D4F91;outline-offset:6px;border-radius:6px' : ''}">${cap}<div style="aspect-ratio:1588/1400;border:1px solid #D9D9D9;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#6B6B6B;font-size:13px">불러오는 중…</div></figure>`;
@@ -278,6 +277,7 @@ function modalHtml(d) {
         <div style="display:flex;flex-direction:column;gap:6px"><b style="font-size:17px">${md(d.ymd)} · ${esc(d.site || '')} <button type="button" data-gb="editsite" aria-label="현장명 고치기" style="border:0;background:none;padding:2px;cursor:pointer;display:inline-flex;vertical-align:middle">${PEN}</button> · ${esc(itemTitle(d))} <button type="button" data-gb="edittitle" aria-label="제목 고치기" style="border:0;background:none;padding:2px;cursor:pointer;display:inline-flex;vertical-align:middle">${PEN}</button></b>
           <span style="display:flex;align-items:center;gap:8px;font-size:13px;color:#5C5C5C">합계 ${won(d.total)}원 <button type="button" data-gb="edittotal" aria-label="합계 고치기" style="border:0;background:none;padding:2px;cursor:pointer;display:inline-flex;vertical-align:middle">${PEN}</button> ${statusPick(d.id, st)}${x.paid ? paidTag(x.paid) : ''}${x.delivered ? `<span style="font-size:12px;font-weight:700;color:#1E6B34">✓ ${esc(x.delivered)} 전달완료</span>` : ''}</span></div>
         <div style="display:flex;gap:8px;align-items:center">
+          ${hasPend() ? `<button type="button" data-gb="pend-save" style="height:40px;padding:0 22px;border:0;border-radius:8px;background:#1F2328;color:#fff;font:inherit;font-size:15px;font-weight:800;cursor:pointer">저장</button>` : ''}
           <button type="button" data-gb="both" style="height:40px;padding:0 16px;border:1px solid #1F2328;border-radius:8px;background:#fff;color:#1F2328;font:inherit;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">${DOWN}2장 한 번에 다운로드</button>
           <button type="button" data-gb="close" aria-label="닫기" style="width:40px;height:40px;border:1px solid #E6E4DF;border-radius:20px;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">${X}</button>
         </div>
@@ -414,25 +414,35 @@ async function attach(id, kind, file) {   // 올린 사진은 바로 저장하�
   if (!file) return;
   try {
     const cur = G.list.find((d) => d.id === id);
-    G.pending = { id, kind, name: file.name || '', data: await toStored(file), total: cur ? Math.round(cur.total) : '' };
+    const one = { name: file.name || '', data: await toStored(file), total: cur ? Math.round(cur.total) : '' };
+    G.pend = { ...(G.pend && G.pend.id === id ? G.pend : { id }), [kind]: one };   // 두 장(명세표·세금계산서)을 올려도 저장은 위 [저장] 하나로 (10/27 대표)
     G.panel = kind; ctx.rerender();
   } catch (e) { alert(e.message || e); }
 }
-async function commitPending() {
-  const p = G.pending; if (!p) return;
-  const { id, kind, data } = p, file = { name: p.name };
-  G.pending = null; G.panel = 'tax';   // 명세표를 바꾼 뒤 Ctrl+V 는 세금계산서로 (10/27 대표 — 복붙이 다시 명세표로 가던 것)
+const hasPend = () => !!(G.pend && (G.pend.stmt || G.pend.tax));
+async function commitPending() {   // 올린 명세표·세금계산서를 한 번에 저장
+  const p = G.pend; if (!p) return;
+  G.pend = null; G.panel = 'tax';   // 저장 뒤 Ctrl+V 는 세금계산서로 (10/27 — 복붙이 다시 명세표로 가던 것)
+  const id = p.id;
   try {
-    const prev = G.docs[id] || {};
-    if (kind === 'tax') { await save(id, { tax_data: data, tax_name: file.name || '세금계산서', tax_no: null, status: prev.status === '수정요청' ? null : prev.status || null }); findTaxNo(id, data); }
-    else {
-      const cur = G.list.find((d) => d.id === id);
-      const n = Number(String(p.total || '').replace(/[^\d]/g, ''));
+    if (p.tax) {
+      const prev = G.docs[id] || {};
+      await save(id, { tax_data: p.tax.data, tax_name: p.tax.name || '세금계산서', tax_no: null, status: prev.status === '수정요청' ? null : prev.status || null }); findTaxNo(id, p.tax.data);
+    }
+    if (p.stmt) {
+      const prev = G.docs[id] || {}, cur = G.list.find((d) => d.id === id);
+      const n = Number(String(p.stmt.total || '').replace(/[^\d]/g, ''));
       if (n && cur) cur.total = n;
       const m2 = { ...(prev.manual || {}) }; delete m2.stmtDel; if (n) m2.total = n;
-      save(id, { stmt_data: data, manual: Object.keys(m2).length ? m2 : null });   // 직접 등록한 장은 품목은 그대로, 합계만
+      await save(id, { stmt_data: p.stmt.data, manual: Object.keys(m2).length ? m2 : null });   // 직접 등록한 장은 품목은 그대로, 합계만
     }
   } catch (e) { alert(e.message || e); }
+}
+// 저장 안 한 사진이 있으면 창을 닫거나 다른 장으로 갈 때 물어봄 (10/27 대표 "창 닫거나 이럴 때 팝업도 뜨게")
+async function leavePend() {
+  if (!hasPend()) return;
+  if (confirm('올린 사진을 아직 저장하지 않았어요.\n[확인] 저장하고 닫기 · [취소] 저장하지 않고 닫기')) await commitPending();
+  else G.pend = null;
 }
 async function canvasOf(src) {
   const im = await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => no(new Error('그림을 읽지 못했어요')); i.src = src; });
@@ -533,15 +543,15 @@ const pickFile = (id, kind) => { fileTarget = { id, kind }; const f = document.g
 export function setBiz(biz) { if (G.biz !== biz) { G.biz = biz; G.loaded = ''; G.page = 1; G.pick.clear(); G.open = null; G.month = '전체'; G.status = '전체'; G.site = ''; } }
 export function bind(app, c) {
   ctx = c;
-  app.addEventListener('click', (e) => {
+  app.addEventListener('click', async (e) => {
     const t = e.target.closest('[data-gb]'); if (!t || !app.querySelector('.gb')) return;
     const a = t.dataset.gb, id = t.dataset.id, cur = G.open && G.list.find((d) => d.id === G.open);
     if (a === 'row') { if (e.target.closest('button, input, a, label, select')) return; G.open = id; G.reason = ''; G.zoom = ''; G.panel = 'tax'; ctx.rerender(); }
     else if (a === 'pend-save') commitPending();
-    else if (a === 'pend-cancel') { G.pending = null; G.panel = 'tax'; ctx.rerender(); }
+    else if (a === 'pend-cancel' && G.pend) { G.pend[t.dataset.k] = null; if (!hasPend()) G.pend = null; ctx.rerender(); }
     else if (a === 'panel') { if (G.panel !== t.dataset.k) { G.panel = t.dataset.k; ctx.rerender(); } }   // 누른 칸 = Ctrl+C·V 대상 (10/26)
-    else if (a === 'overlay') { if (e.target === t) { G.open = null; G.pending = null; ctx.rerender(); } }
-    else if (a === 'close') { G.open = null; G.zoom = ''; G.editNo = false; G.pending = null; ctx.rerender(); }
+    else if (a === 'overlay') { if (e.target === t) { await leavePend(); G.open = null; ctx.rerender(); } }
+    else if (a === 'close') { await leavePend(); G.open = null; G.zoom = ''; G.editNo = false; ctx.rerender(); }
     else if (a === 'biz') { setBiz(t.dataset.v); ctx.go(t.dataset.v === 'ace' ? 'gonggan-ace' : 'gonggan'); }
     else if (a === 'start') ctx.goStart();
     else if (a === 'logout') ctx.logout();
@@ -604,7 +614,7 @@ export function bind(app, c) {
   app.addEventListener('input', (e) => {
     const t = e.target; if (!app.querySelector('.gb')) return;
     if (t.dataset.gb === 'reason') G.reason = t.value.slice(0, 300);
-    else if (t.dataset.gb === 'pend-total' && G.pending) G.pending.total = t.value.replace(/[^\d]/g, '');   // 다시 그리지 않음 (입력 중 커서 유지)
+    else if (t.dataset.gb === 'pend-total' && G.pend && G.pend.stmt) G.pend.stmt.total = t.value.replace(/[^\d]/g, '');   // 다시 그리지 않음 (입력 중 커서 유지)
     else if (t.dataset.gb === 'reg-text' && G.reg) G.reg.text = t.value;
     else if (t.dataset.gb === 'reg-f' && G.reg) G.reg[t.dataset.k] = t.value;
     else if (t.dataset.gb === 'reg-r' && G.reg) {   // 금액·합계만 바로 (칸을 다시 그리면 입력 중인 글자가 끊김)
@@ -631,6 +641,7 @@ export function bind(app, c) {
     const f = [...(cd.files || [])][0] || ([...(cd.items || [])].find((i) => i.kind === 'file') || { getAsFile: () => null }).getAsFile(); if (!f) return;
     e.preventDefault(); attach(G.open, G.panel === 'stmt' && ctx.me() !== 'space1234' ? 'stmt' : 'tax', f);
   });
+  window.addEventListener('beforeunload', (e) => { if (hasPend()) { e.preventDefault(); e.returnValue = ''; } });   // 저장 안 한 사진이 있으면 브라우저 창을 닫을 때도 물어봄
   window.addEventListener('keydown', (e) => {    // 누른 칸에서 Ctrl+C(⌘C) = 그 그림 복사 (10/26)
     if (!G.open || !G.panel || !(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== 'c' || !app.querySelector('.gb')) return;
     if (/INPUT|TEXTAREA|SELECT/.test((document.activeElement || {}).tagName || '') || String(window.getSelection() || '')) return;
