@@ -411,6 +411,17 @@ export function bind(app, c) {
     else if (text.trim()) F[r].text = [F[r].text, text].filter(Boolean).join('\n');
     ctx.rerender();
   });
+  document.addEventListener('paste', (e) => {   // Cmd+V 로 사진·파일 넣기 (10/27 대표 "/stmt 복붙 안돼") — 글자는 칸에 그대로, 칸 밖이면 번호 칸에 이어 붙임
+    const r = cur(); if (!r || !app.querySelector('#fm-drop')) return;
+    const stamp = Date.now().toString(36);
+    const files = [...((e.clipboardData && e.clipboardData.items) || [])].filter((it) => it.kind === 'file').map((it, i) => {
+      const f = it.getAsFile(); if (!f) return null;
+      return f.name && f.name !== 'image.png' ? f : new File([f], `붙여넣기_${stamp}${i ? '_' + (i + 1) : ''}.${(f.type.split('/')[1] || 'png').replace('jpeg', 'jpg')}`, { type: f.type });
+    }).filter(Boolean);
+    const text = e.clipboardData ? e.clipboardData.getData('text/plain') : '';
+    if (files.length && !(text.includes('\t') && e.target.closest('input, textarea'))) { e.preventDefault(); F[r].files.push(...files.map((file) => ({ name: file.name, file }))); if (r.startsWith('stmt-')) loadStmt(r); else ctx.rerender(); }   // 명세표는 붙이면 바로 그 양식으로 (10/27 대표)
+    else if (text.trim() && !e.target.closest('input, textarea, [contenteditable]')) { e.preventDefault(); F[r].text = [F[r].text, text.trim()].filter(Boolean).join('\n'); ctx.rerender(); }
+  });
   app.addEventListener('change', async (e) => {
     const r = cur(); if (!r) return;
     if (e.target.dataset.fmA) { F.approval[e.target.dataset.fmA] = e.target.value; return; }
