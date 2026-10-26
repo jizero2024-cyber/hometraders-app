@@ -703,7 +703,7 @@ a.fm-btn { text-decoration: none; }
   .hm-tile b { font-size: 16px; }
   .hm-tile.big { min-height: 140px; }
   .hm-tile.big b { font-size: 18px; }
-  .hm-tile.wide { grid-column: span 2; min-height: 96px; flex-direction: row; justify-content: flex-start; padding: 14px 16px; text-align: left; flex-wrap: wrap; }
+  .hm-tile.wide { order: -1; grid-column: span 2; min-height: 96px; flex-direction: row; justify-content: flex-start; padding: 14px 16px; text-align: left; flex-wrap: wrap; }
   .hm-tile.wide .hm-sub { flex-basis: 100%; font-size: 11px; }
   .hm-ic { width: 48px; height: 48px; border-radius: 14px; }
   .hm-ic svg { width: 28px !important; height: 28px !important; }
