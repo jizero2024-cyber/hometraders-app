@@ -4,11 +4,13 @@
 //   approval  자재승인원 : 제조사·현장명·출고일자·발행일자·납품확인서 PDF → 도우미 make_pack.py
 //   quote     견적서     : 카톡 글·발주서 사진/PDF/엑셀 → 도우미 판독(종전가) → 줄 고치기 → 도우미 견적서 엑셀
 //   deposit   입금표     : deposit.html (같은 머리 아래)
+//   esong     전자 송장  : 출고 번호·전표·판매 엑셀 → 품목 고치기 → 링크 (받는 분이 휴대폰으로 체크·서명, /songjang/ · js/songjang.js, 10/26)
 //   화면 모양은 모두 같음 — 머리(‹ · 로고 · 이름) · 제목 · 불러오기 칸 · 결과 칸, 파일은 끌어다 놓기도 됨
 import * as SM from './stmt.js';
 import * as DL from './delivery.js';
+import * as S from './store-supabase.js';
 
-export const ROUTES = ['stmt-gong', 'stmt-etc', 'stmt-ace', 'deliv', 'approval', 'quote', 'deposit'];
+export const ROUTES = ['stmt-gong', 'stmt-etc', 'stmt-ace', 'deliv', 'approval', 'quote', 'deposit', 'esong'];
 const ST = { 'stmt-gong': ['공간제작소 거래명세표', 'homt'], 'stmt-etc': ['그 외 명세표', 'homt'], 'stmt-ace': ['에이스 거래명세표', 'ace'] };
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const won = (n) => Math.round(Number(n) || 0).toLocaleString();
@@ -17,7 +19,7 @@ const blank = () => ({ text: '', files: [], docs: null, err: '', busy: false });
 const today = () => DL.isoDate(new Date());
 const F = { 'stmt-gong': blank(), 'stmt-etc': blank(), 'stmt-ace': blank(), deliv: { ...blank(), confirms: null },
   approval: { presets: null, preset: '', site: '', ship: '', issue: '', file: null, busy: false, err: '', out: null },
-  quote: { ...blank(), doc: null, out: null }, deposit: {} };
+  quote: { ...blank(), doc: null, out: null }, deposit: {}, esong: { ...blank(), doc: null, link: '', copied: false } };
 let ctx = { rerender: () => {}, go: () => {}, me: () => '', helper: async () => ({}), helperUp: () => false, helperFile: () => '', slips: async () => ({ slips: [] }) };
 
 function top(back, right) {
@@ -120,8 +122,61 @@ function delivScreen() {
     ${cs.map(card).join('')}</section>`;
   return inputCard(f, '.xlsx,.xlsm,.xls,image/*,.heic,.pdf', '<button type="button" class="fm-btn ghost" data-fm="dv-new">빈 양식</button>') + out;
 }
+// ── 전자 송장 (10/26 대표) ─────────────────────────────
+//   납품 송장처럼 품명·수량·단위만 (단가·금액 없음). 만들면 링크 → 받는 분이 휴대폰으로 품목 체크 + 서명 (e_songjang 표, supabase/2026-10-26-e-songjang.sql)
+const esRow = () => ({ name: '', qty: '', unit: '개' });
+function esongScreen() {
+  const f = F.esong, d = f.doc;
+  const ed = !d ? '' : `<section class="fm-out">
+    <div class="fm-grid"><label>납품일<input type="date" data-fm-es="ymd" value="${esc(d.ymd)}"></label>
+      <label>거래처<input data-fm-es="partner" value="${esc(d.partner)}"></label><label>현장<input data-fm-es="site" value="${esc(d.site)}"></label><span></span></div>
+    <div class="fm-tab"><div class="fm-th es"><span>품명</span><span>수량</span><span>단위</span><span></span></div>
+      ${d.items.map((r, k) => `<div class="fm-tr es"><input data-fm-esr="${k}" data-f="name" value="${esc(r.name)}" placeholder="품명"><input data-fm-esr="${k}" data-f="qty" value="${esc(r.qty)}" inputmode="decimal" placeholder="수량"><input data-fm-esr="${k}" data-f="unit" value="${esc(r.unit)}" placeholder="단위"><button type="button" class="fm-x" data-fm="es-rdel" data-k="${k}" aria-label="줄 지우기">✕</button></div>`).join('')}
+      <button type="button" class="fm-add" data-fm="es-radd">＋ 줄</button></div>
+    <div class="fm-row"><span class="sp"></span><button type="button" class="fm-btn" data-fm="es-make" ${f.busy ? 'disabled' : ''}>${f.busy ? '만드는 중…' : '송장 링크 만들기'}</button></div>
+    ${f.link ? `<div class="fm-link"><input readonly value="${esc(f.link)}" id="fm-es-link"><button type="button" class="fm-btn ghost" data-fm="es-copy">${f.copied ? '복사됨 ✓' : '복사'}</button>${navigator.share ? '<button type="button" class="fm-btn ghost" data-fm="es-share">보내기</button>' : ''}<a class="fm-btn ghost" href="${esc(f.link)}" target="_blank" rel="noopener">열기</a></div>` : ''}
+  </section>`;
+  return inputCard(f, '.xlsx,.xlsm,.xls', '<button type="button" class="fm-btn ghost" data-fm="es-new">빈 양식</button>') + ed;
+}
+async function loadEsong() {
+  const f = F.esong, text = f.text.trim();
+  if (!text && !f.files.length) { f.err = '출고 번호·전표 번호를 넣거나 판매 엑셀을 골라 주세요'; ctx.rerender(); return; }
+  f.busy = true; f.err = ''; f.link = ''; ctx.rerender();
+  const vs = [], errs = [];
+  try {
+    if (text) {
+      const r = await ctx.slips(text);
+      (r.slips || []).filter((s) => s.error).forEach((s) => errs.push(s.error));
+      const sale = (r.slips || []).filter((s) => s.rows && s.rows.length && s.kind === '판매');
+      if (sale.length) vs.push(...SM.splitSheets(SM.parseSales([[r.head, ...sale.flatMap((s) => s.rows)]]), {}));
+    }
+    for (const x of f.files) {
+      try { vs.push(...SM.splitSheets(SM.parseSales(await SM.readSheets(x.file)), {})); } catch (e) { errs.push(`${x.name}: ${e.message || e}`); }
+    }
+    const items = vs.flatMap((d) => d.items).filter((x) => !/운반비/.test(x.name)).map((x) => ({ name: x.name, qty: x.qty, unit: '개' }));
+    if (items.length) {
+      const first = vs[0];
+      f.doc = { partner: first.partner || '', site: first.site || '', ymd: `${first.ymd.slice(0, 4)}-${first.ymd.slice(4, 6)}-${first.ymd.slice(6, 8)}`, items };
+    } else if (!errs.length) errs.push('품목이 없어요');
+  } catch (e) { errs.push(e.message || String(e)); }
+  f.err = errs.join(' · '); f.busy = false; ctx.rerender();
+}
+async function makeEsong() {
+  const f = F.esong, d = f.doc;
+  const items = d.items.map((r) => ({ name: r.name.trim(), qty: Number(String(r.qty).replace(/[^\d.]/g, '')) || 0, unit: (r.unit || '개').trim() })).filter((r) => r.name && r.qty > 0);
+  if (!items.length) { f.err = '품명·수량이 있는 줄이 없어요'; ctx.rerender(); return; }
+  if (!d.partner.trim()) { f.err = '거래처를 적어 주세요'; ctx.rerender(); return; }
+  f.busy = true; f.err = ''; ctx.rerender();
+  const id = [...crypto.getRandomValues(new Uint8Array(18))].map((b) => b.toString(36).padStart(2, '0')).join('').slice(0, 28);   // 맞히기 어려운 링크
+  const e = await S.addSongjang({ id, partner: d.partner.trim(), site: d.site.trim(), ymd: d.ymd.replace(/-/g, ''), items, created_by: ctx.me() });
+  f.busy = false;
+  if (e) f.err = /does not exist|relation|schema cache/i.test(e) ? '전자 송장 표가 아직 없어요 (SQL 실행 필요)' : e;
+  else { f.link = `${location.origin}/songjang/?k=${id}`; f.copied = false; }
+  ctx.rerender();
+}
+
 // 팝업 (10/23 대표 "팝업 형태로") — 첫 화면·거래명세표 화면 버튼은 모두 팝업. 주소(/deliv · /quote …)로 열면 전체 화면
-const TITLE = { ...Object.fromEntries(Object.entries(ST).map(([k, v]) => [k, v[0]])), deliv: '납품확인서', approval: '자재승인원', quote: '견적서', deposit: '입금표' };
+const TITLE = { ...Object.fromEntries(Object.entries(ST).map(([k, v]) => [k, v[0]])), deliv: '납품확인서', approval: '자재승인원', quote: '견적서', deposit: '입금표', esong: '전자 송장' };
 export function open(route) { ROUTES.forEach((r) => { F[r].open = r === route; }); }
 export function popup() {
   const r = ROUTES.find((x) => F[x].open);
@@ -288,6 +343,7 @@ export function screen(route) {
   if (route === 'approval') return approvalScreen();
   if (route === 'quote') return quoteScreen();
   if (route === 'deposit') return depositScreen();
+  if (route === 'esong') return page('main', '전자 송장', esongScreen());
   return stmtScreen(route);
 }
 
@@ -301,7 +357,7 @@ export function bind(app, c) {
     else if (a === 'pop-close' || (a === 'pop-close-bg' && e.target === t)) { F[r].open = false; ctx.rerender(); }
     else if (a === 'pick') document.getElementById('fm-file').click();
     else if (a === 'unpick') { f.files.splice(i, 1); ctx.rerender(); }
-    else if (a === 'load') { f.text = (document.getElementById('fm-text') || {}).value || ''; if (r === 'deliv') loadDeliv(); else if (r === 'quote') loadQuote(); else loadStmt(r); }
+    else if (a === 'load') { f.text = (document.getElementById('fm-text') || {}).value || ''; if (r === 'deliv') loadDeliv(); else if (r === 'quote') loadQuote(); else if (r === 'esong') loadEsong(); else loadStmt(r); }
     else if (a === 'ap-pick') document.getElementById('fm-ap-file').click();
     else if (a === 'ap-make') makeApproval();
     else if (a === 'q-new') { f.doc = { partner: '', owner: '', manager: '', site: '', doc_date: today(), lines: [{ raw_name: '', spec: '', unit: '', qty: '', price: '' }] }; f.out = null; ctx.rerender(); }
@@ -315,6 +371,12 @@ export function bind(app, c) {
     else if (a === 'dv-radd') { f.confirms[i].rows.push({ cat: '', name: '', unit: 'ROLL', qty: '', ov: {} }); ctx.rerender(); }
     else if (a === 'dv-rdel') { f.confirms[i].rows.splice(Number(t.dataset.k), 1); ctx.rerender(); }
     else if (a === 'dv-print') printDeliv();
+    else if (a === 'es-new') { f.doc = { partner: '', site: '', ymd: today(), items: [esRow()] }; f.link = ''; ctx.rerender(); }
+    else if (a === 'es-radd') { f.doc.items.push(esRow()); ctx.rerender(); }
+    else if (a === 'es-rdel') { f.doc.items.splice(Number(t.dataset.k), 1); ctx.rerender(); }
+    else if (a === 'es-make') makeEsong();
+    else if (a === 'es-copy') { const el = document.getElementById('fm-es-link'); try { await navigator.clipboard.writeText(f.link); } catch (_) { if (el) { el.select(); document.execCommand('copy'); } } f.copied = true; ctx.rerender(); }
+    else if (a === 'es-share') { try { await navigator.share({ title: '납품 송장', text: `${f.doc.partner} 납품 송장`, url: f.link }); } catch (_) { /* 닫음 */ } }
   });
   app.addEventListener('input', (e) => {
     const r = cur(); if (!r) return;
@@ -326,6 +388,8 @@ export function bind(app, c) {
     else if (d.fmC !== undefined) f.confirms[Number(d.fmC)][d.k] = el.value;
     else if (d.fmA !== undefined) F.approval[d.fmA] = el.value;
     else if (d.fmQ !== undefined) f.doc[d.fmQ] = el.value;
+    else if (d.fmEs !== undefined) F.esong.doc[d.fmEs] = el.value;
+    else if (d.fmEsr !== undefined) F.esong.doc.items[Number(d.fmEsr)][d.f] = el.value;
     else if (d.fmQl !== undefined) {
       f.doc.lines[Number(d.fmQl)][d.f] = d.f === 'qty' || d.f === 'price' ? el.value.replace(/[^\d.]/g, '') : el.value;
       const k = Number(d.fmQl), sup = qSum(f.doc), set = (id, v) => { const x = document.getElementById(id); if (x) x.textContent = v; };   // 금액·합계만 바로 (칸을 다시 그리면 입력 중인 글자가 끊김)

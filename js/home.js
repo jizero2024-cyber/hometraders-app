@@ -18,6 +18,7 @@ const IC = {
   deliv: svg('#1E6B34', '<path d="M6 3h9l4 4v14H6z"></path><path d="M9 13l2.2 2.2L16 10.5"></path>'),
   pack: svg('#5B3FA8', '<path d="M4 6h6l2 2h8v11H4z"></path><path d="M9 14l2 2 4-4"></path>'),
   won: svg('#B54708', '<rect x="3" y="6" width="18" height="12" rx="2"></rect><circle cx="12" cy="12" r="2.6"></circle><path d="M6.5 9v6M17.5 9v6"></path>'),
+  sign: svg('#C2410C', '<path d="M6 3h9l4 4v14H6z"></path><path d="M9 15c1.5-2 2.5-2 3 0s1.5 2 3-1"></path><path d="M9 18h7"></path>'),
   quote: svg('#3F3F46', '<path d="M6 3h9l4 4v14H6z"></path><path d="M9 9h3M9 13h7M9 17h5"></path><path d="M15 3v4h4"></path>'),
 };
 
@@ -113,6 +114,7 @@ export function screen(view) {
       ${tile({ title: '자재승인원', icon: IC.pack, bg: '#F2EEFB', attr: 'data-hm="form" data-r="approval"' })}
       ${tile({ title: '견적서', icon: IC.quote, bg: '#F3F4F6', attr: 'data-hm="form" data-r="quote"' })}
       ${tile({ title: '입금표', icon: IC.won, bg: '#FFF4E5', attr: 'data-hm="frame" data-src="./deposit.html?embed=1" data-title="입금표"' })}
+      ${tile({ title: '전자 송장', icon: IC.sign, bg: '#FDF0E6', attr: 'data-hm="form" data-r="esong"' })}
     </div>${farePanel()}</main>${boxModal()}${FM.popup()}<input type="file" id="hm-file" multiple accept="image/*,.heic,.pdf,.xlsx,.xls,.csv,.txt" hidden></div>`;
 }
 

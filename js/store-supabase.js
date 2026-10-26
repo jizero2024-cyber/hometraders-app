@@ -278,6 +278,10 @@ export async function getInboxCounts() {
   if (error) throw noTable(error, '자료');
   return (data || []).reduce((a, r) => { a[r.status] = (a[r.status] || 0) + 1; return a; }, {});
 }
+export async function addSongjang(row) {   // 전자 송장 한 장 (10/26) — 실패하면 글자, 되면 null
+  const { error } = await sb.from('e_songjang').insert(row);
+  return error ? error.message : null;
+}
 export async function addInbox(row) {   // 실패하면 글자, 되면 null
   const { error } = await sb.from('site_inbox').insert(row);
   return error ? error.message : null;
