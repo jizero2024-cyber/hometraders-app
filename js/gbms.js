@@ -215,7 +215,7 @@ function cardHtml(d) {
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span style="font-size:12px;color:#6B6B6B"><b style="color:#1F2328;font-size:14px">${md(d.ymd)}</b> ${esc(d.site || '')}</span>${statusPick(d.id, st)}</div>
     <div style="font-weight:600;font-size:14px;line-height:1.4">${esc(itemTitle(d))}</div>
     ${st === '수정요청' && x.reason ? `<div style="font-size:12px;color:#B42318"><b>수정요청</b> ${esc(x.reason)}</div>` : ''}
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><span style="display:flex;gap:4px;flex-wrap:wrap">${chip(true, '명세표')}${chip(!!x.tax_name, '계산서')}${x.paid ? paidTag(x.paid) : ''}</span><b style="font-size:15px;font-variant-numeric:tabular-nums">${won(d.total)}원</b></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><span style="display:flex;gap:4px;flex-wrap:wrap">${chip(!(x.manual || {}).stmtDel, '명세표')}${chip(!!x.tax_name, '계산서')}${x.paid ? paidTag(x.paid) : ''}</span><b style="font-size:15px;font-variant-numeric:tabular-nums">${won(d.total)}원</b></div>
     ${d.no ? `<div style="font-size:11px;color:#9A9A9A">${esc(d.no)}</div>` : ''}
   </div>`;
 }
@@ -226,7 +226,7 @@ function rowHtml(d) {
     <td style="padding:12px 8px;white-space:nowrap">${esc(d.site || '')}</td>
     <td style="padding:12px 8px"><div style="font-weight:600">${esc(itemTitle(d))}</div>${st === '수정요청' && x.reason ? `<div style="margin-top:6px;max-width:340px;font-size:12px;line-height:1.5;color:#B42318;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden"><b>수정요청</b> ${esc(x.reason)}</div>` : ''}</td>
     <td style="padding:12px 8px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums">${won(d.total)}</td>
-    <td style="padding:12px 8px;text-align:center">${okTag}</td>
+    <td style="padding:12px 8px;text-align:center">${(x.manual || {}).stmtDel ? addBtn('addstmt', d.id) : okTag}</td>
     <td style="padding:12px 8px;text-align:center">${x.tax_name ? okTag : addBtn('addtax', d.id)}</td>
     <td style="padding:12px 8px;text-align:center;white-space:nowrap">${statusPick(d.id, st)}${x.paid ? `<div style="margin-top:6px">${paidTag(x.paid)}</div>` : ''}</td>
     <td style="padding:12px 14px 12px 8px;text-align:center;white-space:nowrap;font-size:13px;color:#3F3F46">${x.delivered ? `<span style="font-weight:700;color:#1E6B34">✓ ${esc(x.delivered)} 전달완료</span>` : d.reg ? md(d.reg.replace(/-/g, '')) : ''}</td>
@@ -234,7 +234,7 @@ function rowHtml(d) {
 }
 function docBox(kind, d) {
   const f = G.full[d.id] || {};
-  const hid = kind === 'stmt' && f.stmt_data === 'none';   // 휴지통으로 지운 명세표 — 목록 줄은 남고 그림만 비움 (10/27 대표)
+  const hid = kind === 'stmt' && (f.stmt_data === 'none' || !!(((G.docs[d.id] || {}).manual || {}).stmtDel));   // 휴지통으로 지운 명세표 — 목록 줄은 남고 그림만 비움 (10/27 대표)
   const src = kind === 'stmt' ? (hid ? '' : f.stmt_data || (G.img[d.id] && G.img[d.id] !== 'loading' ? G.img[d.id] : '')) : f.tax_data;
   const label = kind === 'stmt' ? '거래명세표' : '세금계산서';
   const no = kind === 'tax' && src ? (G.docs[d.id] || {}).tax_no || '' : '';
@@ -259,7 +259,7 @@ function docBox(kind, d) {
         <button type="button" data-gb="pend-cancel" style="height:36px;padding:0 16px;border:1px solid #D5D8DD;border-radius:8px;background:#fff;font:inherit;font-size:14px;cursor:pointer">취소</button>
         <button type="button" data-gb="pend-save" style="height:36px;padding:0 20px;border:0;border-radius:8px;background:#1F2328;color:#fff;font:inherit;font-size:14px;font-weight:700;cursor:pointer">저장</button></div></figure>`;
   }
-  if (hid) return `<figure data-gb="panel" data-k="stmt" style="margin:0;display:flex;flex-direction:column;gap:8px">${cap}<div data-gb="panel" data-k="stmt" tabindex="0" style="aspect-ratio:1588/1400;border:2px dashed ${G.panel === 'stmt' ? '#1D4F91' : '#B8B8B8'};border-radius:8px;background:${G.panel === 'stmt' ? '#EEF3FB' : '#F4F4F4'};color:#4B4B4B;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;cursor:pointer;outline:none"><b>거래명세표 넣기</b><span style="font-size:13px;color:#6B6B6B">누르고 Ctrl+V (⌘V)</span><span style="display:flex;gap:8px"><button type="button" data-gb="replace" data-k="stmt" style="height:36px;padding:0 16px;border:1px solid #B8B8B8;border-radius:8px;background:#fff;font:inherit;font-size:13px;cursor:pointer">파일 고르기</button><button type="button" data-gb="stmt-restore" style="height:36px;padding:0 16px;border:1px solid #B8B8B8;border-radius:8px;background:#fff;font:inherit;font-size:13px;cursor:pointer">원래 명세표</button></span></div></figure>`;
+  if (hid) return `<figure data-gb="panel" data-k="stmt" style="margin:0;display:flex;flex-direction:column;gap:8px">${cap}<div data-gb="panel" data-k="stmt" tabindex="0" style="aspect-ratio:1588/1400;border:2px dashed ${G.panel === 'stmt' ? '#1D4F91' : '#B8B8B8'};border-radius:8px;background:${G.panel === 'stmt' ? '#EEF3FB' : '#F4F4F4'};color:#4B4B4B;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;cursor:pointer;outline:none"><b>거래명세표 넣기</b><span style="font-size:13px;color:#6B6B6B">누르고 Ctrl+V (⌘V)</span><span style="display:flex;gap:8px"><button type="button" data-gb="replace" data-k="stmt" style="height:36px;padding:0 16px;border:1px solid #B8B8B8;border-radius:8px;background:#fff;font:inherit;font-size:13px;cursor:pointer">파일 고르기</button></span></div></figure>`;
   if (!src && kind === 'stmt') return `<figure data-gb="panel" data-k="${kind}" style="margin:0;display:flex;flex-direction:column;gap:8px;${G.panel === kind ? 'outline:2px solid #1D4F91;outline-offset:6px;border-radius:6px' : ''}">${cap}<div style="aspect-ratio:1588/1400;border:1px solid #D9D9D9;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#6B6B6B;font-size:13px">불러오는 중…</div></figure>`;
   if (!src) return `<figure data-gb="panel" data-k="${kind}" style="margin:0;display:flex;flex-direction:column;gap:8px;${G.panel === kind ? 'outline:2px solid #1D4F91;outline-offset:6px;border-radius:6px' : ''}">${cap}<div data-gb="panel" data-k="tax" data-gb-drop="tax" tabindex="0" style="aspect-ratio:1588/1400;border:2px dashed ${G.panel === 'tax' ? '#1D4F91' : '#B8B8B8'};border-radius:8px;background:${G.panel === 'tax' ? '#EEF3FB' : '#F4F4F4'};color:#4B4B4B;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;cursor:pointer;outline:none"><b>세금계산서 넣기</b><span style="font-size:13px;color:#6B6B6B">누르고 Ctrl+V (⌘V) · 끌어다 놓기</span><button type="button" data-gb="replace" data-k="tax" style="height:36px;padding:0 16px;border:1px solid #B8B8B8;border-radius:8px;background:#fff;font:inherit;font-size:13px;cursor:pointer">파일 고르기</button></div></figure>`;   // 빈 칸을 누르면 파일 창 대신 이 칸이 골라짐 → 바로 Ctrl+V (10/27 대표 "세금계산서를 클릭하고 복붙하면 되게")
   const pdf = src.startsWith('data:application/pdf');
@@ -429,7 +429,8 @@ async function commitPending() {
       const cur = G.list.find((d) => d.id === id);
       const n = Number(String(p.total || '').replace(/[^\d]/g, ''));
       if (n && cur) cur.total = n;
-      save(id, { stmt_data: data, ...(n ? { manual: { ...(prev.manual || {}), total: n } } : {}) });   // 직접 등록한 장은 품목은 그대로, 합계만
+      const m2 = { ...(prev.manual || {}) }; delete m2.stmtDel; if (n) m2.total = n;
+      save(id, { stmt_data: data, manual: Object.keys(m2).length ? m2 : null });   // 직접 등록한 장은 품목은 그대로, 합계만
     }
   } catch (e) { alert(e.message || e); }
 }
@@ -548,6 +549,7 @@ export function bind(app, c) {
     else if (a === 'status') { G.status = t.dataset.v; G.page = 1; ctx.rerender(); }
     else if (a === 'page') { G.page = Number(t.dataset.v) || 1; ctx.rerender(); }
     else if (a === 'addtax') { G.open = id; pickFile(id, 'tax'); ctx.rerender(); }
+    else if (a === 'addstmt') { G.open = id; G.panel = 'stmt'; pickFile(id, 'stmt'); ctx.rerender(); }
     else if (a === 'replace' && cur) pickFile(cur.id, t.dataset.k);
     else if (a === 'reg') { G.reg = regBlank(); ctx.rerender(); }
     else if (a === 'reg-close' || (a === 'reg-bg' && e.target === t)) { G.reg = null; ctx.rerender(); }
@@ -576,9 +578,8 @@ export function bind(app, c) {
       save(cur.id, { manual: Object.keys(m).length ? m : null });
     }
     else if (a === 'delstmt' && cur) {   // 거래명세표 지우기 — 그림만 비우고(stmt_data 'none') 목록 줄·상태·세금계산서는 그대로. 바꿀 때 적은 합계도 풂
-      if (confirm('삭제하시겠습니까?')) { const m = { ...((G.docs[cur.id] || {}).manual || {}) }; const had = 'total' in m; delete m.total; if (had) cur.total = m.items ? manualDoc({ ...G.docs[cur.id], manual: m }).total : itemsTotal(cur); G.panel = 'stmt'; save(cur.id, { stmt_data: 'none', ...(had ? { manual: Object.keys(m).length ? m : null } : {}) }); }
+      if (confirm('삭제하시겠습니까?')) { const m = { ...((G.docs[cur.id] || {}).manual || {}) }; const had = 'total' in m; delete m.total; if (had) cur.total = m.items ? manualDoc({ ...G.docs[cur.id], manual: m }).total : itemsTotal(cur); m.stmtDel = true; G.panel = 'stmt'; save(cur.id, { stmt_data: 'none', manual: m }); }
     }
-    else if (a === 'stmt-restore' && cur) save(cur.id, { stmt_data: null });   // 원래(이카운트) 명세표로
     else if (a === 'deltax' && cur) { if (confirm('삭제하시겠습니까?')) save(cur.id, { tax_data: null, tax_name: null, tax_no: null, status: null, drafted_at: null }); }   // 지우면 결재전으로
     else if (a === 'reject' && cur) { save(cur.id, { status: '수정요청', reason: G.reason.trim() || '수정요청' }); G.open = null; G.reason = ''; }
     else if (a === 'zoom') { if (G.panel !== t.dataset.k) { G.panel = t.dataset.k; ctx.rerender(); } else if (e.detail >= 2 || G.panelAt && Date.now() - G.panelAt < 400) { G.zoom = t.dataset.k; ctx.rerender(); } G.panelAt = Date.now(); }   // 한 번 = 칸 고르기(Ctrl+V 대상), 두 번 = 크게 보기 (10/27)
