@@ -25,7 +25,11 @@ const slipKey = (slip) => { const m = /(20\d\d)\/(\d{1,2})\/(\d{1,2})\s*-\s*(\d+
 // 직접 등록한 장 (gonggan_docs.manual = {ymd, site, partner, items:[{name, qty, price}]}) → 목록 한 장
 function manualDoc(x) {
   const m = x.manual, date = new Date(+m.ymd.slice(0, 4), +m.ymd.slice(4, 6) - 1, +m.ymd.slice(6, 8));
-  const items = m.items.map((it) => { const supply = Math.round((Number(it.qty) || 0) * (Number(it.price) || 0)); return { date, name: it.name, qty: Number(it.qty) || 0, supply, vat: Math.round(supply * 0.1) }; });
+  const items = m.items.map((it) => {   // m.vatIn: 단가가 부가세 포함가 (10/27 대표 — 소수점 떼서 넣지 말고 포함가로) — 예전 장은 그대로 별도가
+    const amt = Math.round((Number(it.qty) || 0) * (Number(it.price) || 0));
+    const supply = m.vatIn ? Math.round(amt / 1.1) : amt;
+    return { date, name: it.name, qty: Number(it.qty) || 0, supply, vat: m.vatIn ? amt - supply : Math.round(supply * 0.1) };
+  });
   return { id: x.id, reg: m.reg || '', ymd: m.ymd, slip: `${m.ymd}-${m.no || 1}`, seq: m.no || 1, partner: m.partner || '(주)공간제작소', site: m.site || '', items, manual: true, total: m.total ? Number(m.total) : items.reduce((a, i) => a + i.supply + i.vat, 0) };
 }
 const docId = (d) => `${d.ymd}|${(d.slips || [d.slip]).slice().sort().join(',')}|${(d.items[0] || {}).name || ''}`;
@@ -253,7 +257,7 @@ function docBox(kind, d) {
   }
   const pdf = src.startsWith('data:application/pdf');
   const staff = true;   // 10/26 대표: 공간제작소 계정도 지우기 됨 (계정 나누면 다시 막을 수 있게 남겨 둠)
-  const canDelStmt = staff && (!!f.stmt_data || !!((G.docs[d.id] || {}).manual || {}).items);   // 이카운트에서 온 원래 명세표는 지우지 않음 (휴지통에 장이 통째로 사라졌던 일, 10/26)
+  const canDelStmt = staff && !!f.stmt_data;   // 바꿔 넣은 명세표 그림만 지움 — 목록 줄은 지우지 않음 (10/27 대표 "문서 삭제할 때 목록까지 삭제되면 안 돼")
   const del = kind === 'stmt' && canDelStmt ? `<button type="button" data-gb="delstmt" aria-label="거래명세표 지우기" style="position:absolute;bottom:8px;right:46px;width:30px;height:30px;border-radius:15px;border:1px solid #F1B5AF;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">${TRASH}</button>` : kind === 'tax' && staff ? `<button type="button" data-gb="deltax" aria-label="세금계산서 지우기" style="position:absolute;bottom:8px;right:46px;width:30px;height:30px;border-radius:15px;border:1px solid #F1B5AF;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">${TRASH}</button>` : '';   // 잘못 넣은 세금계산서 지우기 (10/23 대표)
   return `<figure data-gb="panel" data-k="${kind}" style="margin:0;display:flex;flex-direction:column;gap:8px;${G.panel === kind ? 'outline:2px solid #1D4F91;outline-offset:6px;border-radius:6px' : ''}">${cap}<div ${kind === 'tax' ? 'data-gb-drop="tax"' : ''} style="position:relative;aspect-ratio:1588/1400;border:1px solid #D9D9D9;border-radius:6px;overflow:hidden;background:#fff">${pdf && !pdfView(d.id, src) ? '<div style="height:100%;display:flex;align-items:center;justify-content:center;color:#6B6B6B;font-size:13px">불러오는 중…</div>' : `<button type="button" data-gb="zoom" data-k="${kind}" aria-label="${label} 크게 보기" style="display:flex;align-items:flex-start;justify-content:center;width:100%;height:100%;padding:0;border:0;background:none;cursor:zoom-in"><img src="${pdf ? pdfView(d.id, src) : src}" alt="${label}" style="max-width:100%;max-height:100%;object-fit:contain;display:block"></button>`}${del}${pen}</div></figure>`;
 }
@@ -290,7 +294,7 @@ const regBlank = () => ({ text: '', files: [], ymd: new Date().toISOString().sli
 const regSum = (r) => r.rows.reduce((a, x) => a + Math.round((Number(x.qty) || 0) * (Number(x.price) || 0)), 0);
 function regDoc() {
   const r = G.reg;
-  return manualDoc({ id: 'preview', manual: { ymd: r.ymd.replace(/-/g, ''), site: r.site.trim(), partner: r.partner.trim(), items: r.rows.filter((x) => x.name.trim() && Number(x.qty) > 0).map((x) => ({ name: x.name.trim(), qty: Number(x.qty), price: Number(x.price) || 0 })) } });
+  return manualDoc({ id: 'preview', manual: { vatIn: true, ymd: r.ymd.replace(/-/g, ''), site: r.site.trim(), partner: r.partner.trim(), items: r.rows.filter((x) => x.name.trim() && Number(x.qty) > 0).map((x) => ({ name: x.name.trim(), qty: Number(x.qty), price: Number(x.price) || 0 })) } });
 }
 function regHtml() {
   const r = G.reg, sup = regSum(r), ace = G.biz === 'ace';
@@ -313,7 +317,7 @@ function regHtml() {
             <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:#5C5C5C">출고일<input type="date" data-gb="reg-f" data-k="ymd" value="${esc(r.ymd)}" style="${inp}"></label>
             <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:#5C5C5C">현장명<input data-gb="reg-f" data-k="site" value="${esc(r.site)}" placeholder="현장명" style="${inp}"></label>
             <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:#5C5C5C">받는 곳<input data-gb="reg-f" data-k="partner" value="${esc(r.partner)}" style="${inp}"></label></div>
-          <div style="display:grid;grid-template-columns:1fr 80px 110px 120px 24px;gap:6px;font-size:12px;color:#6B6B6B;padding:0 2px"><span>품명</span><span style="text-align:right">수량</span><span style="text-align:right">단가</span><span style="text-align:right">공급가액</span><span></span></div>
+          <div style="display:grid;grid-template-columns:1fr 80px 110px 120px 24px;gap:6px;font-size:12px;color:#6B6B6B;padding:0 2px"><span>품명</span><span style="text-align:right">수량</span><span style="text-align:right">단가(부가세 포함)</span><span style="text-align:right">금액(부가세 포함)</span><span></span></div>
           ${r.rows.map((x, k) => `<div style="display:grid;grid-template-columns:1fr 80px 110px 120px 24px;gap:6px;align-items:center">
             <input data-gb="reg-r" data-k="${k}" data-f="name" value="${esc(x.name)}" style="${inp}">
             <input data-gb="reg-r" data-k="${k}" data-f="qty" value="${esc(x.qty)}" inputmode="decimal" style="${inp};text-align:right">
@@ -326,7 +330,7 @@ function regHtml() {
         ${r.preview ? `<img src="${r.preview}" alt="미리보기" style="width:100%;border:1px solid #E6E4DF;border-radius:10px;background:#fff">` : ''}
       </div>
       <div style="position:sticky;bottom:0;display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:14px 20px;background:#FFF7F0;border-top:1px solid #F3D9C6;font-size:14px;color:#5C5C5C">
-        <span>공급가 <b id="gb-reg-sup" style="color:#1F2328">${won(sup)}</b></span><span>부가세 <b id="gb-reg-vat" style="color:#1F2328">${won(sup * 0.1)}</b></span><span style="font-size:16px">합계 <b id="gb-reg-tot" style="font-size:20px;color:#C2410C">${won(sup * 1.1)}원</b></span>
+        <span>공급가 <b id="gb-reg-sup" style="color:#1F2328">${won(Math.round(sup / 1.1))}</b></span><span>부가세 <b id="gb-reg-vat" style="color:#1F2328">${won(sup - Math.round(sup / 1.1))}</b></span><span style="font-size:16px">합계 <b id="gb-reg-tot" style="font-size:20px;color:#C2410C">${won(sup)}원</b></span>
         <span style="flex:1"></span>
         <button type="button" data-gb="reg-preview" style="height:40px;padding:0 16px;border:1px solid #D0D0D0;border-radius:10px;background:#fff;font:inherit;font-size:14px;font-weight:600;cursor:pointer">명세표 미리보기</button>
         <button type="button" data-gb="reg-save" style="height:40px;padding:0 18px;border:0;border-radius:10px;background:#E8732C;color:#fff;font:inherit;font-size:14px;font-weight:700;cursor:pointer">${ace ? '에이스' : '홈트'} 목록에 올리기</button></div>
@@ -380,7 +384,7 @@ async function regSave() {
   if (!d.items.length) { r.err = '품명·수량이 있는 줄이 없어요'; ctx.rerender(); return; }
   const id = `m${Date.now().toString(36)}`;
   const no = G.list.filter((x) => x.ymd === d.ymd).length + 1;   // 그날 몇 번째 장 (에이스 양식 문서번호 제 261020-2호)
-  const manual = { ymd: d.ymd, no, reg: new Date().toLocaleDateString('sv-SE'), site: d.site, partner: d.partner, items: d.items.map((it) => ({ name: it.name, qty: it.qty, price: it.qty ? Math.round(it.supply / it.qty) : 0 })) };
+  const manual = { ymd: d.ymd, no, reg: new Date().toLocaleDateString('sv-SE'), site: d.site, partner: d.partner, vatIn: true, items: r.rows.filter((x) => x.name.trim() && Number(x.qty) > 0).map((x) => ({ name: x.name.trim(), qty: Number(x.qty), price: Number(x.price) || 0 })) };
   const err = await S.saveGongganDoc({ id, biz: G.biz, manual, status: null, updated_by: ctx.me(), updated_at: new Date().toISOString() });
   if (err) { r.err = '저장하지 못했어요 — ' + err; ctx.rerender(); return; }
   G.docs[id] = { id, biz: G.biz, manual, status: null };
@@ -410,7 +414,7 @@ async function attach(id, kind, file) {   // 올린 사진은 바로 저장하�
 async function commitPending() {
   const p = G.pending; if (!p) return;
   const { id, kind, data } = p, file = { name: p.name };
-  G.pending = null;
+  G.pending = null; G.panel = 'tax';   // 명세표를 바꾼 뒤 Ctrl+V 는 세금계산서로 (10/27 대표 — 복붙이 다시 명세표로 가던 것)
   try {
     const prev = G.docs[id] || {};
     if (kind === 'tax') { await save(id, { tax_data: data, tax_name: file.name || '세금계산서', tax_no: null, status: prev.status === '수정요청' ? null : prev.status || null }); findTaxNo(id, data); }
@@ -526,7 +530,7 @@ export function bind(app, c) {
     const a = t.dataset.gb, id = t.dataset.id, cur = G.open && G.list.find((d) => d.id === G.open);
     if (a === 'row') { if (e.target.closest('button, input, a, label, select')) return; G.open = id; G.reason = ''; G.zoom = ''; G.panel = 'tax'; ctx.rerender(); }
     else if (a === 'pend-save') commitPending();
-    else if (a === 'pend-cancel') { G.pending = null; ctx.rerender(); }
+    else if (a === 'pend-cancel') { G.pending = null; G.panel = 'tax'; ctx.rerender(); }
     else if (a === 'panel') { if (G.panel !== t.dataset.k) { G.panel = t.dataset.k; ctx.rerender(); } }   // 누른 칸 = Ctrl+C·V 대상 (10/26)
     else if (a === 'overlay') { if (e.target === t) { G.open = null; G.pending = null; ctx.rerender(); } }
     else if (a === 'close') { G.open = null; G.zoom = ''; G.editNo = false; G.pending = null; ctx.rerender(); }
@@ -566,7 +570,6 @@ export function bind(app, c) {
     }
     else if (a === 'delstmt' && cur) {   // 거래명세표 지우기 (10/23) — 바꾼 명세표면 원래대로, 아니면 이 장을 목록에서 지움
       if ((G.full[cur.id] || {}).stmt_data) { if (confirm('삭제하시겠습니까? (바꿔 넣은 거래명세표를 지우고 원래 명세표로 돌아감)')) { const m = (G.docs[cur.id] || {}).manual || {}; const { total, ...rest } = m; cur.total = m.items ? manualDoc({ ...G.docs[cur.id], manual: rest }).total : itemsTotal(cur); save(cur.id, { stmt_data: null, manual: m.items ? rest : null }); } }
-      else if (((G.docs[cur.id] || {}).manual || {}).items && confirm('삭제하시겠습니까?')) { save(cur.id, { status: '삭제' }); G.list = G.list.filter((d) => d.id !== cur.id); G.open = null; ctx.rerender(); }
     }
     else if (a === 'deltax' && cur) { if (confirm('삭제하시겠습니까?')) save(cur.id, { tax_data: null, tax_name: null, tax_no: null, status: null, drafted_at: null }); }   // 지우면 결재전으로
     else if (a === 'reject' && cur) { save(cur.id, { status: '수정요청', reason: G.reason.trim() || '수정요청' }); G.open = null; G.reason = ''; }
@@ -599,7 +602,7 @@ export function bind(app, c) {
       const k = Number(t.dataset.k), row = G.reg.rows[k], f = t.dataset.f;
       row[f] = f === 'name' ? t.value : t.value.replace(/[^\d.]/g, '');
       const sup = regSum(G.reg), set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-      set(`gb-reg-amt-${k}`, Number(row.qty) * Number(row.price) ? won(Number(row.qty) * Number(row.price)) : ''); set('gb-reg-sup', won(sup)); set('gb-reg-vat', won(sup * 0.1)); set('gb-reg-tot', `${won(sup * 1.1)}원`);
+      set(`gb-reg-amt-${k}`, Number(row.qty) * Number(row.price) ? won(Number(row.qty) * Number(row.price)) : ''); set('gb-reg-sup', won(Math.round(sup / 1.1))); set('gb-reg-vat', won(sup - Math.round(sup / 1.1))); set('gb-reg-tot', `${won(sup)}원`);   // sup = 부가세 포함 합계
     }
     else if (t.dataset.gb === 'q') { G.q = t.value.slice(0, 60); G.page = 1; clearTimeout(G.qt); G.qt = setTimeout(() => { ctx.rerender(); const el = document.querySelector('[data-gb="q"]'); if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }, 250); }
   });
