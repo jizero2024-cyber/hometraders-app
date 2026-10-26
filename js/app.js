@@ -1,14 +1,14 @@
 import {
   CATEGORIES, UNITS, WH_ICON_KEYS, swatchFor, SILICONE_COLORS,
 } from './data.js?v=2';
-import * as S from './store-supabase.js?v=2';
+import * as S from './store-supabase.js?v=3';
 import { ECOUNT_ITEMS } from './ecount-items.js';
 import { makeMatcher, readPastedText, quotePrev } from './textread.js';
 import * as DL from './delivery.js';
-import * as SM from './stmt.js';
-import * as HD from './hdisp.js?v=2';
-import * as HM from './home.js?v=4';
-import * as FM from './forms.js?v=4';
+import * as SM from './stmt.js?v=102';
+import * as HD from './hdisp.js?v=3';
+import * as HM from './home.js?v=5';
+import * as FM from './forms.js?v=5';
 
 // 창고 아이콘 세트 (무채색)
 const WH_ICONS = {
@@ -5686,6 +5686,7 @@ FM.bind(app, {
   go: (r) => { state.route = r; state.sheet = null; render(); },
   me: () => myName(),
   helper: async (path, body) => {   // 이 맥 도우미에 바로 닿으면 바로, 아니면 사무실 맥이 공유 DB 로 대신 (10/27)
+    if (path === '/api/doc/read' && body && body.data) { try { return await S.readDocCloud(body.name, body.data); } catch (e) { console.warn('서버 읽기 안 됨 → 맥으로', e.message); } }   // 먼저 인터넷 서버 (맥 꺼져도)
     if (helperState.up || await helperPing()) return helperFetch(path, body);
     return S.relayHelper(path, body, myName());
   },

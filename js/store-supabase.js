@@ -282,6 +282,21 @@ export async function addSongjang(row) {   // 전자 송장 한 장 (10/26) — 
   const { error } = await sb.from('e_songjang').insert(row);
   return error ? error.message : null;
 }
+// 사진·PDF 읽기를 인터넷 서버(Edge Function doc-read)에서 — 맥이 꺼져 있어도 (10/27 대표). 서버가 아직 없거나 막히면 throw → 맥으로
+async function shrinkB64(name, data) {   // 큰 사진은 긴 변 2400px JPEG 로 (AI 사진 한도)
+  if (/\.pdf$/i.test(name) || data.length < 3e6) return { data, mime: /\.pdf$/i.test(name) ? 'application/pdf' : /\.png$/i.test(name) ? 'image/png' : 'image/jpeg' };
+  const img = await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = 'data:image/*;base64,' + data; });
+  const k = Math.min(1, 2400 / Math.max(img.width, img.height)), c = document.createElement('canvas');
+  c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+  return { data: c.toDataURL('image/jpeg', 0.88).split(',')[1], mime: 'image/jpeg' };
+}
+export async function readDocCloud(name, data) {
+  const f = await shrinkB64(name || '', data);
+  const { data: j, error } = await sb.functions.invoke('doc-read', { body: { name, ...f } });
+  if (error) { let m = error.message; try { const b = await error.context.json(); m = b.error || m; } catch (_) { /* 그대로 */ } throw new Error(m); }
+  if (!j || !j.ok) throw new Error((j && j.error) || '서버에서 읽지 못했어요');
+  return j;
+}
 // 사무실 맥 도우미에 바로 못 닿을 때(다른 컴퓨터·폰·사파리) — site_inbox 에 'read' 로 올리면 맥 도우미가 읽고 note 에 결과 (10/27 대표)
 export async function relayHelper(path, body, by) {
   const id = 'read_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);

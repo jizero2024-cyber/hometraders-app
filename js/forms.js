@@ -6,9 +6,9 @@
 //   deposit   입금표     : deposit.html (같은 머리 아래)
 //   esong     전자 송장  : 출고 번호·전표·판매 엑셀 → 품목 고치기 → 링크 (받는 분이 휴대폰으로 체크·서명, /songjang/ · js/songjang.js, 10/26)
 //   화면 모양은 모두 같음 — 머리(‹ · 로고 · 이름) · 제목 · 불러오기 칸 · 결과 칸, 파일은 끌어다 놓기도 됨
-import * as SM from './stmt.js';
+import * as SM from './stmt.js?v=102';
 import * as DL from './delivery.js';
-import * as S from './store-supabase.js?v=2';
+import * as S from './store-supabase.js?v=3';
 
 export const ROUTES = ['stmt-gong', 'stmt-etc', 'stmt-ace', 'deliv', 'approval', 'quote', 'deposit', 'esong'];
 const ST = { 'stmt-gong': ['공간제작소 거래명세표', 'homt'], 'stmt-etc': ['그 외 명세표', 'homt'], 'stmt-ace': ['에이스 거래명세표', 'ace'] };
@@ -91,7 +91,7 @@ async function loadStmt(route) {
         vouchers.push(v);
       } catch (e) { errs.push(`${x.name}: ${e.message || e}`); }
     }
-    let docs = vouchers.length ? SM.splitSheets(vouchers, {}) : [];
+    let docs = vouchers.length ? SM.splitSheets(vouchers, { byDate: route !== 'stmt-gong' }) : [];   // 공간제작소만 품목·현장별로 나눔, 나머지는 일자별 한 장
     docs = docs.filter((d) => (route === 'stmt-gong' ? isGong(d.partner) : true));
     f.docs = docs;
     if (!docs.length && route === 'stmt-gong' && vouchers.length) errs.push('공간제작소 전표가 아니에요');

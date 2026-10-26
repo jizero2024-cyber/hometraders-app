@@ -375,6 +375,18 @@ export function splitSheets(vouchers, opt) {
   const out = [], seq = {}, lumberAt = {};
   const oneEach = !!(opt && opt.perVoucher);        // 구매명세서는 거래처와 상관없이 전표 1건당 1장
   if (!oneEach) vouchers = mergeSameSite(vouchers);
+  if (!oneEach && opt && opt.byDate) {              // 그 외 명세표: 같은 날·같은 거래처는 전표·현장이 달라도 한 장 (10/27 대표 "일자별로 묶어서 — 공간제작소만 나눔")
+    const by = new Map(), rest = [];
+    vouchers.forEach((v) => {
+      if (perItem(v.partner) || perSite(v.partner)) { rest.push(v); return; }
+      const k = `${v.ymd}|${key(v.partner)}`;
+      if (!by.has(k)) by.set(k, { ...v, items: [], sites: new Set(), slips: [] });
+      const g = by.get(k);
+      g.items.push(...v.items); g.slips.push(...(v.slips || [v.slip])); if (v.site) g.sites.add(v.site);
+    });
+    vouchers = [...by.values()].map((g) => ({ ...g, merged: true, site: g.sites.size === 1 ? [...g.sites][0] : '', slips: [...new Set(g.slips)] })).concat(rest)
+      .sort((a, b) => a.ymd.localeCompare(b.ymd));
+  }
   vouchers.forEach((v) => {
     let groups;
     if (oneEach) {
