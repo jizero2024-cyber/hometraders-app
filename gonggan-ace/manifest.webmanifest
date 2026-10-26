@@ -1,0 +1,14 @@
+{
+  "name": "공간제작소 거래명세표",
+  "short_name": "공간제작소",
+  "start_url": "/gonggan-ace/",
+  "scope": "/gonggan-ace/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "lang": "ko",
+  "icons": [
+    { "src": "/icons/gonggan-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "/icons/gonggan-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
