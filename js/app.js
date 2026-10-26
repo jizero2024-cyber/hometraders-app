@@ -7,8 +7,8 @@ import { makeMatcher, readPastedText, quotePrev } from './textread.js';
 import * as DL from './delivery.js';
 import * as SM from './stmt.js';
 import * as HD from './hdisp.js';
-import * as HM from './home.js?v=2';
-import * as FM from './forms.js?v=2';
+import * as HM from './home.js?v=3';
+import * as FM from './forms.js?v=3';
 
 // 창고 아이콘 세트 (무채색)
 const WH_ICONS = {
@@ -5685,6 +5685,11 @@ FM.bind(app, {
   helperFile: (p) => `${HELPER}/api/file?path=${encodeURIComponent(p)}`,
   helperUp: () => { if (!helperState.checked || Date.now() - helperState.at > 60000) helperCheck(); return helperState.up; },
   slips: slipsFor,
+  helperReady: async () => {   // 첫 확인이 끝나기 전에 붙여넣으면 '꺼져 있다'로 나오던 것 (10/27) — 직접 물어보고 기다림
+    if (helperState.up) return true;
+    try { const j = await helperFetch('/api/health'); helperState = { checked: true, up: true, info: j, at: Date.now() }; } catch (_) { helperState = { checked: true, up: false, info: null, at: Date.now() }; }
+    return helperState.up;
+  },
 });
 HM.bind(app, {
   rerender: render,

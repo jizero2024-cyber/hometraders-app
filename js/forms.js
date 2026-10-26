@@ -20,7 +20,7 @@ const today = () => DL.isoDate(new Date());
 const F = { 'stmt-gong': blank(), 'stmt-etc': blank(), 'stmt-ace': blank(), deliv: { ...blank(), confirms: null },
   approval: { presets: null, preset: '', site: '', ship: '', issue: '', file: null, busy: false, err: '', out: null },
   quote: { ...blank(), doc: null, out: null }, deposit: {}, esong: { ...blank(), doc: null, link: '', copied: false } };
-let ctx = { rerender: () => {}, go: () => {}, me: () => '', helper: async () => ({}), helperUp: () => false, helperFile: () => '', slips: async () => ({ slips: [] }) };
+let ctx = { rerender: () => {}, go: () => {}, me: () => '', helper: async () => ({}), helperUp: () => false, helperReady: async () => false, helperFile: () => '', slips: async () => ({ slips: [] }) };
 
 function top(back, right) {
   return `<header class="hm-top"><div class="hm-in">
@@ -80,7 +80,7 @@ async function loadStmt(route) {
       try {
         if (/\.(xlsx|xlsm|xls|csv)$/i.test(x.name)) { vouchers.push(...SM.parseSales(await SM.readSheets(x.file))); continue; }
         // 전표 PDF · 거래명세표 PDF/사진 (에이스 건을 홈트로 잘못 올린 것 → 에이스 양식으로, 10/23 대표) — 사무실 맥 도우미가 읽음
-        if (!ctx.helperUp()) { errs.push(`${x.name}: PDF·사진은 사무실 맥 도우미가 켜져 있어야 읽어요`); continue; }
+        if (!(ctx.helperUp() || await ctx.helperReady())) { errs.push(`${x.name}: PDF·사진은 사무실 맥 도우미가 켜져 있어야 읽어요`); continue; }
         const data = await b64(x.file);
         let j = null;
         if (/\.pdf$/i.test(x.name)) { try { j = await ctx.helper('/api/slip/pdf', { data }); } catch (_) { j = null; } }   // 이카운트 전표 PDF 는 칸 그대로
@@ -225,7 +225,7 @@ async function loadDeliv() {
           try { fromSales(SM.parseSales(await SM.readSheets(x.file))); }
           catch (_) { const d = await DL.readQuoteXlsx(await b64(x.file)); docs.push({ doc: d, lines: d.lines }); }   // 이카운트 판매 엑셀이 아니면 우리 견적서·명세서 엑셀
         } else {
-          if (!ctx.helperUp()) { errs.push(`${x.name}: 사진·PDF 는 사무실 맥 도우미가 켜져 있어야 읽어요`); continue; }
+          if (!(ctx.helperUp() || await ctx.helperReady())) { errs.push(`${x.name}: 사진·PDF 는 사무실 맥 도우미가 켜져 있어야 읽어요`); continue; }
           const j = await ctx.helper('/api/doc/read', { name: x.name, data: await b64(x.file) });
           docs.push({ doc: j.doc, lines: j.doc.lines });
         }
@@ -311,7 +311,7 @@ function quoteScreen() {
 async function loadQuote() {
   const q = F.quote, text = q.text.trim();
   if (!text && !q.files.length) { q.err = '품목 글을 붙여넣거나 파일을 골라 주세요'; ctx.rerender(); return; }
-  if (!ctx.helperUp()) { q.err = '사무실 맥 도우미가 켜져 있어야 읽어요'; ctx.rerender(); return; }
+  if (!(ctx.helperUp() || await ctx.helperReady())) { q.err = '사무실 맥 도우미가 켜져 있어야 읽어요'; ctx.rerender(); return; }
   q.busy = true; q.err = ''; q.out = null; ctx.rerender();
   try {
     const j = text ? await ctx.helper('/api/doc/read', { text }) : await ctx.helper('/api/doc/read', { name: q.files[0].name, data: await b64(q.files[0].file) });
