@@ -2,7 +2,7 @@
 //   이 페이지는 우리 업무 앱 코드를 하나도 불러오지 않음: 로그인 · 공간제작소 명세(gbms.js) · 거래명세표 그리기(stmt.js) 만.
 //   공간제작소 계정(space1234)은 코드 하나로 로그인. 직원 계정도 같은 화면 (직원만: 직접 등록 · 처음 화면 · 거래명세표 지우기).
 import * as S from './gonggan-store.js?v=4';
-import * as GB from './gbms.js?v=32';
+import * as GB from './gbms.js?v=33';
 
 const app = document.getElementById('app');
 const GONG_ID = 'space1234';
