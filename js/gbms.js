@@ -55,6 +55,8 @@ export async function load(biz, force) {
       .map((d) => ({ ...d, site0: d.site, site: ((G.docs[d.id] || {}).manual || {}).site || d.site, reg: d.manual ? (d.reg || '') : (d.slips || [d.slip]).map((sl) => regOf[sl]).filter(Boolean).sort()[0] || '', no: d.manual ? '' : (d.slips || [d.slip]).map((sl) => noOf[slipKey(sl)]).find(Boolean) || '' }))   // 직접 등록한 장은 번호가 이카운트 전표가 아님
       .filter((d) => (G.docs[d.id] || {}).status !== '삭제')                         // 지운 장은 안 보임 (10/23)
       .sort((a, b) => (b.ymd + b.slip).localeCompare(a.ymd + a.slip));
+    G.syncAt = [...sales.map((r) => r.updated_at), ...docs.map((x) => x.updated_at)].filter(Boolean).map((t) => new Date(t)).sort((a, b) => b - a)[0] || null;
+    G.feed = feedOf(G.list);
     G.loaded = biz;
   } catch (e) { G.err = e.message || String(e); }
   G.loading = false; ctx.rerender();
@@ -124,6 +126,19 @@ async function ensureImg(d) {
 
 // ── 화면 ─────────────────────────────────────────
 const md = (ymd) => `${ymd.slice(4, 6)}/${ymd.slice(6, 8)}`;
+const hm = (t) => { const d = t instanceof Date ? t : new Date(t); return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
+const regTime = (reg) => (/\d{1,2}:\d{2}/.exec(reg || '') || [''])[0];   // 등록 시각 (10/27부터 올라간 것만 — 예전 것은 날짜만)
+// 상단 업데이트 (10/27 대표 "상단에 업데이트 내용 자동으로") — 최근 3일 새로 올라온 장 + 상태·계산서·입금이 바뀐 장, 최근 순 6개
+function feedOf(list) {
+  const since = Date.now() - 3 * 864e5, out = [];
+  for (const d of list) {
+    const t = regTime(d.reg);
+    if (t) { const at = new Date(`${d.reg.slice(0, 10)}T${t}:00`); if (at >= since) out.push({ at, id: d.id, tag: '새로 올라옴' }); }
+    const x = G.docs[d.id];
+    if (x && x.updated_at && new Date(x.updated_at) >= since) out.push({ at: new Date(x.updated_at), id: d.id, tag: x.paid ? '입금' : ['최종완료', '수정요청', '기안중'].includes(x.status) ? x.status : x.tax_name ? '계산서' : '수정' });
+  }
+  return out.sort((a, b) => b.at - a.at).filter((f, i, a) => a.findIndex((g) => g.id === f.id && g.tag === f.tag) === i).slice(0, 6);
+}
 const itemTitle = (d) => ((G.docs[d.id] || {}).manual || {}).title || `${(d.items[0] || {}).name || ''}${d.items.length > 1 ? ` 외 ${d.items.length - 1}개` : ''}`;   // 손으로 고친 제목(manual.title) 먼저 (10/26 공간제작소)
 function filtered() {
   const q = G.q.trim().toLowerCase();
@@ -178,6 +193,14 @@ export function screen() {
       ${months.map((m) => `<button type="button" role="tab" data-gb="month" data-v="${m}" style="${tab(G.month === m)}">2026년 ${Number(m)}월 <span style="opacity:.7;margin-left:4px">${G.list.filter((d) => d.ymd.slice(4, 6) === m).length}</span></button>`).join('')}
       <button type="button" role="tab" data-gb="month" data-v="전체" style="${tab(G.month === '전체')}">전체보기 <span style="opacity:.7;margin-left:4px">${G.list.length}</span></button>
     </div>
+    ${G.syncAt ? `<section class="gb-feed" aria-label="업데이트" style="background:#fff;border:1px solid #E6E4DF;border-radius:12px;padding:12px 16px;display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#5C5C5C"><b style="color:#1F2328">업데이트</b><span style="font-variant-numeric:tabular-nums">${hm(G.syncAt)}</span></div>
+      ${(G.feed || []).map((f) => { const d = G.list.find((x) => x.id === f.id); return d ? `<button type="button" data-gb="row" data-id="${esc(d.id)}" style="display:flex;align-items:center;gap:10px;border:0;border-top:1px solid #F1EFEA;background:none;padding:8px 0 0;font:inherit;font-size:13px;text-align:left;cursor:pointer;min-width:0">
+        <span style="flex:none;font-variant-numeric:tabular-nums;color:#6B6B6B">${hm(f.at)}</span>
+        <span style="flex:none;font-size:11px;padding:2px 8px;border-radius:10px;${f.tag === '새로 올라옴' ? 'background:#FDF0E6;color:#9A3412' : 'background:#F3F4F6;color:#3F3F46'}">${esc(f.tag)}</span>
+        <span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><b>${md(d.ymd)}</b> ${esc(d.site || '')} · ${esc(itemTitle(d))}</span>
+        <b style="flex:none;margin-left:auto;font-variant-numeric:tabular-nums">${won(d.total)}</b></button>` : ''; }).join('')}
+    </section>` : ''}
     <div class="gb-stat" style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px">
       ${STATUS.map((k) => `<button type="button" data-gb="status" data-v="${k}" style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:14px 16px;border-radius:12px;font:inherit;text-align:left;cursor:pointer;background:#fff;${G.status === k ? 'border:2px solid #E8732C' : 'border:1px solid #E6E4DF'}"><span style="font-size:13px;color:#5C5C5C">${k === '전체' ? '전체보기' : k}</span><b style="font-size:26px">${cnt(k)}<span style="font-size:14px;font-weight:500;margin-left:3px">건</span></b></button>`).join('')}
     </div>
@@ -221,7 +244,7 @@ function cardHtml(d) {
     <div style="font-weight:600;font-size:14px;line-height:1.4">${esc(itemTitle(d))}</div>
     ${st === '수정요청' && x.reason ? `<div style="font-size:12px;color:#B42318"><b>수정요청</b> ${esc(x.reason)}</div>` : ''}
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><span style="display:flex;gap:4px;flex-wrap:wrap">${chip(!(x.manual || {}).stmtDel, '명세표')}${chip(!!x.tax_name, '계산서')}${x.paid ? paidTag(x.paid) : ''}</span><b style="font-size:15px;font-variant-numeric:tabular-nums">${won(d.total)}원</b></div>
-    <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:11px;color:#9A9A9A">${esc(d.no || '')}</span><button type="button" data-gb="delrow" data-id="${esc(d.id)}" aria-label="목록에서 삭제" title="목록에서 삭제" style="width:30px;height:30px;border-radius:15px;border:1px solid #F1B5AF;background:#fff;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0">${TRASH}</button></div>
+    <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:11px;color:#9A9A9A">${esc(d.no || '')}${d.reg ? ` · 등록 ${md(d.reg.replace(/-/g, ''))} ${regTime(d.reg)}` : ''}</span><button type="button" data-gb="delrow" data-id="${esc(d.id)}" aria-label="목록에서 삭제" title="목록에서 삭제" style="width:30px;height:30px;border-radius:15px;border:1px solid #F1B5AF;background:#fff;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0">${TRASH}</button></div>
   </div>`);
 }
 function rowHtml(d) {
@@ -234,7 +257,7 @@ function rowHtml(d) {
     <td style="padding:12px 8px;text-align:center">${(x.manual || {}).stmtDel ? addBtn('addstmt', d.id) : okTag}</td>
     <td style="padding:12px 8px;text-align:center">${x.tax_name ? okTag : addBtn('addtax', d.id)}</td>
     <td style="padding:12px 8px;text-align:center;white-space:nowrap">${statusPick(d.id, st)}${x.paid ? `<div style="margin-top:6px">${paidTag(x.paid)}</div>` : ''}</td>
-    <td style="padding:12px 14px 12px 8px;text-align:center;white-space:nowrap;font-size:13px;color:#3F3F46">${x.delivered ? `<span style="font-weight:700;color:#1E6B34">✓ ${esc(x.delivered)} 전달완료</span>` : d.reg ? md(d.reg.replace(/-/g, '')) : ''}</td>
+    <td style="padding:12px 14px 12px 8px;text-align:center;white-space:nowrap;font-size:13px;color:#3F3F46">${x.delivered ? `<span style="font-weight:700;color:#1E6B34">✓ ${esc(x.delivered)} 전달완료</span>` : d.reg ? `${md(d.reg.replace(/-/g, ''))}${regTime(d.reg) ? `<div style="font-size:11px;color:#8A8A8A">${regTime(d.reg)}</div>` : ''}` : ''}</td>
     <td style="padding:12px 12px 12px 0;text-align:center"><button type="button" data-gb="delrow" data-id="${esc(d.id)}" aria-label="목록에서 삭제" title="목록에서 삭제" style="width:30px;height:30px;border-radius:15px;border:1px solid #F1B5AF;background:#fff;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0">${TRASH}</button></td>
   </tr>`);
 }
