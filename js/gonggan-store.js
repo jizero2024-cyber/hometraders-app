@@ -52,6 +52,13 @@ export async function putWaitRows(rows, reg) {
   const { error: e2 } = await sb.from('gonggan_sales').delete().in('id', rows.map((r) => r.id));
   if (e2) throw new Error(e2.message);
 }
+export async function skipWait(slips, rowIds, who) {   // 올릴 전표 [빼기] — 이미 올라간 것 (10/27). 맥은 waitskip: 문서를 보고 다시 안 올림
+  const now = new Date().toISOString();
+  const { error } = await sb.from('gonggan_docs').upsert(slips.map((sl) => ({ id: `waitskip:${sl}`, biz: 'homt_wait', manual: { slip: sl }, updated_by: who, updated_at: now })), { onConflict: 'id' });
+  if (error) throw new Error(error.message);
+  const { error: e2 } = await sb.from('gonggan_sales').delete().in('id', rowIds);
+  if (e2) throw new Error(e2.message);
+}
 export async function getGongganDocs(biz) {
   const cols = 'id,biz,status,tax_name,tax_no,manual,delivered,reason,drafted_at,updated_by,updated_at';
   let { data, error } = await sb.from('gonggan_docs').select(cols + ',paid').eq('biz', biz).limit(5000);   // paid = 입금일 (10/25) — 칸이 아직 없으면 빼고 다시

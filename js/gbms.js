@@ -1,7 +1,7 @@
 // 공간제작소 BMS — 거래명세표 · 세금계산서 · 기안 (2026-10-23, 시안 https://claude.ai/artifact/Kmkve915nhwknjJYE76xGE)
 // 줄 = 이카운트 판매현황의 공간제작소 판매 줄(gonggan_sales, 맥 도우미가 올림) → 거래명세표 변환기(stmt.js)로 장마다 나눔.
 // 장마다 상태·세금계산서·수정요청 사유 = gonggan_docs. 홈트레이더스·현구 과장님 같은 화면.
-import * as S from './gonggan-store.js?v=5';   // 우리 업무 앱 저장소와 따로 (10/23)
+import * as S from './gonggan-store.js?v=6';   // 우리 업무 앱 저장소와 따로 (10/23)
 import * as SM from './stmt.js?v=101';
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -270,7 +270,8 @@ function waitHtml() {
         <div style="margin-top:4px;font-size:12px;color:#6B6B6B;line-height:1.6">${d.items.slice(0, 4).map((i) => `${esc(i.name)} ${won(i.qty)}`).join('<br>')}${d.items.length > 4 ? `<br>외 ${d.items.length - 4}줄` : ''}</div></div>
       <span style="flex:0 0 auto;font-size:12px;color:#5C5C5C">입력 <b style="color:#1F2328">${esc(waitWho(d) || '—')}</b></span>
       <b style="flex:0 0 auto;font-variant-numeric:tabular-nums">${won(d.total)}원</b>
-      <button type="button" data-gb="wait-up" data-id="${esc(d.id)}" ${G.waitBusy ? 'disabled' : ''} style="${btn(G.waitBusy === d.id)}">${G.waitBusy === d.id ? '올리는 중…' : '올리기'}</button>
+      <span style="flex:0 0 auto;display:flex;gap:6px"><button type="button" data-gb="wait-skip" data-id="${esc(d.id)}" ${G.waitBusy ? 'disabled' : ''} style="height:36px;padding:0 12px;border:1px solid #E6E4DF;border-radius:8px;background:#fff;color:#5C5C5C;font:inherit;font-size:13px;cursor:pointer">빼기</button>
+      <button type="button" data-gb="wait-up" data-id="${esc(d.id)}" ${G.waitBusy ? 'disabled' : ''} style="${btn(G.waitBusy === d.id)}">${G.waitBusy === d.id ? '올리는 중…' : '올리기'}</button></span>
     </div>`).join('') || `<div style="padding:40px;text-align:center;color:#6B6B6B;background:#fff;border:1px solid #E6E4DF;border-radius:12px">${G.loading ? '불러오는 중…' : '없어요'}</div>`}</div>`;
 }
 const waitInfo = (d) => (d.slips || [d.slip]).map((sl) => ({ slip: sl, ...(G.waitMeta[sl] || {}) }));
@@ -288,6 +289,14 @@ function waitModal() {
       ${pdfs.length ? pdfs.map((x) => `<iframe src="${esc(x.pdf)}" title="판매전표 ${esc(x.slip)}" style="width:100%;height:72vh;border:1px solid #E6E4DF;border-radius:8px"></iframe>`).join('')
         : `<div style="padding:40px;text-align:center;color:#6B6B6B;background:#FAFAF8;border-radius:8px">전표 PDF 받는 중</div>`}
     </div></div>`;
+}
+async function waitSkip(id) {
+  const d = G.wait.find((x) => x.id === id); if (!d || G.waitBusy) return;
+  if (!confirm(`올릴 전표에서 빼시겠습니까?\n${md(d.ymd)} ${d.site || ''} ${won(d.total)}원`)) return;
+  G.waitBusy = id; G.err = ''; ctx.rerender();
+  try { await S.skipWait(d.slips || [d.slip], d.rows.map((r) => r.id), ctx.me()); G.waitOpen = ''; }
+  catch (e) { G.err = e.message || String(e); }
+  G.waitBusy = ''; await load(G.biz, true);
 }
 async function waitUp(id) {
   const d = G.wait.find((x) => x.id === id); if (!d || G.waitBusy) return;
@@ -652,6 +661,7 @@ export function bind(app, c) {
     if (LIM() && LIM_ACTS.has(a)) return;
     if (a === 'view') { G.view = t.dataset.v; G.open = null; ctx.rerender(); return; }
     if (a === 'wait-up' && id) { waitUp(id); return; }
+    if (a === 'wait-skip' && id) { waitSkip(id); return; }
     if (a === 'wait-open' && id) { if (e.target.closest('button')) return; G.waitOpen = id; ctx.rerender(); return; }
     if (a === 'wait-close' || (a === 'wait-bg' && e.target === t)) { G.waitOpen = ''; ctx.rerender(); return; }
     if (a === 'feed' && id) { feedGo(id); return; }   // 업데이트 줄 → 아래 목록의 그 줄로 (10/27 대표)
