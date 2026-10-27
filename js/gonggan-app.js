@@ -36,7 +36,9 @@ app.addEventListener('submit', (e) => {
   e.preventDefault();
   const code = e.target.code.value.trim(), err = document.getElementById('gg-err');
   if (err) err.textContent = '로그인 중…';
-  S.signIn(GONG_ID, code).catch(() => { if (err) err.textContent = '코드를 확인해 주세요'; });   // 코드 = space1234(현구 과장님) 계정 비밀번호 — 직원은 첫 화면에서 로그인하고 들어옴 (10/27 대표 "코드만, 그때처럼")   // 아이디는 space1234 고정, 코드 = 비밀번호 (10/23 대표: 비밀번호를 바꿔도 코드만 새로)
+  S.signIn(GONG_ID, code)
+    .catch(() => (/^[a-z]+\d+$/i.test(code) ? S.signIn(code.toLowerCase(), code) : Promise.reject()))   // space1225 = 우리 직원 계정 — 코드 = 그 아이디 (10/27 대표)
+    .catch(() => { if (err) err.textContent = '코드를 확인해 주세요'; });   // 코드 = space1234(현구 과장님) 계정 비밀번호 — 직원은 첫 화면에서 로그인하고 들어옴 (10/27 대표 "코드만, 그때처럼")   // 아이디는 space1234 고정, 코드 = 비밀번호 (10/23 대표: 비밀번호를 바꿔도 코드만 새로)
 });
 
 async function boot() {
