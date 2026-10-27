@@ -1,7 +1,7 @@
 // 공간제작소 BMS — 거래명세표 · 세금계산서 · 기안 (2026-10-23, 시안 https://claude.ai/artifact/Kmkve915nhwknjJYE76xGE)
 // 줄 = 이카운트 판매현황의 공간제작소 판매 줄(gonggan_sales, 맥 도우미가 올림) → 거래명세표 변환기(stmt.js)로 장마다 나눔.
 // 장마다 상태·세금계산서·수정요청 사유 = gonggan_docs. 홈트레이더스·현구 과장님 같은 화면.
-import * as S from './gonggan-store.js?v=6';   // 우리 업무 앱 저장소와 따로 (10/23)
+import * as S from './gonggan-store.js?v=7';   // 우리 업무 앱 저장소와 따로 (10/23)
 import * as SM from './stmt.js?v=101';
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -57,8 +57,9 @@ export async function load(biz, force) {
       .sort((a, b) => (b.ymd + b.slip).localeCompare(a.ymd + a.slip));
     G.wait = [];                                         // 올릴 전표 (10/27) — 홈트 목록에만, 공간제작소 계정은 안 봄
     if (biz === 'homt' && ctx.me() !== 'space1234') {
-      const [w, wm] = await Promise.all([S.getGongganSales('homt_wait').catch(() => []), S.getGongganDocs('homt_wait').catch(() => [])]);
-      G.waitMeta = Object.fromEntries(wm.filter((x) => x.manual && x.manual.slip).map((x) => [x.manual.slip, x.manual]));   // 전표 → {pdf, who} (맥이 올림)
+      const ws = await S.getWaitSlips().catch(() => []);
+      G.waitMeta = Object.fromEntries(ws.map((x) => [x.slip, x]));   // 전표 → {pdf, who}
+      const w = ws.flatMap((x) => x.rows || []);
       w.sort((a, b) => String(a.id).split('|')[0].localeCompare(String(b.id).split('|')[0]) || lineNo(a.id) - lineNo(b.id));
       const wl = w.length ? SM.splitSheets(SM.parseSales([[HEAD, ...w.map((r) => [r.slip, r.partner, r.name, r.qty, r.price, r.supply, r.vat])]]), {}) : [];
       G.wait = wl.map((d) => ({ ...d, id: docId(d), total: itemsTotal(d), rows: w.filter((r) => (d.slips || [d.slip]).includes(slipKey(r.slip))) }))
@@ -75,7 +76,10 @@ const statusPick = (id, st) => LIM() ? `<span style="display:inline-block;paddin
 // 현구대리님 계정(space1234) — 수정요청 · 기안 확정만 (10/27 대표). 최종완료는 우리가 입금 확인 후. 고치기·넣기·지우기 버튼은 안 보이고 눌려도 안 됨
 const LIM = () => ctx.me() === 'space1234';
 const LIM_ACTS = new Set(['editsite', 'edittitle', 'edittotal', 'delrow', 'delstmt', 'deltax', 'replace', 'addstmt', 'addtax', 'pend-save', 'pend-cancel', 'editno', 'reg', 'reg-save']);
+// 10/27 대표 "기안확정이랑 수정요청 그리고 다운받기만" — 이 계정은 아래 보기·다운로드·기안 확정·수정요청만 (나머지는 눌려도 안 됨)
+const LIM_OK = new Set(['row', 'close', 'overlay', 'panel', 'zoom', 'unzoom', 'both', 'draft', 'reject', 'reason', 'month', 'status', 'page', 'size', 'site', 'q', 'feed', 'biz', 'logout', 'copyno']);
 const limHtml = (h) => (!LIM() ? h : h.replace(/<button[^>]*data-gb="(?:editsite|edittitle|edittotal|delrow|delstmt|deltax|replace|addstmt|addtax|pend-save|editno)"[^>]*>[\s\S]*?<\/button>/g, '')
+  .replace(/<input[^>]*data-gb="taxno"[^>]*>/g, '')
   .replace(/<b>(거래명세표|세금계산서) 넣기<\/b><span[^>]*>[^<]*<\/span>/g, '<b>$1 없음</b>'));
 const statusOf = (d) => { const x = G.docs[d.id] || {}; return ['최종완료', '수정요청', '기안중'].includes(x.status) ? x.status : '결재전'; };   // 세금계산서를 넣어도 결재전 (10/23 대표)
 async function save(id, patch) {
@@ -294,7 +298,7 @@ async function waitSkip(id) {
   const d = G.wait.find((x) => x.id === id); if (!d || G.waitBusy) return;
   if (!confirm(`올릴 전표에서 빼시겠습니까?\n${md(d.ymd)} ${d.site || ''} ${won(d.total)}원`)) return;
   G.waitBusy = id; G.err = ''; ctx.rerender();
-  try { await S.skipWait(d.slips || [d.slip], d.rows.map((r) => r.id), ctx.me()); G.waitOpen = ''; }
+  try { await S.skipWait(d.slips || [d.slip]); G.waitOpen = ''; }
   catch (e) { G.err = e.message || String(e); }
   G.waitBusy = ''; await load(G.biz, true);
 }
@@ -302,7 +306,7 @@ async function waitUp(id) {
   const d = G.wait.find((x) => x.id === id); if (!d || G.waitBusy) return;
   G.waitBusy = id; G.err = ''; ctx.rerender();
   const n = new Date(), p = (v) => String(v).padStart(2, '0');
-  try { await S.putWaitRows(d.rows, `${n.getFullYear()}-${p(n.getMonth() + 1)}-${p(n.getDate())} ${p(n.getHours())}:${p(n.getMinutes())}`); }
+  try { await S.putWaitRows(d.slips || [d.slip], d.rows, `${n.getFullYear()}-${p(n.getMonth() + 1)}-${p(n.getDate())} ${p(n.getHours())}:${p(n.getMinutes())}`); }
   catch (e) { G.err = e.message || String(e); }
   G.waitBusy = ''; if (!G.err) G.waitOpen = ''; await load(G.biz, true);
 }
@@ -658,7 +662,7 @@ export function bind(app, c) {
   app.addEventListener('click', async (e) => {
     const t = e.target.closest('[data-gb]'); if (!t || !app.querySelector('.gb')) return;
     const a = t.dataset.gb, id = t.dataset.id, cur = G.open && G.list.find((d) => d.id === G.open);
-    if (LIM() && LIM_ACTS.has(a)) return;
+    if (LIM() && (LIM_ACTS.has(a) || !LIM_OK.has(a))) return;
     if (a === 'view') { G.view = t.dataset.v; G.open = null; ctx.rerender(); return; }
     if (a === 'wait-up' && id) { waitUp(id); return; }
     if (a === 'wait-skip' && id) { waitSkip(id); return; }
@@ -733,6 +737,7 @@ export function bind(app, c) {
   app.addEventListener('change', (e) => {
     const t = e.target; if (!app.querySelector('.gb')) return;
     if (t.id === 'gb-reg-file' && G.reg) { G.reg.files.push(...[...t.files].map((file) => ({ name: file.name, file }))); t.value = ''; ctx.rerender(); return; }
+    if (LIM() && !['site', 'size'].includes(t.dataset && t.dataset.gb)) return;   // 공간제작소 계정 — 고르기(현장·쪽 크기)만
     if (t.id === 'gb-file') { const f = t.files && t.files[0]; if (fileTarget) attach(fileTarget.id, fileTarget.kind, f); return; }
     const a = t.dataset && t.dataset.gb;
     if (a === 'taxno') { const m = NO_RE.exec(t.value); const cur = G.open && G.list.find((d) => d.id === G.open); if (m && cur) { G.editNo = false; save(cur.id, { tax_no: `${m[1]}-${m[2]}-${m[3]}` }); } else if (t.value.trim()) alert('승인번호는 20261013-10261013-99366706 모양이에요'); return; }

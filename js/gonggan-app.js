@@ -1,13 +1,13 @@
 // 공간제작소 페이지 (/gonggan/ · /gonggan-ace/) — 우리 업무 앱(app.js)과 완전히 따로 (10/23 대표 "공간제작소 관련된 건 사이트 코드 분리")
 //   이 페이지는 우리 업무 앱 코드를 하나도 불러오지 않음: 로그인 · 공간제작소 명세(gbms.js) · 거래명세표 그리기(stmt.js) 만.
 //   공간제작소 계정(space1234)은 코드 하나로 로그인. 직원 계정도 같은 화면 (직원만: 직접 등록 · 처음 화면 · 거래명세표 지우기).
-import * as S from './gonggan-store.js?v=6';
-import * as GB from './gbms.js?v=38';
+import * as S from './gonggan-store.js?v=7';
+import * as GB from './gbms.js?v=39';
 
 const app = document.getElementById('app');
 const GONG_ID = 'space1234';
 const GONG_MIN_LOGIN = '2026-10-25T05:37:00Z';   // 공간제작소 계정: 이 시각(10/25 14:37 — 비밀번호 바꾼 뒤) 전에 로그인한 기기는 다시 로그인해야 함 — 비밀번호 바꿀 때마다 이 값을 지금으로
-const CLOSED = true;   // 공간제작소 계정 닫기 스위치 (10/23 닫음 → 10/25 대표 "이제 열어줘" → 10/27 대표 "아직 space1234 는 막아줘" — space1225 는 그대로). 닫을 땐 true + DB 정책 gonggan_closed
+const CLOSED = false;  // 공간제작소 계정 닫기 스위치 (10/23 닫음 → 10/25 대표 "이제 열어줘" → 10/27 오전 "아직 막아줘" → 10/27 대표 "기안확정·수정요청·다운받기만 되게 하고 이제 풀어줘"). 닫을 땐 true + DB 정책 gonggan_closed
 const HELPER = 'http://127.0.0.1:4180';   // 사무실 맥 도우미 — 직원이 직접 등록할 때 PDF·사진 읽기
 let me = '';
 let booted = false;

@@ -273,10 +273,10 @@ export async function markFareSent(id, by) {   // 실패하면 글자, 되면 nu
   const { error } = await sb.from('fare_unpaid').update({ sent: true, sent_by: by, sent_at: new Date().toISOString() }).eq('id', id);
   return error ? error.message : null;
 }
-export async function getGongganWaitCount() {   // 공간 올릴 전표 수 (10/27) — 맥이 올려 둔 biz=homt_wait 줄의 전표 수
-  const { data, error } = await sb.from('gonggan_sales').select('slip').eq('biz', 'homt_wait').limit(2000);
+export async function getGongganWaitCount() {   // 공간 올릴 전표 수 (10/27) — 맥이 올려 둔 올릴 전표 수
+  const { count, error } = await sb.from('site_inbox').select('id', { count: 'exact', head: true }).eq('kind', 'gwait').eq('status', 'gwait');   // 직원 전용 표 (10/27)
   if (error) throw new Error(error.message);
-  return new Set((data || []).map((r) => r.slip)).size;
+  return count || 0;
 }
 export async function getInboxCounts() {
   const { data, error } = await sb.from('site_inbox').select('status').neq('kind', 'read').in('status', ['wait', 'got', 'check']);   // 'read' = 사진 읽기 부탁 (자료 아님)

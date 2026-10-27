@@ -1,14 +1,14 @@
 import {
   CATEGORIES, UNITS, WH_ICON_KEYS, swatchFor, SILICONE_COLORS,
 } from './data.js?v=2';
-import * as S from './store-supabase.js?v=4';
+import * as S from './store-supabase.js?v=5';
 import { ECOUNT_ITEMS } from './ecount-items.js';
 import { makeMatcher, readPastedText, quotePrev } from './textread.js';
 import * as DL from './delivery.js';
 import * as SM from './stmt.js?v=103';
-import * as HD from './hdisp.js?v=4';
-import * as HM from './home.js?v=7';
-import * as FM from './forms.js?v=7';
+import * as HD from './hdisp.js?v=5';
+import * as HM from './home.js?v=8';
+import * as FM from './forms.js?v=8';
 
 // 창고 아이콘 세트 (무채색)
 const WH_ICONS = {
