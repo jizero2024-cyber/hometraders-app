@@ -16,7 +16,7 @@ const S = { doc: null, checks: new Set(), name: '', drawn: false, busy: false, m
 let pad = null;
 
 function head() {
-  return `<div class="sj-head"><h1>납품 송장</h1><img src="/icons/logo-full.png" alt="HOME TRADERS"></div><div class="sj-bar"></div>`;
+  return `<div class="sj-head"><img src="/icons/logo-full.png" alt="HOME TRADERS"><h1>납품 송장</h1></div><div class="sj-bar"></div>`;
 }
 function info(d) {
   return `<div class="sj-to">${esc(d.partner || '')} 귀하</div>
