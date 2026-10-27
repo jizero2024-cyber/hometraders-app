@@ -1,8 +1,8 @@
 // 공간제작소 페이지 (/gonggan/ · /gonggan-ace/) — 우리 업무 앱(app.js)과 완전히 따로 (10/23 대표 "공간제작소 관련된 건 사이트 코드 분리")
 //   이 페이지는 우리 업무 앱 코드를 하나도 불러오지 않음: 로그인 · 공간제작소 명세(gbms.js) · 거래명세표 그리기(stmt.js) 만.
 //   공간제작소 계정(space1234)은 코드 하나로 로그인. 직원 계정도 같은 화면 (직원만: 직접 등록 · 처음 화면 · 거래명세표 지우기).
-import * as S from './gonggan-store.js?v=4';
-import * as GB from './gbms.js?v=34';
+import * as S from './gonggan-store.js?v=5';
+import * as GB from './gbms.js?v=35';
 
 const app = document.getElementById('app');
 const GONG_ID = 'space1234';
@@ -57,6 +57,7 @@ async function boot() {
     return;
   }
   booted = true;
+  if (location.hash === '#wait' && me !== GONG_ID) { GB.openWait(); history.replaceState(null, '', location.pathname); }   // 처음 화면 '공간 올릴 전표' 칸에서 (10/27)
   render();
 }
 

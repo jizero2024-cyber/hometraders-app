@@ -1,7 +1,7 @@
 // 공간제작소 BMS — 거래명세표 · 세금계산서 · 기안 (2026-10-23, 시안 https://claude.ai/artifact/Kmkve915nhwknjJYE76xGE)
 // 줄 = 이카운트 판매현황의 공간제작소 판매 줄(gonggan_sales, 맥 도우미가 올림) → 거래명세표 변환기(stmt.js)로 장마다 나눔.
 // 장마다 상태·세금계산서·수정요청 사유 = gonggan_docs. 홈트레이더스·현구 과장님 같은 화면.
-import * as S from './gonggan-store.js?v=4';   // 우리 업무 앱 저장소와 따로 (10/23)
+import * as S from './gonggan-store.js?v=5';   // 우리 업무 앱 저장소와 따로 (10/23)
 import * as SM from './stmt.js?v=101';
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -16,7 +16,7 @@ const DOWN = '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"
 const CHEV = '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" style="position:absolute;right:14px;top:12px;pointer-events:none"><path d="M4 6l4 4 4-4" fill="none" stroke="#1F2328" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
 
 const G = { biz: 'homt', loaded: '', loading: false, err: '', list: [], docs: {}, month: '전체', status: '전체', site: '', q: '', page: 1, size: 20,
-  pick: new Set(), open: null, zoom: '', reason: '', img: {}, full: {}, busy: '', reg: null };
+  pick: new Set(), open: null, zoom: '', reason: '', img: {}, full: {}, busy: '', reg: null, view: 'list', wait: [], waitBusy: '' };
 let ctx = { rerender: () => {}, goStart: () => {}, go: () => {}, me: () => '', slips: async () => ({ slips: [] }), helper: async () => ({}), helperUp: () => false };
 
 // ── 데이터 ─────────────────────────────────────────
@@ -55,6 +55,14 @@ export async function load(biz, force) {
       .map((d) => ({ ...d, site0: d.site, site: ((G.docs[d.id] || {}).manual || {}).site || d.site, reg: d.manual ? (d.reg || '') : (d.slips || [d.slip]).map((sl) => regOf[sl]).filter(Boolean).sort()[0] || '', no: d.manual ? '' : (d.slips || [d.slip]).map((sl) => noOf[slipKey(sl)]).find(Boolean) || '' }))   // 직접 등록한 장은 번호가 이카운트 전표가 아님
       .filter((d) => (G.docs[d.id] || {}).status !== '삭제')                         // 지운 장은 안 보임 (10/23)
       .sort((a, b) => (b.ymd + b.slip).localeCompare(a.ymd + a.slip));
+    G.wait = [];                                         // 올릴 전표 (10/27) — 홈트 목록에만, 공간제작소 계정은 안 봄
+    if (biz === 'homt' && ctx.me() !== 'space1234') {
+      const w = await S.getGongganSales('homt_wait').catch(() => []);
+      w.sort((a, b) => String(a.id).split('|')[0].localeCompare(String(b.id).split('|')[0]) || lineNo(a.id) - lineNo(b.id));
+      const wl = w.length ? SM.splitSheets(SM.parseSales([[HEAD, ...w.map((r) => [r.slip, r.partner, r.name, r.qty, r.price, r.supply, r.vat])]]), {}) : [];
+      G.wait = wl.map((d) => ({ ...d, id: docId(d), total: itemsTotal(d), rows: w.filter((r) => (d.slips || [d.slip]).includes(slipKey(r.slip))) }))
+        .sort((a, b) => (b.ymd + b.slip).localeCompare(a.ymd + a.slip));
+    }
     G.syncAt = [...sales.map((r) => r.updated_at), ...docs.map((x) => x.updated_at)].filter(Boolean).map((t) => new Date(t)).sort((a, b) => b - a)[0] || null;
     G.feed = feedOf(G.list);
     G.loaded = biz;
@@ -181,12 +189,14 @@ export function screen() {
 </style>
   <nav class="gb-nav" aria-label="메뉴" style="flex:1 1 220px;max-width:240px;background:#fff;border-right:1px solid #E6E4DF;padding:20px 14px;box-sizing:border-box;display:flex;flex-direction:column;gap:4px">
     <div class="gb-logo" style="display:flex;align-items:center;gap:10px;padding:4px 8px 18px"><img src="/icons/partner-gongan.png" alt="공간제작소" style="height:40px"><span aria-hidden="true" style="color:#8A8A8A">×</span><img src="/icons/logo-full.png" alt="HOME TRADERS" style="height:36px"></div>
-    <button type="button" data-gb="biz" data-v="homt" style="${navStyle(!isAce)}"><span>홈트레이더스</span><span>${isAce ? '' : G.list.length}</span></button>
+    <button type="button" data-gb="biz" data-v="homt" style="${navStyle(!isAce && G.view !== 'wait')}"><span>홈트레이더스</span><span>${isAce ? '' : G.list.length}</span></button>
     <button type="button" data-gb="biz" data-v="ace" style="${navStyle(isAce)}"><span>에이스</span><span>${isAce ? G.list.length : ''}</span></button>
+    ${ctx.me() === 'space1234' || isAce ? '' : `<button type="button" data-gb="view" data-v="${G.view === 'wait' ? 'list' : 'wait'}" style="${navStyle(G.view === 'wait')};margin-top:10px"><span>올릴 전표</span><span style="${G.wait.length ? 'min-width:20px;padding:0 6px;border-radius:10px;background:#E8732C;color:#fff;font-size:12px;text-align:center' : ''}">${G.wait.length || ''}</span></button>`}
     ${ctx.me() === 'space1234' ? '' : '<button type="button" data-gb="start" style="margin-top:auto;border:0;background:none;text-align:left;padding:14px 8px 4px;font:inherit;font-size:12px;color:#6B6B6B;cursor:pointer">‹ 처음 화면</button>'}
     <button type="button" data-gb="logout" style="${ctx.me() === 'space1234' ? 'margin-top:auto;' : ''}border:0;background:none;text-align:left;padding:10px 8px 4px;font:inherit;font-size:12px;color:#9A9A9A;cursor:pointer">로그아웃</button>
   </nav>
   <main class="gb-main" style="flex:999 1 560px;min-width:0;padding:28px 32px 48px;box-sizing:border-box;display:flex;flex-direction:column;gap:18px">
+    ${G.view === 'wait' && !isAce ? waitHtml() + '<div hidden>' : ''}
     <h1 class="gb-h1" style="margin:0;font-size:22px">공간제작소 거래명세표 · 세금계산서 <span style="display:inline-block;vertical-align:middle;margin-left:8px;padding:3px 10px;border-radius:12px;font-size:13px;${isAce ? 'background:#E8EDF4;color:#1F3A5F' : 'background:#FDF0E6;color:#9A3412'}">${isAce ? '에이스' : '홈트레이더스'}</span></h1>
     ${G.err ? `<div style="padding:12px 14px;border-radius:8px;background:#FDECEC;color:#7A1A12;font-size:13px">${esc(G.err)}</div>` : ''}
     <div class="gb-months" role="tablist" aria-label="월" style="display:flex;gap:6px;flex-wrap:wrap">
@@ -224,6 +234,7 @@ export function screen() {
       <div style="display:flex;gap:4px">${Array.from({ length: pages }, (_, i) => i + 1).map((n) => `<button type="button" data-gb="page" data-v="${n}" style="min-width:36px;height:36px;padding:0 10px;border-radius:8px;font:inherit;font-size:13px;cursor:pointer;${n === G.page ? 'background:#1F2328;color:#fff;border:1px solid #1F2328;font-weight:700' : 'background:#fff;color:#1F2328;border:1px solid #E6E4DF'}">${n}</button>`).join('')}</div>
       <span style="position:relative;display:inline-flex"><select data-gb="size" aria-label="한 페이지에" style="height:36px;border:1px solid #E6E4DF;border-radius:8px;padding:0 40px 0 14px;font:inherit;font-size:13px;background:#fff;appearance:none;-webkit-appearance:none;cursor:pointer">${[20, 50, 100].map((n) => `<option value="${n}" ${G.size === n ? 'selected' : ''}>${n}개씩</option>`).join('')}</select>${CHEV}</span>
     </nav>
+    ${G.view === 'wait' && !isAce ? '</div>' : ''}
   </main>
   ${open ? modalHtml(open) : ''}${G.reg ? regHtml() : ''}
   <input type="file" id="gb-file" accept="image/*,application/pdf" hidden>
@@ -246,6 +257,27 @@ function cardHtml(d) {
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><span style="display:flex;gap:4px;flex-wrap:wrap">${chip(!(x.manual || {}).stmtDel, '명세표')}${chip(!!x.tax_name, '계산서')}${x.paid ? paidTag(x.paid) : ''}</span><b style="font-size:15px;font-variant-numeric:tabular-nums">${won(d.total)}원</b></div>
     <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:11px;color:#9A9A9A">${esc(d.no || '')}${d.reg ? ` · 등록 ${md(d.reg.replace(/-/g, ''))} ${regTime(d.reg)}` : ''}</span><button type="button" data-gb="delrow" data-id="${esc(d.id)}" aria-label="목록에서 삭제" title="목록에서 삭제" style="width:30px;height:30px;border-radius:15px;border:1px solid #F1B5AF;background:#fff;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0">${TRASH}</button></div>
   </div>`);
+}
+// 올릴 전표 (10/27 대표) — 이카운트에 있는데 목록에 아직 없는 공간제작소 판매전표, [올리기] 누르면 바로 목록에
+function waitHtml() {
+  const btn = (on) => `height:36px;padding:0 16px;border:0;border-radius:8px;font:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;${on ? 'background:#E6E4DF;color:#6B6B6B' : 'background:#E8732C;color:#fff'}`;
+  return `<h1 class="gb-h1" style="margin:0;font-size:22px">올릴 전표 <span style="font-size:15px;color:#6B6B6B;font-weight:500;margin-left:4px">${G.wait.length}건</span></h1>
+    ${G.err ? `<div style="padding:12px 14px;border-radius:8px;background:#FDECEC;color:#7A1A12;font-size:13px">${esc(G.err)}</div>` : ''}
+    <div style="display:flex;flex-direction:column;gap:10px">${G.wait.map((d) => `<div style="background:#fff;border:1px solid #E6E4DF;border-radius:12px;padding:14px 16px;display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px">
+      <div style="flex:0 0 auto;min-width:84px"><b>${md(d.ymd)}</b><div style="font-size:11px;color:#6B6B6B">${esc((d.slips || [d.slip]).map((x) => x.slice(4)).join(', '))}</div></div>
+      <div style="flex:1 1 280px;min-width:0"><div style="font-weight:600">${esc(d.site ? d.site + ' · ' : '')}${esc(itemTitle(d))}</div>
+        <div style="margin-top:4px;font-size:12px;color:#6B6B6B;line-height:1.6">${d.items.slice(0, 4).map((i) => `${esc(i.name)} ${won(i.qty)}`).join('<br>')}${d.items.length > 4 ? `<br>외 ${d.items.length - 4}줄` : ''}</div></div>
+      <b style="flex:0 0 auto;font-variant-numeric:tabular-nums">${won(d.total)}원</b>
+      <button type="button" data-gb="wait-up" data-id="${esc(d.id)}" ${G.waitBusy ? 'disabled' : ''} style="${btn(G.waitBusy === d.id)}">${G.waitBusy === d.id ? '올리는 중…' : '올리기'}</button>
+    </div>`).join('') || `<div style="padding:40px;text-align:center;color:#6B6B6B;background:#fff;border:1px solid #E6E4DF;border-radius:12px">${G.loading ? '불러오는 중…' : '없어요'}</div>`}</div>`;
+}
+async function waitUp(id) {
+  const d = G.wait.find((x) => x.id === id); if (!d || G.waitBusy) return;
+  G.waitBusy = id; G.err = ''; ctx.rerender();
+  const n = new Date(), p = (v) => String(v).padStart(2, '0');
+  try { await S.putWaitRows(d.rows, `${n.getFullYear()}-${p(n.getMonth() + 1)}-${p(n.getDate())} ${p(n.getHours())}:${p(n.getMinutes())}`); }
+  catch (e) { G.err = e.message || String(e); }
+  G.waitBusy = ''; await load(G.biz, true);
 }
 function rowHtml(d) {
   const st = statusOf(d), x = G.docs[d.id] || {};
@@ -592,6 +624,7 @@ function feedGo(id) {
     setTimeout(() => { el.style.background = bg; }, 1800);
   });
 }
+export function openWait() { G.view = 'wait'; }
 export function setBiz(biz) { if (G.biz !== biz) { G.biz = biz; G.loaded = ''; G.page = 1; G.pick.clear(); G.open = null; G.month = '전체'; G.status = '전체'; G.site = ''; } }
 export function bind(app, c) {
   ctx = c;
@@ -599,6 +632,8 @@ export function bind(app, c) {
     const t = e.target.closest('[data-gb]'); if (!t || !app.querySelector('.gb')) return;
     const a = t.dataset.gb, id = t.dataset.id, cur = G.open && G.list.find((d) => d.id === G.open);
     if (LIM() && LIM_ACTS.has(a)) return;
+    if (a === 'view') { G.view = t.dataset.v; G.open = null; ctx.rerender(); return; }
+    if (a === 'wait-up' && id) { waitUp(id); return; }
     if (a === 'feed' && id) { feedGo(id); return; }   // 업데이트 줄 → 아래 목록의 그 줄로 (10/27 대표)
     if (a === 'row') { if (e.target.closest('button, input, a, label, select')) return; G.open = id; G.reason = ''; G.zoom = ''; G.panel = 'tax'; ctx.rerender(); }
     else if (a === 'pend-save') commitPending();
@@ -606,7 +641,7 @@ export function bind(app, c) {
     else if (a === 'panel') { if (G.panel !== t.dataset.k) { G.panel = t.dataset.k; ctx.rerender(); } }   // 누른 칸 = Ctrl+C·V 대상 (10/26)
     else if (a === 'overlay') { if (e.target === t) { await leavePend(); G.open = null; ctx.rerender(); } }
     else if (a === 'close') { await leavePend(); G.open = null; G.zoom = ''; G.editNo = false; ctx.rerender(); }
-    else if (a === 'biz') { setBiz(t.dataset.v); ctx.go(t.dataset.v === 'ace' ? 'gonggan-ace' : 'gonggan'); }
+    else if (a === 'biz') { G.view = 'list'; setBiz(t.dataset.v); ctx.go(t.dataset.v === 'ace' ? 'gonggan-ace' : 'gonggan'); }
     else if (a === 'start') ctx.goStart();
     else if (a === 'logout') ctx.logout();
     else if (a === 'month') { G.month = t.dataset.v; G.page = 1; ctx.rerender(); }

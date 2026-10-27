@@ -43,6 +43,15 @@ export async function getGongganSales(biz) {
   }
   return out;
 }
+// 올릴 전표 → 목록으로 (10/27 대표 "출고일보 체크해도 바로 안 돼") — 맥이 올려 둔 biz=homt_wait 줄('w:' id)을 biz=homt 줄로 넣고 대기 줄은 지움
+export async function putWaitRows(rows, reg) {
+  const live = rows.map((r) => ({ id: r.id.replace(/^w:/, ''), ymd: r.ymd, slip: r.slip, partner: r.partner, name: r.name, qty: r.qty, price: r.price, supply: r.supply, vat: r.vat,
+    logi: r.logi || false, biz: 'homt', reg, updated_at: new Date().toISOString(), ...(r.board_no ? { board_no: r.board_no } : {}) }));
+  const { error } = await sb.from('gonggan_sales').upsert(live, { onConflict: 'id' });
+  if (error) throw new Error(error.message);
+  const { error: e2 } = await sb.from('gonggan_sales').delete().in('id', rows.map((r) => r.id));
+  if (e2) throw new Error(e2.message);
+}
 export async function getGongganDocs(biz) {
   const cols = 'id,biz,status,tax_name,tax_no,manual,delivered,reason,drafted_at,updated_by,updated_at';
   let { data, error } = await sb.from('gonggan_docs').select(cols + ',paid').eq('biz', biz).limit(5000);   // paid = 입금일 (10/25) — 칸이 아직 없으면 빼고 다시

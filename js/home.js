@@ -2,12 +2,12 @@
 // 맨 위 빨간 칸 = 기사 운임 미송금 (fare_unpaid — 맥 도우미가 출고일보 폴더 '기사_운임_미송금_정리' 엑셀에서 올림. '보냄' 누르면 엑셀 보냄 칸에 O)
 // 버튼: 배차 요청 · 자료 넣기(site_inbox — 출고일보 업데이트 때 판매·구매입력) · 거래명세표(공간제작소 · 그 외 · 에이스) · 납품확인서 · 자재승인원 · 견적서 · 입금표
 //   서류 화면은 모두 js/forms.js (같은 머리·카드·버튼)
-import * as S from './store-supabase.js?v=3';
-import * as FM from './forms.js?v=6';
+import * as S from './store-supabase.js?v=4';
+import * as FM from './forms.js?v=7';
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const won = (n) => Math.round(Number(n) || 0).toLocaleString();
-const H = { fare: null, fareErr: '', inbox: {}, inboxErr: '', at: 0, loading: false, fareAll: false, toast: '', busy: false, box: false, text: '', frame: null };
+const H = { gwait: 0, fare: null, fareErr: '', inbox: {}, inboxErr: '', at: 0, loading: false, fareAll: false, toast: '', busy: false, box: false, text: '', frame: null };
 let ctx = { rerender: () => {}, go: () => {}, me: () => '', helper: async () => ({}) };
 
 const svg = (stroke, d) => `<svg viewBox="0 0 24 24" style="width:38px;height:38px;fill:none;stroke:${stroke};stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round">${d}</svg>`;
@@ -25,6 +25,7 @@ const IC = {
 export function load(force) {
   if (H.loading || (!force && Date.now() - H.at < 60000)) return;
   H.loading = true; H.at = Date.now();
+  S.getGongganWaitCount().then((n) => { H.gwait = n; ctx.rerender(); }).catch(() => {});   // 공간 올릴 전표 (10/27)
   Promise.allSettled([S.getFareUnpaid(), S.getInboxCounts()]).then(([f, i]) => {
     if (f.status === 'fulfilled') { H.fare = f.value; H.fareErr = ''; } else H.fareErr = f.reason.message;
     if (i.status === 'fulfilled') { H.inbox = i.value; H.inboxErr = ''; } else H.inboxErr = i.reason.message;
@@ -115,7 +116,7 @@ export function screen(view) {
       ${tile({ title: '견적서', icon: IC.quote, bg: '#F3F4F6', attr: 'data-hm="form" data-r="quote"' })}
       ${tile({ title: '입금표', icon: IC.won, bg: '#FFF4E5', attr: 'data-hm="frame" data-src="./deposit.html?embed=1" data-title="입금표"' })}
       ${tile({ title: '전자 송장', icon: IC.sign, bg: '#FDF0E6', attr: 'data-hm="form" data-r="esong"' })}
-    </div>${farePanel()}</main>${boxModal()}${FM.popup()}<input type="file" id="hm-file" multiple accept="image/*,.heic,.pdf,.xlsx,.xls,.csv,.txt" hidden></div>`;
+    </div>${H.gwait ? `<a class="hm-gwait" href="/gonggan/#wait" style="display:flex;align-items:center;gap:12px;padding:14px 18px;border-radius:14px;background:#FDF0E6;color:#9A3412;text-decoration:none;font-size:15px"><b>공간 올릴 전표</b><span style="min-width:24px;padding:2px 8px;border-radius:12px;background:#E8732C;color:#fff;font-weight:700;text-align:center">${H.gwait}</span><span style="margin-left:auto">›</span></a>` : ''}${farePanel()}</main>${boxModal()}${FM.popup()}<input type="file" id="hm-file" multiple accept="image/*,.heic,.pdf,.xlsx,.xls,.csv,.txt" hidden></div>`;
 }
 
 // ── 자료 넣기 ─────────────────────────────────────────
