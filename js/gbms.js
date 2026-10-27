@@ -706,7 +706,10 @@ export function bind(app, c) {
       save(cur.id, { status: '삭제' });
     }
     else if (a === 'deltax' && cur) { if (confirm('삭제하시겠습니까?')) save(cur.id, { tax_data: null, tax_name: null, tax_no: null, status: null, drafted_at: null }); }   // 지우면 결재전으로
-    else if (a === 'draft' && cur) save(cur.id, { status: '기안중', drafted_at: new Date().toISOString() });   // 기안 확정 = 기안중 (10/27 대표)
+    else if (a === 'draft' && cur) {   // 기안 확정 = 기안중 (10/27 대표) — 누르기 전에 한 번 묻기 (10/27 대표 "확정하시겠습니까?")
+      if (!confirm(`기안 확정하시겠습니까?\n${md(cur.ymd)} ${cur.site || ''} ${won(cur.total)}원`)) return;
+      save(cur.id, { status: '기안중', drafted_at: new Date().toISOString() });
+    }
     else if (a === 'reject' && cur) { save(cur.id, { status: '수정요청', reason: G.reason.trim() || '수정요청' }); G.open = null; G.reason = ''; }
     else if (a === 'zoom') { if (G.panel !== t.dataset.k) { G.panel = t.dataset.k; ctx.rerender(); } else if (e.detail >= 2 || G.panelAt && Date.now() - G.panelAt < 400) { G.zoom = t.dataset.k; ctx.rerender(); } G.panelAt = Date.now(); }   // 한 번 = 칸 고르기(Ctrl+V 대상), 두 번 = 크게 보기 (10/27)
     else if (a === 'unzoom') { G.zoom = ''; ctx.rerender(); }
