@@ -19,8 +19,7 @@ function head() {
   return `<div class="sj-head"><img src="/icons/logo-full.png" alt="HOME TRADERS"><h1>납품 송장</h1></div><div class="sj-bar"></div>`;
 }
 function info(d) {
-  return `<div class="sj-to">${esc(d.partner || '')} 귀하</div>
-    <div class="sj-meta">${d.site ? `<span>현장</span><b>${esc(d.site)}</b>` : ''}<span>납품일자</span><b>${esc(day(d.ymd))}</b></div>`;
+  return `<div class="sj-meta">${d.site ? `<span>현장</span><b>${esc(d.site)}</b>` : ''}<span>납품일자</span><b>${esc(day(d.ymd))}</b></div>`;
 }
 function items(d, locked) {
   const n = d.items.length, k = S.checks.size;
