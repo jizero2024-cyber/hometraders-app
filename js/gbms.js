@@ -56,7 +56,7 @@ export async function load(biz, force) {
       .filter((d) => (G.docs[d.id] || {}).status !== '삭제')                         // 지운 장은 안 보임 (10/23)
       .sort((a, b) => (b.ymd + b.slip).localeCompare(a.ymd + a.slip));
     G.wait = [];                                         // 올릴 전표 (10/27) — 홈트 목록에만, 공간제작소 계정은 안 봄
-    if (biz === 'homt' && ctx.me() !== 'space1234') {
+    if (ctx.me() !== 'space1234') {                      // 에이스 화면에서도 사이드바 숫자가 보이게 (10/27 대표)
       const ws = await S.getWaitSlips().catch(() => []);
       G.waitMeta = Object.fromEntries(ws.map((x) => [x.slip, x]));   // 전표 → {pdf, who}
       const w = ws.flatMap((x) => x.rows || []);
@@ -196,7 +196,7 @@ export function screen() {
     <div class="gb-logo" style="display:flex;align-items:center;gap:10px;padding:4px 8px 18px"><img src="/icons/partner-gongan.png" alt="공간제작소" style="height:40px"><span aria-hidden="true" style="color:#8A8A8A">×</span><img src="/icons/logo-full.png" alt="HOME TRADERS" style="height:36px"></div>
     <button type="button" data-gb="biz" data-v="homt" style="${navStyle(!isAce && G.view !== 'wait')}"><span>홈트레이더스</span><span>${isAce ? '' : G.list.length}</span></button>
     <button type="button" data-gb="biz" data-v="ace" style="${navStyle(isAce)}"><span>에이스</span><span>${isAce ? G.list.length : ''}</span></button>
-    ${ctx.me() === 'space1234' || isAce ? '' : `<button type="button" data-gb="view" data-v="${G.view === 'wait' ? 'list' : 'wait'}" style="${navStyle(G.view === 'wait')};margin-top:10px"><span>올릴 전표</span><span style="${G.wait.length ? 'min-width:20px;padding:0 6px;border-radius:10px;background:#E8732C;color:#fff;font-size:12px;text-align:center' : ''}">${G.wait.length || ''}</span></button>`}
+    ${ctx.me() === 'space1234' ? '' : `<button type="button" data-gb="view" data-v="${G.view === 'wait' && !isAce ? 'list' : 'wait'}" style="${navStyle(G.view === 'wait' && !isAce)};margin-top:10px"><span>올릴 전표</span><span style="${G.wait.length ? 'min-width:20px;padding:0 6px;border-radius:10px;background:#E8732C;color:#fff;font-size:12px;text-align:center' : ''}">${G.wait.length || ''}</span></button>`}
     ${ctx.me() === 'space1234' ? '' : '<button type="button" data-gb="start" style="margin-top:auto;border:0;background:none;text-align:left;padding:14px 8px 4px;font:inherit;font-size:12px;color:#6B6B6B;cursor:pointer">‹ 처음 화면</button>'}
     <button type="button" data-gb="logout" style="${ctx.me() === 'space1234' ? 'margin-top:auto;' : ''}border:0;background:none;text-align:left;padding:10px 8px 4px;font:inherit;font-size:12px;color:#9A9A9A;cursor:pointer">로그아웃</button>
   </nav>
@@ -663,7 +663,7 @@ export function bind(app, c) {
     const t = e.target.closest('[data-gb]'); if (!t || !app.querySelector('.gb')) return;
     const a = t.dataset.gb, id = t.dataset.id, cur = G.open && G.list.find((d) => d.id === G.open);
     if (LIM() && (LIM_ACTS.has(a) || !LIM_OK.has(a))) return;
-    if (a === 'view') { G.view = t.dataset.v; G.open = null; ctx.rerender(); return; }
+    if (a === 'view') { G.view = t.dataset.v; G.open = null; if (G.biz === 'ace') { setBiz('homt'); ctx.go('gonggan'); } else ctx.rerender(); return; }   // 올릴 전표는 홈트 것 — 에이스에서 누르면 홈트로
     if (a === 'wait-up' && id) { waitUp(id); return; }
     if (a === 'wait-skip' && id) { waitSkip(id); return; }
     if (a === 'wait-open' && id) { if (e.target.closest('button')) return; G.waitOpen = id; ctx.rerender(); return; }
