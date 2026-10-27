@@ -1,12 +1,15 @@
 // 전자 송장 (2026-10-26 대표 "모바일용 전자 송장 — 품목 체크 + 모두의싸인처럼 서명")
-//   /songjang/?k=<id> — 받는 분이 로그인 없이 링크로 엶. 표는 직접 못 읽고 songjang_get · songjang_sign 함수로만 (supabase/2026-10-26-e-songjang.sql)
+//   /songjang/?k=<id> — 받는 분이 로그인 없이 링크로 엶. 표는 직접 못 읽고 songjang_get · songjang_sign 함수로만 (supabase/2026-10-27-e-songjang-all.sql — 짧은 링크 /s/<코드>)
 //   모양은 납품 송장(songjang.py)처럼: 왼쪽 위 '납품 송장', 오른쪽 위 로고, 아래 품목 — 단가·금액 없음
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { SUPABASE_URL, SUPABASE_KEY } from './supabase-config.js';
 
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false } });
 const app = document.getElementById('app');
-const key = new URLSearchParams(location.search).get('k') || '';
+const qs = new URLSearchParams(location.search), key = (qs.get('k') || '').trim(), peek = qs.has('p');   // k = 긴 id 또는 코드 6자리 (/s/<코드> 가 여기로), p = 우리 직원 미리보기 (열어 봄 기록 안 함)
+const okKey = (k) => k.length >= 20 || /^[A-Za-z0-9]{6}$/.test(k);
+let saveT = 0;
+const saveChecks = () => { if (peek || !S.doc || S.doc.signed_at) return; clearTimeout(saveT); saveT = setTimeout(() => sb.rpc('songjang_check', { k: key, c: [...S.checks].sort((x, y) => x - y) }).then(() => {}, () => {}), 700); };   // 서명 전 체크도 우리 목록에 (10/27)
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = (n) => { const v = Number(n) || 0; return Number.isInteger(v) ? v.toLocaleString() : v.toLocaleString(undefined, { maximumFractionDigits: 2 }); };
 const day = (ymd) => (ymd && ymd.length >= 8 ? `${ymd.slice(0, 4)}년 ${Number(ymd.slice(4, 6))}월 ${Number(ymd.slice(6, 8))}일` : '');
@@ -89,9 +92,9 @@ function makePad(cv) {
 
 app.addEventListener('click', async (e) => {
   const it = e.target.closest('.sj-it');
-  if (it && !it.disabled) { const i = Number(it.dataset.i); if (S.checks.has(i)) S.checks.delete(i); else S.checks.add(i); render(); return; }
+  if (it && !it.disabled) { const i = Number(it.dataset.i); if (S.checks.has(i)) S.checks.delete(i); else S.checks.add(i); render(); saveChecks(); return; }
   const a = (e.target.closest('[data-act]') || {}).dataset?.act;
-  if (a === 'all') { S.doc.items.forEach((_, i) => S.checks.add(i)); render(); }
+  if (a === 'all') { S.doc.items.forEach((_, i) => S.checks.add(i)); render(); saveChecks(); }
   else if (a === 'clear') { if (pad) pad.clear(); S.drawn = false; render(); }
   else if (a === 'sign') {
     if (S.busy) return;
@@ -105,11 +108,11 @@ app.addEventListener('click', async (e) => {
 app.addEventListener('input', (e) => { if (e.target.dataset.act === 'name') { S.name = e.target.value.slice(0, 40); refreshButton(); } });
 
 async function load() {
-  if (key.length < 20) { app.innerHTML = '<div class="sj-empty">송장 링크가 올바르지 않아요</div>'; return; }
-  const { data, error } = await sb.rpc('songjang_get', { k: key });
+  if (!okKey(key)) { app.innerHTML = '<div class="sj-empty">송장 링크가 올바르지 않아요</div>'; return; }
+  const { data, error } = await sb.rpc('songjang_get', { k: key, peek });
   if (error || !data) { app.innerHTML = `<div class="sj-empty">${error ? '불러오지 못했어요' : '송장을 찾을 수 없어요'}</div>`; return; }
   S.doc = { ...data, items: data.items || [] };
-  if (data.signed_at) S.checks = new Set(data.checks || []);
+  S.checks = new Set(data.checks || []);   // 서명 전 체크도 이어서
   pad = null;
   render();
 }

@@ -768,3 +768,27 @@ a.fm-btn { text-decoration: none; }
 .hd-dl.over { background: #F2F1EE; color: #6B6B6B; }
 .hm .hd-go { padding: 17px; font-size: 17px; border-radius: 14px; }
 @media (max-width: 480px) { .hd-end-nm { font-size: 26px; } .hd-route { padding-right: 58px; } }
+
+/* 발행한 전자 송장 목록 (10/27) */
+.es-hd { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.es-hd > b { font-size: 16px; }
+.es-cnt { display: flex; gap: 6px; flex: 1; flex-wrap: wrap; }
+.es-cnt i, .es-st { font-style: normal; font-size: 12px; padding: 3px 9px; border-radius: 10px; white-space: nowrap; }
+.es-box .ok { background: #EEF6EE; color: #1E6B34; } .es-box .seen { background: #FDF0E6; color: #9A3412; } .es-box .wait { background: #F2F1EE; color: #6B6B6B; }
+.es-li { border-top: 1px solid #EFEDE8; }
+.es-row { display: flex; align-items: center; gap: 12px; width: 100%; border: 0; background: none; padding: 12px 2px; font: inherit; text-align: left; cursor: pointer; color: inherit; }
+.es-d { font-weight: 700; font-size: 14px; width: 42px; flex: none; font-variant-numeric: tabular-nums; }
+.es-w { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.es-w b { font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.es-w small { font-size: 12px; color: #6B6B6B; }
+.es-st { font-size: 12.5px; padding: 4px 10px; }
+.es-det { padding: 0 2px 14px 54px; display: flex; flex-direction: column; gap: 10px; }
+.es-its { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
+.es-its li { display: flex; gap: 8px; align-items: center; color: #6B6B6B; }
+.es-its li span { width: 16px; color: #1E6B34; font-weight: 700; }
+.es-its li.ck { color: #1F2328; }
+.es-its li b { margin-left: auto; font-weight: 600; }
+.es-sign img { max-width: 240px; max-height: 110px; border: 1px solid #E6E4DF; border-radius: 10px; background: #fff; }
+.es-meta { font-size: 12px; color: #8A8A8A; }
+.es-empty { padding: 16px; text-align: center; color: #8A8A8A; font-size: 14px; }
+@media (max-width: 560px) { .es-row { flex-wrap: wrap; } .es-st { margin-left: 54px; } .es-det { padding-left: 0; } }

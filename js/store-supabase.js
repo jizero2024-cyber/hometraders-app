@@ -283,6 +283,16 @@ export async function getInboxCounts() {
   if (error) throw noTable(error, '자료');
   return (data || []).reduce((a, r) => { a[r.status] = (a[r.status] || 0) + 1; return a; }, {});
 }
+export async function listSongjang() {   // 발행한 송장 목록 (10/27) — 서명 그림은 빼고
+  const { data, error } = await sb.from('e_songjang').select('id,code,partner,site,ymd,items,checks,signer,signed_at,opened_at,last_opened_at,open_count,checked_at,created_by,created_at').order('created_at', { ascending: false }).limit(200);
+  if (error) throw new Error(/does not exist|relation|schema cache|column/i.test(error.message) ? '전자 송장 표가 아직 없어요 (SQL 실행 필요)' : error.message);
+  return data || [];
+}
+export async function getSongjangSign(id) {
+  const { data, error } = await sb.from('e_songjang').select('sign').eq('id', id).maybeSingle();
+  if (error) throw new Error(error.message);
+  return (data || {}).sign || '';
+}
 export async function addSongjang(row) {   // 전자 송장 한 장 (10/26) — 실패하면 글자, 되면 null
   const { error } = await sb.from('e_songjang').insert(row);
   return error ? error.message : null;

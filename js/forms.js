@@ -8,7 +8,7 @@
 //   화면 모양은 모두 같음 — 머리(‹ · 로고 · 이름) · 제목 · 불러오기 칸 · 결과 칸, 파일은 끌어다 놓기도 됨
 import * as SM from './stmt.js?v=103';
 import * as DL from './delivery.js';
-import * as S from './store-supabase.js?v=5';
+import * as S from './store-supabase.js?v=6';
 
 export const ROUTES = ['stmt-gong', 'stmt-etc', 'stmt-ace', 'deliv', 'approval', 'quote', 'deposit', 'esong'];
 const ST = { 'stmt-gong': ['공간제작소 거래명세표', 'homt'], 'stmt-etc': ['그 외 명세표', 'homt'], 'stmt-ace': ['에이스 거래명세표', 'ace'] };
@@ -19,7 +19,7 @@ const blank = () => ({ text: '', files: [], docs: null, err: '', busy: false });
 const today = () => DL.isoDate(new Date());
 const F = { 'stmt-gong': blank(), 'stmt-etc': blank(), 'stmt-ace': blank(), deliv: { ...blank(), confirms: null },
   approval: { presets: null, preset: '', site: '', ship: '', issue: '', file: null, busy: false, err: '', out: null },
-  quote: { ...blank(), doc: null, out: null }, deposit: {}, esong: { ...blank(), doc: null, link: '', copied: false } };
+  quote: { ...blank(), doc: null, out: null }, deposit: {}, esong: { ...blank(), doc: null, link: '', copied: false, signs: {} } };
 let ctx = { rerender: () => {}, go: () => {}, me: () => '', helper: async () => ({}), helperUp: () => false, helperReady: async () => false, helperFile: () => '', slips: async () => ({ slips: [] }) };
 
 function top(back, right) {
@@ -134,10 +134,43 @@ function esongScreen() {
       ${d.items.map((r, k) => `<div class="fm-tr es"><input data-fm-esr="${k}" data-f="name" value="${esc(r.name)}" placeholder="품명"><input data-fm-esr="${k}" data-f="qty" value="${esc(r.qty)}" inputmode="decimal" placeholder="수량"><input data-fm-esr="${k}" data-f="unit" value="${esc(r.unit)}" placeholder="단위"><button type="button" class="fm-x" data-fm="es-rdel" data-k="${k}" aria-label="줄 지우기">✕</button></div>`).join('')}
       <button type="button" class="fm-add" data-fm="es-radd">＋ 줄</button></div>
     <div class="fm-row"><span class="sp"></span><button type="button" class="fm-btn" data-fm="es-make" ${f.busy ? 'disabled' : ''}>${f.busy ? '만드는 중…' : '송장 링크 만들기'}</button></div>
-    ${f.link ? `<div class="fm-link"><input readonly value="${esc(f.link)}" id="fm-es-link"><button type="button" class="fm-btn ghost" data-fm="es-copy">${f.copied ? '복사됨 ✓' : '복사'}</button>${navigator.share ? '<button type="button" class="fm-btn ghost" data-fm="es-share">보내기</button>' : ''}<a class="fm-btn ghost" href="${esc(f.link)}" target="_blank" rel="noopener">열기</a></div>` : ''}
+    ${f.link ? `<div class="fm-link"><input readonly value="${esc(f.link)}" id="fm-es-link"><button type="button" class="fm-btn ghost" data-fm="es-copy">${f.copied ? '복사됨 ✓' : '복사'}</button>${f.made ? `<button type="button" class="fm-btn ghost" data-fm="es-msg">${f.copied === 'm' ? '복사됨 ✓' : '보낼 문구 복사'}</button>` : ''}${navigator.share ? '<button type="button" class="fm-btn ghost" data-fm="es-share">보내기</button>' : ''}<a class="fm-btn ghost" href="${esc(f.link)}" target="_blank" rel="noopener">열기</a></div>` : ''}
   </section>`;
-  return inputCard(f, '.xlsx,.xlsm,.xls', '<button type="button" class="fm-btn ghost" data-fm="es-new">빈 양식</button>') + ed;
+  return inputCard(f, '.xlsx,.xlsm,.xls', '<button type="button" class="fm-btn ghost" data-fm="es-new">빈 양식</button>') + ed + esList();
 }
+// 발행한 송장 목록 — 열어 봄 · 체크 · 서명 (10/27 대표 "발행하고 나서 얼마나 확인했는지")
+const esLink = (x) => (x.code ? `${location.origin}/s/${x.code}` : `${location.origin}/songjang/?k=${x.id}`);
+const hm2 = (t) => { const d = new Date(t); return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
+function esState(x) {
+  const n = (x.items || []).length, k = (x.checks || []).length;
+  if (x.signed_at) return { t: `서명 완료 ${hm2(x.signed_at)}${x.signer ? ` · ${x.signer}` : ''}`, c: 'ok' };
+  if (x.opened_at) return { t: `열어 봄 ${hm2(x.last_opened_at || x.opened_at)}${k ? ` · 체크 ${k}/${n}` : ''}`, c: 'seen' };
+  return { t: '안 열어 봄', c: 'wait' };
+}
+function esList() {
+  const f = F.esong;
+  if (f.list === undefined) { f.list = 'loading'; S.listSongjang().then((r) => { f.list = r; f.listErr = ''; ctx.rerender(); }, (e) => { f.list = []; f.listErr = e.message || String(e); ctx.rerender(); }); }
+  const L = Array.isArray(f.list) ? f.list : [];
+  const cnt = { ok: 0, seen: 0, wait: 0 }; L.forEach((x) => { cnt[esState(x).c]++; });
+  const row = (x) => {
+    const st = esState(x), on = f.openId === x.id, n = (x.items || []).length, ck = new Set(x.checks || []);
+    return `<div class="es-li ${on ? 'on' : ''}"><button type="button" class="es-row" data-fm="es-row" data-id="${esc(x.id)}">
+        <span class="es-d">${esc(x.ymd ? `${Number(x.ymd.slice(4, 6))}/${Number(x.ymd.slice(6, 8))}` : '')}</span>
+        <span class="es-w"><b>${esc(x.site || x.partner || '')}</b><small>${esc([x.partner && x.site ? x.partner : '', x.code, `${n}품목`].filter(Boolean).join(' · '))}</small></span>
+        <span class="es-st ${st.c}">${esc(st.t)}</span></button>
+      ${on ? `<div class="es-det">
+        <ol class="es-its">${(x.items || []).map((it, i) => `<li class="${ck.has(i) ? 'ck' : ''}"><span>${ck.has(i) ? '✓' : ''}</span>${esc(it.name)}<b>${esc(it.qty)}${esc(it.unit || '')}</b></li>`).join('')}</ol>
+        ${x.signed_at ? `<div class="es-sign">${f.signs[x.id] ? `<img src="${esc(f.signs[x.id])}" alt="서명">` : '…'}</div>` : ''}
+        <div class="es-meta">발행 ${esc(hm2(x.created_at))}${x.created_by ? ` · ${esc(x.created_by)}` : ''}${x.open_count ? ` · 열어 봄 ${x.open_count}번` : ''}</div>
+        <div class="fm-row"><button type="button" class="fm-btn ghost" data-fm="es-lcopy" data-id="${esc(x.id)}">${f.copiedId === x.id ? '복사됨 ✓' : '링크 복사'}</button><button type="button" class="fm-btn ghost" data-fm="es-lmsg" data-id="${esc(x.id)}">${f.copiedId === x.id + 'm' ? '복사됨 ✓' : '보낼 문구 복사'}</button><a class="fm-btn ghost" href="${esc(esLink(x))}${x.code ? '?p' : '&p'}" target="_blank" rel="noopener">미리보기</a></div>
+      </div>` : ''}</div>`;
+  };
+  return `<section class="fm-out es-box"><div class="es-hd"><b>발행한 송장</b><span class="es-cnt"><i class="ok">서명 ${cnt.ok}</i><i class="seen">열어 봄 ${cnt.seen}</i><i class="wait">안 열어 봄 ${cnt.wait}</i></span><button type="button" class="fm-btn ghost" data-fm="es-reload">새로고침</button></div>
+    ${f.listErr ? `<div class="fm-err">${esc(f.listErr)}</div>` : f.list === 'loading' ? '<div class="es-empty">불러오는 중…</div>' : L.length ? L.map(row).join('') : '<div class="es-empty">없음</div>'}
+  </section>`;
+}
+const esMsg = (x) => `[홈트레이더스] 납품 송장\n${[x.site, x.ymd ? `${Number(x.ymd.slice(4, 6))}월 ${Number(x.ymd.slice(6, 8))}일` : ''].filter(Boolean).join(' · ')}\n받으신 품목 확인 후 서명 부탁드립니다.\n${esLink(x)}`;
+async function copyText(t) { try { await navigator.clipboard.writeText(t); } catch (_) { const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); } catch (__) { /* 무시 */ } ta.remove(); } }
 async function loadEsong() {
   const f = F.esong, text = f.text.trim();
   if (!text && !f.files.length) { f.err = '출고 번호·전표 번호를 넣거나 판매 엑셀을 골라 주세요'; ctx.rerender(); return; }
@@ -165,13 +198,19 @@ async function makeEsong() {
   const f = F.esong, d = f.doc;
   const items = d.items.map((r) => ({ name: r.name.trim(), qty: Number(String(r.qty).replace(/[^\d.]/g, '')) || 0, unit: (r.unit || '개').trim() })).filter((r) => r.name && r.qty > 0);
   if (!items.length) { f.err = '품명·수량이 있는 줄이 없어요'; ctx.rerender(); return; }
-  if (!d.partner.trim()) { f.err = '거래처를 적어 주세요'; ctx.rerender(); return; }
   f.busy = true; f.err = ''; ctx.rerender();
-  const id = [...crypto.getRandomValues(new Uint8Array(18))].map((b) => b.toString(36).padStart(2, '0')).join('').slice(0, 28);   // 맞히기 어려운 링크
-  const e = await S.addSongjang({ id, partner: d.partner.trim(), site: d.site.trim(), ymd: d.ymd.replace(/-/g, ''), items, created_by: ctx.me() });
+  const id = [...crypto.getRandomValues(new Uint8Array(18))].map((b) => b.toString(36).padStart(2, '0')).join('').slice(0, 28);   // 맞히기 어려운 id
+  const AB = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';   // 짧은 링크 코드 6자리 — 헷갈리는 0·O·1·I 뺌 (10/27 대표 '청첩장처럼')
+  const row = { id, partner: d.partner.trim(), site: d.site.trim(), ymd: d.ymd.replace(/-/g, ''), items, created_by: ctx.me() };
+  let e = '';
+  for (let n = 0; n < 4; n++) {
+    row.code = [...crypto.getRandomValues(new Uint8Array(6))].map((b) => AB[b % 32]).join('');
+    e = await S.addSongjang(row);
+    if (!e || !/duplicate|e_songjang_code/i.test(e)) break;
+  }
   f.busy = false;
-  if (e) f.err = /does not exist|relation|schema cache/i.test(e) ? '전자 송장 표가 아직 없어요 (SQL 실행 필요)' : e;
-  else { f.link = `${location.origin}/songjang/?k=${id}`; f.copied = false; }
+  if (e) f.err = /does not exist|relation|schema cache|column/i.test(e) ? '전자 송장 표가 아직 없어요 (SQL 실행 필요)' : e;
+  else { f.link = esLink(row); f.made = row; f.copied = false; f.list = undefined; }
   ctx.rerender();
 }
 
@@ -375,6 +414,15 @@ export function bind(app, c) {
     else if (a === 'es-radd') { f.doc.items.push(esRow()); ctx.rerender(); }
     else if (a === 'es-rdel') { f.doc.items.splice(Number(t.dataset.k), 1); ctx.rerender(); }
     else if (a === 'es-make') makeEsong();
+    else if (a === 'es-msg' && f.made) { await copyText(esMsg(f.made)); f.copied = 'm'; ctx.rerender(); }
+    else if (a === 'es-reload') { f.list = undefined; ctx.rerender(); }
+    else if (a === 'es-row') {
+      const id = t.dataset.id, x = (Array.isArray(f.list) ? f.list : []).find((y) => y.id === id);
+      f.openId = f.openId === id ? '' : id; f.signs = f.signs || {};
+      if (x && x.signed_at && f.signs[id] === undefined) { f.signs[id] = ''; S.getSongjangSign(id).then((g) => { f.signs[id] = g; ctx.rerender(); }, () => {}); }
+      ctx.rerender();
+    }
+    else if (a === 'es-lcopy' || a === 'es-lmsg') { const x = (Array.isArray(f.list) ? f.list : []).find((y) => y.id === t.dataset.id); if (x) { await copyText(a === 'es-lcopy' ? esLink(x) : esMsg(x)); f.copiedId = x.id + (a === 'es-lmsg' ? 'm' : ''); ctx.rerender(); } }
     else if (a === 'es-copy') { const el = document.getElementById('fm-es-link'); try { await navigator.clipboard.writeText(f.link); } catch (_) { if (el) { el.select(); document.execCommand('copy'); } } f.copied = true; ctx.rerender(); }
     else if (a === 'es-share') { try { await navigator.share({ title: '납품 송장', text: `${f.doc.partner} 납품 송장`, url: f.link }); } catch (_) { /* 닫음 */ } }
   });
