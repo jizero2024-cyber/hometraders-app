@@ -77,7 +77,7 @@ const statusPick = (id, st) => LIM() ? `<span style="display:inline-block;paddin
 const LIM = () => ctx.me() === 'space1234';
 const LIM_ACTS = new Set(['editsite', 'edittitle', 'edittotal', 'delrow', 'delstmt', 'deltax', 'replace', 'addstmt', 'addtax', 'pend-save', 'pend-cancel', 'editno', 'reg', 'reg-save']);
 // 10/27 대표 "기안확정이랑 수정요청 그리고 다운받기만" — 이 계정은 아래 보기·다운로드·기안 확정·수정요청만 (나머지는 눌려도 안 됨)
-const LIM_OK = new Set(['row', 'close', 'overlay', 'panel', 'zoom', 'unzoom', 'both', 'draft', 'reject', 'reason', 'month', 'status', 'page', 'size', 'site', 'q', 'feed', 'biz', 'logout', 'copyno']);
+const LIM_OK = new Set(['row', 'close', 'overlay', 'panel', 'zoom', 'unzoom', 'both', 'draft', 'reject', 'reason', 'month', 'status', 'page', 'size', 'site', 'q', 'feed', 'biz', 'logout', 'copyno', 'pdf', 'copy', 'jpg', 'view']);
 const limHtml = (h) => (!LIM() ? h : h.replace(/<button[^>]*data-gb="(?:editsite|edittitle|edittotal|delrow|delstmt|deltax|replace|addstmt|addtax|pend-save|editno)"[^>]*>[\s\S]*?<\/button>/g, '')
   .replace(/<input[^>]*data-gb="taxno"[^>]*>/g, '')
   .replace(/<b>(거래명세표|세금계산서) 넣기<\/b><span[^>]*>[^<]*<\/span>/g, '<b>$1 없음</b>'));
