@@ -25,7 +25,8 @@ function showLogin(msg) {
   <div class="gb-login" style="position:fixed;inset:0;background:#fff;display:flex;flex-direction:column;align-items:center;padding:18vh 24px 0;box-sizing:border-box;font-family:Pretendard,'Noto Sans KR',system-ui,sans-serif">
     <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:28px"><img src="/icons/partner-gongan.png" alt="공간제작소" style="height:48px"><span aria-hidden="true" style="color:#8A8A8A">×</span><img src="/icons/logo-full.png" alt="HOME TRADERS" style="height:44px"></div>
     <form id="gg-login" style="width:100%;max-width:320px;display:flex;flex-direction:column;gap:10px">
-      <input name="code" type="password" autocomplete="current-password" placeholder="코드" aria-label="코드" style="padding:14px;border-radius:11px;background:#F3F4F6;border:0;font-size:16px;text-align:center">
+      <input name="uid" autocomplete="username" autocapitalize="off" placeholder="아이디" aria-label="아이디" style="padding:14px;border-radius:11px;background:#F3F4F6;border:0;font-size:16px;text-align:center">
+      <input name="code" type="password" autocomplete="current-password" placeholder="비밀번호" aria-label="비밀번호" style="padding:14px;border-radius:11px;background:#F3F4F6;border:0;font-size:16px;text-align:center">
       <button type="submit" style="margin-top:4px;width:100%;padding:15px;border:0;border-radius:13px;background:#1F2328;color:#fff;font:inherit;font-size:16px;font-weight:700;cursor:pointer">로그인</button>
       <p id="gg-err" style="color:#e05a52;font-size:13px;min-height:18px;margin:2px 0;text-align:center">${esc(msg || '')}</p>
     </form>
@@ -34,9 +35,9 @@ function showLogin(msg) {
 app.addEventListener('submit', (e) => {
   if (e.target.id !== 'gg-login') return;
   e.preventDefault();
-  const code = e.target.code.value.trim(), err = document.getElementById('gg-err');
+  const id = (e.target.elements.uid.value.trim() || GONG_ID).toLowerCase(), code = e.target.code.value.trim(), err = document.getElementById('gg-err');   // 10/27 대표: space1234 = 현구 과장님, space1225 = 우리 직원 — 아이디로 나눔
   if (err) err.textContent = '로그인 중…';
-  S.signIn(GONG_ID, code).catch(() => { if (err) err.textContent = '코드를 확인해 주세요'; });   // 아이디는 space1234 고정, 코드 = 비밀번호 (10/23 대표: 비밀번호를 바꿔도 코드만 새로)
+  S.signIn(id, code).catch(() => { if (err) err.textContent = '아이디·비밀번호를 확인해 주세요'; });   // 아이디는 space1234 고정, 코드 = 비밀번호 (10/23 대표: 비밀번호를 바꿔도 코드만 새로)
 });
 
 async function boot() {
