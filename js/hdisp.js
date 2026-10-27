@@ -97,19 +97,45 @@ function updateList(t) {
   box.style.display = h ? '' : 'none';
 }
 
-function placeField(t, label) {
+// 아이콘 (선 그림)
+const svg = (d, w = 18) => `<svg width="${w}" height="${w}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const IC = {
+  pin: svg('<path d="M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11z" fill="currentColor"/><circle cx="12" cy="10" r="2.2" fill="#fff" stroke="none"/>', 26),
+  swap: svg('<path d="M7 4v16M3 8l4-4 4 4M17 20V4M21 16l-4 4-4-4"/>', 20),
+  truck: svg('<path d="M3 6h11v10H3zM14 9h4l3 3v4h-7"/><circle cx="7" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/>'),
+  box: svg('<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5l8 4.5 8-4.5M12 12v9"/>'),
+  cash: svg('<rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/>'),
+  scale: svg('<path d="M6 20h12l-2-11H8z"/><circle cx="12" cy="6" r="2"/>'),
+  clock: svg('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'),
+  alarm: svg('<circle cx="12" cy="13" r="7"/><path d="M12 10v3l2 1M5 4 3 6M19 4l2 2"/>'),
+  user: svg('<circle cx="12" cy="8" r="3.5"/><path d="M5 20c1.5-3.5 4-5 7-5s5.5 1.5 7 5"/>'),
+};
+function endHtml(t, lab) {
   const p = F[t];
-  return `<div class="hd-field"><label>${label}</label>
-    ${p ? `<div class="hd-picked"><div class="hd-picked-top">${p.kind === '현장' ? '<b>직접 입력</b>' : `<b>${esc(p.name)}</b>`}<span class="hd-kind">${esc(p.kind || '직접')}</span>
-        <button type="button" class="hd-x" data-hd="clear" data-t="${t}">바꾸기</button></div>
-        ${p.kind === '현장' ? `<input class="hd-in" data-hd-in="${t}.name" maxlength="60" value="${esc(p.name)}" placeholder="받는 곳·현장 이름 (선택 — 예: 김OO 건축주 현장)">` : ''}
-        <input class="hd-in" data-hd-in="${t}.addr" maxlength="120" value="${esc(p.addr)}" placeholder="주소 (확인·수정)">
-        ${t === 'from' ? `<div class="hd-fixed">연락처 ${LOAD_PHONE} <span>(상차지는 항상 이 번호)</span></div>`
-          : `<input class="hd-in" data-hd-in="${t}.phone" maxlength="30" value="${esc(p.phone)}" placeholder="연락처 (선택)" inputmode="tel">`}</div>`
-      : `<input class="hd-in hd-search" id="hd-q-${t}" data-hd-q="${t}" maxlength="60" value="${esc(F.q[t])}" placeholder="검색 — 이름·주소·초성 (예: ㅇㅇㅋㅂ)" autocomplete="off">
-        <div class="hd-list" id="hd-list-${t}" style="${F.open === t ? '' : 'display:none'}">${listHtml(t)}</div>
-        ${t === 'to' ? '<button type="button" class="hd-direct" data-hd="direct" data-t="to">＋ 거래처가 아니면 주소 직접 입력</button>' : ''}`}
+  const ico = t === 'from' ? '<span class="hd-ico"><span class="hd-sq"></span></span>' : `<span class="hd-ico hd-pin">${IC.pin}</span>`;
+  if (!p) return `<div class="hd-field hd-end hd-end-${t}">${ico}<div class="hd-end-lab">${lab}</div>
+      <input class="hd-in hd-search hd-end-q" id="hd-q-${t}" data-hd-q="${t}" maxlength="60" value="${esc(F.q[t])}" placeholder="이름 · 주소 · 초성" autocomplete="off">
+      <div class="hd-list" id="hd-list-${t}" style="${F.open === t ? '' : 'display:none'}">${listHtml(t)}</div>
+      ${t === 'to' ? '<button type="button" class="hd-direct" data-hd="direct" data-t="to">＋ 주소 직접 입력</button>' : ''}</div>`;
+  const direct = p.kind === '현장';
+  return `<div class="hd-field hd-end hd-end-${t}">${ico}<div class="hd-end-lab">${lab}<span class="hd-kind">${esc(p.kind || '직접')}</span><button type="button" class="hd-x" data-hd="clear" data-t="${t}">바꾸기</button></div>
+    ${direct ? `<input class="hd-in hd-end-q" data-hd-in="${t}.name" maxlength="60" value="${esc(p.name)}" placeholder="현장 이름">` : `<div class="hd-end-nm">${esc(p.name)}</div>`}
+    <input class="hd-in hd-end-in" data-hd-in="${t}.addr" maxlength="120" value="${esc(p.addr)}" placeholder="주소">
+    ${t === 'from' ? `<div class="hd-end-sub">연락처 ${LOAD_PHONE}</div>`
+      : `<input class="hd-in hd-end-in" data-hd-in="${t}.phone" maxlength="30" value="${esc(p.phone)}" placeholder="연락처" inputmode="tel">`}</div>`;
+}
+const routeCard = () => `<div class="hd-route">
+    <div class="hd-ends">${endHtml('from', '상차')}${endHtml('to', '하차')}</div>
+    <button type="button" class="hd-swap" data-hd="swap" aria-label="상차 하차 바꾸기">${IC.swap}</button>
   </div>`;
+// 오늘 배차 요청 마감 15:00 (10/27 대표)
+const DEADLINE = { h: 15, m: 0 };
+function dlHtml() {
+  const now = new Date(), dl = new Date(now); dl.setHours(DEADLINE.h, DEADLINE.m, 0, 0);
+  const left = Math.floor((dl - now) / 60000), hh = `${DEADLINE.h}:${String(DEADLINE.m).padStart(2, '0')}`;
+  if (left < 0) return `<div class="hd-dl over" id="hd-dl"><span>${IC.alarm} 오늘 마감</span><b>${hh} 지남</b></div>`;
+  const rest = left >= 60 ? `${Math.floor(left / 60)}시간 ${left % 60}분` : `${left}분`;
+  return `<div class="hd-dl${left <= 30 ? ' soon' : ''}" id="hd-dl"><span>${IC.alarm} 오늘 마감</span><b>${hh} · ${rest} 남음</b></div>`;
 }
 
 // 차량은 여러 대 골라도 됨 — "1톤 또는 1.4톤" (10/22 대표). 직접 적은 차량(F.vehicle)은 맨 뒤에
@@ -142,27 +168,29 @@ export function homtScreen() {
   return `<div class="hm">${EMBED ? '' : `<header class="hm-top"><div class="hm-in">
     <button type="button" class="hm-back" data-hd="back" aria-label="뒤로">‹</button><img src="./icons/logo-full.png" alt="HOME TRADERS" class="hm-logo" data-hd="back"></div></header>`}
     <div class="hd-page">${EMBED ? '' : '<h1 class="hm-h1" style="margin:12px 0 16px">배차 요청</h1>'}
-    ${placeField('from', '상차지')}
-    ${placeField('to', '하차지')}
+    ${routeCard()}
+    <div class="hd-sheet"><div class="hd-handle"></div>
     <div class="hd-field"><label class="hd-check"><input type="checkbox" data-hd="say" ${F.say ? 'checked' : ''}> 상차지에 우리 물건이라고 말해 주세요</label>
       ${F.say ? `<div class="hd-chips">${chip('sayAs', '홈트레이더스', F.sayAs === '홈트레이더스')}${chip('sayAs', '에이스', F.sayAs === '에이스')}</div>` : ''}</div>
-    <div class="hd-field"><label>차량</label><div class="hd-chips">${VEHICLES.map((v) => `<button type="button" class="hd-chip ${F.cars.includes(v) ? 'on' : ''}" data-hd="car" data-v="${esc(v)}">${esc(v)}</button>`).join('')}</div>
+    <div class="hd-field"><label>${IC.truck} 차량</label><div class="hd-chips">${VEHICLES.map((v) => `<button type="button" class="hd-chip ${F.cars.includes(v) ? 'on' : ''}" data-hd="car" data-v="${esc(v)}">${esc(v)}</button>`).join('')}</div>
       <input class="hd-in" data-hd-in="vehicle" maxlength="100" value="${esc(F.vehicle)}" placeholder="직접 입력 (예: 1톤 탑차) · 여러 개 고르면 '또는'"></div>
-    <div class="hd-field"><label>운임</label><div class="hd-chips">${chip('pay', '현불', F.pay === '현불')}${chip('pay', '착불', F.pay === '착불')}</div></div>
-    <div class="hd-field"><label>품목</label><div class="hd-chips">${GOODS.map((v) => chip('goods', v, F.goods === v)).join('')}</div>
+    <div class="hd-field"><label>${IC.cash} 운임</label><div class="hd-seg">${['현불', '착불'].map((v) => `<button type="button" class="${F.pay === v ? 'on' : ''}" data-hd="set" data-k="pay" data-v="${v}">${v}</button>`).join('')}</div></div>
+    <div class="hd-field"><label>${IC.box} 품목</label><div class="hd-chips">${GOODS.map((v) => chip('goods', v, F.goods === v)).join('')}</div>
       <input class="hd-in" data-hd-in="goods" maxlength="100" value="${esc(GOODS.includes(F.goods) ? '' : F.goods)}" placeholder="직접 입력 (예: 방킬라이 1PLT · 3m)"></div>
-    <div class="hd-field"><label>무게</label><div class="hd-chips">${chip('weight', '최대중량', F.weight === '최대중량')}</div>
+    <div class="hd-field"><label>${IC.scale} 무게</label><div class="hd-chips">${chip('weight', '최대중량', F.weight === '최대중량')}</div>
       <input class="hd-in" data-hd-in="weight" maxlength="100" value="${esc(F.weight === '최대중량' ? '' : F.weight)}" placeholder="예: 600kg"></div>
-    <div class="hd-field"><label>일정 <span class="hd-opt-lab">(선택)</span></label><div class="hd-chips">${chip('sched', '오늘 상차 / 내일 하차', F.sched === '오늘 상차 / 내일 하차')}${chip('sched', '바로 상차 / 바로 하차', F.sched === '바로 상차 / 바로 하차')}</div>
+    <div class="hd-field"><label>${IC.clock} 일정</label><div class="hd-chips">${chip('sched', '오늘 상차 / 내일 하차', F.sched === '오늘 상차 / 내일 하차')}${chip('sched', '바로 상차 / 바로 하차', F.sched === '바로 상차 / 바로 하차')}</div>
       <input class="hd-in" data-hd-in="sched" maxlength="100" value="${esc(['오늘 상차 / 내일 하차', '바로 상차 / 바로 하차'].includes(F.sched) ? '' : F.sched)}" placeholder="예: 내일 오전 8시 착"></div>
     <div class="hd-field"><label>배차요청톡 미리보기</label><pre class="hd-pre" id="hd-pre">${esc(dispatchText())}</pre></div>
-    <button type="button" class="hd-go" data-hd="submit">배차 요청 — 복사 + 출고 등록</button>
-  </div></div>`;
+    ${dlHtml()}
+    <button type="button" class="hd-go" data-hd="submit">배차 요청</button>
+  </div></div></div>`;
 }
 
 // ── 입력·클릭 ──────────────────────────────────────────
 // ctx = { rerender, goAce, goHomt, goStart }
 export function bind(app, ctx) {
+  setInterval(() => { const el = document.getElementById('hd-dl'); if (el) el.outerHTML = dlHtml(); }, 30000);
   app.addEventListener('click', (e) => {
     const t = e.target.closest('[data-hd]');
     if (!t) {
@@ -176,11 +204,12 @@ export function bind(app, ctx) {
     else if (a === 'back') ctx.goStart();
     else if (a === 'pick') { F[k] = { ...search(F.q[k])[Number(t.dataset.i)] }; F.open = ''; F.q[k] = ''; ctx.rerender(); }
     else if (a === 'pick-new') { F[k] = { name: cut(F.q[k], MAX.name), addr: '', phone: '', kind: '직접' }; F.open = ''; F.q[k] = ''; ctx.rerender(); }
-    else if (a === 'direct') { F[k] = { name: '', addr: cut(F.q[k], MAX.addr), phone: '', kind: '현장' }; F.open = ''; F.q[k] = ''; ctx.rerender(); focusIn(`${k}.addr`); }   // 거래처 아닌 하차지 — 거래처에 저장 안 함
+    else if (a === 'direct') { F[k] = { name: '', addr: cut(F.q[k], MAX.addr), phone: '', kind: '현장' }; F.open = ''; F.q[k] = ''; ctx.rerender(); focusIn(`${k}.name`); }   // 거래처 아닌 하차지 — 거래처에 저장 안 함
     else if (a === 'clear') { F[k] = null; F.open = k; ctx.rerender(); }
     else if (a === 'set') { const key = t.dataset.k; if (!SET_KEYS.has(key)) return; F[key] = F[key] === t.dataset.v && key !== 'pay' && key !== 'sayAs' ? '' : t.dataset.v; ctx.rerender(); }
     else if (a === 'car') { const v = t.dataset.v; if (!VEHICLES.includes(v)) return; F.cars = F.cars.includes(v) ? F.cars.filter((x) => x !== v) : [...F.cars, v]; ctx.rerender(); }
     else if (a === 'say') { F.say = !!t.checked; ctx.rerender(); }
+    else if (a === 'swap') { [F.from, F.to] = [F.to, F.from]; [F.q.from, F.q.to] = [F.q.to, F.q.from]; F.open = ''; ctx.rerender(); }
     else if (a === 'submit') submit(ctx);
   });
   app.addEventListener('focusin', (e) => {
@@ -199,7 +228,7 @@ export function bind(app, ctx) {
 }
 // 다시 그린 뒤 검색칸이 열려 있었으면 커서를 돌려놓음 (공유 DB 갱신으로 화면이 새로 그려져도 치던 글자가 끊기지 않게)
 export function afterRender() { if (F.open) focusQ(F.open); }
-function focusIn(k) { setTimeout(() => { const el = document.querySelector(`[data-hd-in="${k}"]`); if (el) el.focus(); }, 0); }
+function focusIn(k) { setTimeout(() => { const el = document.querySelector(`[data-hd-in="${k}"]`); if (el) el.focus(); }, 60); }
 function focusQ(t) {
   const el = document.getElementById('hd-q-' + t);
   if (el) { el.focus(); const n = el.value.length; try { el.setSelectionRange(n, n); } catch (_) { /* 무시 */ } }
