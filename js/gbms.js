@@ -195,7 +195,7 @@ export function screen() {
     </div>
     ${G.syncAt ? `<section class="gb-feed" aria-label="업데이트" style="background:#fff;border:1px solid #E6E4DF;border-radius:12px;padding:12px 16px;display:flex;flex-direction:column;gap:8px">
       <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#5C5C5C"><b style="color:#1F2328">업데이트</b><span style="font-variant-numeric:tabular-nums">${hm(G.syncAt)}</span></div>
-      ${(G.feed || []).map((f) => { const d = G.list.find((x) => x.id === f.id); return d ? `<button type="button" data-gb="row" data-id="${esc(d.id)}" style="display:flex;align-items:center;gap:10px;border:0;border-top:1px solid #F1EFEA;background:none;padding:8px 0 0;font:inherit;font-size:13px;text-align:left;cursor:pointer;min-width:0">
+      ${(G.feed || []).map((f) => { const d = G.list.find((x) => x.id === f.id); return d ? `<button type="button" data-gb="feed" data-id="${esc(d.id)}" style="display:flex;align-items:center;gap:10px;border:0;border-top:1px solid #F1EFEA;background:none;padding:8px 0 0;font:inherit;font-size:13px;text-align:left;cursor:pointer;min-width:0">
         <span style="flex:none;font-variant-numeric:tabular-nums;color:#6B6B6B">${hm(f.at)}</span>
         <span style="flex:none;font-size:11px;padding:2px 8px;border-radius:10px;${f.tag === '새로 올라옴' ? 'background:#FDF0E6;color:#9A3412' : 'background:#F3F4F6;color:#3F3F46'}">${esc(f.tag)}</span>
         <span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><b>${md(d.ymd)}</b> ${esc(d.site || '')} · ${esc(itemTitle(d))}</span>
@@ -572,6 +572,26 @@ async function copyImg(d, kind) {
 // ── 입력 ─────────────────────────────────────────
 let fileTarget = null;
 const pickFile = (id, kind) => { fileTarget = { id, kind }; const f = document.getElementById('gb-file'); if (f) { f.value = ''; f.click(); } };
+// 업데이트 줄을 누르면 그 장이 보이게 거르기·쪽을 풀고 목록의 그 줄로 내려가 잠깐 표시
+function feedGo(id) {
+  const d = G.list.find((x) => x.id === id);
+  if (!d) return;
+  if (G.month !== '전체' && d.ymd.slice(4, 6) !== G.month) G.month = d.ymd.slice(4, 6);
+  if (G.site && d.site !== G.site) G.site = '';
+  if (G.q) G.q = '';
+  if (G.status !== '전체' && statusOf(d) !== G.status) G.status = '전체';
+  const shown = filtered().filter((x) => G.status === '전체' || statusOf(x) === G.status);
+  G.page = Math.floor(Math.max(0, shown.findIndex((x) => x.id === id)) / G.size) + 1;
+  ctx.rerender();
+  requestAnimationFrame(() => {
+    const el = [...document.querySelectorAll(`[data-gb="row"][data-id="${CSS.escape(id)}"]`)].find((x) => x.offsetParent);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const bg = el.style.background;
+    el.style.transition = 'background .3s'; el.style.background = '#FFE8D6';
+    setTimeout(() => { el.style.background = bg; }, 1800);
+  });
+}
 export function setBiz(biz) { if (G.biz !== biz) { G.biz = biz; G.loaded = ''; G.page = 1; G.pick.clear(); G.open = null; G.month = '전체'; G.status = '전체'; G.site = ''; } }
 export function bind(app, c) {
   ctx = c;
@@ -579,6 +599,7 @@ export function bind(app, c) {
     const t = e.target.closest('[data-gb]'); if (!t || !app.querySelector('.gb')) return;
     const a = t.dataset.gb, id = t.dataset.id, cur = G.open && G.list.find((d) => d.id === G.open);
     if (LIM() && LIM_ACTS.has(a)) return;
+    if (a === 'feed' && id) { feedGo(id); return; }   // 업데이트 줄 → 아래 목록의 그 줄로 (10/27 대표)
     if (a === 'row') { if (e.target.closest('button, input, a, label, select')) return; G.open = id; G.reason = ''; G.zoom = ''; G.panel = 'tax'; ctx.rerender(); }
     else if (a === 'pend-save') commitPending();
     else if (a === 'pend-cancel' && G.pend) { G.pend[t.dataset.k] = null; if (!hasPend()) G.pend = null; ctx.rerender(); }
