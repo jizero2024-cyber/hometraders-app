@@ -921,8 +921,8 @@ a.fm-btn { text-decoration: none; }
 button.fl-evl { border: 0; cursor: pointer; font: inherit; font-size: 12px; } .fl-evl.k { background: #FFF6D6; color: #7A5A00; } .fl-evl.m { background: #F2EEFB; color: #5B3FA8; }
 .fl-txm { max-width: 560px; } .fl-tx { white-space: pre-wrap; font: inherit; font-size: 14px; line-height: 1.6; max-height: 70vh; overflow: auto; margin: 8px 0 0; background: #FBFAF8; border-radius: 12px; padding: 14px 16px; }
 
-.fl-ck { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 6px; border: 0; background: none; font: inherit; font-size: 13px; color: #8A877F; cursor: pointer; white-space: nowrap; }
-.fl-ck i { width: 18px; height: 18px; border: 1.5px solid #CFCBC3; border-radius: 5px; display: inline-flex; align-items: center; justify-content: center; font-style: normal; font-size: 12px; font-weight: 800; box-sizing: border-box; }
-.fl-ck:hover i { border-color: #E8732C; }
-.fl-ck.on { color: #2E7D4F; font-weight: 700; cursor: default; }
-.fl-ck.on i { background: #2E7D4F; border-color: #2E7D4F; color: #fff; }
+.fl-sent { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 6px; border: 0; background: none; font: inherit; font-size: 13px; color: #8A877F; cursor: pointer; white-space: nowrap; }
+.fl-sent i { width: 18px; height: 18px; border: 1.5px solid #CFCBC3; border-radius: 5px; display: inline-flex; align-items: center; justify-content: center; font-style: normal; font-size: 12px; font-weight: 800; box-sizing: border-box; }
+.fl-sent:hover i { border-color: #E8732C; }
+.fl-sent.on { color: #2E7D4F; font-weight: 700; cursor: default; }
+.fl-sent.on i { background: #2E7D4F; border-color: #2E7D4F; color: #fff; }

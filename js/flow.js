@@ -60,7 +60,7 @@ function stmtHtml(r) {   // 거래명세표 — 판매전표 PDF 보기 · 전�
   if (!sl.length) return '<span class="fl-stm na">판매 미입력</span>';
   const mk = FL.marks[`sent:${r.no}`];
   return `<span class="fl-stm"><button type="button" class="fl-in ok" data-fl="pdf" data-k="판매" data-s="${esc(sl.join(','))}">명세표 ›</button><button type="button" class="fl-gh" data-fl="stmtgo" data-no="${esc(r.no)}" data-s="${esc(sl.join(','))}">변환</button>
-    ${mk ? `<span class="fl-ck on" title="전달 ${esc(String(mk.created_at || '').slice(5, 10).replace('-', '/'))}"><i>✓</i>전달</span>` : `<button type="button" class="fl-ck" data-fl="sent" data-no="${esc(r.no)}"><i></i>전달</button>`}</span>`;
+    ${mk ? `<span class="fl-sent on" title="전달 ${esc(String(mk.created_at || '').slice(5, 10).replace('-', '/'))}"><i>✓</i>전달</span>` : `<button type="button" class="fl-sent" data-fl="sent" data-no="${esc(r.no)}"><i></i>전달</button>`}</span>`;
 }
 function rowHtml(r) {
   const btns = (BTN[FL.cur] || []).map(([a, t], i) => `<button type="button" class="${i ? 'fl-gh' : 'fl-go'}" data-fl="${a}" data-no="${esc(r.no)}">${t}</button>`).join('');
