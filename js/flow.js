@@ -43,7 +43,8 @@ const barOn = (k) => !NOBAR.includes(k) && (FL.view !== 'flow' || FL.all);   // 
 const rqOf = (k) => ((FL.rqs = FL.rqs || {})[k] = FL.rqs[k] || {});
 const filt = (rs, k) => {
   const q = rqOf(k), w = String(q.q || '').trim().toLowerCase(), mdOf = (d) => (d ? +d.slice(5, 7) * 100 + +d.slice(8, 10) : null), a = mdOf(q.from), b = mdOf(q.to);
-  return rs.filter((r) => (!q.p || r.partner === q.p) && (a == null || (r.md ?? 0) >= a) && (b == null || (r.md ?? 9999) <= b)
+  const ps = Array.isArray(q.p) ? q.p : [];
+  return rs.filter((r) => (!ps.length || ps.includes(r.partner)) && (a == null || (r.md ?? 0) >= a) && (b == null || (r.md ?? 9999) <= b)
     && (!w || `${r.partner} ${r.site_full} ${r.site} ${r.boss} ${r.item} ${r.items} ${r.from} ${r.veh} ${r.memo} ${r.no} ${(r.lines || []).flatMap((l) => l.slips || []).join(' ')}`.toLowerCase().includes(w)));
 };
 const baseOf = (k) => (k === '기록' ? rowsOf('기록') : k === '입력 완료' ? (FL.data ? FL.data.rows.filter((r) => (r.lines || []).length && (slipOk(r) || (r.steps.includes('입력 완료') && !slipTodo().includes(r)))) : []) : FL.all || FL.view === '견적' ? rowsOf(k) : TODAY_ONLY.includes(k) ? rowsOf(k).filter((r) => [r.day, r.arr].includes((FL.data || {}).today) || (k !== '출고 완료' && [md(r.day), r.arr].includes(tmr()))) : k === '견적' ? rowsOf(k).filter(dueToday) : rowsOf(k));
@@ -209,12 +210,14 @@ function closeHtml(x) {
       ${i.n ? `<button type="button" class="fl-go" data-fl="go" data-k="${i.go}">${i.btn}</button>` : ''}</div>`).join('')}</div>
     <button type="button" class="fl-close ${left ? '' : 'on'}" data-fl="close">${left ? `오늘 마감 (남은 것 ${left})` : '오늘 마감'}</button>`;
 }
+const pLab = (q) => { const p = Array.isArray(q.p) ? q.p : []; return !p.length ? '거래처 전체' : p.length === 1 ? p[0] : `${p[0]} 외 ${p.length - 1}`; };   // 거래처 여러 곳 고르기 (10/29 대표)
 function rqBar(k) {
   const q = rqOf(k), ps = [...new Set(baseOf(k).map((r) => r.partner))].sort((a, b) => a.localeCompare(b, 'ko'));
   const iso = (n) => new Date(Date.now() - n * 864e5 + 9 * 36e5).toISOString().slice(0, 10), tday = iso(0);
   const qk = [['오늘', 0], ['1주', 7], ['1달', 30], ['전체', '']].map(([t, n]) => `<button type="button" class="fl-sb mid ${(n === '' ? !q.from && !q.to : q.from === iso(n) && q.to === tday) ? 'on' : ''}" data-fl="rqp" data-k="${n}">${t}</button>`).join('');
   return `<div class="fl-rq"><input type="search" class="fl-rqi" data-rq="q" placeholder="검색" value="${esc(q.q || '')}">
-    <select data-rq="p"><option value="">거래처 전체</option>${ps.map((p_) => `<option ${q.p === p_ ? 'selected' : ''}>${esc(p_)}</option>`).join('')}</select>
+    <details class="fl-rqp"><summary class="fl-rqps">${esc(pLab(q))}</summary><div class="fl-rqpl"><input type="search" data-rqf="1" placeholder="거래처 찾기">
+      ${ps.map((p_) => `<label><input type="checkbox" data-rq="p" value="${esc(p_)}" ${(q.p || []).includes(p_) ? 'checked' : ''}>${esc(p_)}</label>`).join('')}</div></details>
     <input type="date" data-rq="from" value="${esc(q.from || '')}"><span>~</span><input type="date" data-rq="to" value="${esc(q.to || '')}">
     <div class="fl-sub fl-rqk">${qk}</div><b class="fl-rqn">${listOf(k).length}건</b></div>`;
 }
@@ -276,11 +279,15 @@ export function bind(app, c) {
   setInterval(() => { if (document.visibilityState === 'visible' && app.querySelector('.fl')) load(true); }, 60000);   // 열어 둔 채로도 1분마다 새로 (도우미는 출고일보가 바뀌면 5분 안에 올림)
   const onRq = (e) => {
     const t = e.target.closest('[data-rq]'); if (!t || !app.querySelector('.fl')) return;
-    rqOf(FL.cur)[t.dataset.rq] = t.value;
+    const q = rqOf(FL.cur);
+    if (t.type === 'checkbox') { const set = new Set(Array.isArray(q.p) ? q.p : []); if (t.checked) set.add(t.value); else set.delete(t.value); q.p = [...set]; const sm = app.querySelector('.fl-rqps'); if (sm) sm.textContent = pLab(q); }
+    else q[t.dataset.rq] = t.value;
     const L = document.getElementById('fl-rec'), n = app.querySelector('.fl-rqn');
     if (L) L.innerHTML = listHtml(); if (n) n.textContent = `${listOf(FL.cur).length}건`;
   };
   app.addEventListener('input', onRq);
+  document.addEventListener('click', (e) => { const d = document.querySelector('.fl-rqp[open]'); if (d && !d.contains(e.target)) d.open = false; });
+  app.addEventListener('input', (e) => { const f = e.target.closest('[data-rqf]'); if (!f) return; const w = f.value.trim().toLowerCase(); f.parentNode.querySelectorAll('label').forEach((l) => { l.style.display = !w || l.textContent.toLowerCase().includes(w) ? '' : 'none'; }); });
   const onClick = (e) => {
     const t = e.target.closest('[data-fl]'); if (!t || (!app.querySelector('.fl') && !t.closest('.fl-qov'))) return;
     const a = t.dataset.fl, r = FL.data && FL.data.rows.find((x) => x.no === t.dataset.no);

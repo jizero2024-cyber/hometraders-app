@@ -963,3 +963,12 @@ button.fl-chip { border: 0; cursor: pointer; font: inherit; }
 .fl-pld i { font-style: normal; color: #A3A09A; } .fl-pld b { font-size: 17px; color: #B4531B; } .fl-pld b.no { color: #C62828; } .fl-pld em { font-style: normal; font-size: 12px; color: #8A877F; }
 .fl-rqk { display: inline-flex; gap: 4px; margin: 0; }
 .fl-rqk .fl-sb { height: 38px; }
+.fl-rqp { position: relative; }
+.fl-rqps { height: 38px; line-height: 36px; border: 1px solid #E4E1DA; border-radius: 10px; padding: 0 30px 0 12px; font-size: 14px; background: #fff; color: #222; cursor: pointer; list-style: none; min-width: 140px; max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; position: relative; }
+.fl-rqps::-webkit-details-marker { display: none; }
+.fl-rqps::after { content: '▾'; position: absolute; right: 12px; color: #A3A09A; }
+.fl-rqpl { position: absolute; z-index: 30; top: 42px; left: 0; width: 260px; max-height: 360px; overflow: auto; background: #fff; border: 1px solid #E4E1DA; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.08); padding: 8px; }
+.fl-rqpl input[type=search] { width: 100%; margin-bottom: 6px; }
+.fl-rqpl label { display: flex; align-items: center; gap: 8px; padding: 6px 4px; font-size: 14px; cursor: pointer; border-radius: 8px; }
+.fl-rqpl label:hover { background: #FBF7F2; }
+.fl-rqpl input[type=checkbox] { width: 16px; height: 16px; padding: 0; flex: none; accent-color: #E8732C; }
