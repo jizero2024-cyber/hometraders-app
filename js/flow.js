@@ -123,7 +123,6 @@ function listHtml() {
   setTimeout(fitActs, 0);
   let h = `<div class="fl-lh"><span>${FL.cur === '견적' ? '언제까지' : '도착'}</span><span>판매처 · 현장</span><span>품목</span><span>${FL.cur === '견적' ? '' : '상차 → 하차'}</span><span>${FL.cur === '견적' ? '' : '차량'}</span><span></span></div>`, last = null;
   rows.forEach((r) => { const g = dayLab(r); if (g !== last) { h += `<div class="fl-day">${esc(g)}</div>`; last = g; } h += rowHtml(r); });
-  if (!FL.all && FL.view !== '견적') h += '<div class="fl-more"><button type="button" class="fl-gh" data-fl="all" data-k="1">전체보기</button></div>';
   return h;
 }
 function fitActs() {
