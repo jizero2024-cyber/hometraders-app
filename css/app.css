@@ -830,6 +830,9 @@ a.fm-btn { text-decoration: none; }
 .fl-why { font-size: 12px; color: #C2410C; }
 .fl-ln { display: grid; grid-template-columns: 56px minmax(0, 1fr) 90px 72px; gap: 10px; align-items: center; padding: 4px 0 4px 12px; font-size: 13px; }
 .fl-lk { color: #7A7A7A; font-weight: 700; }
+.fl-lr { margin-left: 8px; color: #555; }
+.fl-la { margin-left: 8px; color: #222; font-weight: 700; }
+.fl-lno { margin-left: 8px; font-size: 12px; color: #8A877F; font-variant-numeric: tabular-nums; }
 .fl-by { font-size: 12px; color: #8A877F; text-align: right; white-space: nowrap; }
 .fl-in { justify-self: end; font: inherit; font-size: 13px; font-weight: 800; border: 0; background: none; padding: 3px 8px; border-radius: 8px; }
 .fl-in.ok { background: #EEF6EE; color: #1E6B34; cursor: pointer; } .fl-in.no { color: #E03E2D; } .fl-in.na { color: #A3A09A; font-weight: 400; }

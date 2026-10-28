@@ -79,6 +79,7 @@ function detailHtml(r) {
   const buys = (r.buys || []).filter((b) => b.name).map((b) => `<div class="fl-k">${esc(b.name)}</div><div class="fl-it">${esc(b.item)}</div>`).join('');
   return `<div class="fl-det">
     ${r.why ? `<div class="fl-why">${esc(r.why)}</div>` : ''}
+    ${r.no.startsWith('Q-') ? '' : `<div class="fl-k">상차 → 하차</div><div class="fl-it"><b>${esc(r.from || '상차지 확인')}</b> → <b>${esc(r.site_full || r.site || '하차지 확인')}</b></div>`}
     ${buys || `<div class="fl-it">${esc(r.items)}</div>`}
     ${r.veh ? `<div class="fl-k">차량</div><div class="fl-it">${esc(r.veh)}</div>` : ''}
     <div class="fl-k">전표</div><div>${linesHtml(r)}</div>
@@ -89,7 +90,9 @@ function linesHtml(r) {
     const kk = l.k === '판매' ? '판매' : '구매', has = l.st === '입력' && l.slips && l.slips.some((s) => (FL.links[s] || []).some((x) => !x.kind || x.kind === kk));
     const st = l.st === '입력' ? `<button type="button" class="fl-in ok" data-fl="pdf" data-k="${l.k === '판매' ? '판매' : '구매'}" data-s="${esc((l.slips || []).join(','))}">입력${has ? ' ›' : ''}</button>`
       : `<span class="fl-in ${l.st === '미입력' || l.st === '누락' ? 'no' : 'na'}">${esc(l.st)}</span>`;
-    return `<div class="fl-ln"><span class="fl-lk">${esc(l.k)}</span><span class="fl-c">${esc(l.who)}</span><span class="fl-by">${esc(l.by || '')}</span>${st}</div>`;
+    const nos = (l.slips || []).map((x) => x.replace(/^\d{4}(\d\d)(\d\d)-/, '$1/$2-')).join(' · ');   // 전표 번호 · 운반비는 어디서 어디·금액 (10/28 대표)
+    const info = [l.route ? `<span class="fl-lr">${esc(l.route)}</span>` : '', l.amt ? `<b class="fl-la">${Number(l.amt).toLocaleString()}원</b>` : '', nos ? `<span class="fl-lno">${esc(nos)}</span>` : ''].join('');
+    return `<div class="fl-ln"><span class="fl-lk">${esc(l.k)}</span><span class="fl-c">${esc(l.who)}${info}</span><span class="fl-by">${esc(l.by || '')}</span>${st}</div>`;
   }).join('');
 }
 const evLinks = (es) => (es || []).map((e) => (e.u ? `<a class="fl-evl" href="${esc(e.u)}" target="_blank" rel="noopener">${esc(e.t)}</a>`
