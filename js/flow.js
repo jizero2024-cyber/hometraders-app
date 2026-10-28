@@ -2,7 +2,7 @@
 // 맥 도우미 flow_board.py 가 출고일보 줄을 출고 건(출고번호)마다 단계로 나눠 site_inbox 'flow:board' 에 올림 → 여기선 읽기만.
 // 버튼은 있는 화면을 그 건 값으로 엶: 배차 요청(/homt) · 전자 송장 · 납품확인서 · 자재승인원 · 견적서 · 공간 올릴 전표
 import * as S from './store-supabase.js?v=7';
-import * as FM from './forms.js?v=16';
+import * as FM from './forms.js?v=17';
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const sv = (d) => `<svg viewBox="0 0 24 24" aria-hidden="true">${d}</svg>`;
@@ -38,7 +38,12 @@ const rowsOf = (k) => (FL.data ? FL.data.rows : []).filter((r) => r.steps.includ
 const TODAY_ONLY = ['배차 요청', '배차 완료', '출고 완료'];   // 오늘 마감 — 오늘 건만 (10/28 대표). 견적 요청·발주는 날짜가 앞이라 다
 const dueToday = (r) => { const t = (FL.data || {}).today || '', d = t.replace(/^0/, '');   // 견적 — 오늘까지 보내야 하는 것 (10/28 대표)
   const txt = `${r.time} ${r.item} ${r.memo || ''}`; return r.day === t || new RegExp(`(^|[^\\d/])(${t}|${d})(?![\\d/])`).test(txt); };   // '오늘' 글자는 옛 메모에도 있어서 오늘 날짜가 적힌 것만
-const listOf = (k) => (FL.all || FL.view === '견적' ? rowsOf(k) : TODAY_ONLY.includes(k) ? rowsOf(k).filter((r) => r.day === (FL.data || {}).today || (k !== '출고 완료' && md(r.day) === tmr())) : k === '견적' ? rowsOf(k).filter(dueToday) : rowsOf(k));
+const recOf = () => {   // 전표 확인 > 전체보기 — 거래처·기간·검색 (10/28 대표)
+  const q = FL.rq || {}, w = String(q.q || '').trim().toLowerCase(), mdOf = (d) => (d ? +d.slice(5, 7) * 100 + +d.slice(8, 10) : null), a = mdOf(q.from), b = mdOf(q.to);
+  return rowsOf('기록').filter((r) => (!q.p || r.partner === q.p) && (a == null || (r.md ?? 0) >= a) && (b == null || (r.md ?? 9999) <= b)
+    && (!w || `${r.partner} ${r.site_full} ${r.site} ${r.boss} ${r.items} ${r.from} ${r.no} ${(r.lines || []).flatMap((l) => l.slips || []).join(' ')}`.toLowerCase().includes(w)));
+};
+const listOf = (k) => (k === '기록' ? recOf() : FL.all || FL.view === '견적' ? rowsOf(k) : TODAY_ONLY.includes(k) ? rowsOf(k).filter((r) => r.day === (FL.data || {}).today || (k !== '출고 완료' && md(r.day) === tmr())) : k === '견적' ? rowsOf(k).filter(dueToday) : rowsOf(k));
 const countOf = (k) => (k === '전표' ? (FL.all ? rowsOf('입력 누락') : rowsOf('입력 누락').filter((r) => r.day === (FL.data || {}).today)).length
   : ['명세표', '입금'].includes(k) ? 0 : listOf(k).length);
 const hotOf = (k) => (k === '전표' ? rowsOf('입력 누락').length > 0 : TODAY_ONLY.includes(k) && listOf(k).length > 0);
@@ -54,12 +59,13 @@ const tmr = () => { const x = new Date(Date.now() + 864e5); return `${String(x.g
 const dayLab = (r) => { const t = (FL.data || {}).today; if (r.day === t) return '오늘'; if (r.late) return '지난 날'; if (md(r.day) === tmr()) return '내일'; return r.day === '미정' ? '날짜 미정' : r.day; };
 const BTN = { 견적: [['quote', '견적서']], 발주: [['esong', '전자 송장']], '배차 요청': [['disp', '배차 요청'], ['esong', '전자 송장']], '배차 완료': [['esong', '전자 송장']],
   '출고 완료': [['deliv', '납품확인서'], ['approval', '자재승인원'], ['esong', '전자 송장']] };
+BTN['기록'] = BTN['출고 완료'];
 
 function stepsHtml() {
   return `<nav class="fl-steps" aria-label="단계">${STEPS.map((k) => `<button type="button" class="fl-st ${FL.cur === k ? 'on' : ''} ${hotOf(k) ? 'hot' : ''}" data-fl="step" data-k="${k}">
     <i>${IC[k]}</i>${LABEL[k] || k}<b>${['명세표', '입금'].includes(k) ? '' : countOf(k)}</b></button>`).join('')}</nav>`;
 }
-const STMT_STEPS = ['배차 완료', '출고 완료'];
+const STMT_STEPS = ['배차 완료', '출고 완료', '기록'];
 const saleSlips = (r) => [...new Set((r.lines || []).filter((l) => l.k === '판매' && l.st === '입력').flatMap((l) => l.slips || []))];
 function stmtHtml(r) {   // 거래명세표 — 판매전표 PDF 보기 · 전달했는지 (10/28 대표)
   const sl = saleSlips(r);
@@ -118,6 +124,7 @@ function listHtml() {
     return (miss.length ? `<div class="fl-day no">입력 누락 ${miss.length}</div>${miss.map(evHtml).join('')}` : '') + (ok.length ? `<div class="fl-day ok">입력 완료 ${ok.length}</div>${ok.map(evHtml).join('')}` : '') || '<div class="fl-empty">없어요</div>';
   }
   const rows = listOf(FL.cur).map((r, i) => [r, i]).sort((a, b) => ((a[0].md ?? 9999) - (b[0].md ?? 9999)) || (tkey(a[0].time) - tkey(b[0].time)) || (a[1] - b[1])).map((x) => x[0]);
+  if (FL.cur === '기록') rows.reverse();   // 최근 것 먼저
   if (!rows.length) return '<div class="fl-empty">없어요</div>';
   if (STMT_STEPS.includes(FL.cur)) setTimeout(() => rows.forEach(fetchLinks), 0);
   setTimeout(fitActs, 0);
@@ -177,6 +184,14 @@ export function main(x) {
   load();
 
   if (FL.view === '견적') { FL.cur = '견적'; return `<section class="fl"><h1 class="fl-h1">견적 요청</h1><div class="fl-list" style="--acts:${[0, 130, 240, 350][(BTN[FL.cur] || []).length] + (STMT_STEPS.includes(FL.cur) ? 210 : 0)}px">${listHtml()}</div></section>`; }   // 사이드바 견적 요청 — 단계줄 없이 (10/28 대표)
+  if (FL.view === '기록') {
+    FL.cur = '기록'; const q = FL.rq || {}, ps = [...new Set(rowsOf('기록').map((r) => r.partner))].sort((a, b) => a.localeCompare(b, 'ko'));
+    return `<section class="fl"><h1 class="fl-h1">전체 출고</h1><div class="fl-rq">
+      <input type="search" class="fl-rqi" data-rq="q" placeholder="검색" value="${esc(q.q || '')}">
+      <select data-rq="p"><option value="">거래처 전체</option>${ps.map((p_) => `<option ${q.p === p_ ? 'selected' : ''}>${esc(p_)}</option>`).join('')}</select>
+      <input type="date" data-rq="from" value="${esc(q.from || '')}"><span>~</span><input type="date" data-rq="to" value="${esc(q.to || '')}">
+      <b class="fl-rqn">${recOf().length}건</b></div><div class="fl-list" id="fl-rec">${listHtml()}</div></section>`;
+  }
   if (FL.view === '누락') return `<section class="fl">${slipHtml('입력 누락')}</section>`;
   if (FL.view === '완료') return `<section class="fl">${slipHtml('입력 완료')}</section>`;
   const tg = `<div class="fl-sub fl-tg"><button type="button" class="fl-sb mid ${FL.all ? '' : 'on'}" data-fl="all" data-k="0">오늘</button><button type="button" class="fl-sb mid ${FL.all ? 'on' : ''}" data-fl="all" data-k="1">전체보기</button></div>`;
@@ -227,6 +242,13 @@ let clickQ = () => {};
 export function bind(app, c) {
   ctx = c;
   setInterval(() => { if (document.visibilityState === 'visible' && app.querySelector('.fl')) load(true); }, 60000);   // 열어 둔 채로도 1분마다 새로 (도우미는 출고일보가 바뀌면 5분 안에 올림)
+  const onRq = (e) => {
+    const t = e.target.closest('[data-rq]'); if (!t || !app.querySelector('.fl')) return;
+    FL.rq = { ...(FL.rq || {}), [t.dataset.rq]: t.value };
+    const L = document.getElementById('fl-rec'), n = app.querySelector('.fl-rqn');
+    if (L) L.innerHTML = listHtml(); if (n) n.textContent = `${recOf().length}건`;
+  };
+  app.addEventListener('input', onRq);
   const onClick = (e) => {
     const t = e.target.closest('[data-fl]'); if (!t || (!app.querySelector('.fl') && !t.closest('.fl-qov'))) return;
     const a = t.dataset.fl, r = FL.data && FL.data.rows.find((x) => x.no === t.dataset.no);
@@ -261,6 +283,7 @@ export function bind(app, c) {
       const body = k === '' ? String(p.r.items || p.r.item || '').split(/\s*·\s*/).join('\n') : (p.kits[k] || []).map(([n, q, u]) => `${String(n).replace(/<색상>/g, color || '색상').replace(/_?<색>/g, '')} ${q} ${String(u || '').replace(/\s*\(.*\)/, '')}`.trim()).join('\n');
       FM.presetQuote(body, p.r.partner, p.r.site); ctx.rerender(); }
     else if (a === 'qx') { FL.qpick = null; closeQ(); }
+    else if (a === 'deliv' && r) { FM.presetDeliv(saleSlips(r).join(' ')); ctx.rerender(); }
     else if (['deliv', 'approval', 'quote', 'stmt'].includes(a)) { FM.open(a === 'stmt' ? '' : a); if (a === 'stmt') ctx.go('stmt'); else ctx.rerender(); }
     else if (a === 'pdf') {
       const slips = (t.dataset.s || '').split(',').filter(Boolean), kk = t.dataset.k, hit = slips.flatMap((s) => FL.links[s] || []).find((x) => !kk || !x.kind || x.kind === kk);

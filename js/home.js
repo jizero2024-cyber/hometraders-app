@@ -3,8 +3,8 @@
 // 버튼: 배차 요청 · 자료 넣기(site_inbox — 출고일보 업데이트 때 판매·구매입력) · 거래명세표(공간제작소 · 그 외 · 에이스) · 납품확인서 · 자재승인원 · 견적서 · 입금표
 //   서류 화면은 모두 js/forms.js (같은 머리·카드·버튼)
 import * as S from './store-supabase.js?v=7';
-import * as FM from './forms.js?v=16';
-import * as FL from './flow.js?v=34';   // 맨 위 출고 흐름 (10/28)
+import * as FM from './forms.js?v=17';
+import * as FL from './flow.js?v=35';   // 맨 위 출고 흐름 (10/28)
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const won = (n) => Math.round(Number(n) || 0).toLocaleString();
@@ -129,6 +129,7 @@ function sideHtml() {
     <div class="hm-sg">전표 확인</div>
     ${it('입력 누락', 'data-hm="fv" data-v="누락"', v === '누락', n(c.miss + c.missOld), 'sub')}
     ${it('입력 완료', 'data-hm="fv" data-v="완료"', v === '완료', '', 'sub')}
+    ${it('전체보기', 'data-hm="fv" data-v="기록"', v === '기록', '', 'sub')}
     <div class="hm-sg">거래처</div>
     <a class="hm-si sub" href="/gonggan/"><span>공간 협업툴</span>${n(H.gwait)}</a>
     ${it('뉴하우징 협업툴', 'disabled', false, '<i>준비중</i>', 'sub off')}

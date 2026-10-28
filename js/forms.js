@@ -272,6 +272,9 @@ export function presetStmt(route, text, rows) {   // 출고 흐름 [명세표] �
   const f = F[route]; if (!f) return;
   f.text = rows && rows.length ? '' : text; f.rows = rows && rows.length ? rows : null; f.files = []; f.err = ''; open(route); loadStmt(route);
 }
+export function presetDeliv(text) {   // 출고 흐름 [납품확인서] — 그 건 판매전표 번호로 바로 (10/28 대표 "납품확인서 요청 오면 여기서 발행")
+  const f = F.deliv; f.text = text || ''; f.files = []; f.confirms = null; f.err = ''; open('deliv'); if (f.text) loadDeliv(); else ctx.rerender();
+}
 export function presetQuote(text, partner, site) {   // 출고 흐름 견적 요청 → 품목 글을 넣고 바로 읽기 (우리 품목명·종전가는 도우미 판독) (10/28 대표 "자동으로 품목 들어가고 견적서 나오게")
   const q = F.quote; q.text = text; q.files = []; q.doc = null; q.out = null; q.err = ''; q.preset = { partner: partner || '', site: site || '' };
   open('quote'); loadQuote();
