@@ -145,7 +145,7 @@ export function main(x) {
 
   if (FL.view === '누락') return `<section class="fl">${slipHtml('입력 누락')}</section>`;
   if (FL.view === '완료') return `<section class="fl">${slipHtml('입력 완료')}</section>`;
-  return `<section class="fl" aria-label="오늘 마감">${closeHtml(x || {})}</section><section class="fl" id="fl-list">${stepsHtml()}<div class="fl-list">${listHtml()}</div></section>`;
+  return `<section class="fl" id="fl-list" aria-label="오늘 마감">${stepsHtml()}<div class="fl-list">${listHtml()}</div></section>`;   // 출고 흐름과 같은 모양, 오늘 건만 (10/28 대표)
 }
 export const panel = main;
 
@@ -185,7 +185,16 @@ export function bind(app, c) {
     else if (a === 'close') { if (t.classList.contains('on')) alert('오늘 마감했어요'); }
     else if (a === 'row') { if (e.target.closest('button,a')) return; FL.sel = FL.sel === t.dataset.no ? '' : t.dataset.no; if (FL.sel && r) fetchLinks(r); ctx.rerender(); }
     else if (a === 'disp' && r) ctx.openFrame('배차 요청', dispSrc(r));
-    else if (a === 'esong' && r) { FM.preset('esong', { partner: r.partner, site: r.site, ymd: '', items: itemRows(r.items) }); FM.open('esong'); ctx.rerender(); }
+    else if (a === 'esong' && r) {
+      const open = (items) => { FM.preset('esong', { partner: r.partner, site: r.site, ymd: '', items }); FM.open('esong'); ctx.rerender(); };
+      const sale = [...new Set((r.lines || []).filter((l) => l.k === '판매').flatMap((l) => l.slips || []))];
+      if (!sale.length) { open(itemRows(r.items)); return; }
+      S.getSlipRowsBySlip(sale).then((gs) => {   // 이카운트 판매전표 줄 — 품목명 뒤 [현장 태그] 는 뺌
+        const rows = gs.filter((g) => g.kind === '판매').flatMap((g) => g.rows || []).filter((x) => x && x[3] && !/운반비/.test(x[3]))
+          .map((x) => ({ name: String(x[3]).replace(/\s*\[[^\]]*\]\s*$/, '').trim(), qty: String(x[5] == null ? '' : x[5]), unit: '개' }));
+        open(rows.length ? rows : itemRows(r.items));
+      }).catch(() => open(itemRows(r.items)));
+    }
     else if (['deliv', 'approval', 'quote', 'stmt'].includes(a)) { FM.open(a === 'stmt' ? '' : a); if (a === 'stmt') ctx.go('stmt'); else ctx.rerender(); }
     else if (a === 'pdf') {
       const slips = (t.dataset.s || '').split(',').filter(Boolean), hit = slips.flatMap((s) => FL.links[s] || [])[0];
