@@ -31,7 +31,9 @@ export function setGwait(n) { FL.gwait = n || 0; }
 
 const rowsOf = (k) => (FL.data ? FL.data.rows : []).filter((r) => r.steps.includes(k));
 const TODAY_ONLY = ['배차 요청', '배차 완료', '출고 완료'];   // 오늘 마감 — 오늘 건만 (10/28 대표). 견적 요청·발주는 날짜가 앞이라 다
-const listOf = (k) => (!FL.all && TODAY_ONLY.includes(k) ? rowsOf(k).filter((r) => r.day === (FL.data || {}).today) : rowsOf(k));
+const dueToday = (r) => { const t = (FL.data || {}).today || '', d = t.replace(/^0/, '');   // 견적 — 오늘까지 보내야 하는 것 (10/28 대표)
+  const txt = `${r.time} ${r.item} ${r.memo || ''}`; return r.day === t || /오늘|오전 중|오후 중|당일/.test(txt) || txt.includes(`견적 요청 ${t}`) || new RegExp(`(^|[^\\d/])(${t}|${d})(?![\\d/])`).test(`${r.time}`); };
+const listOf = (k) => (FL.all || FL.view === '견적' ? rowsOf(k) : TODAY_ONLY.includes(k) ? rowsOf(k).filter((r) => r.day === (FL.data || {}).today) : k === '견적' ? rowsOf(k).filter(dueToday) : rowsOf(k));
 const countOf = (k) => (k === '전표' ? rowsOf('입력 누락').filter((r) => r.day === (FL.data || {}).today).length
   : ['명세표', '입금'].includes(k) ? 0 : listOf(k).length);
 const hotOf = (k) => (k === '전표' ? rowsOf('입력 누락').length > 0 : TODAY_ONLY.includes(k) && listOf(k).length > 0);
@@ -50,13 +52,13 @@ function rowHtml(r) {
   const btns = (BTN[FL.cur] || []).map(([a, t], i) => `<button type="button" class="${i ? 'fl-gh' : 'fl-go'}" data-fl="${a}" data-no="${esc(r.no)}">${t}</button>`).join('');
   const asked = FL.cur === '배차 요청' && S.getShipments().find((s) => String(s.note || '').includes(`출고 흐름 ${r.no})`));
   const chips = [asked ? `<span class="fl-chip blu">요청함 ${esc((String(asked.note).match(/요청함 (\d\d:\d\d)/) || ['', ''])[1])}</span>` : '', r.late && FL.cur === '배차 요청' ? '<span class="fl-chip no">누락</span>' : '', FL.cur === '배차 완료' && !r.driver ? '<span class="fl-chip amb">기사·운임 확인</span>' : ''].join('');
-  const route = `${esc(r.from || '상차지 확인')} → ${esc(r.site || '하차지 확인')}`;
+  const route = FL.cur === '견적' ? '' : `${esc(r.from || '상차지 확인')} → ${esc(r.site || '하차지 확인')}`;
   return `<div class="fl-row ${FL.sel === r.no ? 'sel' : ''}" data-fl="row" data-no="${esc(r.no)}">
     <div class="fl-c fl-tm ${r.late || r.day === FL.data.today ? 'now' : ''}"><b>${esc(r.time || (r.day === '미정' ? '미정' : '시간 미정'))}</b><span>${esc(r.day)}</span></div>
     <div class="fl-c fl-nm">${title(r)}</div>
     <div class="fl-c fl-ds">${chips}${esc(r.item)}</div>
     <div class="fl-c fl-ds fl-rt">${route}</div>
-    <div class="fl-c fl-ds fl-v">${esc(r.size || '')}</div>
+    <div class="fl-c fl-ds fl-v">${FL.cur === '견적' ? '' : esc(r.size || '')}</div>
     <div class="fl-acts">${btns}</div></div>${FL.sel === r.no ? detailHtml(r) : ''}`;
 }
 function detailHtml(r) {
@@ -94,7 +96,7 @@ function listHtml() {
   }
   const rows = listOf(FL.cur);
   if (!rows.length) return '<div class="fl-empty">없어요</div>';
-  let h = `<div class="fl-lh"><span>${FL.cur === '견적' ? '언제까지' : '도착'}</span><span>판매처 · 현장</span><span>품목</span><span>상차 → 하차</span><span>차량</span><span></span></div>`, last = null;
+  let h = `<div class="fl-lh"><span>${FL.cur === '견적' ? '언제까지' : '도착'}</span><span>판매처 · 현장</span><span>품목</span><span>${FL.cur === '견적' ? '' : '상차 → 하차'}</span><span>${FL.cur === '견적' ? '' : '차량'}</span><span></span></div>`, last = null;
   rows.forEach((r) => { const g = dayLab(r); if (g !== last) { h += `<div class="fl-day">${esc(g)}</div>`; last = g; } h += rowHtml(r); });
   return h;
 }
