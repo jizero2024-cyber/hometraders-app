@@ -63,12 +63,13 @@ const dayLab = (r) => { const t = (FL.data || {}).today; if (r.day === t) return
 const BTN = { 견적: [['quote', '견적서']], 발주: [['esong', '전자 송장']], '배차 요청': [['disp', '배차 요청'], ['esong', '전자 송장']], '배차 완료': [['esong', '전자 송장']],
   '출고 완료': [['deliv', '납품확인서'], ['approval', '자재승인원'], ['esong', '전자 송장']] };
 BTN['기록'] = [...BTN['출고 완료'], ['cmp', '대조']];
+BTN['입력 완료'] = [['cmp', '대조']];   // 입력 완료 — 한 줄씩 리스트, [대조] (10/28 대표)
 
 function stepsHtml() {
   return `<nav class="fl-steps" aria-label="단계">${STEPS.map((k) => `<button type="button" class="fl-st ${FL.cur === k ? 'on' : ''} ${hotOf(k) ? 'hot' : ''}" data-fl="step" data-k="${k}">
     <i>${IC[k]}</i>${LABEL[k] || k}<b>${['명세표', '입금'].includes(k) ? '' : countOf(k)}</b></button>`).join('')}</nav>`;
 }
-const STMT_STEPS = ['배차 완료', '출고 완료', '기록'];
+const STMT_STEPS = ['배차 완료', '출고 완료', '기록', '입력 완료'];
 const saleSlips = (r) => [...new Set((r.lines || []).filter((l) => l.k === '판매' && l.st === '입력').flatMap((l) => l.slips || []))];
 function stmtHtml(r) {   // 거래명세표 — 판매전표 PDF 보기 · 전달했는지 (10/28 대표)
   const sl = saleSlips(r);
@@ -127,7 +128,7 @@ function listHtml() {
     return (miss.length ? `<div class="fl-day no">입력 누락 ${miss.length}</div>${miss.map(evHtml).join('')}` : '') + (ok.length ? `<div class="fl-day ok">입력 완료 ${ok.length}</div>${ok.map(evHtml).join('')}` : '') || '<div class="fl-empty">없어요</div>';
   }
   const rows = listOf(FL.cur).map((r, i) => [r, i]).sort((a, b) => ((a[0].md ?? 9999) - (b[0].md ?? 9999)) || (tkey(a[0].time) - tkey(b[0].time)) || (a[1] - b[1])).map((x) => x[0]);
-  if (FL.cur === '기록') rows.reverse();   // 최근 것 먼저
+  if (FL.cur === '기록' || FL.cur === '입력 완료') rows.reverse();   // 최근 것 먼저
   if (!rows.length) return '<div class="fl-empty">없어요</div>';
   setTimeout(fitActs, 0);
   let h = `<div class="fl-lh"><span>${FL.cur === '견적' ? '언제까지' : '도착'}</span><span>판매처 · 현장</span><span>품목</span><span>${FL.cur === '견적' ? '' : '상차 → 하차'}</span><span>${FL.cur === '견적' ? '' : '차량'}</span><span></span></div>`, last = null;
@@ -195,7 +196,7 @@ export function main(x) {
       <b class="fl-rqn">${recOf().length}건</b></div><div class="fl-list" id="fl-rec" style="--acts:${FL.acts['기록'] || 760}px">${listHtml()}</div></section>`;
   }
   if (FL.view === '누락') return `<section class="fl">${slipHtml('입력 누락')}</section>`;
-  if (FL.view === '완료') return `<section class="fl">${slipHtml('입력 완료')}</section>`;
+  if (FL.view === '완료') { FL.cur = '입력 완료'; return `<section class="fl"><h1 class="fl-h1">입력 완료</h1><div class="fl-list" style="--acts:${FL.acts['입력 완료'] || 300}px">${listHtml()}</div></section>`; }
   const tg = `<div class="fl-sub fl-tg"><button type="button" class="fl-sb mid ${FL.all ? '' : 'on'}" data-fl="all" data-k="0">오늘</button><button type="button" class="fl-sb mid ${FL.all ? 'on' : ''}" data-fl="all" data-k="1">전체보기</button></div>`;
   return `<section class="fl" id="fl-list" aria-label="오늘 마감">${tg}${stepsHtml()}<div class="fl-list" style="--acts:${FL.acts[FL.cur] || [0, 130, 240, 350, 460][(BTN[FL.cur] || []).length] + (STMT_STEPS.includes(FL.cur) ? 290 : 0)}px">${listHtml()}</div></section>`;   // 출고 흐름과 같은 모양, 오늘 건만 (10/28 대표)
 }
@@ -264,13 +265,22 @@ export function bind(app, c) {
       ov.addEventListener('click', (ev) => { if (ev.target === ov || ev.target.closest('.hm-x')) ov.remove(); });
       document.body.appendChild(ov);
     }
-    else if (a === 'cmp' && r) {   // 판매·구매(운반비) 전표 PDF 나란히 — 한 화면에서 대조 (10/28 대표)
-      const want = (r.lines || []).filter((l) => l.st === '입력').flatMap((l) => (l.slips || []).map((s_) => [l.k === '판매' ? '판매' : '구매', s_, l.k, l.who]));
-      S.getSlipLinks([...new Set(want.map((w) => w[1]))]).then((m) => {
-        const seen = new Set(), cols = want.map(([kk, s_, k, who]) => { const hit = (m[s_] || []).find((x) => x.kind === kk); if (!hit || seen.has(hit.drive_id)) return ''; seen.add(hit.drive_id);
-          return `<div class="fl-cmpc"><div class="fl-cmph"><b>${esc(k)}</b> ${esc(who || '')} <span>${esc(s_.replace(/^\d{4}(\d\d)(\d\d)-/, '$1/$2-'))}</span></div><iframe src="https://drive.google.com/file/d/${encodeURIComponent(hit.drive_id)}/preview" title="${esc(k)} ${esc(s_)}"></iframe></div>`; }).join('');
+    else if (a === 'cmp' && r) {   // 대조 — 구매 거래명세표(원본) · 구매 입력 전표 · 판매 입력 거래명세표 나란히 (10/28 대표)
+      const L = (r.lines || []).filter((l) => l.st === '입력'), srcs = (FL.data && FL.data.srcs) || {};
+      const slipsOf = (f) => [...new Set(L.filter(f).flatMap((l) => l.slips || []))];
+      const buy = slipsOf((l) => l.k === '구매'), fare = slipsOf((l) => l.k === '운반비'), sale = slipsOf((l) => l.k === '판매');
+      const nm = (s_) => s_.replace(/^\d{4}(\d\d)(\d\d)-/, '$1/$2-');
+      const frame = (id, cap) => `<div class="fl-cmpc"><div class="fl-cmph">${cap}</div><iframe src="https://drive.google.com/file/d/${encodeURIComponent(id)}/preview" title="${esc(cap)}" loading="lazy"></iframe></div>`;
+      const none = (cap) => `<div class="fl-cmpc na"><div class="fl-cmph">${cap}</div><div class="fl-empty">없음</div></div>`;
+      S.getSlipLinks([...new Set([...buy, ...fare, ...sale])]).then((m) => {
+        const pdf = (kk, s_) => { const seen = new Set(); return (m[s_] || []).filter((x) => x.kind === kk && !seen.has(x.file || x.slip) && seen.add(x.file || x.slip)).slice(0, 1); };
+        const col1 = buy.flatMap((s_) => (srcs[`구매|${s_}`] || []).map((x) => frame(x.id, `<b>구매 거래명세표</b> <span>${esc(nm(s_))}</span>`)));
+        const col2 = [...buy, ...fare].flatMap((s_) => pdf('구매', s_).map((x) => frame(x.drive_id, `<b>${fare.includes(s_) && !buy.includes(s_) ? '운반비 전표' : '구매 전표'}</b> <span>${esc(nm(s_))}</span>`)));
+        const col3 = sale.flatMap((s_) => pdf('판매', s_).map((x) => frame(x.drive_id, `<b>판매 거래명세표</b> <span>${esc(nm(s_))}</span>`)));
+        const g = (cols, cap) => (cols.length ? cols.join('') : none(`<b>${cap}</b>`));
         closeQ(); const ov = document.createElement('div'); ov.className = 'hm-ov fl-qov';
-        ov.innerHTML = `<div class="hm-modal fl-cmpm" role="dialog" aria-label="전표 대조"><div class="hm-mh"><b>${title(r)}</b>${plHtml(r)}<button type="button" class="hm-x" aria-label="닫기">✕</button></div><div class="fl-cmpg">${cols || '<div class="fl-empty">전표 PDF가 아직 없어요</div>'}</div></div>`;
+        ov.innerHTML = `<div class="hm-modal fl-cmpm" role="dialog" aria-label="전표 대조"><div class="hm-mh"><b>${title(r)}</b>${plHtml(r)}<button type="button" class="hm-x" aria-label="닫기">✕</button></div>
+          <div class="fl-cmpg">${g(col1, '구매 거래명세표')}${g(col2, '구매 전표')}${g(col3, '판매 거래명세표')}</div></div>`;
         ov.addEventListener('click', (ev) => { if (ev.target === ov || ev.target.closest('.hm-x')) ov.remove(); });
         document.body.appendChild(ov);
       }).catch((err) => alert('전표를 못 불러왔어요 — ' + (err.message || err)));
