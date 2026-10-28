@@ -2,7 +2,7 @@
 // 맥 도우미 flow_board.py 가 출고일보 줄을 출고 건(출고번호)마다 단계로 나눠 site_inbox 'flow:board' 에 올림 → 여기선 읽기만.
 // 버튼은 있는 화면을 그 건 값으로 엶: 배차 요청(/homt) · 전자 송장 · 납품확인서 · 자재승인원 · 견적서 · 공간 올릴 전표
 import * as S from './store-supabase.js?v=7';
-import * as FM from './forms.js?v=11';
+import * as FM from './forms.js?v=12';
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const sv = (d) => `<svg viewBox="0 0 24 24" aria-hidden="true">${d}</svg>`;
@@ -188,11 +188,27 @@ function copyText(text) {
   try { document.execCommand('copy'); } catch (_) { /* 무시 */ }
   ta.remove(); return Promise.resolve();
 }
+// 견적서 — 뉴하우징·공간제작소면 세트·키트 고르기, 그 외는 품목 글 그대로 → 견적서 화면이 우리 품목명·종전가로 채움
+function closeQ() { const x = document.querySelector('.fl-qov'); if (x) x.remove(); }
+function quoteFor(r) {
+  const all = (FL.data && FL.data.kits) || {}, kits = /뉴하우징/.test(r.partner) ? all['뉴하우징'] || {} : /공간/.test(r.partner) ? all['공간제작소'] || {} : {};
+  const names = Object.keys(kits);
+  if (!names.length) { FM.presetQuote(`거래처: ${r.partner}${r.site ? `\n현장: ${r.site}` : ''}\n${r.items || r.item || ''}`); ctx.rerender(); return; }
+  FL.qpick = { r, kits }; closeQ();
+  const ov = document.createElement('div'); ov.className = 'hm-ov fl-qov';
+  ov.innerHTML = `<div class="hm-modal fl-qm" role="dialog" aria-label="견적서"><div class="hm-mh"><b>${esc(r.partner)} 견적서</b><button type="button" class="hm-x" data-fl="qx" aria-label="닫기">✕</button></div>
+    ${/공간/.test(r.partner) ? '<label class="fl-qcl">색상<input id="fl-qc" class="fm-in" placeholder="EFX3453"></label>' : ''}
+    <div class="fl-qbs">${names.map((n) => `<button type="button" class="fl-go" data-fl="qk" data-k="${esc(n)}">${esc(n)}</button>`).join('')}<button type="button" class="fl-gh" data-fl="qk" data-k="">품목 그대로</button></div></div>`;
+  ov.addEventListener('click', (e) => { if (e.target === ov) { FL.qpick = null; closeQ(); } });
+  document.body.appendChild(ov);
+  ov.addEventListener('click', (e) => { const b = e.target.closest('[data-fl]'); if (b) clickQ(b); });
+}
+let clickQ = () => {};
 export function bind(app, c) {
   ctx = c;
   setInterval(() => { if (document.visibilityState === 'visible' && app.querySelector('.fl')) load(true); }, 60000);   // 열어 둔 채로도 1분마다 새로 (도우미는 출고일보가 바뀌면 5분 안에 올림)
-  app.addEventListener('click', (e) => {
-    const t = e.target.closest('[data-fl]'); if (!t || !app.querySelector('.fl')) return;
+  const onClick = (e) => {
+    const t = e.target.closest('[data-fl]'); if (!t || (!app.querySelector('.fl') && !t.closest('.fl-qov'))) return;
     const a = t.dataset.fl, r = FL.data && FL.data.rows.find((x) => x.no === t.dataset.no);
     if (a !== 'row') e.stopPropagation();
     if (a === 'step') { FL.cur = t.dataset.k; FL.sel = ''; ctx.rerender(); }
@@ -213,11 +229,20 @@ export function bind(app, c) {
         open(rows.length ? rows : itemRows(r.items));
       }).catch(() => open(itemRows(r.items)));
     }
+    else if (a === 'quote' && r) quoteFor(r);
+    else if (a === 'qk' && FL.qpick) { const p = FL.qpick, k = t.dataset.k; FL.qpick = null; closeQ();
+      const color = ((document.getElementById('fl-qc') || {}).value || '').trim();
+      const head = `거래처: ${p.r.partner}${p.r.site ? `\n현장: ${p.r.site}` : ''}`;
+      const body = k === '' ? String(p.r.items || p.r.item || '') : (p.kits[k] || []).map(([n, q, u]) => `${String(n).replace(/<색상>/g, color || '색상').replace(/<색>/g, '')} ${q} ${u || ''}`.trim()).join('\n');
+      FM.presetQuote(`${head}\n${body}`); ctx.rerender(); }
+    else if (a === 'qx') { FL.qpick = null; closeQ(); }
     else if (['deliv', 'approval', 'quote', 'stmt'].includes(a)) { FM.open(a === 'stmt' ? '' : a); if (a === 'stmt') ctx.go('stmt'); else ctx.rerender(); }
     else if (a === 'pdf') {
       const slips = (t.dataset.s || '').split(',').filter(Boolean), hit = slips.flatMap((s) => FL.links[s] || [])[0];
       if (hit) window.open(`https://drive.google.com/file/d/${encodeURIComponent(hit.drive_id)}/view`, '_blank', 'noopener');
       else if (slips.length) copyText(slips.join(' ')).then(() => alert(`전표 PDF가 아직 안 올라왔어요 — 전표 번호 ${slips.join(', ')} 복사함`));
     }
-  });
+  };
+  app.addEventListener('click', onClick);
+  clickQ = (b) => onClick({ target: b, stopPropagation() {} });
 }

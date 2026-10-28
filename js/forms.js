@@ -267,6 +267,10 @@ const TITLE = { ...Object.fromEntries(Object.entries(ST).map(([k, v]) => [k, v[0
 export function preset(route, doc) {   // 출고 흐름에서 그 건 값으로 열기 (10/28) — 지금은 전자 송장만
   if (route === 'esong') { F.esong.doc = { partner: doc.partner || '', site: doc.site || '', ymd: doc.ymd || today(), items: (doc.items && doc.items.length ? doc.items : [esRow()]).map((r) => ({ name: r.name || '', qty: r.qty || '', unit: r.unit || '개' })) }; F.esong.link = ''; F.esong.copied = false; }
 }
+export function presetQuote(text) {   // 출고 흐름 견적 요청 → 품목 글을 넣고 바로 읽기 (우리 품목명·종전가는 도우미 판독) (10/28 대표 "자동으로 품목 들어가고 견적서 나오게")
+  const q = F.quote; q.text = text; q.files = []; q.doc = null; q.out = null; q.err = '';
+  open('quote'); loadQuote();
+}
 export function open(route) { ROUTES.forEach((r) => { F[r].open = r === route; }); }
 export function popup() {
   const r = ROUTES.find((x) => F[x].open);
