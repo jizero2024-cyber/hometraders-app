@@ -16,9 +16,9 @@ const IC = {
   명세표: sv('<path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4M9 13l2 2 4-4"/>'),
   입금: sv('<circle cx="12" cy="12" r="8.5"/><path d="M8 9l1.5 6L12 10l2.5 5L16 9M7.5 12h9"/>'),
 };
-const STEPS = ['견적', '발주', '배차 요청', '배차 완료', '출고 완료', '전표', '명세표', '입금'];
+const STEPS = ['견적', '발주', '배차 요청', '배차 완료', '출고 완료'];   // 전표는 사이드바 '전표 확인'으로 (10/28 대표)
 const LABEL = { 견적: '견적 요청' };   // 10/28 대표 "견적 텍스트 견적요청으로"
-const FL = { data: null, err: '', at: 0, loading: false, cur: '배차 요청', day: '', sel: '', links: {}, gwait: 0 };
+const FL = { data: null, err: '', at: 0, loading: false, cur: '배차 요청', view: 'flow', day: '', sel: '', links: {}, gwait: 0 };
 let ctx = { rerender: () => {}, openFrame: () => {} };
 
 export function load(force) {
@@ -37,8 +37,8 @@ const title = (r) => `${esc(r.partner)} · ${r.site ? esc(r.site) : '<span class
 const md = (d) => { const m = /^(\d{2})\/(\d{2})$/.exec(d || ''); return m ? `${m[1]}/${m[2]}` : ''; };
 const tmr = () => { const x = new Date(Date.now() + 864e5); return `${String(x.getMonth() + 1).padStart(2, '0')}/${String(x.getDate()).padStart(2, '0')}`; };
 const dayLab = (r) => { const t = (FL.data || {}).today; if (r.day === t) return '오늘'; if (r.late) return '지난 날'; if (md(r.day) === tmr()) return '내일'; return r.day === '미정' ? '날짜 미정' : r.day; };
-const BTN = { 견적: [['quote', '견적서']], 발주: [['esong', '납품송장']], '배차 요청': [['disp', '배차 요청']], '배차 완료': [['esong', '납품송장']],
-  '출고 완료': [['deliv', '납품확인서'], ['approval', '자재승인원']] };
+const BTN = { 견적: [['quote', '견적서']], 발주: [['esong', '전자 송장']], '배차 요청': [['disp', '배차 요청'], ['esong', '전자 송장']], '배차 완료': [['esong', '전자 송장']],
+  '출고 완료': [['deliv', '납품확인서'], ['approval', '자재승인원'], ['esong', '전자 송장']] };
 
 function stepsHtml() {
   return `<nav class="fl-steps" aria-label="단계">${STEPS.map((k) => `<button type="button" class="fl-st ${FL.cur === k ? 'on' : ''} ${hotOf(k) ? 'hot' : ''}" data-fl="step" data-k="${k}">
@@ -63,18 +63,20 @@ function detailHtml(r) {
     ${r.why ? `<div class="fl-why">${esc(r.why)}</div>` : ''}
     ${buys || `<div class="fl-it">${esc(r.items)}</div>`}
     ${r.veh ? `<div class="fl-k">차량</div><div class="fl-it">${esc(r.veh)}</div>` : ''}
-    <div class="fl-k">전표</div><div>${linesHtml(r)}</div></div>`;
+    <div class="fl-k">전표</div><div>${linesHtml(r)}</div>
+    ${(r.ev || []).length ? `<div class="fl-k">근거</div><div class="fl-memo">${r.ev.map((e) => `<a class="fl-evl" href="${esc(e.u)}" target="_blank" rel="noopener">${esc(e.t)}</a>`).join('')}</div>` : ''}</div>`;
 }
 function linesHtml(r) {
   return (r.lines || []).map((l) => {
     const has = l.st === '입력' && l.slips && l.slips.some((s) => FL.links[s]);
     const st = l.st === '입력' ? `<button type="button" class="fl-in ok" data-fl="pdf" data-s="${esc((l.slips || []).join(','))}">입력${has ? ' ›' : ''}</button>`
-      : `<span class="fl-in ${l.st === '미입력' ? 'no' : 'na'}">${esc(l.st)}</span>`;
+      : `<span class="fl-in ${l.st === '미입력' || l.st === '누락' ? 'no' : 'na'}">${esc(l.st)}</span>`;
     return `<div class="fl-ln"><span class="fl-lk">${esc(l.k)}</span><span class="fl-c">${esc(l.who)}</span><span class="fl-by">${esc(l.by || '')}</span>${st}</div>`;
   }).join('');
 }
 function evHtml(r) {
-  return `<div class="fl-ev"><div class="fl-eh"><b>${title(r)}</b><span>${esc(r.day)}</span></div>${linesHtml(r)}</div>`;
+  const ev = (r.ev || []).map((e) => `<a class="fl-evl" href="${esc(e.u)}" target="_blank" rel="noopener">${esc(e.t)}</a>`).join('');
+  return `<div class="fl-ev"><div class="fl-eh"><b>${title(r)}</b><span>${esc(r.day)}</span></div>${linesHtml(r)}${r.memo || ev ? `<div class="fl-memo">${r.memo ? `<span>${esc(r.memo)}</span>` : ''}${ev}</div>` : ''}</div>`;
 }
 function listHtml() {
   if (FL.err) return `<div class="fl-empty">${esc(FL.err)}</div>`;
@@ -94,10 +96,38 @@ function listHtml() {
   rows.forEach((r) => { const g = dayLab(r); if (g !== last) { h += `<div class="fl-day">${esc(g)}</div>`; last = g; } h += rowHtml(r); });
   return h;
 }
-export function panel() {
+const today = () => (FL.data || {}).today;
+export const counts = () => ({
+  miss: rowsOf('입력 누락').filter((r) => r.day === today()).length, missOld: rowsOf('입력 누락').filter((r) => r.day !== today()).length,
+  quote: rowsOf('견적').length, disp: rowsOf('배차 요청').length, songjang: [...rowsOf('배차 완료'), ...rowsOf('출고 완료')].filter((r) => r.day === today()).length,
+});
+export const view = () => FL.view;
+export function setView(v) { FL.view = v; FL.sel = ''; if (v === '견적') { FL.view = 'flow'; FL.cur = '견적'; } }
+function slipHtml(kind) {   // 전표 확인 — 입력 누락(오늘 먼저 · 지난 날 아래) / 입력 완료(최근 것부터)
+  if (!FL.data) return '<div class="fl-empty">불러오는 중…</div>';
+  const t = today(), rows = rowsOf(kind).slice().reverse();
+  const now = rows.filter((r) => r.day === t), old = rows.filter((r) => r.day !== t);
+  return `<h1 class="fl-h1">${kind}</h1>` + (now.length ? `<div class="fl-day ${kind === '입력 누락' ? 'no' : 'ok'}">오늘 ${now.length}</div>${now.map(evHtml).join('')}` : '')
+    + (old.length ? `<div class="fl-day">지난 날 ${old.length}</div>${old.map(evHtml).join('')}` : '') + (rows.length ? '' : '<div class="fl-empty">없어요</div>');
+}
+function closeHtml(x) {   // 오늘 마감 (10/28 대표 "하루 마감을 치도록 하는 페이지")
+  const c = counts(), items = [
+    ['오늘 출고 전표 입력', c.miss, 'v-누락'], ['내일까지 배차 안 잡힌 것', c.disp, 'v-flow-배차 요청'], ['운송비 송금', x.fare || 0, 'fare'],
+    ['견적 회신', c.quote, 'v-flow-견적'], ['전자 송장', c.songjang, 'v-flow-배차 완료', 1], ['자료 넣기 처리', x.inbox || 0, 'box'],
+  ];
+  const left = items.filter((i) => i[1] && !i[3]).length, d = new Date();
+  return `<h1 class="fl-h1">오늘 마감 <span>${d.getMonth() + 1}/${d.getDate()} (${'일월화수목금토'[d.getDay()]})</span></h1>
+    ${items.map(([t, n, go, info]) => `<div class="fl-cl"><span class="fl-ck ${n && !info ? '' : 'ok'}"></span><span>${t}</span><b class="${n && !info ? 'no' : 'ok'}">${n}</b>${n ? `<button type="button" class="fl-gh" data-fl="go" data-k="${go}">${info ? '전자 송장' : '보기'}</button>` : '<span></span>'}</div>`).join('')}
+    <button type="button" class="fl-close ${left ? '' : 'on'}" data-fl="close">${left ? `마감 (남은 것 ${left})` : '오늘 마감'}</button>`;
+}
+export function main(x) {
   load();
+  if (FL.view === '마감') return `<section class="fl">${closeHtml(x || {})}</section>`;
+  if (FL.view === '누락') return `<section class="fl">${slipHtml('입력 누락')}</section>`;
+  if (FL.view === '완료') return `<section class="fl">${slipHtml('입력 완료')}</section>`;
   return `<section class="fl" aria-label="출고 흐름">${stepsHtml()}<div class="fl-list">${listHtml()}</div></section>`;
 }
+export const panel = main;
 
 // 전표 PDF 링크 미리 받기 (입력 줄의 전표 번호)
 function fetchLinks(r) {
@@ -131,6 +161,8 @@ export function bind(app, c) {
     if (a !== 'row') e.stopPropagation();
     if (a === 'step') { FL.cur = t.dataset.k; FL.sel = ''; ctx.rerender(); }
     else if (a === 'old') { FL.old = !FL.old; ctx.rerender(); }
+    else if (a === 'go') { const k = t.dataset.k; if (k === 'fare' || k === 'box') ctx.home(k); else if (k.startsWith('v-flow-')) { FL.view = 'flow'; FL.cur = k.slice(7); FL.sel = ''; ctx.rerender(); } else { FL.view = k.slice(2); ctx.rerender(); } }
+    else if (a === 'close') { if (t.classList.contains('on')) alert('오늘 마감했어요'); }
     else if (a === 'row') { if (e.target.closest('button,a')) return; FL.sel = FL.sel === t.dataset.no ? '' : t.dataset.no; if (FL.sel && r) fetchLinks(r); ctx.rerender(); }
     else if (a === 'disp' && r) ctx.openFrame('배차 요청', dispSrc(r));
     else if (a === 'esong' && r) { FM.preset('esong', { partner: r.partner, site: r.site, ymd: '', items: itemRows(r.items) }); FM.open('esong'); ctx.rerender(); }
