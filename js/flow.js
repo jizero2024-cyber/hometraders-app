@@ -60,7 +60,7 @@ function stmtHtml(r) {   // 거래명세표 — 판매전표 PDF 보기 · 전�
   if (!sl.length) return '<span class="fl-stm na">판매 미입력</span>';
   const mk = FL.marks[`sent:${r.no}`];
   return `<span class="fl-stm"><button type="button" class="fl-in ok" data-fl="pdf" data-k="판매" data-s="${esc(sl.join(','))}">명세표 ›</button><button type="button" class="fl-gh" data-fl="stmtgo" data-no="${esc(r.no)}" data-s="${esc(sl.join(','))}">변환</button>
-    ${mk ? `<span class="fl-chip ok">전달 ${esc(String(mk.created_at || '').slice(5, 10).replace('-', '/'))}</span>` : `<button type="button" class="fl-gh sm" data-fl="sent" data-no="${esc(r.no)}">전달함</button>`}</span>`;
+    ${mk ? `<span class="fl-ck on" title="전달 ${esc(String(mk.created_at || '').slice(5, 10).replace('-', '/'))}"><i>✓</i>전달</span>` : `<button type="button" class="fl-ck" data-fl="sent" data-no="${esc(r.no)}"><i></i>전달</button>`}</span>`;
 }
 function rowHtml(r) {
   const btns = (BTN[FL.cur] || []).map(([a, t], i) => `<button type="button" class="${i ? 'fl-gh' : 'fl-go'}" data-fl="${a}" data-no="${esc(r.no)}">${t}</button>`).join('');
@@ -167,7 +167,7 @@ export function main(x) {
   if (FL.view === '누락') return `<section class="fl">${slipHtml('입력 누락')}</section>`;
   if (FL.view === '완료') return `<section class="fl">${slipHtml('입력 완료')}</section>`;
   const tg = `<div class="fl-sub fl-tg"><button type="button" class="fl-sb mid ${FL.all ? '' : 'on'}" data-fl="all" data-k="0">오늘</button><button type="button" class="fl-sb mid ${FL.all ? 'on' : ''}" data-fl="all" data-k="1">전체보기</button></div>`;
-  return `<section class="fl" id="fl-list" aria-label="오늘 마감">${tg}${stepsHtml()}<div class="fl-list" style="--acts:${[0, 130, 240, 350, 460][(BTN[FL.cur] || []).length] + (STMT_STEPS.includes(FL.cur) ? 290 : 0)}px">${listHtml()}</div></section>`;   // 출고 흐름과 같은 모양, 오늘 건만 (10/28 대표)
+  return `<section class="fl" id="fl-list" aria-label="오늘 마감">${tg}${stepsHtml()}<div class="fl-list" style="--acts:${[0, 130, 240, 350, 460][(BTN[FL.cur] || []).length] + (STMT_STEPS.includes(FL.cur) ? 250 : 0)}px">${listHtml()}</div></section>`;   // 출고 흐름과 같은 모양, 오늘 건만 (10/28 대표)
 }
 export const panel = main;
 
@@ -219,7 +219,7 @@ export function bind(app, c) {
     const a = t.dataset.fl, r = FL.data && FL.data.rows.find((x) => x.no === t.dataset.no);
     if (a !== 'row') e.stopPropagation();
     if (a === 'step') { FL.cur = t.dataset.k; FL.sel = ''; ctx.rerender(); }
-    else if (a === 'sent' && r) { if (!confirm(`${r.partner} · ${r.site} 거래명세표 전달함으로 표시할까요?`)) return; S.addFlowMark(`sent:${r.no}`, `${r.partner} ${r.site}`, ctx.me ? ctx.me() : '').then((err) => { if (err) alert('저장 못 했어요 — ' + err); else { FL.marks[`sent:${r.no}`] = { created_at: new Date().toISOString() }; ctx.rerender(); } }); }
+    else if (a === 'sent' && r) { if (!confirm(`${r.partner} · ${r.site} 명세표 전달 체크할까요?`)) return; S.addFlowMark(`sent:${r.no}`, `${r.partner} ${r.site}`, ctx.me ? ctx.me() : '').then((err) => { if (err) alert('저장 못 했어요 — ' + err); else { FL.marks[`sent:${r.no}`] = { created_at: new Date().toISOString() }; ctx.rerender(); } }); }
     else if (a === 'stmtgo' && r) { FM.presetStmt(/공간/.test(r.partner) ? 'stmt-gong' : 'stmt-etc', (t.dataset.s || '').split(',').join(' '), r.salerows); ctx.rerender(); }
     else if (a === 'evx') {   // 카톡·문자 원문 — 같은 방 앞뒤 대화 (배차안내까지)
       closeQ(); const ov = document.createElement('div'); ov.className = 'hm-ov fl-qov';
