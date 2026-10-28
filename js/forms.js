@@ -389,7 +389,7 @@ function quoteScreen() {
       <label>견적일<input type="date" data-fm-q="doc_date" value="${esc(d.doc_date)}"></label>
     </div>
     <div class="fm-tab"><div class="fm-th q">${QCOLS.map(([, l]) => `<span>${l}</span>`).join('')}<span class="r">금액</span><span></span></div>
-      ${d.lines.map((l, k) => `<div class="fm-tr q">${QCOLS.map(([key]) => `<div class="fm-cell"><input data-fm-ql="${k}" data-f="${key}" value="${esc(l[key])}"${key === 'qty' || key === 'price' ? ' inputmode="decimal" class="n"' : ''}>${key === 'price' && l.prevSrc ? `<small>${esc(l.prevSrc)}</small>` : ''}</div>`).join('')}
+      ${d.lines.map((l, k) => `<div class="fm-tr q">${QCOLS.map(([key]) => `<div class="fm-cell"><input data-fm-ql="${k}" data-f="${key}" value="${esc(l[key])}"${key === 'qty' || key === 'price' ? ' inputmode="decimal" class="n"' : ''}>${key === 'price' && l.prevSrc ? `<small>${esc(l.prevSrc)}</small>` : ''}${key === 'raw_name' && l.orig ? `<small>${esc(l.orig)}</small>` : ''}</div>`).join('')}
         <span class="fm-amt r" id="fm-qamt-${k}">${qAmt(l) ? won(qAmt(l)) : ''}</span>
         <button type="button" class="fm-x" data-fm="q-rdel" data-k="${k}" aria-label="줄 지우기">✕</button></div>`).join('')}
       <button type="button" class="fm-add" data-fm="q-radd">＋ 줄</button></div>
@@ -412,7 +412,7 @@ async function loadQuote() {
     const j = text ? await ctx.helper('/api/doc/read', { text, partner: pre.partner || '' }) : await ctx.helper('/api/doc/read', { name: q.files[0].name, data: await b64(q.files[0].file) });
     const d = j.doc || {};
     q.doc = { partner: d.partner || pre.partner || '', owner: d.owner || pre.site || '', manager: d.manager || '', site: d.site || '', doc_date: DL.isoDate(d.doc_date) || today(),
-      lines: (d.lines || []).map((l) => ({ raw_name: l.raw_name || l.name || '', spec: l.spec || '', unit: l.unit || '', qty: l.qty || '',
+      lines: (d.lines || []).map((l) => ({ raw_name: (l.match && l.match.ours) || l.raw_name || l.name || '', orig: l.match && l.match.ours ? (l.raw_name || '') : '', spec: l.spec || '', unit: l.unit || '', qty: l.qty || '',
         price: Number(l.price) || Number(l.unit_price) || (l.prev && Number(l.prev.price)) || '', prevSrc: l.prev && l.prev.price ? `${l.prev.src || '종전가'} ${l.prev.date || ''}` : '' })) };
   } catch (e) { q.err = e.message || String(e); }
   q.busy = false; ctx.rerender();
