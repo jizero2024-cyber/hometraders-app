@@ -53,13 +53,13 @@ const countOf = (k) => (k === '전표' ? slipTodo().length
 const hotOf = (k) => (k === '전표' ? slipTodo().length > 0 : TODAY_ONLY.includes(k) && listOf(k).length > 0);
 const title = (r) => `${esc(r.partner)} · ${r.site ? esc(r.site) : '<span class="fl-q">현장 확인</span>'}${r.boss ? ` · ${esc(r.boss)}` : ''}`;
 const ioHtml = (r) => {   // 리스트에서 판매·구매·운반비 입력됐는지 바로 (10/28 대표)
-  const seen = {};
-  (r.lines || []).forEach((l) => { const k = l.k === '반품' ? '판매' : l.k; const v = l.st === '입력' ? 2 : l.st === '—' ? 0 : 1; seen[k] = seen[k] === 1 || v === 1 ? 1 : Math.max(seen[k] ?? 0, v); });   // 하나라도 안 됐으면 ✕
+  const seen = {}, na = {};
+  (r.lines || []).forEach((l) => { const k = l.k === '반품' ? '판매' : l.k; const v = l.st === '입력' ? 2 : l.st === '—' ? 0 : 1; seen[k] = seen[k] === 1 || v === 1 ? 1 : Math.max(seen[k] ?? 0, v); if (l.na) na[k] = l.na; });   // 하나라도 안 됐으면 ✕ · na = 착불 (10/28 대표 "필요없음은 착불이라고")
   const ks = ['판매', '구매', '운반비'].filter((k) => k in seen);
   const sl = (k) => [...new Set((r.lines || []).filter((l) => (l.k === '반품' ? '판매' : l.k) === k && l.st === '입력').flatMap((l) => l.slips || []))];
   return ks.length ? `<div class="fl-io">${ks.map((k) => (seen[k] === 2 && sl(k).length   // 초록 = 누르면 그 전표 PDF (10/28 대표)
     ? `<button type="button" class="ok" data-fl="pdf" data-k="${k === '판매' ? '판매' : '구매'}" data-s="${esc(sl(k).join(','))}">${k} ✓</button>`
-    : `<span class="${['na', 'no', 'ok'][seen[k]]}">${k}${seen[k] === 2 ? ' ✓' : seen[k] === 1 ? ' ✕' : ' —'}</span>`)).join('')}${plHtml(r)}</div>` : '';
+    : `<span class="${['na', 'no', 'ok'][seen[k]]}">${k}${seen[k] === 2 ? ' ✓' : seen[k] === 1 ? ' ✕' : ` ${na[k] || '—'}`}</span>`)).join('')}${plHtml(r)}</div>` : '';
 };
 const won = (n) => `${Math.round(n).toLocaleString()}원`;
 const plHtml = (r) => (r.pl ? `<span class="fl-pl ${r.pl.net < 0 ? 'no' : ''}" title="판매 ${won(r.pl.sale)} − 구매 ${won(r.pl.buy)} − 운반비 ${won(r.pl.fare)} (공급가)">순이익 ${won(r.pl.net)} · ${r.pl.sale ? Math.round((100 * r.pl.net) / r.pl.sale) : 0}%</span>` : '');   // 판매·구매·운반비 다 들어간 건 (10/28 대표)
