@@ -620,11 +620,11 @@ export async function saveReview(id, patch) {
   if (error) throw new Error(error.message);
   reviews = reviews.map((r) => (r.id === id ? { ...r, ...row } : r));
 }
-export async function setShipCase(no, patch, who) {   // 출고 흐름 버튼 → 운영 DB ship_case 먼저 (10/28 대표 "데이터베이스 먼저") · 바꾼 칸은 src 'site' 로 (맥 도우미가 출고일보 글로 안 덮음)
+export async function setShipCase(no, patch, who, need) {   // 출고 흐름 버튼 → 운영 DB ship_case 먼저 (10/28 대표 "데이터베이스 먼저") · 바꾼 칸은 src 'site' 로 (맥 도우미가 출고일보 글로 안 덮음)
   if (!no) return null;
   const { data: cur, error: e1 } = await sb.from('ship_case').select('*').eq('no', no).maybeSingle();
   if (e1) return e1.message;
-  if (!cur) return null;   // 표에 없는 건(견적·이음 배차 줄)은 건너뜀
+  if (!cur) return need ? '출고 건 표에 없음' : null;   // 표에 없는 건(견적·이음 배차 줄)은 건너뜀
   const src = { ...(cur.src || {}) };
   Object.keys(patch).forEach((k) => { if (!['checked', 'checked_by'].includes(k)) src[k] = 'site'; });
   const now = new Date().toISOString();

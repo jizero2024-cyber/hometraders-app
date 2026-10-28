@@ -1,8 +1,8 @@
 // 첫 화면 맨 위 '출고 흐름' (10/28 대표 "배차 뭐뭐 해야 하는지 간편하게") — 목업 https://claude.ai/artifact/4boELHQ3xhPF3WmLSqFXEt
 // 맥 도우미 flow_board.py 가 출고일보 줄을 출고 건(출고번호)마다 단계로 나눠 site_inbox 'flow:board' 에 올림 → 여기선 읽기만.
 // 버튼은 있는 화면을 그 건 값으로 엶: 배차 요청(/homt) · 전자 송장 · 납품확인서 · 자재승인원 · 견적서 · 공간 올릴 전표
-import * as S from './store-supabase.js?v=8';
-import * as FM from './forms.js?v=18';
+import * as S from './store-supabase.js?v=9';
+import * as FM from './forms.js?v=19';
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const sv = (d) => `<svg viewBox="0 0 24 24" aria-hidden="true">${d}</svg>`;
@@ -72,7 +72,7 @@ const tmr = () => { const x = new Date(Date.now() + 864e5); return `${String(x.g
 const dday = (r) => (TODAY_ONLY.includes(FL.cur) && r.arr) || r.day;   // 배차·출고 목록은 도착 날로 묶음 (상차 오늘 → 내일 8시 착, 10/28 대표)
 const mdN = (d) => { const m = /^(\d{2})\/(\d{2})$/.exec(d || ''); return m ? +m[1] * 100 + +m[2] : 9999; };
 const dayLab = (r0) => { const t = (FL.data || {}).today, r = { ...r0, day: dday(r0) }; if (r.day === t) return '오늘'; if (r.late) return '지난 날'; if (md(r.day) === tmr()) return '내일'; if (r.day === yst()) return '어제'; return r.day === '미정' ? '날짜 미정' : r.day; };
-const BTN = { 견적: [['quote', '견적서']], 발주: [['esong', '전자 송장']], '배차 요청': [['disp', '배차 요청'], ['esong', '전자 송장']], '배차 완료': [['esong', '전자 송장']],
+const BTN = { 견적: [['quote', '견적서']], 발주: [['esong', '전자 송장']], '배차 요청': [['disp', '배차 요청'], ['dispok', '배차 완료'], ['esong', '전자 송장']], '배차 완료': [['shipok', '출고 완료'], ['esong', '전자 송장']],
   '출고 완료': [['deliv', '납품확인서'], ['approval', '자재승인원'], ['esong', '전자 송장']] };
 BTN['기록'] = [...BTN['출고 완료'], ['cmp', '대조']];
 BTN['입력 완료'] = [['cmp', '대조']];
@@ -319,6 +319,17 @@ export function bind(app, c) {
     else if (a === 'close') { if (t.classList.contains('on')) alert('오늘 마감했어요'); }
     else if (a === 'row') { if (e.target.closest('button,a')) return; FL.sel = FL.sel === t.dataset.no ? '' : t.dataset.no; if (FL.sel && r) fetchLinks(r); ctx.rerender(); }
     else if (a === 'disp' && r) ctx.openFrame('배차 요청', dispSrc(r));
+    else if ((a === 'dispok' || a === 'shipok') && r) {   // 배차 완료·출고 완료 → 운영 DB ship_case (10/29 대표)
+      const ok = a === 'dispok', hm = new Date().toTimeString().slice(0, 5);
+      if (!confirm(`${r.partner} · ${r.site} ${ok ? '배차 완료' : '출고 완료'}?`)) return;
+      S.setShipCase(r.no, ok ? { disp: `배차 완료 ${hm}` } : { status: '완료' }, ctx.me ? ctx.me() : '', true).then((err) => {
+        if (err) { alert('저장 못 했어요 — ' + err); return; }
+        r.steps = ok ? r.steps.filter((k) => !['발주', '배차 요청'].includes(k)).concat(r.steps.includes('배차 완료') ? [] : ['배차 완료'])
+          : r.steps.filter((k) => !['발주', '배차 요청', '배차 완료'].includes(k)).concat(['출고 완료', '기록'].filter((k) => !r.steps.includes(k)));
+        if (ok) r.car = `배차 완료 ${hm}`;
+        FL.sel = ''; ctx.rerender();
+      }).catch((e2) => alert('저장 못 했어요 — ' + e2));
+    }
     else if (a === 'esong' && r) {
       const open = (items) => { FM.preset('esong', { partner: r.partner, site: r.site, ymd: '', items }); FM.open('esong'); ctx.rerender(); };
       const sale = [...new Set((r.lines || []).filter((l) => l.k === '판매').flatMap((l) => l.slips || []))];
