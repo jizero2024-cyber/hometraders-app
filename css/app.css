@@ -828,8 +828,9 @@ a.fm-btn { text-decoration: none; }
 .fl-k { font-size: 11.5px; color: #A3A09A; font-weight: 800; margin-top: 6px; }
 .fl-it { color: #3F3F46; }
 .fl-why { font-size: 12px; color: #C2410C; }
-.fl-ln { display: grid; grid-template-columns: 56px minmax(0, 1fr) 72px; gap: 10px; align-items: center; padding: 4px 0 4px 12px; font-size: 13px; }
+.fl-ln { display: grid; grid-template-columns: 56px minmax(0, 1fr) 90px 72px; gap: 10px; align-items: center; padding: 4px 0 4px 12px; font-size: 13px; }
 .fl-lk { color: #7A7A7A; font-weight: 700; }
+.fl-by { font-size: 12px; color: #8A877F; text-align: right; white-space: nowrap; }
 .fl-in { justify-self: end; font: inherit; font-size: 13px; font-weight: 800; border: 0; background: none; padding: 3px 8px; border-radius: 8px; }
 .fl-in.ok { background: #EEF6EE; color: #1E6B34; cursor: pointer; } .fl-in.no { color: #E03E2D; } .fl-in.na { color: #A3A09A; font-weight: 400; }
 .fl-ev { padding: 10px 10px 12px; border-bottom: 1px solid #F1EFEA; }

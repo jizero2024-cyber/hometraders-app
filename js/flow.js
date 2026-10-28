@@ -71,7 +71,7 @@ function linesHtml(r) {
     const has = l.st === '입력' && l.slips && l.slips.some((s) => FL.links[s]);
     const st = l.st === '입력' ? `<button type="button" class="fl-in ok" data-fl="pdf" data-s="${esc((l.slips || []).join(','))}">입력${has ? ' ›' : ''}</button>`
       : `<span class="fl-in ${l.st === '미입력' ? 'no' : 'na'}">${esc(l.st)}</span>`;
-    return `<div class="fl-ln"><span class="fl-lk">${esc(l.k)}</span><span class="fl-c">${esc(l.who)}</span>${st}</div>`;
+    return `<div class="fl-ln"><span class="fl-lk">${esc(l.k)}</span><span class="fl-c">${esc(l.who)}</span><span class="fl-by">${esc(l.by || '')}</span>${st}</div>`;
   }).join('');
 }
 function evHtml(r) {
