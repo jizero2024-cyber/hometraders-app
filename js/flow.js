@@ -18,6 +18,7 @@ const IC = {
 };
 const STEPS = ['견적', '발주', '배차 요청', '배차 완료', '출고 완료', '전표', '명세표', '입금'];
 const SUBS = ['입력 누락', '입력 완료', '올릴 전표'];
+const LABEL = { 견적: '견적 요청' };   // 10/28 대표 "견적 텍스트 견적요청으로"
 const FL = { data: null, err: '', at: 0, loading: false, cur: '배차 요청', sub: '입력 누락', sel: '', links: {}, gwait: 0 };
 let ctx = { rerender: () => {}, openFrame: () => {} };
 
@@ -42,7 +43,7 @@ const BTN = { 견적: [['quote', '견적서']], 발주: [['esong', '납품송장
 
 function stepsHtml() {
   return `<nav class="fl-steps" aria-label="단계">${STEPS.map((k) => `<button type="button" class="fl-st ${FL.cur === k ? 'on' : ''} ${hotOf(k) ? 'hot' : ''}" data-fl="step" data-k="${k}">
-    <i>${IC[k]}</i>${k}<b>${['명세표', '입금'].includes(k) ? '' : countOf(k)}</b></button>`).join('')}</nav>`;
+    <i>${IC[k]}</i>${LABEL[k] || k}<b>${['명세표', '입금'].includes(k) ? '' : countOf(k)}</b></button>`).join('')}</nav>`;
 }
 function rowHtml(r) {
   const btns = (BTN[FL.cur] || []).map(([a, t], i) => `<button type="button" class="${i ? 'fl-gh' : 'fl-go'}" data-fl="${a}" data-no="${esc(r.no)}">${t}</button>`).join('');
