@@ -30,7 +30,7 @@ export function load(force) {
 export function setGwait(n) { FL.gwait = n || 0; }
 
 const rowsOf = (k) => (FL.data ? FL.data.rows : []).filter((r) => r.steps.includes(k));
-const countOf = (k) => (k === '전표' ? rowsOf('입력 누락').length
+const countOf = (k) => (k === '전표' ? rowsOf('입력 누락').filter((r) => r.day === (FL.data || {}).today).length
   : ['명세표', '입금'].includes(k) ? 0 : rowsOf(k).length);
 const hotOf = (k) => (k === '전표' ? rowsOf('입력 누락').length > 0 : rowsOf(k).some((r) => r.late || r.day === (FL.data || {}).today));
 const title = (r) => `${esc(r.partner)} · ${r.site ? esc(r.site) : '<span class="fl-q">현장 확인</span>'}${r.boss ? ` · ${esc(r.boss)}` : ''}`;
@@ -81,17 +81,12 @@ function listHtml() {
   if (!FL.data) return '<div class="fl-empty">불러오는 중…</div>';
   if (FL.cur === '입금') return '<div class="fl-empty">준비 중</div>';
   if (FL.cur === '명세표') return `<div class="fl-links"><a class="fl-go" href="/gonggan/">공간 협업툴</a><a class="fl-go" href="/newhousing/">뉴하우징 협업툴</a><button type="button" class="fl-gh" data-fl="stmt">거래명세표</button></div>`;
-  if (FL.cur === '전표') {   // 날짜마다 — 그날 건은 그날 다 입력 (10/28 대표). 올릴 전표는 공간 협업툴에서
-    const all = [...rowsOf('입력 누락'), ...rowsOf('입력 완료')];
-    const days = [...new Set(all.map((r) => r.day))].sort().reverse();
-    if (!days.length) return '<div class="fl-empty">없어요</div>';
-    if (!days.includes(FL.day)) FL.day = days[0];
-    const t = FL.data.today, lab = (d) => (d === t ? '오늘' : d);
-    const tabs = `<div class="fl-sub fl-days">${days.slice(0, 14).map((d) => { const n = all.filter((r) => r.day === d && r.steps.includes('입력 누락')).length;
-      return `<button type="button" class="fl-sb ${n ? 'no' : 'ok'} ${FL.day === d ? 'on' : ''}" data-fl="day" data-k="${esc(d)}">${esc(lab(d))}${n ? `<b>${n}</b>` : ' ✓'}</button>`; }).join('')}</div>`;
-    const miss = all.filter((r) => r.day === FL.day && r.steps.includes('입력 누락')), ok = all.filter((r) => r.day === FL.day && r.steps.includes('입력 완료'));
-    return tabs + (miss.length ? `<div class="fl-day no">입력 누락 ${miss.length}</div>${miss.map(evHtml).join('')}` : '')
-      + (ok.length ? `<div class="fl-day ok">입력 완료 ${ok.length}</div>${ok.map(evHtml).join('')}` : '');
+  if (FL.cur === '전표') {   // 오늘 하차한 건만 — 누락 먼저, 완료 아래 (10/28 대표 "하루에 다 입력"). 지난 날 누락은 맨 위 한 줄
+    const t = FL.data.today, miss = rowsOf('입력 누락'), ok = rowsOf('입력 완료');
+    const old = miss.filter((r) => r.day !== t), tm = miss.filter((r) => r.day === t), to = ok.filter((r) => r.day === t);
+    const oldLine = old.length ? `<button type="button" class="fl-old" data-fl="old">지난 날 입력 누락 <b>${old.length}</b><span>${FL.old ? '접기 ▴' : '보기 ▾'}</span></button>` + (FL.old ? old.slice().reverse().map(evHtml).join('') : '') : '';
+    const body = (tm.length ? `<div class="fl-day no">입력 누락 ${tm.length}</div>${tm.map(evHtml).join('')}` : '') + (to.length ? `<div class="fl-day ok">입력 완료 ${to.length}</div>${to.map(evHtml).join('')}` : '');
+    return oldLine + (body || '<div class="fl-empty">오늘 하차한 건이 없어요</div>');
   }
   const rows = rowsOf(FL.cur);
   if (!rows.length) return '<div class="fl-empty">없어요</div>';
@@ -135,7 +130,7 @@ export function bind(app, c) {
     const a = t.dataset.fl, r = FL.data && FL.data.rows.find((x) => x.no === t.dataset.no);
     if (a !== 'row') e.stopPropagation();
     if (a === 'step') { FL.cur = t.dataset.k; FL.sel = ''; ctx.rerender(); }
-    else if (a === 'day') { FL.day = t.dataset.k; ctx.rerender(); }
+    else if (a === 'old') { FL.old = !FL.old; ctx.rerender(); }
     else if (a === 'row') { if (e.target.closest('button,a')) return; FL.sel = FL.sel === t.dataset.no ? '' : t.dataset.no; if (FL.sel && r) fetchLinks(r); ctx.rerender(); }
     else if (a === 'disp' && r) ctx.openFrame('배차 요청', dispSrc(r));
     else if (a === 'esong' && r) { FM.preset('esong', { partner: r.partner, site: r.site, ymd: '', items: itemRows(r.items) }); FM.open('esong'); ctx.rerender(); }
