@@ -52,14 +52,17 @@ const ioHtml = (r) => {   // 리스트에서 판매·구매·운반비 입력됐
   const seen = {};
   (r.lines || []).forEach((l) => { const k = l.k === '반품' ? '판매' : l.k; const v = l.st === '입력' ? 2 : l.st === '—' ? 0 : 1; seen[k] = seen[k] === 1 || v === 1 ? 1 : Math.max(seen[k] ?? 0, v); });   // 하나라도 안 됐으면 ✕
   const ks = ['판매', '구매', '운반비'].filter((k) => k in seen);
-  return ks.length ? `<div class="fl-io">${ks.map((k) => `<span class="${['na', 'no', 'ok'][seen[k]]}">${k}${seen[k] === 2 ? ' ✓' : seen[k] === 1 ? ' ✕' : ' —'}</span>`).join('')}</div>` : '';
+  return ks.length ? `<div class="fl-io">${ks.map((k) => `<span class="${['na', 'no', 'ok'][seen[k]]}">${k}${seen[k] === 2 ? ' ✓' : seen[k] === 1 ? ' ✕' : ' —'}</span>`).join('')}${plHtml(r)}</div>` : '';
 };
+const won = (n) => `${Math.round(n).toLocaleString()}원`;
+const plHtml = (r) => (r.pl ? `<span class="fl-pl ${r.pl.net < 0 ? 'no' : ''}" title="판매 ${won(r.pl.sale)} − 구매 ${won(r.pl.buy)} − 운반비 ${won(r.pl.fare)} (공급가)">순이익 ${won(r.pl.net)} · ${r.pl.sale ? Math.round((100 * r.pl.net) / r.pl.sale) : 0}%</span>` : '');   // 판매·구매·운반비 다 들어간 건 (10/28 대표)
+const cmpBtn = (r) => ((r.lines || []).some((l) => l.st === '입력' && (l.slips || []).length) ? `<button type="button" class="fl-gh sm" data-fl="cmp" data-no="${esc(r.no)}">대조</button>` : '');
 const md = (d) => { const m = /^(\d{2})\/(\d{2})$/.exec(d || ''); return m ? `${m[1]}/${m[2]}` : ''; };
 const tmr = () => { const x = new Date(Date.now() + 864e5); return `${String(x.getMonth() + 1).padStart(2, '0')}/${String(x.getDate()).padStart(2, '0')}`; };
 const dayLab = (r) => { const t = (FL.data || {}).today; if (r.day === t) return '오늘'; if (r.late) return '지난 날'; if (md(r.day) === tmr()) return '내일'; return r.day === '미정' ? '날짜 미정' : r.day; };
 const BTN = { 견적: [['quote', '견적서']], 발주: [['esong', '전자 송장']], '배차 요청': [['disp', '배차 요청'], ['esong', '전자 송장']], '배차 완료': [['esong', '전자 송장']],
   '출고 완료': [['deliv', '납품확인서'], ['approval', '자재승인원'], ['esong', '전자 송장']] };
-BTN['기록'] = BTN['출고 완료'];
+BTN['기록'] = [...BTN['출고 완료'], ['cmp', '대조']];
 
 function stepsHtml() {
   return `<nav class="fl-steps" aria-label="단계">${STEPS.map((k) => `<button type="button" class="fl-st ${FL.cur === k ? 'on' : ''} ${hotOf(k) ? 'hot' : ''}" data-fl="step" data-k="${k}">
@@ -111,7 +114,7 @@ const evLinks = (es) => (es || []).map((e) => (e.u ? `<a class="fl-evl" href="${
   : `<button type="button" class="fl-evl ${/^카톡/.test(e.t) ? 'k' : 'm'}" data-fl="evx" data-x="${esc(e.x || e.t)}">${esc(e.t)}</button>`)).join('');   // 카톡·문자는 출고일보 원문 시트 글 (10/28 대표 "톡·문자도")
 function evHtml(r) {
   const ev = evLinks(r.ev);
-  return `<div class="fl-ev"><div class="fl-eh"><b>${title(r)}</b><span>${esc(r.day)}</span></div>${linesHtml(r)}${r.memo || ev ? `<div class="fl-memo">${r.memo ? `<span>${esc(r.memo)}</span>` : ''}${ev}</div>` : ''}</div>`;
+  return `<div class="fl-ev"><div class="fl-eh"><b>${title(r)}</b>${plHtml(r)}${cmpBtn(r)}<span>${esc(r.day)}</span></div>${linesHtml(r)}${r.memo || ev ? `<div class="fl-memo">${r.memo ? `<span>${esc(r.memo)}</span>` : ''}${ev}</div>` : ''}</div>`;
 }
 function listHtml() {
   if (FL.err) return `<div class="fl-empty">${esc(FL.err)}</div>`;
@@ -261,6 +264,17 @@ export function bind(app, c) {
       ov.innerHTML = `<div class="hm-modal fl-txm" role="dialog" aria-label="원문"><div class="hm-mh"><b>${esc(t.textContent)}</b><button type="button" class="hm-x" aria-label="닫기">✕</button></div><pre class="fl-tx">${esc(t.dataset.x || '')}</pre></div>`;
       ov.addEventListener('click', (ev) => { if (ev.target === ov || ev.target.closest('.hm-x')) ov.remove(); });
       document.body.appendChild(ov);
+    }
+    else if (a === 'cmp' && r) {   // 판매·구매(운반비) 전표 PDF 나란히 — 한 화면에서 대조 (10/28 대표)
+      const want = (r.lines || []).filter((l) => l.st === '입력').flatMap((l) => (l.slips || []).map((s_) => [l.k === '판매' ? '판매' : '구매', s_, l.k, l.who]));
+      S.getSlipLinks([...new Set(want.map((w) => w[1]))]).then((m) => {
+        const seen = new Set(), cols = want.map(([kk, s_, k, who]) => { const hit = (m[s_] || []).find((x) => x.kind === kk); if (!hit || seen.has(hit.drive_id)) return ''; seen.add(hit.drive_id);
+          return `<div class="fl-cmpc"><div class="fl-cmph"><b>${esc(k)}</b> ${esc(who || '')} <span>${esc(s_.replace(/^\d{4}(\d\d)(\d\d)-/, '$1/$2-'))}</span></div><iframe src="https://drive.google.com/file/d/${encodeURIComponent(hit.drive_id)}/preview" title="${esc(k)} ${esc(s_)}"></iframe></div>`; }).join('');
+        closeQ(); const ov = document.createElement('div'); ov.className = 'hm-ov fl-qov';
+        ov.innerHTML = `<div class="hm-modal fl-cmpm" role="dialog" aria-label="전표 대조"><div class="hm-mh"><b>${title(r)}</b>${plHtml(r)}<button type="button" class="hm-x" aria-label="닫기">✕</button></div><div class="fl-cmpg">${cols || '<div class="fl-empty">전표 PDF가 아직 없어요</div>'}</div></div>`;
+        ov.addEventListener('click', (ev) => { if (ev.target === ov || ev.target.closest('.hm-x')) ov.remove(); });
+        document.body.appendChild(ov);
+      }).catch((err) => alert('전표를 못 불러왔어요 — ' + (err.message || err)));
     }
     else if (a === 'all') { FL.all = t.dataset.k === '1'; FL.sel = ''; ctx.rerender(); }
     else if (a === 'old') { FL.old = !FL.old; ctx.rerender(); }
