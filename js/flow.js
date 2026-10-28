@@ -32,7 +32,7 @@ export function setGwait(n) { FL.gwait = n || 0; }
 const rowsOf = (k) => (FL.data ? FL.data.rows : []).filter((r) => r.steps.includes(k));
 const TODAY_ONLY = ['배차 요청', '배차 완료', '출고 완료'];   // 오늘 마감 — 오늘 건만 (10/28 대표). 견적 요청·발주는 날짜가 앞이라 다
 const dueToday = (r) => { const t = (FL.data || {}).today || '', d = t.replace(/^0/, '');   // 견적 — 오늘까지 보내야 하는 것 (10/28 대표)
-  const txt = `${r.time} ${r.item} ${r.memo || ''}`; return r.day === t || /오늘|오전 중|오후 중|당일/.test(txt) || txt.includes(`견적 요청 ${t}`) || new RegExp(`(^|[^\\d/])(${t}|${d})(?![\\d/])`).test(`${r.time}`); };
+  const txt = `${r.time} ${r.item} ${r.memo || ''}`; return r.day === t || new RegExp(`(^|[^\\d/])(${t}|${d})(?![\\d/])`).test(txt); };   // '오늘' 글자는 옛 메모에도 있어서 오늘 날짜가 적힌 것만
 const listOf = (k) => (FL.all || FL.view === '견적' ? rowsOf(k) : TODAY_ONLY.includes(k) ? rowsOf(k).filter((r) => r.day === (FL.data || {}).today) : k === '견적' ? rowsOf(k).filter(dueToday) : rowsOf(k));
 const countOf = (k) => (k === '전표' ? rowsOf('입력 누락').filter((r) => r.day === (FL.data || {}).today).length
   : ['명세표', '입금'].includes(k) ? 0 : listOf(k).length);
