@@ -18,12 +18,13 @@ const IC = {
 };
 const STEPS = ['견적', '발주', '배차 요청', '배차 완료', '출고 완료'];   // 전표는 사이드바 '전표 확인'으로 (10/28 대표)
 const LABEL = { 견적: '견적 요청' };   // 10/28 대표 "견적 텍스트 견적요청으로"
-const FL = { data: null, err: '', at: 0, loading: false, cur: '배차 요청', view: 'flow', day: '', sel: '', links: {}, gwait: 0 };
+const FL = { marks: {}, data: null, err: '', at: 0, loading: false, cur: '배차 요청', view: 'flow', day: '', sel: '', links: {}, gwait: 0 };
 let ctx = { rerender: () => {}, openFrame: () => {} };
 
 export function load(force) {
   if (FL.loading || (!force && Date.now() - FL.at < 60000)) return;
   FL.loading = true; FL.at = Date.now();
+  S.getFlowMarks().then((m) => { FL.marks = m; ctx.rerender(); }).catch(() => {});
   S.getFlowBoard().then((d) => { FL.data = d; FL.err = ''; }).catch((e) => { FL.err = e.message; })
     .finally(() => { FL.loading = false; ctx.rerender(); });
 }
@@ -48,6 +49,15 @@ function stepsHtml() {
   return `<nav class="fl-steps" aria-label="단계">${STEPS.map((k) => `<button type="button" class="fl-st ${FL.cur === k ? 'on' : ''} ${hotOf(k) ? 'hot' : ''}" data-fl="step" data-k="${k}">
     <i>${IC[k]}</i>${LABEL[k] || k}<b>${['명세표', '입금'].includes(k) ? '' : countOf(k)}</b></button>`).join('')}</nav>`;
 }
+const STMT_STEPS = ['배차 완료', '출고 완료'];
+const saleSlips = (r) => [...new Set((r.lines || []).filter((l) => l.k === '판매' && l.st === '입력').flatMap((l) => l.slips || []))];
+function stmtHtml(r) {   // 거래명세표 — 판매전표 PDF 보기 · 전달했는지 (10/28 대표)
+  const sl = saleSlips(r);
+  if (!sl.length) return '<span class="fl-stm na">판매 미입력</span>';
+  const hit = sl.flatMap((x) => FL.links[x] || [])[0], mk = FL.marks[`sent:${r.no}`];
+  return `<span class="fl-stm">${hit ? `<button type="button" class="fl-in ok" data-fl="pdf" data-s="${esc(sl.join(','))}">명세표 ›</button>` : `<span class="fl-in na">명세표 PDF 대기</span>`}
+    ${mk ? `<span class="fl-chip ok">전달 ${esc(String(mk.created_at || '').slice(5, 10).replace('-', '/'))}</span>` : `<button type="button" class="fl-gh sm" data-fl="sent" data-no="${esc(r.no)}">전달함</button>`}</span>`;
+}
 function rowHtml(r) {
   const btns = (BTN[FL.cur] || []).map(([a, t], i) => `<button type="button" class="${i ? 'fl-gh' : 'fl-go'}" data-fl="${a}" data-no="${esc(r.no)}">${t}</button>`).join('');
   const asked = FL.cur === '배차 요청' && S.getShipments().find((s) => String(s.note || '').includes(`출고 흐름 ${r.no})`));
@@ -59,7 +69,7 @@ function rowHtml(r) {
     <div class="fl-c fl-ds">${chips}${esc(r.item)}</div>
     <div class="fl-c fl-ds fl-rt">${route}</div>
     <div class="fl-c fl-ds fl-v">${FL.cur === '견적' ? '' : esc(r.size || '')}</div>
-    <div class="fl-acts">${btns}</div></div>${FL.sel === r.no ? detailHtml(r) : ''}`;
+    <div class="fl-acts">${STMT_STEPS.includes(FL.cur) ? stmtHtml(r) : ''}${btns}</div></div>${FL.sel === r.no ? detailHtml(r) : ''}`;
 }
 function detailHtml(r) {
   const buys = (r.buys || []).filter((b) => b.name).map((b) => `<div class="fl-k">${esc(b.name)}</div><div class="fl-it">${esc(b.item)}</div>`).join('');
@@ -96,6 +106,7 @@ function listHtml() {
   }
   const rows = listOf(FL.cur);
   if (!rows.length) return '<div class="fl-empty">없어요</div>';
+  if (STMT_STEPS.includes(FL.cur)) setTimeout(() => rows.forEach(fetchLinks), 0);
   let h = `<div class="fl-lh"><span>${FL.cur === '견적' ? '언제까지' : '도착'}</span><span>판매처 · 현장</span><span>품목</span><span>${FL.cur === '견적' ? '' : '상차 → 하차'}</span><span>${FL.cur === '견적' ? '' : '차량'}</span><span></span></div>`, last = null;
   rows.forEach((r) => { const g = dayLab(r); if (g !== last) { h += `<div class="fl-day">${esc(g)}</div>`; last = g; } h += rowHtml(r); });
   return h;
@@ -145,7 +156,7 @@ function closeHtml(x) {
 export function main(x) {
   load();
 
-  if (FL.view === '견적') { FL.cur = '견적'; return `<section class="fl"><h1 class="fl-h1">견적 요청</h1><div class="fl-list" style="--acts:${[0, 130, 240, 350][(BTN[FL.cur] || []).length]}px">${listHtml()}</div></section>`; }   // 사이드바 견적 요청 — 단계줄 없이 (10/28 대표)
+  if (FL.view === '견적') { FL.cur = '견적'; return `<section class="fl"><h1 class="fl-h1">견적 요청</h1><div class="fl-list" style="--acts:${[0, 130, 240, 350][(BTN[FL.cur] || []).length] + (STMT_STEPS.includes(FL.cur) ? 200 : 0)}px">${listHtml()}</div></section>`; }   // 사이드바 견적 요청 — 단계줄 없이 (10/28 대표)
   if (FL.view === '누락') return `<section class="fl">${slipHtml('입력 누락')}</section>`;
   if (FL.view === '완료') return `<section class="fl">${slipHtml('입력 완료')}</section>`;
   const tg = `<div class="fl-sub fl-tg"><button type="button" class="fl-sb mid ${FL.all ? '' : 'on'}" data-fl="all" data-k="0">오늘</button><button type="button" class="fl-sb mid ${FL.all ? 'on' : ''}" data-fl="all" data-k="1">전체보기</button></div>`;
@@ -179,11 +190,13 @@ function copyText(text) {
 }
 export function bind(app, c) {
   ctx = c;
+  setInterval(() => { if (document.visibilityState === 'visible' && app.querySelector('.fl')) load(true); }, 60000);   // 열어 둔 채로도 1분마다 새로 (도우미는 출고일보가 바뀌면 5분 안에 올림)
   app.addEventListener('click', (e) => {
     const t = e.target.closest('[data-fl]'); if (!t || !app.querySelector('.fl')) return;
     const a = t.dataset.fl, r = FL.data && FL.data.rows.find((x) => x.no === t.dataset.no);
     if (a !== 'row') e.stopPropagation();
     if (a === 'step') { FL.cur = t.dataset.k; FL.sel = ''; ctx.rerender(); }
+    else if (a === 'sent' && r) { if (!confirm(`${r.partner} · ${r.site} 거래명세표 전달함으로 표시할까요?`)) return; S.addFlowMark(`sent:${r.no}`, `${r.partner} ${r.site}`, ctx.me ? ctx.me() : '').then((err) => { if (err) alert('저장 못 했어요 — ' + err); else { FL.marks[`sent:${r.no}`] = { created_at: new Date().toISOString() }; ctx.rerender(); } }); }
     else if (a === 'all') { FL.all = t.dataset.k === '1'; FL.sel = ''; ctx.rerender(); }
     else if (a === 'old') { FL.old = !FL.old; ctx.rerender(); }
     else if (a === 'go') { const k = t.dataset.k; if (k === 'fare' || k === 'box') ctx.home(k); else if (k.startsWith('v-flow-')) { FL.view = 'flow'; FL.cur = k.slice(7); FL.sel = ''; ctx.rerender(); setTimeout(() => { const el = document.getElementById('fl-list'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 0); } else { FL.view = k.slice(2); ctx.rerender(); } }

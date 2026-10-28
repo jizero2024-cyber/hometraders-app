@@ -903,3 +903,6 @@ a.fm-btn { text-decoration: none; }
 .hm-body .fl { background: #fff; border-radius: 18px; padding: 22px 24px; margin-top: 8px; }
 @media (max-width: 820px) { .cl-s { font-size: 10.5px; } .cl-s i { width: 36px; height: 36px; font-size: 13px; } .cl-st::before, .cl-st::after { top: 17px; } }
 .fl-tg { justify-content: flex-end; margin-bottom: 4px; }
+.fl-stm { display: inline-flex; align-items: center; gap: 6px; margin-right: 6px; } .fl-stm.na { font-size: 12px; color: #A3A09A; }
+.fl-chip.ok { background: #EEF6EE; color: #1E6B34; }
+.fl-gh.sm { padding: 5px 10px; font-size: 12px; }

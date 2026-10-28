@@ -4,7 +4,7 @@
 //   서류 화면은 모두 js/forms.js (같은 머리·카드·버튼)
 import * as S from './store-supabase.js?v=7';
 import * as FM from './forms.js?v=11';
-import * as FL from './flow.js?v=14';   // 맨 위 출고 흐름 (10/28)
+import * as FL from './flow.js?v=15';   // 맨 위 출고 흐름 (10/28)
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const won = (n) => Math.round(Number(n) || 0).toLocaleString();
@@ -183,7 +183,7 @@ async function putInbox(items) {
 
 export function bind(app, c) {
   ctx = c;
-  FL.bind(app, { rerender: () => ctx.rerender(), openFrame, go: (r) => ctx.go(r),
+  FL.bind(app, { rerender: () => ctx.rerender(), openFrame, go: (r) => ctx.go(r), me: () => ctx.me(),
     home: (k) => { if (k === 'fare') { H.fareOpen = true; ctx.rerender(); setTimeout(() => { const x = document.querySelector('.hm-fare'); if (x) x.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 0); } else { H.box = true; ctx.rerender(); } } });
   const on = () => app.querySelector('.hm');
   app.addEventListener('click', (e) => {

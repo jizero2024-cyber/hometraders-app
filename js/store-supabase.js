@@ -284,6 +284,15 @@ export async function getFlowBoard() {   // 첫 화면 '출고 흐름' (10/28) �
   if (!data) return null;
   try { return JSON.parse(data.body || '{}'); } catch (_) { return null; }
 }
+export async function getFlowMarks() {   // 출고 흐름에서 누른 표시 — 거래명세표 전달함 (10/28 대표) · site_inbox kind 'flowmark' (직원 전용 표)
+  const { data, error } = await sb.from('site_inbox').select('id,name,created_by,created_at').eq('kind', 'flowmark');
+  if (error) throw new Error(error.message);
+  return (data || []).reduce((a, r) => { a[r.id] = r; return a; }, {});
+}
+export async function addFlowMark(id, name, by) {
+  const { error } = await sb.from('site_inbox').upsert({ id, kind: 'flowmark', status: 'mark', name, created_by: by || null });
+  return error ? error.message : null;
+}
 export async function getSlipLinks(slips) {   // 전표 번호(20261027-3) → 이카운트 전표 PDF 드라이브 링크
   if (!slips.length) return {};
   const { data, error } = await sb.from('slip_rows').select('drive_id,slip,kind').in('slip', slips);
