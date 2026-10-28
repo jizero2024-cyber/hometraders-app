@@ -34,7 +34,9 @@ const countOf = (k) => (k === '전표' ? rowsOf('입력 누락').length + rowsOf
   : ['명세표', '입금'].includes(k) ? 0 : rowsOf(k).length);
 const hotOf = (k) => (k === '전표' ? rowsOf('입력 누락').length > 0 : rowsOf(k).some((r) => r.late || r.day === (FL.data || {}).today));
 const title = (r) => `${esc(r.partner)} · ${r.site ? esc(r.site) : '<span class="fl-q">현장 확인</span>'}${r.boss ? ` · ${esc(r.boss)}` : ''}`;
-const dayLab = (r) => { const t = (FL.data || {}).today; if (r.day === t) return '오늘'; if (r.late) return '지난 날'; return r.day === '미정' ? '날짜 미정' : r.day; };
+const md = (d) => { const m = /^(\d{2})\/(\d{2})$/.exec(d || ''); return m ? `${m[1]}/${m[2]}` : ''; };
+const tmr = () => { const x = new Date(Date.now() + 864e5); return `${String(x.getMonth() + 1).padStart(2, '0')}/${String(x.getDate()).padStart(2, '0')}`; };
+const dayLab = (r) => { const t = (FL.data || {}).today; if (r.day === t) return '오늘'; if (r.late) return '지난 날'; if (md(r.day) === tmr()) return '내일'; return r.day === '미정' ? '날짜 미정' : r.day; };
 const BTN = { 견적: [['quote', '견적서']], 발주: [['esong', '납품송장']], '배차 요청': [['disp', '배차 요청']], '배차 완료': [['esong', '납품송장']],
   '출고 완료': [['deliv', '납품확인서'], ['approval', '자재승인원']] };
 
