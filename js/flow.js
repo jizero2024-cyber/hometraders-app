@@ -43,10 +43,14 @@ const recOf = () => {   // 전표 확인 > 전체보기 — 거래처·기간·�
   return rowsOf('기록').filter((r) => (!q.p || r.partner === q.p) && (a == null || (r.md ?? 0) >= a) && (b == null || (r.md ?? 9999) <= b)
     && (!w || `${r.partner} ${r.site_full} ${r.site} ${r.boss} ${r.items} ${r.from} ${r.no} ${(r.lines || []).flatMap((l) => l.slips || []).join(' ')}`.toLowerCase().includes(w)));
 };
-const listOf = (k) => (k === '기록' ? recOf() : FL.all || FL.view === '견적' ? rowsOf(k) : TODAY_ONLY.includes(k) ? rowsOf(k).filter((r) => r.day === (FL.data || {}).today || (k !== '출고 완료' && md(r.day) === tmr())) : k === '견적' ? rowsOf(k).filter(dueToday) : rowsOf(k));
-const countOf = (k) => (k === '전표' ? (FL.all ? rowsOf('입력 누락') : rowsOf('입력 누락').filter((r) => r.day === (FL.data || {}).today)).length
+const listOf = (k) => (k === '기록' ? recOf() : k === '입력 완료' ? (FL.data ? FL.data.rows.filter((r) => slipOk(r) && (r.lines || []).length) : []) : FL.all || FL.view === '견적' ? rowsOf(k) : TODAY_ONLY.includes(k) ? rowsOf(k).filter((r) => r.day === (FL.data || {}).today || (k !== '출고 완료' && md(r.day) === tmr())) : k === '견적' ? rowsOf(k).filter(dueToday) : rowsOf(k));
+const yst = () => { const x = new Date(Date.now() - 864e5); return `${String(x.getMonth() + 1).padStart(2, '0')}/${String(x.getDate()).padStart(2, '0')}`; };
+const slipOk = (r) => !!FL.marks[`slipok:${r.case || r.no}`];   // 전표 확인 체크 → 입력 완료로 (10/28 대표)
+const SHIP = ['배차 완료', '출고 완료', '기록', '입력 누락', '입력 완료'];
+const slipTodo = () => (FL.data ? FL.data.rows.filter((r) => [yst(), (FL.data || {}).today, tmr()].includes(r.day) && r.steps.some((k) => SHIP.includes(k)) && allIn(r) && !slipOk(r)) : []);   // 어제·오늘·내일 배차된 건 중 사건 전체가 다 입력된 것
+const countOf = (k) => (k === '전표' ? slipTodo().length
   : ['명세표', '입금'].includes(k) ? 0 : listOf(k).length);
-const hotOf = (k) => (k === '전표' ? rowsOf('입력 누락').length > 0 : TODAY_ONLY.includes(k) && listOf(k).length > 0);
+const hotOf = (k) => (k === '전표' ? slipTodo().length > 0 : TODAY_ONLY.includes(k) && listOf(k).length > 0);
 const title = (r) => `${esc(r.partner)} · ${r.site ? esc(r.site) : '<span class="fl-q">현장 확인</span>'}${r.boss ? ` · ${esc(r.boss)}` : ''}`;
 const ioHtml = (r) => {   // 리스트에서 판매·구매·운반비 입력됐는지 바로 (10/28 대표)
   const seen = {};
@@ -62,7 +66,7 @@ const allIn = (r) => caseRows(r).every(allIn1);   // 사건 전체 판매·구�
 const cmpBtn = (r) => (allIn(r) && (r.lines || []).some((l) => l.st === '입력' && (l.slips || []).length) ? `<button type="button" class="fl-gh sm" data-fl="cmp" data-no="${esc(r.no)}">대조</button>` : '');
 const md = (d) => { const m = /^(\d{2})\/(\d{2})$/.exec(d || ''); return m ? `${m[1]}/${m[2]}` : ''; };
 const tmr = () => { const x = new Date(Date.now() + 864e5); return `${String(x.getMonth() + 1).padStart(2, '0')}/${String(x.getDate()).padStart(2, '0')}`; };
-const dayLab = (r) => { const t = (FL.data || {}).today; if (r.day === t) return '오늘'; if (r.late) return '지난 날'; if (md(r.day) === tmr()) return '내일'; return r.day === '미정' ? '날짜 미정' : r.day; };
+const dayLab = (r) => { const t = (FL.data || {}).today; if (r.day === t) return '오늘'; if (r.late) return '지난 날'; if (md(r.day) === tmr()) return '내일'; if (r.day === yst()) return '어제'; return r.day === '미정' ? '날짜 미정' : r.day; };
 const BTN = { 견적: [['quote', '견적서']], 발주: [['esong', '전자 송장']], '배차 요청': [['disp', '배차 요청'], ['esong', '전자 송장']], '배차 완료': [['esong', '전자 송장']],
   '출고 완료': [['deliv', '납품확인서'], ['approval', '자재승인원'], ['esong', '전자 송장']] };
 BTN['기록'] = [...BTN['출고 완료'], ['cmp', '대조']];
@@ -94,7 +98,7 @@ function rowHtml(r) {
     <div class="fl-c fl-ds">${chips}${esc(r.item)}</div>
     <div class="fl-c fl-ds fl-rt">${route}</div>
     <div class="fl-c fl-ds fl-v">${FL.cur === '견적' ? '' : esc(r.size || '')}</div>
-    <div class="fl-acts">${STMT_STEPS.includes(FL.cur) ? stmtHtml(r) : ''}${btns}</div></div>${FL.sel === r.no ? detailHtml(r) : ''}`;
+    <div class="fl-acts">${STMT_STEPS.includes(FL.cur) ? stmtHtml(r) : ''}${btns}${FL.cur === '전표' ? `<button type="button" class="fl-sent" data-fl="slipok" data-no="${esc(r.no)}"><i></i>입력 확인</button>` : ''}</div></div>${FL.sel === r.no ? detailHtml(r) : ''}`;
 }
 function detailHtml(r) {
   const buys = (r.buys || []).filter((b) => b.name).map((b) => `<div class="fl-k">${esc(b.name)}</div><div class="fl-it">${esc(b.item)}</div>`).join('');
@@ -127,12 +131,13 @@ function listHtml() {
   if (!FL.data) return '<div class="fl-empty">불러오는 중…</div>';
   if (FL.cur === '입금') return '<div class="fl-empty">준비 중</div>';
   if (FL.cur === '명세표') return `<div class="fl-links"><a class="fl-go" href="/gonggan/">공간 협업툴</a><a class="fl-go" href="/newhousing/">뉴하우징 협업툴</a><button type="button" class="fl-gh" data-fl="stmt">거래명세표</button></div>`;
-  if (FL.cur === '전표') {   // 오늘 하차한 건 — 누락 먼저, 완료 아래 ([전체보기]면 30일 치)
-    const t = FL.data.today, pick = (k) => rowsOf(k).filter((r) => FL.all || r.day === t).slice().reverse();
-    const miss = pick('입력 누락'), ok = pick('입력 완료');   // 한 줄씩 리스트 · 대조는 사건 전체가 다 들어간 건만 (10/28 대표)
+  if (FL.cur === '전표') {   // 어제·오늘·내일 배차 건 중 다 입력된 사건만 — [대조] 후 체크하면 입력 완료로 (10/28 대표)
+    const rs = slipTodo().sort((a, b) => ((a.md ?? 0) - (b.md ?? 0)) || (tkey(a.time) - tkey(b.time)));
+    if (!rs.length) return '<div class="fl-empty">없어요</div>';
     setTimeout(fitActs, 0);
-    const head = `<div class="fl-lh"><span>도착</span><span>판매처 · 현장</span><span>품목</span><span>상차 → 하차</span><span>차량</span><span></span></div>`;
-    return (miss.length || ok.length ? head : '') + (miss.length ? `<div class="fl-day no">입력 누락 ${miss.length}</div>${miss.map(rowHtml).join('')}` : '') + (ok.length ? `<div class="fl-day ok">입력 완료 ${ok.length}</div>${ok.map(rowHtml).join('')}` : '') || '<div class="fl-empty">없어요</div>';
+    let h = `<div class="fl-lh"><span>도착</span><span>판매처 · 현장</span><span>품목</span><span>상차 → 하차</span><span>차량</span><span></span></div>`, last = null;
+    rs.forEach((r) => { const g = dayLab(r); if (g !== last) { h += `<div class="fl-day">${esc(g)}</div>`; last = g; } h += rowHtml(r); });
+    return h;
   }
   const rows = listOf(FL.cur).map((r, i) => [r, i]).sort((a, b) => ((a[0].md ?? 9999) - (b[0].md ?? 9999)) || (tkey(a[0].time) - tkey(b[0].time)) || (a[1] - b[1])).map((x) => x[0]);
   if (FL.cur === '기록' || FL.cur === '입력 완료') rows.reverse();   // 최근 것 먼저
@@ -264,6 +269,7 @@ export function bind(app, c) {
     const a = t.dataset.fl, r = FL.data && FL.data.rows.find((x) => x.no === t.dataset.no);
     if (a !== 'row') e.stopPropagation();
     if (a === 'step') { FL.cur = t.dataset.k; FL.sel = ''; ctx.rerender(); }
+    else if (a === 'slipok' && r) { const key = `slipok:${r.case || r.no}`; S.addFlowMark(key, `${r.partner} ${r.site}`, ctx.me ? ctx.me() : '').then((err) => { if (err) alert('저장 못 했어요 — ' + err); else { FL.marks[key] = { created_at: new Date().toISOString() }; ctx.rerender(); } }); }
     else if (a === 'sent' && r) { if (!confirm(`${r.partner} · ${r.site} 거래처 전달 체크할까요?`)) return; S.addFlowMark(`sent:${r.no}`, `${r.partner} ${r.site}`, ctx.me ? ctx.me() : '').then((err) => { if (err) alert('저장 못 했어요 — ' + err); else { FL.marks[`sent:${r.no}`] = { created_at: new Date().toISOString() }; ctx.rerender(); } }); }
     else if (a === 'stmtgo' && r) { FM.presetStmt(/공간/.test(r.partner) ? 'stmt-gong' : 'stmt-etc', (t.dataset.s || '').split(',').join(' '), r.salerows); ctx.rerender(); }
     else if (a === 'evx') {   // 카톡·문자 원문 — 같은 방 앞뒤 대화 (배차안내까지)
