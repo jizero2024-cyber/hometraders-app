@@ -916,3 +916,4 @@ a.fm-btn { text-decoration: none; }
 .fl-stm.na { white-space: nowrap; height: 34px; display: inline-flex; align-items: center; }
 .fl-in { white-space: nowrap; }
 button.fl-evl { border: 0; cursor: pointer; font: inherit; font-size: 12px; } .fl-evl.k { background: #FFF6D6; color: #7A5A00; } .fl-evl.m { background: #F2EEFB; color: #5B3FA8; }
+.fl-txm { max-width: 560px; } .fl-tx { white-space: pre-wrap; font: inherit; font-size: 14px; line-height: 1.6; max-height: 70vh; overflow: auto; margin: 8px 0 0; background: #FBFAF8; border-radius: 12px; padding: 14px 16px; }

@@ -214,7 +214,12 @@ export function bind(app, c) {
     if (a === 'step') { FL.cur = t.dataset.k; FL.sel = ''; ctx.rerender(); }
     else if (a === 'sent' && r) { if (!confirm(`${r.partner} · ${r.site} 거래명세표 전달함으로 표시할까요?`)) return; S.addFlowMark(`sent:${r.no}`, `${r.partner} ${r.site}`, ctx.me ? ctx.me() : '').then((err) => { if (err) alert('저장 못 했어요 — ' + err); else { FL.marks[`sent:${r.no}`] = { created_at: new Date().toISOString() }; ctx.rerender(); } }); }
     else if (a === 'stmtgo' && r) { FM.presetStmt(/공간/.test(r.partner) ? 'stmt-gong' : 'stmt-etc', (t.dataset.s || '').split(',').join(' '), r.salerows); ctx.rerender(); }
-    else if (a === 'evx') alert(t.dataset.x || '');
+    else if (a === 'evx') {   // 카톡·문자 원문 — 같은 방 앞뒤 대화 (배차안내까지)
+      closeQ(); const ov = document.createElement('div'); ov.className = 'hm-ov fl-qov';
+      ov.innerHTML = `<div class="hm-modal fl-txm" role="dialog" aria-label="원문"><div class="hm-mh"><b>${esc(t.textContent)}</b><button type="button" class="hm-x" aria-label="닫기">✕</button></div><pre class="fl-tx">${esc(t.dataset.x || '')}</pre></div>`;
+      ov.addEventListener('click', (ev) => { if (ev.target === ov || ev.target.closest('.hm-x')) ov.remove(); });
+      document.body.appendChild(ov);
+    }
     else if (a === 'all') { FL.all = t.dataset.k === '1'; FL.sel = ''; ctx.rerender(); }
     else if (a === 'old') { FL.old = !FL.old; ctx.rerender(); }
     else if (a === 'go') { const k = t.dataset.k; if (k === 'fare' || k === 'box') ctx.home(k); else if (k.startsWith('v-flow-')) { FL.view = 'flow'; FL.cur = k.slice(7); FL.sel = ''; ctx.rerender(); setTimeout(() => { const el = document.getElementById('fl-list'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 0); } else { FL.view = k.slice(2); ctx.rerender(); } }
