@@ -56,7 +56,9 @@ const ioHtml = (r) => {   // 리스트에서 판매·구매·운반비 입력됐
 };
 const won = (n) => `${Math.round(n).toLocaleString()}원`;
 const plHtml = (r) => (r.pl ? `<span class="fl-pl ${r.pl.net < 0 ? 'no' : ''}" title="판매 ${won(r.pl.sale)} − 구매 ${won(r.pl.buy)} − 운반비 ${won(r.pl.fare)} (공급가)">순이익 ${won(r.pl.net)} · ${r.pl.sale ? Math.round((100 * r.pl.net) / r.pl.sale) : 0}%</span>` : '');   // 판매·구매·운반비 다 들어간 건 (10/28 대표)
-const allIn = (r) => (r.lines || []).length > 0 && r.lines.every((l) => l.st === '입력' || l.st === '—');   // 판매·구매·운반비 다 들어감
+const allIn1 = (r) => (r.lines || []).length > 0 && r.lines.every((l) => l.st === '입력' || l.st === '—');
+const caseRows = (r) => (r.case && FL.data ? FL.data.rows.filter((x) => x.case === r.case) : [r]);   // 같은 사건 (나중에 보낸 누락분도 같이)
+const allIn = (r) => caseRows(r).every(allIn1);   // 사건 전체 판매·구매·운반비 다 들어감
 const cmpBtn = (r) => (allIn(r) && (r.lines || []).some((l) => l.st === '입력' && (l.slips || []).length) ? `<button type="button" class="fl-gh sm" data-fl="cmp" data-no="${esc(r.no)}">대조</button>` : '');
 const md = (d) => { const m = /^(\d{2})\/(\d{2})$/.exec(d || ''); return m ? `${m[1]}/${m[2]}` : ''; };
 const tmr = () => { const x = new Date(Date.now() + 864e5); return `${String(x.getMonth() + 1).padStart(2, '0')}/${String(x.getDate()).padStart(2, '0')}`; };
@@ -64,13 +66,14 @@ const dayLab = (r) => { const t = (FL.data || {}).today; if (r.day === t) return
 const BTN = { 견적: [['quote', '견적서']], 발주: [['esong', '전자 송장']], '배차 요청': [['disp', '배차 요청'], ['esong', '전자 송장']], '배차 완료': [['esong', '전자 송장']],
   '출고 완료': [['deliv', '납품확인서'], ['approval', '자재승인원'], ['esong', '전자 송장']] };
 BTN['기록'] = [...BTN['출고 완료'], ['cmp', '대조']];
-BTN['입력 완료'] = [['cmp', '대조']];   // 입력 완료 — 한 줄씩 리스트, [대조] (10/28 대표)
+BTN['입력 완료'] = [['cmp', '대조']];
+BTN['전표'] = [['cmp', '대조']];   // 입력 완료 — 한 줄씩 리스트, [대조] (10/28 대표)
 
 function stepsHtml() {
   return `<nav class="fl-steps" aria-label="단계">${STEPS.map((k) => `<button type="button" class="fl-st ${FL.cur === k ? 'on' : ''} ${hotOf(k) ? 'hot' : ''}" data-fl="step" data-k="${k}">
     <i>${IC[k]}</i>${LABEL[k] || k}<b>${['명세표', '입금'].includes(k) ? '' : countOf(k)}</b></button>`).join('')}</nav>`;
 }
-const STMT_STEPS = ['배차 완료', '출고 완료', '기록', '입력 완료'];
+const STMT_STEPS = ['배차 완료', '출고 완료', '기록', '입력 완료', '전표'];
 const saleSlips = (r) => [...new Set((r.lines || []).filter((l) => l.k === '판매' && l.st === '입력').flatMap((l) => l.slips || []))];
 function stmtHtml(r) {   // 거래명세표 — 판매전표 PDF 보기 · 전달했는지 (10/28 대표)
   const sl = saleSlips(r);
@@ -82,7 +85,8 @@ function stmtHtml(r) {   // 거래명세표 — 판매전표 PDF 보기 · 전�
 function rowHtml(r) {
   const btns = (BTN[FL.cur] || []).filter(([a]) => a !== 'cmp' || allIn(r)).map(([a, t], i) => `<button type="button" class="${i ? 'fl-gh' : 'fl-go'}" data-fl="${a}" data-no="${esc(r.no)}">${t}</button>`).join('');
   const asked = FL.cur === '배차 요청' && S.getShipments().find((s) => String(s.note || '').includes(`출고 흐름 ${r.no})`));
-  const chips = [...(r.chips || []).map((c) => `<span class="fl-chip amb">${esc(c)}</span>`), asked ? `<span class="fl-chip blu">요청함 ${esc((String(asked.note).match(/요청함 (\d\d:\d\d)/) || ['', ''])[1])}</span>` : '', r.late && FL.cur === '배차 요청' ? '<span class="fl-chip no">누락</span>' : '', FL.cur === '배차 완료' && !r.driver ? '<span class="fl-chip amb">기사·운임 확인</span>' : ''].join('');
+  const cn = caseRows(r).length;
+  const chips = [cn > 1 ? `<span class="fl-chip blu">같은 주문 ${cn}건</span>` : '', ...(r.chips || []).map((c) => `<span class="fl-chip amb">${esc(c)}</span>`), asked ? `<span class="fl-chip blu">요청함 ${esc((String(asked.note).match(/요청함 (\d\d:\d\d)/) || ['', ''])[1])}</span>` : '', r.late && FL.cur === '배차 요청' ? '<span class="fl-chip no">누락</span>' : '', FL.cur === '배차 완료' && !r.driver ? '<span class="fl-chip amb">기사·운임 확인</span>' : ''].join('');
   const route = FL.cur === '견적' ? '' : `${esc(r.from || '상차지 확인')} → ${esc(r.site || '하차지 확인')}`;
   return `<div class="fl-row ${FL.sel === r.no ? 'sel' : ''}" data-fl="row" data-no="${esc(r.no)}">
     <div class="fl-c fl-tm ${r.late || r.day === FL.data.today ? 'now' : ''}"><b>${esc(r.time || (r.day === '미정' ? '미정' : '시간 미정'))}</b><span>${esc(r.day)}</span></div>
@@ -125,8 +129,10 @@ function listHtml() {
   if (FL.cur === '명세표') return `<div class="fl-links"><a class="fl-go" href="/gonggan/">공간 협업툴</a><a class="fl-go" href="/newhousing/">뉴하우징 협업툴</a><button type="button" class="fl-gh" data-fl="stmt">거래명세표</button></div>`;
   if (FL.cur === '전표') {   // 오늘 하차한 건 — 누락 먼저, 완료 아래 ([전체보기]면 30일 치)
     const t = FL.data.today, pick = (k) => rowsOf(k).filter((r) => FL.all || r.day === t).slice().reverse();
-    const miss = pick('입력 누락'), ok = pick('입력 완료');
-    return (miss.length ? `<div class="fl-day no">입력 누락 ${miss.length}</div>${miss.map(evHtml).join('')}` : '') + (ok.length ? `<div class="fl-day ok">입력 완료 ${ok.length}</div>${ok.map(evHtml).join('')}` : '') || '<div class="fl-empty">없어요</div>';
+    const miss = pick('입력 누락'), ok = pick('입력 완료');   // 한 줄씩 리스트 · 대조는 사건 전체가 다 들어간 건만 (10/28 대표)
+    setTimeout(fitActs, 0);
+    const head = `<div class="fl-lh"><span>도착</span><span>판매처 · 현장</span><span>품목</span><span>상차 → 하차</span><span>차량</span><span></span></div>`;
+    return (miss.length || ok.length ? head : '') + (miss.length ? `<div class="fl-day no">입력 누락 ${miss.length}</div>${miss.map(rowHtml).join('')}` : '') + (ok.length ? `<div class="fl-day ok">입력 완료 ${ok.length}</div>${ok.map(rowHtml).join('')}` : '') || '<div class="fl-empty">없어요</div>';
   }
   const rows = listOf(FL.cur).map((r, i) => [r, i]).sort((a, b) => ((a[0].md ?? 9999) - (b[0].md ?? 9999)) || (tkey(a[0].time) - tkey(b[0].time)) || (a[1] - b[1])).map((x) => x[0]);
   if (FL.cur === '기록' || FL.cur === '입력 완료') rows.reverse();   // 최근 것 먼저
@@ -267,7 +273,7 @@ export function bind(app, c) {
       document.body.appendChild(ov);
     }
     else if (a === 'cmp' && r) {   // 대조 — 구매 거래명세표(원본) · 구매 입력 전표 · 판매 입력 거래명세표 나란히 (10/28 대표)
-      const L = (r.lines || []).filter((l) => l.st === '입력'), srcs = (FL.data && FL.data.srcs) || {};
+      const L = caseRows(r).flatMap((x) => x.lines || []).filter((l) => l.st === '입력'), srcs = (FL.data && FL.data.srcs) || {};
       const slipsOf = (f) => [...new Set(L.filter(f).flatMap((l) => l.slips || []))];
       const buy = slipsOf((l) => l.k === '구매'), fare = slipsOf((l) => l.k === '운반비'), sale = slipsOf((l) => l.k === '판매');
       const nm = (s_) => s_.replace(/^\d{4}(\d\d)(\d\d)-/, '$1/$2-');
