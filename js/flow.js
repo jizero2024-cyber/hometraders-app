@@ -110,15 +110,33 @@ function slipHtml(kind) {   // 전표 확인 — 입력 누락(오늘 먼저 · 
   return `<h1 class="fl-h1">${kind}</h1>` + (now.length ? `<div class="fl-day ${kind === '입력 누락' ? 'no' : 'ok'}">오늘 ${now.length}</div>${now.map(evHtml).join('')}` : '')
     + (old.length ? `<div class="fl-day">지난 날 ${old.length}</div>${old.map(evHtml).join('')}` : '') + (rows.length ? '' : '<div class="fl-empty">없어요</div>');
 }
-function closeHtml(x) {   // 오늘 마감 (10/28 대표 "하루 마감을 치도록 하는 페이지")
-  const c = counts(), items = [
-    ['오늘 출고 전표 입력', c.miss, 'v-누락'], ['내일까지 배차 안 잡힌 것', c.disp, 'v-flow-배차 요청'], ['운송비 송금', x.fare || 0, 'fare'],
-    ['견적 회신', c.quote, 'v-flow-견적'], ['전자 송장', c.songjang, 'v-flow-배차 완료', 1], ['자료 넣기 처리', x.inbox || 0, 'box'],
-  ];
-  const left = items.filter((i) => i[1] && !i[3]).length, d = new Date();
-  return `<h1 class="fl-h1">오늘 마감 <span>${d.getMonth() + 1}/${d.getDate()} (${'일월화수목금토'[d.getDay()]})</span></h1>
-    ${items.map(([t, n, go, info]) => `<div class="fl-cl"><span class="fl-ck ${n && !info ? '' : 'ok'}"></span><span>${t}</span><b class="${n && !info ? 'no' : 'ok'}">${n}</b>${n ? `<button type="button" class="fl-gh" data-fl="go" data-k="${go}">${info ? '전자 송장' : '보기'}</button>` : '<span></span>'}</div>`).join('')}
-    <button type="button" class="fl-close ${left ? '' : 'on'}" data-fl="close">${left ? `마감 (남은 것 ${left})` : '오늘 마감'}</button>`;
+// 오늘 마감 대시보드 (10/28 대표 "오늘 마감 흐름이 보이게 · 오늘 마감 것만") — 오늘 건만 센다
+export function closeItems(x) {
+  const t = today(), d = new Date(), md = `${d.getMonth() + 1}/${String(d.getDate()).padStart(2, '0')}`;
+  const on = (k) => rowsOf(k).filter((r) => r.day === t);
+  const fare = (x.fare || []).filter((f) => !f.sent && String(f.job || '').trim().startsWith(md));
+  const lines = (rs, f) => rs.slice(0, 3).map(f);
+  const who = (r) => `${r.partner} · ${r.site || '현장 확인'}`;
+  return [
+    { k: '견적 회신', rows: rowsOf('견적').filter((r) => String(r.memo || '').includes(`견적 요청 ${t}`)), go: 'v-flow-견적', btn: '견적 요청', f: (r) => who(r) },
+    { k: '자료 넣기', n: x.inbox || 0, go: 'box', btn: '자료 넣기' },
+    { k: '배차', rows: on('배차 요청'), go: 'v-flow-배차 요청', btn: '배차 요청', f: (r) => `${who(r)} · ${r.time || '시간 미정'}` },
+    { k: '전자 송장', rows: [...on('배차 완료'), ...on('출고 완료')], go: 'v-flow-배차 완료', btn: '전자 송장', f: (r) => who(r) },
+    { k: '전표 입력', rows: on('입력 누락'), go: 'v-누락', btn: '입력 누락', f: (r) => `${who(r)} — ${(r.lines || []).filter((l) => l.st === '미입력' || l.st === '누락').map((l) => l.k).join('·')}` },
+    { k: '운송비', rows: fare, go: 'fare', btn: '보내기', f: (r) => `${r.job} · ${Math.round(Number(r.amount) || 0).toLocaleString()}원` },
+  ].map((i) => ({ ...i, n: i.rows ? i.rows.length : i.n, list: i.rows ? lines(i.rows, i.f) : [] }));
+}
+function closeHtml(x) {
+  const items = closeItems(x), left = items.filter((i) => i.n).length, done = items.length - left, d = new Date();
+  const first = items.findIndex((i) => i.n);
+  const pct = Math.round((done / items.length) * 100);
+  return `<div class="cl-hd"><h1 class="fl-h1">오늘 마감 <span>${d.getMonth() + 1}/${d.getDate()} (${'일월화수목금토'[d.getDay()]})</span></h1><b>${done} / ${items.length} 끝</b></div>
+    <div class="cl-st" style="--pn:${(pct / 100).toFixed(3)}">${items.map((i, k) => `<button type="button" class="cl-s ${!i.n ? 'ok' : k === first ? 'now' : 'left'}" data-fl="go" data-k="${i.go}"><i>${i.n ? i.n : '✓'}</i>${i.k}</button>`).join('')}
+      <span class="cl-s ${left ? '' : 'ok'}"><i>✓</i>마감</span></div>
+    <div class="cl-cards">${items.map((i) => `<div class="cl-c ${i.n ? '' : 'done'}"><div class="cl-t">${i.k}<b class="${i.n ? '' : 'ok'}">${i.n || '✓'}</b></div>
+      ${i.list.map((l) => `<div class="cl-l">${esc(l)}</div>`).join('')}${i.n > 3 ? `<div class="cl-l">… ${i.n - 3}건 더</div>` : ''}
+      ${i.n ? `<button type="button" class="fl-go" data-fl="go" data-k="${i.go}">${i.btn}</button>` : ''}</div>`).join('')}</div>
+    <button type="button" class="fl-close ${left ? '' : 'on'}" data-fl="close">${left ? `오늘 마감 (남은 것 ${left})` : '오늘 마감'}</button>`;
 }
 export function main(x) {
   load();

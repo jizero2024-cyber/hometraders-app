@@ -4,7 +4,7 @@
 //   서류 화면은 모두 js/forms.js (같은 머리·카드·버튼)
 import * as S from './store-supabase.js?v=7';
 import * as FM from './forms.js?v=10';
-import * as FL from './flow.js?v=6';   // 맨 위 출고 흐름 (10/28)
+import * as FL from './flow.js?v=7';   // 맨 위 출고 흐름 (10/28)
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const won = (n) => Math.round(Number(n) || 0).toLocaleString();
@@ -109,9 +109,9 @@ export function screen(view) {
         ${tile({ title: '에이스 거래명세표', icon: IC.stmt, bg: '#F3F4F6', cls: 'big', attr: 'data-hm="form" data-r="stmt-ace"' })}
       </div></main>${FM.popup()}</div>`;
   }
-  const wait = (H.inbox.wait || 0) + (H.inbox.got || 0), chk = H.inbox.check || 0, fareN = (H.fare || []).filter((r) => !r.sent).length;
+  const wait = (H.inbox.wait || 0) + (H.inbox.got || 0), chk = H.inbox.check || 0;
   return `<div class="hm">${top('')}<div class="hm-body">${sideHtml()}<main class="hm-main">
-    ${FL.main({ fare: fareN, inbox: wait + chk })}${farePanel()}</main></div>${quickHtml(wait, chk)}${boxModal()}${FM.popup()}<input type="file" id="hm-file" multiple accept="image/*,.heic,.pdf,.xlsx,.xls,.csv,.txt" hidden></div>`;
+    ${FL.main({ fare: H.fare || [], inbox: wait + chk })}${farePanel()}</main></div>${quickHtml(wait, chk)}${boxModal()}${FM.popup()}<input type="file" id="hm-file" multiple accept="image/*,.heic,.pdf,.xlsx,.xls,.csv,.txt" hidden></div>`;
 }
 
 // 사이드바 (10/28 대표) — 출고 흐름 · 오늘 마감 · 견적 요청 · 서류 변환 · 전표 확인 · 거래처. 자료 넣기는 오른쪽 아래 퀵메뉴로
@@ -120,7 +120,7 @@ function sideHtml() {
   const it = (lab, attr, on, badge, cls) => `<button type="button" class="hm-si ${on ? 'on' : ''} ${cls || ''}" ${attr}><span>${lab}</span>${badge || ''}</button>`;
   return `<nav class="hm-side" aria-label="메뉴">
     ${it('출고 흐름', 'data-hm="fv" data-v="flow"', v === 'flow')}
-    ${it('오늘 마감', 'data-hm="fv" data-v="마감"', v === '마감', n(c.miss + c.disp))}
+    ${it('오늘 마감', 'data-hm="fv" data-v="마감"', v === '마감', n(FL.closeItems({ fare: H.fare || [], inbox: (H.inbox.wait || 0) + (H.inbox.got || 0) + (H.inbox.check || 0) }).filter((i) => i.n).length))}
     ${it('견적 요청', 'data-hm="fv" data-v="견적"', false, n(c.quote))}
     <div class="hm-sg">서류 변환</div>
     ${it('거래명세표', 'data-hm="go" data-r="stmt"', false, '', 'sub')}

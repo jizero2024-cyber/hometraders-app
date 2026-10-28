@@ -7,7 +7,7 @@ import { makeMatcher, readPastedText, quotePrev } from './textread.js';
 import * as DL from './delivery.js';
 import * as SM from './stmt.js?v=103';
 import * as HD from './hdisp.js?v=8';
-import * as HM from './home.js?v=16';
+import * as HM from './home.js?v=17';
 import * as FM from './forms.js?v=10';
 
 // 창고 아이콘 세트 (무채색)

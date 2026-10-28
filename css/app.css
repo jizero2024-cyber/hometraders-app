@@ -885,3 +885,20 @@ a.fm-btn { text-decoration: none; }
   .hm-side { position: static; flex-direction: row; overflow-x: auto; padding: 8px 12px 0; gap: 4px; }
   .hm-side .hm-sg { display: none; } .hm-si, .hm-si.sub { padding: 7px 10px; white-space: nowrap; font-size: 13px; }
 }
+.cl-hd { display: flex; align-items: baseline; gap: 10px; } .cl-hd b { margin-left: auto; font-size: 13px; color: #C2410C; }
+.cl-st { --pn: 0; display: flex; justify-content: space-between; position: relative; margin: 8px 6px 22px; }
+.cl-st::before { content: ""; position: absolute; left: 24px; right: 24px; top: 21px; height: 3px; border-radius: 3px; background: #EFEDE8; }
+.cl-st::after { content: ""; position: absolute; left: 24px; top: 21px; height: 3px; border-radius: 3px; background: #1E6B34; width: calc((100% - 48px) * var(--pn)); }
+.cl-s { position: relative; z-index: 1; border: 0; background: none; display: flex; flex-direction: column; align-items: center; gap: 6px; font: inherit; font-size: 12.5px; color: #9A978F; cursor: pointer; padding: 0; }
+.cl-s i { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-style: normal; font-weight: 800; font-size: 15px; background: #F4F3F0; color: #BDBAB3; box-shadow: 0 0 0 4px #fff; }
+.cl-s.ok { color: #1E6B34; } .cl-s.ok i { background: #1E6B34; color: #fff; }
+.cl-s.now { color: #C2410C; font-weight: 800; } .cl-s.now i { background: #E8732C; color: #fff; }
+.cl-s.left i { background: #FDECEC; color: #E03E2D; }
+.cl-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+.cl-c { background: #FBFAF8; border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; }
+.cl-c.done { opacity: .55; }
+.cl-t { display: flex; align-items: center; font-weight: 800; font-size: 14.5px; } .cl-t b { margin-left: auto; color: #E03E2D; font-size: 18px; } .cl-t b.ok { color: #1E6B34; }
+.cl-l { font-size: 12.5px; color: #5C5C5C; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cl-c .fl-go { align-self: flex-start; margin-top: 4px; }
+.hm-body .fl { background: #fff; border-radius: 18px; padding: 22px 24px; margin-top: 8px; }
+@media (max-width: 820px) { .cl-s { font-size: 10.5px; } .cl-s i { width: 36px; height: 36px; font-size: 13px; } .cl-st::before, .cl-st::after { top: 17px; } }
