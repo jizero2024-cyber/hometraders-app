@@ -926,3 +926,9 @@ button.fl-evl { border: 0; cursor: pointer; font: inherit; font-size: 12px; } .f
 .fl-sent:hover i { border-color: #E8732C; }
 .fl-sent.on { color: #2E7D4F; font-weight: 700; cursor: default; }
 .fl-sent.on i { background: #2E7D4F; border-color: #2E7D4F; color: #fff; }
+
+.fl-nmt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fl-io { display: flex; gap: 4px; margin-top: 5px; font-weight: 600; }
+.fl-io span { font-size: 11.5px; padding: 2px 7px; border-radius: 6px; white-space: nowrap; line-height: 1.3; }
+.fl-io .ok { background: #EAF4EC; color: #2E7D4F; } .fl-io .no { background: #FDECEA; color: #C62828; } .fl-io .na { background: #F2F1EE; color: #A3A09A; }
+.fl-more { display: flex; justify-content: center; padding: 14px 0 4px; }

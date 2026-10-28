@@ -43,6 +43,12 @@ const countOf = (k) => (k === '전표' ? (FL.all ? rowsOf('입력 누락') : row
   : ['명세표', '입금'].includes(k) ? 0 : listOf(k).length);
 const hotOf = (k) => (k === '전표' ? rowsOf('입력 누락').length > 0 : TODAY_ONLY.includes(k) && listOf(k).length > 0);
 const title = (r) => `${esc(r.partner)} · ${r.site ? esc(r.site) : '<span class="fl-q">현장 확인</span>'}${r.boss ? ` · ${esc(r.boss)}` : ''}`;
+const ioHtml = (r) => {   // 리스트에서 판매·구매·운반비 입력됐는지 바로 (10/28 대표)
+  const seen = {};
+  (r.lines || []).forEach((l) => { const k = l.k === '반품' ? '판매' : l.k; const v = l.st === '입력' ? 2 : l.st === '—' ? 0 : 1; seen[k] = seen[k] === 1 || v === 1 ? 1 : Math.max(seen[k] ?? 0, v); });   // 하나라도 안 됐으면 ✕
+  const ks = ['판매', '구매', '운반비'].filter((k) => k in seen);
+  return ks.length ? `<div class="fl-io">${ks.map((k) => `<span class="${['na', 'no', 'ok'][seen[k]]}">${k}${seen[k] === 2 ? ' ✓' : seen[k] === 1 ? ' ✕' : ' —'}</span>`).join('')}</div>` : '';
+};
 const md = (d) => { const m = /^(\d{2})\/(\d{2})$/.exec(d || ''); return m ? `${m[1]}/${m[2]}` : ''; };
 const tmr = () => { const x = new Date(Date.now() + 864e5); return `${String(x.getMonth() + 1).padStart(2, '0')}/${String(x.getDate()).padStart(2, '0')}`; };
 const dayLab = (r) => { const t = (FL.data || {}).today; if (r.day === t) return '오늘'; if (r.late) return '지난 날'; if (md(r.day) === tmr()) return '내일'; return r.day === '미정' ? '날짜 미정' : r.day; };
@@ -57,7 +63,7 @@ const STMT_STEPS = ['배차 완료', '출고 완료'];
 const saleSlips = (r) => [...new Set((r.lines || []).filter((l) => l.k === '판매' && l.st === '입력').flatMap((l) => l.slips || []))];
 function stmtHtml(r) {   // 거래명세표 — 판매전표 PDF 보기 · 전달했는지 (10/28 대표)
   const sl = saleSlips(r);
-  if (!sl.length) return '<span class="fl-stm na">판매 미입력</span>';
+  if (!sl.length) return '';
   const mk = FL.marks[`sent:${r.no}`];
   return `<span class="fl-stm"><button type="button" class="fl-in ok" data-fl="pdf" data-k="판매" data-s="${esc(sl.join(','))}">명세표 ›</button><button type="button" class="fl-gh" data-fl="stmtgo" data-no="${esc(r.no)}" data-s="${esc(sl.join(','))}">변환</button>
     ${mk ? `<span class="fl-sent on" title="전달 ${esc(String(mk.created_at || '').slice(5, 10).replace('-', '/'))}"><i>✓</i>거래처 전달</span>` : `<button type="button" class="fl-sent" data-fl="sent" data-no="${esc(r.no)}"><i></i>거래처 전달</button>`}</span>`;
@@ -69,7 +75,7 @@ function rowHtml(r) {
   const route = FL.cur === '견적' ? '' : `${esc(r.from || '상차지 확인')} → ${esc(r.site || '하차지 확인')}`;
   return `<div class="fl-row ${FL.sel === r.no ? 'sel' : ''}" data-fl="row" data-no="${esc(r.no)}">
     <div class="fl-c fl-tm ${r.late || r.day === FL.data.today ? 'now' : ''}"><b>${esc(r.time || (r.day === '미정' ? '미정' : '시간 미정'))}</b><span>${esc(r.day)}</span></div>
-    <div class="fl-c fl-nm">${title(r)}</div>
+    <div class="fl-c fl-nm"><div class="fl-nmt">${title(r)}</div>${FL.cur === '견적' ? '' : ioHtml(r)}</div>
     <div class="fl-c fl-ds">${chips}${esc(r.item)}</div>
     <div class="fl-c fl-ds fl-rt">${route}</div>
     <div class="fl-c fl-ds fl-v">${FL.cur === '견적' ? '' : esc(r.size || '')}</div>
@@ -114,9 +120,17 @@ function listHtml() {
   const rows = listOf(FL.cur).map((r, i) => [r, i]).sort((a, b) => ((a[0].md ?? 9999) - (b[0].md ?? 9999)) || (tkey(a[0].time) - tkey(b[0].time)) || (a[1] - b[1])).map((x) => x[0]);
   if (!rows.length) return '<div class="fl-empty">없어요</div>';
   if (STMT_STEPS.includes(FL.cur)) setTimeout(() => rows.forEach(fetchLinks), 0);
+  setTimeout(fitActs, 0);
   let h = `<div class="fl-lh"><span>${FL.cur === '견적' ? '언제까지' : '도착'}</span><span>판매처 · 현장</span><span>품목</span><span>${FL.cur === '견적' ? '' : '상차 → 하차'}</span><span>${FL.cur === '견적' ? '' : '차량'}</span><span></span></div>`, last = null;
   rows.forEach((r) => { const g = dayLab(r); if (g !== last) { h += `<div class="fl-day">${esc(g)}</div>`; last = g; } h += rowHtml(r); });
+  if (!FL.all && FL.view !== '견적') h += '<div class="fl-more"><button type="button" class="fl-gh" data-fl="all" data-k="1">전체보기</button></div>';
   return h;
+}
+function fitActs() {
+  const L = document.querySelector('.fl-list');
+  if (!L) return;
+  const w = Math.max(0, ...[...L.querySelectorAll('.fl-row .fl-acts')].map((a) => [...a.children].reduce((s_, c) => s_ + c.getBoundingClientRect().width + 6, 0)));
+  if (w) L.style.setProperty('--acts', `${Math.ceil(w)}px`);
 }
 const today = () => (FL.data || {}).today;
 export const counts = () => ({
