@@ -88,7 +88,7 @@ function stepsHtml() {
     <i>${IC[k]}</i>${LABEL[k] || k}<b>${['명세표', '입금'].includes(k) ? '' : countOf(k)}</b></button>`).join('')}</nav>`;
 }
 const STMT_STEPS = ['배차 완료', '출고 완료', '기록', '입력 누락', '입력 완료', '전표'];
-const DATE_FIRST = ['기록', '입력 누락', '입력 완료'];   // 날짜를 왼쪽에 진하게 (10/29 대표)
+const DATE_FIRST = ['기록', '입력 누락', '입력 완료', '전표'];   // 날짜를 왼쪽에 진하게 (10/29 대표, 최종 마감 = 출고 날짜)
 const saleSlips = (r) => [...new Set((r.lines || []).filter((l) => l.k === '판매' && l.st === '입력').flatMap((l) => l.slips || []))];
 function stmtHtml(r) {   // 거래명세표 — 판매전표 PDF 보기 · 전달했는지 (10/28 대표)
   const sl = saleSlips(r);
