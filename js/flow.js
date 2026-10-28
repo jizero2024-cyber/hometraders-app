@@ -43,7 +43,7 @@ const recOf = () => {   // 전표 확인 > 전체보기 — 거래처·기간·�
   return rowsOf('기록').filter((r) => (!q.p || r.partner === q.p) && (a == null || (r.md ?? 0) >= a) && (b == null || (r.md ?? 9999) <= b)
     && (!w || `${r.partner} ${r.site_full} ${r.site} ${r.boss} ${r.items} ${r.from} ${r.no} ${(r.lines || []).flatMap((l) => l.slips || []).join(' ')}`.toLowerCase().includes(w)));
 };
-const listOf = (k) => (k === '기록' ? recOf() : k === '입력 완료' ? (FL.data ? FL.data.rows.filter((r) => slipOk(r) && (r.lines || []).length) : []) : FL.all || FL.view === '견적' ? rowsOf(k) : TODAY_ONLY.includes(k) ? rowsOf(k).filter((r) => r.day === (FL.data || {}).today || (k !== '출고 완료' && md(r.day) === tmr())) : k === '견적' ? rowsOf(k).filter(dueToday) : rowsOf(k));
+const listOf = (k) => (k === '기록' ? recOf() : k === '입력 완료' ? (FL.data ? FL.data.rows.filter((r) => (r.lines || []).length && (slipOk(r) || (r.steps.includes('입력 완료') && !slipTodo().includes(r)))) : []) : FL.all || FL.view === '견적' ? rowsOf(k) : TODAY_ONLY.includes(k) ? rowsOf(k).filter((r) => r.day === (FL.data || {}).today || (k !== '출고 완료' && md(r.day) === tmr())) : k === '견적' ? rowsOf(k).filter(dueToday) : rowsOf(k));
 const yst = () => { const x = new Date(Date.now() - 864e5); return `${String(x.getMonth() + 1).padStart(2, '0')}/${String(x.getDate()).padStart(2, '0')}`; };
 const slipOk = (r) => !!FL.marks[`slipok:${r.case || r.no}`];   // 전표 확인 체크 → 입력 완료로 (10/28 대표)
 const SHIP = ['배차 완료', '출고 완료', '기록', '입력 누락', '입력 완료'];
@@ -93,7 +93,7 @@ function rowHtml(r) {
   const btns = (BTN[FL.cur] || []).filter(([a]) => a !== 'cmp' || allIn(r)).map(([a, t], i) => `<button type="button" class="${i ? 'fl-gh' : 'fl-go'}" data-fl="${a}" data-no="${esc(r.no)}">${t}</button>`).join('');
   const asked = FL.cur === '배차 요청' && S.getShipments().find((s) => String(s.note || '').includes(`출고 흐름 ${r.no})`));
   const cn = caseRows(r).length;
-  const chips = [...(r.imgs || []).map((x) => `<button type="button" class="fl-chip blu" data-fl="img" data-id="${esc(x.id)}" data-n="${esc(x.name)}">사진</button>`), cn > 1 ? `<span class="fl-chip blu">같은 주문 ${cn}건</span>` : '', ...(r.chips || []).map((c) => `<span class="fl-chip amb">${esc(c)}</span>`), asked ? `<span class="fl-chip blu">요청함 ${esc((String(asked.note).match(/요청함 (\d\d:\d\d)/) || ['', ''])[1])}</span>` : '', r.late && FL.cur === '배차 요청' ? '<span class="fl-chip no">누락</span>' : '', FL.cur === '배차 완료' && !r.driver ? '<span class="fl-chip amb">기사·운임 확인</span>' : ''].join('');
+  const chips = [FL.cur === '입력 완료' && slipOk(r) ? '<span class="fl-chip ok">마감 확인</span>' : '', ...(r.imgs || []).map((x) => `<button type="button" class="fl-chip blu" data-fl="img" data-id="${esc(x.id)}" data-n="${esc(x.name)}">사진</button>`), cn > 1 ? `<span class="fl-chip blu">같은 주문 ${cn}건</span>` : '', ...(r.chips || []).map((c) => `<span class="fl-chip amb">${esc(c)}</span>`), asked ? `<span class="fl-chip blu">요청함 ${esc((String(asked.note).match(/요청함 (\d\d:\d\d)/) || ['', ''])[1])}</span>` : '', r.late && FL.cur === '배차 요청' ? '<span class="fl-chip no">누락</span>' : '', FL.cur === '배차 완료' && !r.driver ? '<span class="fl-chip amb">기사·운임 확인</span>' : ''].join('');
   const route = FL.cur === '견적' ? '' : `${esc(r.from || '상차지 확인')} → ${esc(r.site || '하차지 확인')}`;
   return `<div class="fl-row ${FL.sel === r.no ? 'sel' : ''}" data-fl="row" data-no="${esc(r.no)}">
     <div class="fl-c fl-tm ${r.late || r.day === FL.data.today ? 'now' : ''}"><b>${esc(r.time || (r.day === '미정' ? '미정' : '시간 미정'))}</b><span>${esc(r.day)}</span></div>
