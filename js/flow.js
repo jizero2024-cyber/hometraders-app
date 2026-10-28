@@ -111,6 +111,15 @@ function rowHtml(r) {
     <div class="fl-c fl-ds fl-v">${FL.cur === '견적' ? '' : esc(r.size || '')}</div>
     <div class="fl-acts">${STMT_STEPS.includes(FL.cur) ? stmtHtml(r) : ''}${btns}${FL.cur === '전표' ? `<button type="button" class="fl-sent" data-fl="slipok" data-no="${esc(r.no)}"><i></i>입력 확인</button>` : ''}</div></div>${FL.sel === r.no ? detailHtml(r) : ''}`;
 }
+const stLab = (x) => (x.steps.includes('출고 완료') || x.steps.includes('기록') ? '출고 완료' : x.steps.includes('배차 완료') ? '배차 완료' : x.steps.includes('배차 요청') ? '배차 요청' : x.steps.includes('발주') ? '발주' : x.steps[0] || '');
+function caseHtml(r) {   // 같은 주문 — 처음 보낸 것·누락분 2차·3차, 누락 남은 것 (10/29 대표)
+  const cs = caseRows(r).slice().sort((a, b) => (a.md || 9999) - (b.md || 9999) || String(a.no).localeCompare(String(b.no)));
+  if (cs.length < 2) return '';
+  const nth = (i) => (i ? `${i + 1}차` : '처음');
+  const rows = cs.map((x, i) => `<div class="fl-cs ${x.no === r.no ? 'me' : ''}"><b>${esc(x.day)}</b><span class="fl-csn">${nth(i)}</span><span class="fl-csi">${esc(x.item || x.items || '')}</span><span class="fl-css">${esc(stLab(x))}</span></div>`).join('');
+  const miss = [...new Set(cs.flatMap((x) => String(x.memo || '').split(/\s+·\s+/)).filter((t) => /누락|빠짐|덜\s?감|추가로 보낼|더 보내/.test(t)).map((t) => t.trim()))].slice(0, 6);
+  return `<div class="fl-k">같은 주문 ${cs.length}건</div><div class="fl-csl">${rows}</div>${miss.length ? `<div class="fl-k">누락</div><div class="fl-it">${miss.map((t) => `<div>${esc(t)}</div>`).join('')}</div>` : ''}`;
+}
 function detailHtml(r) {
   const buys = (r.buys || []).filter((b) => b.name).map((b) => `<div class="fl-k">${esc(b.name)}</div><div class="fl-it">${esc(b.item)}</div>`).join('');
   return `<div class="fl-det">
@@ -119,6 +128,7 @@ function detailHtml(r) {
     ${buys || `<div class="fl-it">${esc(r.items)}</div>`}
     ${r.veh ? `<div class="fl-k">차량</div><div class="fl-it">${esc(r.veh)}</div>` : ''}
     ${r.memo ? `<div class="fl-k">할 일</div><div class="fl-it">${esc(r.memo)}</div>` : ''}
+    ${caseHtml(r)}
     <div class="fl-k">전표</div><div>${linesHtml(r)}</div>
     ${r.pl ? `<div class="fl-k">순이익</div><div class="fl-pld"><span>판매 ${won(r.pl.sale)}</span><i>−</i><span>구매 ${won(r.pl.buy)}</span><i>−</i><span>운반비 ${won(r.pl.fare)}</span><i>=</i><b class="${r.pl.net < 0 ? 'no' : ''}">${won(r.pl.net)}</b><em>${r.pl.sale ? Math.round((100 * r.pl.net) / r.pl.sale) : 0}% · 공급가</em></div>` : ''}
     ${(r.ev || []).length ? `<div class="fl-k">근거</div><div class="fl-memo">${evLinks(r.ev)}</div>` : ''}

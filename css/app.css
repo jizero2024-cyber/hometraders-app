@@ -972,3 +972,11 @@ button.fl-chip { border: 0; cursor: pointer; font: inherit; }
 .fl-rqpl label { display: flex; align-items: center; gap: 8px; padding: 6px 4px; font-size: 14px; cursor: pointer; border-radius: 8px; }
 .fl-rqpl label:hover { background: #FBF7F2; }
 .fl-rqpl input[type=checkbox] { width: 16px; height: 16px; padding: 0; flex: none; accent-color: #E8732C; }
+
+.fl-csl{display:flex;flex-direction:column;gap:4px}
+.fl-cs{display:grid;grid-template-columns:48px 40px 1fr auto;gap:8px;align-items:center;font-size:13px;padding:4px 8px;border-radius:6px;background:#fafafa}
+.fl-cs.me{background:#FDF1E9}
+.fl-cs b{font-weight:700}
+.fl-csn{color:#E8732C;font-weight:600}
+.fl-csi{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fl-css{color:#666;font-size:12px}
