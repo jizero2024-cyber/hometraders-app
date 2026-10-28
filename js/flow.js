@@ -17,7 +17,7 @@ const IC = {
   입금: sv('<circle cx="12" cy="12" r="8.5"/><path d="M8 9l1.5 6L12 10l2.5 5L16 9M7.5 12h9"/>'),
 };
 const STEPS = ['견적', '발주', '배차 요청', '배차 완료', '출고 완료', '전표'];   // 전표 = 오늘 전표 확인 (10/28 대표 "오늘 마감에 전표 확인도")   // 전표는 사이드바 '전표 확인'으로 (10/28 대표)
-const LABEL = { 견적: '견적 요청', 전표: '전표 확인' };   // 10/28 대표 "견적 텍스트 견적요청으로"
+const LABEL = { 견적: '견적 요청', 전표: '최종 마감' };   // 10/28 대표 "견적 텍스트 견적요청으로"
 const FL = { marks: {}, data: null, err: '', at: 0, loading: false, cur: '배차 요청', view: 'flow', day: '', sel: '', links: {}, gwait: 0, acts: {} };
 let ctx = { rerender: () => {}, openFrame: () => {} };
 
@@ -140,6 +140,8 @@ function listHtml() {
     setTimeout(fitActs, 0);
     let h = `<div class="fl-lh"><span>도착</span><span>판매처 · 현장</span><span>품목</span><span>상차 → 하차</span><span>차량</span><span></span></div>`, last = null;
     rs.forEach((r) => { const g = dayLab(r); if (g !== last) { h += `<div class="fl-day">${esc(g)}</div>`; last = g; } h += rowHtml(r); });
+    const pls = rs.filter((r) => r.pl), net = pls.reduce((a, r) => a + r.pl.net, 0), sale = pls.reduce((a, r) => a + r.pl.sale, 0);   // 하단 총 순이익 (10/28 대표)
+    if (pls.length) h += `<div class="fl-tot"><span>총 순이익</span><b class="${net < 0 ? 'no' : ''}">${won(net)}</b><em>${sale ? Math.round((100 * net) / sale) : 0}% · ${pls.length}건${pls.length < rs.length ? ` (순이익 못 낸 ${rs.length - pls.length}건 빼고)` : ''}</em></div>`;
     return h;
   }
   const rows = listOf(FL.cur).map((r, i) => [r, i]).sort((a, b) => ((a[0].md ?? 9999) - (b[0].md ?? 9999)) || (tkey(a[0].time) - tkey(b[0].time)) || (a[1] - b[1])).map((x) => x[0]);

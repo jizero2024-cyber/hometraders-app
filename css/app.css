@@ -954,3 +954,5 @@ button.fl-evl { border: 0; cursor: pointer; font: inherit; font-size: 12px; } .f
 .fl-io button { font: inherit; font-size: 11.5px; padding: 2px 7px; border-radius: 6px; border: 0; cursor: pointer; line-height: 1.3; white-space: nowrap; background: #EAF4EC; color: #2E7D4F; font-weight: 600; }
 .fl-io button:hover { background: #D6EBDB; }
 button.fl-chip { border: 0; cursor: pointer; font: inherit; }
+.fl-tot { display: flex; align-items: baseline; justify-content: flex-end; gap: 12px; padding: 18px 10px 6px; border-top: 2px solid #EEECE7; margin-top: 8px; }
+.fl-tot span { font-size: 14px; color: #555; font-weight: 700; } .fl-tot b { font-size: 22px; color: #B4531B; } .fl-tot b.no { color: #C62828; } .fl-tot em { font-style: normal; font-size: 13px; color: #8A877F; }
