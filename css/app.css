@@ -805,7 +805,7 @@ a.fm-btn { text-decoration: none; }
 .fl-st.on { color: #C2410C; font-weight: 800; }
 .fl-st.on i { background: #E8732C; color: #fff; }
 .fl-st.on b { color: #C2410C; }
-.fl-lh, .fl-row { display: grid; grid-template-columns: 84px minmax(0, 1.3fr) minmax(0, 1.2fr) minmax(0, .9fr) 64px 200px; gap: 14px; align-items: center; padding: 12px 10px; }
+.fl-lh, .fl-row { display: grid; grid-template-columns: 84px minmax(0, 1.3fr) minmax(0, 1.2fr) minmax(0, .9fr) 64px var(--acts, 200px); gap: 14px; align-items: center; padding: 12px 10px; }
 .fl-lh { padding: 0 10px 8px; font-size: 12px; color: #A3A09A; font-weight: 700; border-bottom: 1px solid #F1EFEA; }
 .fl-row { border-bottom: 1px solid #F1EFEA; border-radius: 10px; cursor: pointer; }
 .fl-row:hover { background: #FCFBF9; }

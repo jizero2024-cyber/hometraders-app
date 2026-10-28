@@ -104,7 +104,7 @@ export const counts = () => ({
   quote: rowsOf('견적').length, disp: rowsOf('배차 요청').length, songjang: [...rowsOf('배차 완료'), ...rowsOf('출고 완료')].filter((r) => r.day === today()).length,
 });
 export const view = () => FL.view;
-export function setView(v) { FL.view = v === '마감' ? 'flow' : v; FL.sel = ''; if (v === '견적') { FL.view = 'flow'; FL.cur = '견적'; } }
+export function setView(v) { FL.view = v === '마감' ? 'flow' : v; FL.sel = ''; if (v === '견적') FL.cur = '견적'; else if (FL.cur === '견적' && v === 'flow') FL.cur = '배차 요청'; }
 function slipHtml(kind) {   // 전표 확인 — 입력 누락(오늘 먼저 · 지난 날 아래) / 입력 완료(최근 것부터)
   if (!FL.data) return '<div class="fl-empty">불러오는 중…</div>';
   const t = today(), rows = rowsOf(kind).slice().reverse();
@@ -143,10 +143,11 @@ function closeHtml(x) {
 export function main(x) {
   load();
 
+  if (FL.view === '견적') { FL.cur = '견적'; return `<section class="fl"><h1 class="fl-h1">견적 요청</h1><div class="fl-list" style="--acts:${[0, 130, 240, 350][(BTN[FL.cur] || []).length]}px">${listHtml()}</div></section>`; }   // 사이드바 견적 요청 — 단계줄 없이 (10/28 대표)
   if (FL.view === '누락') return `<section class="fl">${slipHtml('입력 누락')}</section>`;
   if (FL.view === '완료') return `<section class="fl">${slipHtml('입력 완료')}</section>`;
   const tg = `<div class="fl-sub fl-tg"><button type="button" class="fl-sb mid ${FL.all ? '' : 'on'}" data-fl="all" data-k="0">오늘</button><button type="button" class="fl-sb mid ${FL.all ? 'on' : ''}" data-fl="all" data-k="1">전체보기</button></div>`;
-  return `<section class="fl" id="fl-list" aria-label="오늘 마감">${tg}${stepsHtml()}<div class="fl-list">${listHtml()}</div></section>`;   // 출고 흐름과 같은 모양, 오늘 건만 (10/28 대표)
+  return `<section class="fl" id="fl-list" aria-label="오늘 마감">${tg}${stepsHtml()}<div class="fl-list" style="--acts:${[0, 130, 240, 350][(BTN[FL.cur] || []).length]}px">${listHtml()}</div></section>`;   // 출고 흐름과 같은 모양, 오늘 건만 (10/28 대표)
 }
 export const panel = main;
 

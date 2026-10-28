@@ -4,7 +4,7 @@
 //   서류 화면은 모두 js/forms.js (같은 머리·카드·버튼)
 import * as S from './store-supabase.js?v=7';
 import * as FM from './forms.js?v=11';
-import * as FL from './flow.js?v=11';   // 맨 위 출고 흐름 (10/28)
+import * as FL from './flow.js?v=12';   // 맨 위 출고 흐름 (10/28)
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const won = (n) => Math.round(Number(n) || 0).toLocaleString();
@@ -120,7 +120,7 @@ function sideHtml() {
   const it = (lab, attr, on, badge, cls) => `<button type="button" class="hm-si ${on ? 'on' : ''} ${cls || ''}" ${attr}><span>${lab}</span>${badge || ''}</button>`;
   return `<nav class="hm-side" aria-label="메뉴">
     ${it('오늘 마감', 'data-hm="fv" data-v="flow"', v === 'flow', n(FL.closeItems({ fare: H.fare || [], inbox: (H.inbox.wait || 0) + (H.inbox.got || 0) + (H.inbox.check || 0) }).filter((i) => i.n).length))}
-    ${it('견적 요청', 'data-hm="fv" data-v="견적"', false, n(c.quote))}
+    ${it('견적 요청', 'data-hm="fv" data-v="견적"', v === '견적', n(c.quote))}
     <div class="hm-sg">서류 변환</div>
     ${it('거래명세표', 'data-hm="go" data-r="stmt"', false, '', 'sub')}
     ${it('납품확인서', 'data-hm="form" data-r="deliv"', false, '', 'sub')}
