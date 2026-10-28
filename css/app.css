@@ -980,3 +980,9 @@ button.fl-chip { border: 0; cursor: pointer; font: inherit; }
 .fl-csn{color:#E8732C;font-weight:600}
 .fl-csi{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fl-css{color:#666;font-size:12px}
+.fl-ms{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;font-size:13px;padding:6px 8px;border-radius:6px;background:#fafafa}
+.fl-ms b{font-weight:700}
+.fl-msd{color:#555}
+.fl-ms em{font-style:normal;font-weight:700;margin-left:auto}
+.fl-ms em.no{color:#D93025}
+.fl-ms em.ok{color:#1E8E3E}

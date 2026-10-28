@@ -101,7 +101,7 @@ function rowHtml(r) {
   const btns = (BTN[FL.cur] || []).filter(([a]) => a !== 'cmp' || allIn(r)).map(([a, t], i) => `<button type="button" class="${i ? 'fl-gh' : 'fl-go'}" data-fl="${a}" data-no="${esc(r.no)}">${t}</button>`).join('');
   const asked = FL.cur === '배차 요청' && S.getShipments().find((s) => String(s.note || '').includes(`출고 흐름 ${r.no})`));
   const cn = caseRows(r).length;
-  const chips = [FL.cur === '입력 완료' && slipOk(r) ? '<span class="fl-chip ok">마감 확인</span>' : '', ...(r.imgs || []).map((x) => `<button type="button" class="fl-chip blu" data-fl="img" data-id="${esc(x.id)}" data-n="${esc(x.name)}">사진</button>`), cn > 1 ? `<span class="fl-chip blu">같은 주문 ${cn}건</span>` : '', ...(r.chips || []).map((c) => `<span class="fl-chip amb">${esc(c)}</span>`), asked ? `<span class="fl-chip blu">요청함 ${esc((String(asked.note).match(/요청함 (\d\d:\d\d)/) || ['', ''])[1])}</span>` : '', r.late && FL.cur === '배차 요청' ? '<span class="fl-chip no">누락</span>' : '', FL.cur === '배차 완료' && !r.driver ? '<span class="fl-chip amb">기사·운임 확인</span>' : ''].join('');
+  const chips = [FL.cur === '입력 완료' && slipOk(r) ? '<span class="fl-chip ok">마감 확인</span>' : '', ...(r.imgs || []).map((x) => `<button type="button" class="fl-chip blu" data-fl="img" data-id="${esc(x.id)}" data-n="${esc(x.name)}">사진</button>`), cn > 1 ? `<span class="fl-chip blu">같은 주문 ${cn}건</span>` : '', (() => { const L = caseRows(r).flatMap((x) => x.miss || []).reduce((a, m) => a + Math.max(0, mLeft(m, Object.fromEntries((FL.data ? FL.data.rows : []).map((x) => [x.no, x])))), 0); return L > 0 ? `<span class="fl-chip no">누락 남음 ${L.toLocaleString()}</span>` : ''; })(), ...(r.chips || []).map((c) => `<span class="fl-chip amb">${esc(c)}</span>`), asked ? `<span class="fl-chip blu">요청함 ${esc((String(asked.note).match(/요청함 (\d\d:\d\d)/) || ['', ''])[1])}</span>` : '', r.late && FL.cur === '배차 요청' ? '<span class="fl-chip no">누락</span>' : '', FL.cur === '배차 완료' && !r.driver ? '<span class="fl-chip amb">기사·운임 확인</span>' : ''].join('');
   const route = FL.cur === '견적' ? '' : `${esc(r.from || '상차지 확인')} → ${esc(r.site || '하차지 확인')}`;
   return `<div class="fl-row ${FL.sel === r.no ? 'sel' : ''}" data-fl="row" data-no="${esc(r.no)}">
     <div class="fl-c fl-tm ${r.late || dday(r) === FL.data.today ? 'now' : ''}">${DATE_FIRST.includes(FL.cur) ? `<b>${esc(dday(r))}</b><span>${esc(r.time || '')}</span>` : `<b>${esc(r.time || (r.day === '미정' ? '미정' : '시간 미정'))}</b><span>${esc(dday(r))}</span>`}</div>
@@ -112,13 +112,19 @@ function rowHtml(r) {
     <div class="fl-acts">${STMT_STEPS.includes(FL.cur) ? stmtHtml(r) : ''}${btns}${FL.cur === '전표' ? `<button type="button" class="fl-sent" data-fl="slipok" data-no="${esc(r.no)}"><i></i>입력 확인</button>` : ''}</div></div>${FL.sel === r.no ? detailHtml(r) : ''}`;
 }
 const stLab = (x) => (x.steps.includes('출고 완료') || x.steps.includes('기록') ? '출고 완료' : x.steps.includes('배차 완료') ? '배차 완료' : x.steps.includes('배차 요청') ? '배차 요청' : x.steps.includes('발주') ? '발주' : x.steps[0] || '');
+const mGone = (t, by) => by[t.no] && ['출고 완료', '배차 완료'].includes(stLab(by[t.no]));   // 차가 잡힌 것만 보낸 걸로
+const mLeft = (m, by) => m.need - m.sent.filter((t) => mGone(t, by)).reduce((a, t) => a + t.q, 0);
 function caseHtml(r) {   // 같은 주문 — 처음 보낸 것·누락분 2차·3차, 누락 남은 것 (10/29 대표)
   const cs = caseRows(r).slice().sort((a, b) => (a.md || 9999) - (b.md || 9999) || String(a.no).localeCompare(String(b.no)));
-  if (cs.length < 2) return '';
+  const ms = cs.flatMap((x) => x.miss || []);
+  if (cs.length < 2 && !ms.length) return '';
   const nth = (i) => (i ? `${i + 1}차` : '처음');
   const rows = cs.map((x, i) => `<div class="fl-cs ${x.no === r.no ? 'me' : ''}"><b>${esc(x.day)}</b><span class="fl-csn">${nth(i)}</span><span class="fl-csi">${esc(x.item || x.items || '')}</span><span class="fl-css">${esc(stLab(x))}</span></div>`).join('');
   const miss = [...new Set(cs.flatMap((x) => String(x.memo || '').split(/\s+·\s+/)).filter((t) => /누락|빠짐|덜\s?감|추가로 보낼|더 보내/.test(t)).map((t) => t.trim()))].slice(0, 6);
-  return `<div class="fl-k">같은 주문 ${cs.length}건</div><div class="fl-csl">${rows}</div>${miss.length ? `<div class="fl-k">누락</div><div class="fl-it">${miss.map((t) => `<div>${esc(t)}</div>`).join('')}</div>` : ''}`;
+  const by = Object.fromEntries((FL.data ? FL.data.rows : []).map((x) => [x.no, x])), q = (n) => `${Number(n).toLocaleString()}`;
+  const gone = (t) => mGone(t, by), lf = (m) => mLeft(m, by);
+  const mq = ms.map((m) => `<div class="fl-ms"><b>${esc(m.item)}</b><span>빠짐 ${q(m.need)}${esc(m.unit)}</span>${m.sent.map((t) => `<span class="fl-msd">${esc(t.day || '')} ${q(t.q)} ${gone(t) ? '보냄' : '보낼 것'} · ${esc(by[t.no] ? stLab(by[t.no]) : '')}</span>`).join('')}<em class="${lf(m) > 0 ? 'no' : 'ok'}">${lf(m) > 0 ? `남음 ${q(lf(m))}${esc(m.unit)}` : '다 보냄'}</em></div>`).join('');
+  return `${cs.length > 1 ? `<div class="fl-k">같은 주문 ${cs.length}건</div><div class="fl-csl">${rows}</div>` : ''}${mq ? `<div class="fl-k">누락</div><div class="fl-csl">${mq}</div>` : miss.length ? `<div class="fl-k">누락</div><div class="fl-it">${miss.map((t) => `<div>${esc(t)}</div>`).join('')}</div>` : ''}`;
 }
 function detailHtml(r) {
   const buys = (r.buys || []).filter((b) => b.name).map((b) => `<div class="fl-k">${esc(b.name)}</div><div class="fl-it">${esc(b.item)}</div>`).join('');
