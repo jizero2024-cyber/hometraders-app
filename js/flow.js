@@ -228,9 +228,8 @@ export function bind(app, c) {
       }).catch(() => open(itemRows(r.items)));
     }
     else if (a === 'quote' && r) quoteFor(r);
-    else if (a === 'qk' && FL.qpick) { const p = FL.qpick, k = t.dataset.k; FL.qpick = null; closeQ();
-      const color = ((document.getElementById('fl-qc') || {}).value || '').trim();
-      const body = k === '' ? String(p.r.items || p.r.item || '').split(/\s*·\s*/).join('\n') : (p.kits[k] || []).map(([n, q, u]) => `${String(n).replace(/<색상>/g, color || '색상').replace(/<색>/g, '')} ${q} ${u || ''}`.trim()).join('\n');
+    else if (a === 'qk' && FL.qpick) { const p = FL.qpick, k = t.dataset.k, color = ((document.getElementById('fl-qc') || {}).value || '').trim().toUpperCase(); FL.qpick = null; closeQ();
+      const body = k === '' ? String(p.r.items || p.r.item || '').split(/\s*·\s*/).join('\n') : (p.kits[k] || []).map(([n, q, u]) => `${String(n).replace(/<색상>/g, color || '색상').replace(/_?<색>/g, '')} ${q} ${String(u || '').replace(/\s*\(.*\)/, '')}`.trim()).join('\n');
       FM.presetQuote(body, p.r.partner, p.r.site); ctx.rerender(); }
     else if (a === 'qx') { FL.qpick = null; closeQ(); }
     else if (['deliv', 'approval', 'quote', 'stmt'].includes(a)) { FM.open(a === 'stmt' ? '' : a); if (a === 'stmt') ctx.go('stmt'); else ctx.rerender(); }
