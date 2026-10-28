@@ -56,7 +56,10 @@ const ioHtml = (r) => {   // 리스트에서 판매·구매·운반비 입력됐
   const seen = {};
   (r.lines || []).forEach((l) => { const k = l.k === '반품' ? '판매' : l.k; const v = l.st === '입력' ? 2 : l.st === '—' ? 0 : 1; seen[k] = seen[k] === 1 || v === 1 ? 1 : Math.max(seen[k] ?? 0, v); });   // 하나라도 안 됐으면 ✕
   const ks = ['판매', '구매', '운반비'].filter((k) => k in seen);
-  return ks.length ? `<div class="fl-io">${ks.map((k) => `<span class="${['na', 'no', 'ok'][seen[k]]}">${k}${seen[k] === 2 ? ' ✓' : seen[k] === 1 ? ' ✕' : ' —'}</span>`).join('')}${plHtml(r)}</div>` : '';
+  const sl = (k) => [...new Set((r.lines || []).filter((l) => (l.k === '반품' ? '판매' : l.k) === k && l.st === '입력').flatMap((l) => l.slips || []))];
+  return ks.length ? `<div class="fl-io">${ks.map((k) => (seen[k] === 2 && sl(k).length   // 초록 = 누르면 그 전표 PDF (10/28 대표)
+    ? `<button type="button" class="ok" data-fl="pdf" data-k="${k === '판매' ? '판매' : '구매'}" data-s="${esc(sl(k).join(','))}">${k} ✓</button>`
+    : `<span class="${['na', 'no', 'ok'][seen[k]]}">${k}${seen[k] === 2 ? ' ✓' : seen[k] === 1 ? ' ✕' : ' —'}</span>`)).join('')}${plHtml(r)}</div>` : '';
 };
 const won = (n) => `${Math.round(n).toLocaleString()}원`;
 const plHtml = (r) => (r.pl ? `<span class="fl-pl ${r.pl.net < 0 ? 'no' : ''}" title="판매 ${won(r.pl.sale)} − 구매 ${won(r.pl.buy)} − 운반비 ${won(r.pl.fare)} (공급가)">순이익 ${won(r.pl.net)} · ${r.pl.sale ? Math.round((100 * r.pl.net) / r.pl.sale) : 0}%</span>` : '');   // 판매·구매·운반비 다 들어간 건 (10/28 대표)
@@ -90,7 +93,7 @@ function rowHtml(r) {
   const btns = (BTN[FL.cur] || []).filter(([a]) => a !== 'cmp' || allIn(r)).map(([a, t], i) => `<button type="button" class="${i ? 'fl-gh' : 'fl-go'}" data-fl="${a}" data-no="${esc(r.no)}">${t}</button>`).join('');
   const asked = FL.cur === '배차 요청' && S.getShipments().find((s) => String(s.note || '').includes(`출고 흐름 ${r.no})`));
   const cn = caseRows(r).length;
-  const chips = [cn > 1 ? `<span class="fl-chip blu">같은 주문 ${cn}건</span>` : '', ...(r.chips || []).map((c) => `<span class="fl-chip amb">${esc(c)}</span>`), asked ? `<span class="fl-chip blu">요청함 ${esc((String(asked.note).match(/요청함 (\d\d:\d\d)/) || ['', ''])[1])}</span>` : '', r.late && FL.cur === '배차 요청' ? '<span class="fl-chip no">누락</span>' : '', FL.cur === '배차 완료' && !r.driver ? '<span class="fl-chip amb">기사·운임 확인</span>' : ''].join('');
+  const chips = [...(r.imgs || []).map((x) => `<button type="button" class="fl-chip blu" data-fl="img" data-id="${esc(x.id)}" data-n="${esc(x.name)}">사진</button>`), cn > 1 ? `<span class="fl-chip blu">같은 주문 ${cn}건</span>` : '', ...(r.chips || []).map((c) => `<span class="fl-chip amb">${esc(c)}</span>`), asked ? `<span class="fl-chip blu">요청함 ${esc((String(asked.note).match(/요청함 (\d\d:\d\d)/) || ['', ''])[1])}</span>` : '', r.late && FL.cur === '배차 요청' ? '<span class="fl-chip no">누락</span>' : '', FL.cur === '배차 완료' && !r.driver ? '<span class="fl-chip amb">기사·운임 확인</span>' : ''].join('');
   const route = FL.cur === '견적' ? '' : `${esc(r.from || '상차지 확인')} → ${esc(r.site || '하차지 확인')}`;
   return `<div class="fl-row ${FL.sel === r.no ? 'sel' : ''}" data-fl="row" data-no="${esc(r.no)}">
     <div class="fl-c fl-tm ${r.late || r.day === FL.data.today ? 'now' : ''}"><b>${esc(r.time || (r.day === '미정' ? '미정' : '시간 미정'))}</b><span>${esc(r.day)}</span></div>
@@ -269,6 +272,12 @@ export function bind(app, c) {
     const a = t.dataset.fl, r = FL.data && FL.data.rows.find((x) => x.no === t.dataset.no);
     if (a !== 'row') e.stopPropagation();
     if (a === 'step') { FL.cur = t.dataset.k; FL.sel = ''; ctx.rerender(); }
+    else if (a === 'img') {   // 견적 요청 사진
+      closeQ(); const ov = document.createElement('div'); ov.className = 'hm-ov fl-qov';
+      ov.innerHTML = `<div class="hm-modal fl-cmpm" role="dialog" aria-label="사진"><div class="hm-mh"><b>${esc(t.dataset.n || '사진')}</b><button type="button" class="hm-x" aria-label="닫기">✕</button></div><div class="fl-cmpg"><div class="fl-cmpc"><iframe src="https://drive.google.com/file/d/${encodeURIComponent(t.dataset.id)}/preview" title="사진"></iframe></div></div></div>`;
+      ov.addEventListener('click', (ev) => { if (ev.target === ov || ev.target.closest('.hm-x')) ov.remove(); });
+      document.body.appendChild(ov);
+    }
     else if (a === 'slipok' && r) { const key = `slipok:${r.case || r.no}`; S.addFlowMark(key, `${r.partner} ${r.site}`, ctx.me ? ctx.me() : '').then((err) => { if (err) alert('저장 못 했어요 — ' + err); else { FL.marks[key] = { created_at: new Date().toISOString() }; ctx.rerender(); } }); }
     else if (a === 'sent' && r) { if (!confirm(`${r.partner} · ${r.site} 거래처 전달 체크할까요?`)) return; S.addFlowMark(`sent:${r.no}`, `${r.partner} ${r.site}`, ctx.me ? ctx.me() : '').then((err) => { if (err) alert('저장 못 했어요 — ' + err); else { FL.marks[`sent:${r.no}`] = { created_at: new Date().toISOString() }; ctx.rerender(); } }); }
     else if (a === 'stmtgo' && r) { FM.presetStmt(/공간/.test(r.partner) ? 'stmt-gong' : 'stmt-etc', (t.dataset.s || '').split(',').join(' '), r.salerows); ctx.rerender(); }
