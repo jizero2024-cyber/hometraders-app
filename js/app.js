@@ -1,14 +1,14 @@
 import {
   CATEGORIES, UNITS, WH_ICON_KEYS, swatchFor, SILICONE_COLORS,
 } from './data.js?v=2';
-import * as S from './store-supabase.js?v=6';
+import * as S from './store-supabase.js?v=7';
 import { ECOUNT_ITEMS } from './ecount-items.js';
 import { makeMatcher, readPastedText, quotePrev } from './textread.js';
 import * as DL from './delivery.js';
 import * as SM from './stmt.js?v=103';
-import * as HD from './hdisp.js?v=7';
-import * as HM from './home.js?v=9';
-import * as FM from './forms.js?v=9';
+import * as HD from './hdisp.js?v=8';
+import * as HM from './home.js?v=10';
+import * as FM from './forms.js?v=10';
 
 // 창고 아이콘 세트 (무채색)
 const WH_ICONS = {
@@ -4961,8 +4961,8 @@ function render() {
   //   다시 그리기가 돌아 기본 화면(PC = 홈트 도우미)이 떴음 — 공간제작소 쪽에 우리 업무툴이 보이면 절대 안 됨
   if (!booted || !myAccount || IN_GONGGAN) return;
   queueMicrotask(syncUrl);   // 화면을 다 그린 뒤 정해진 route 로 (PC·휴대폰 route 바꿈 포함)
-  if (myAccount === GONG_ID || String(state.route).startsWith('gonggan')) {   // 공간제작소는 따로 된 페이지(/gonggan/ — gonggan-app.js)에서만 (10/23 대표 "사이트 코드 분리")
-    location.replace(state.route === 'gonggan-ace' && myAccount !== GONG_ID ? '/gonggan-ace/' : '/gonggan/');
+  if (String(state.route).startsWith('gonggan')) {   // 공간제작소는 따로 된 페이지(/gonggan/ — gonggan-app.js)에서만 (10/23 대표 "사이트 코드 분리")
+    location.replace(state.route === 'gonggan-ace' ? '/gonggan-ace/' : '/gonggan/');
     return;
   }
   if (FM.ROUTES.includes(state.route)) {   // 간단 서류 화면 — 거래명세표 3종 · 납품확인서 (10/23)
@@ -5606,7 +5606,6 @@ function downloadJSON() {
   URL.revokeObjectURL(a.href);
 }
 
-const GONG_ID = 'space1234';   // 공간제작소(현구 과장님) 계정 — 로그인하면 공간제작소 화면만
 function showLogin(msg) {
   app.innerHTML = `
   <div style="max-width:340px;margin:12vh auto 0;padding:0 24px;text-align:center">
@@ -5631,7 +5630,8 @@ async function boot() {
   if (booted) { render(); return; }
   app.innerHTML = '<div style="padding:64px 24px;text-align:center;color:#888;font-size:15px">불러오는 중…</div>';
   // PC는 열 때마다 대화 화면부터 (예전엔 마지막 화면을 기억해 업무 현황이 다시 떠서 바뀐 걸 못 봄). 휴대폰은 기억한 화면 그대로
-  if (myAccount === GONG_ID) { booted = false; myAccount = ''; showLogin(); return; }   // 공간제작소 계정으로 로그인된 기기에서 업무툴 주소 → 돌려보내지 않고 직원 로그인 화면 (10/25 대표). 자료는 DB 가 막음
+  const acc = await S.myAccess();   // 직원 명단(staff_accounts)에 없는 계정 → 직원 로그인 화면 (10/25 대표). 자료는 DB 가 막음
+  if (acc ? !acc.staff : /^space\d+$/.test(myAccount)) { booted = false; myAccount = ''; showLogin(); return; }
   if (location.pathname.startsWith('/gonggan')) { location.replace(location.pathname.startsWith('/gonggan-ace') ? '/gonggan-ace/' : '/gonggan/'); return; }
   state.route = routeFromPath();   // 열 때마다 첫 화면(에이스/홈트)부터 — 주소에 화면 이름(/homt·/chat …)이 있으면 그 화면. 에이스를 누르면 아래 aceRoute() 로 기존 ERP
   try { await S.init(); booted = true; render(); }

@@ -29,6 +29,11 @@ export async function signIn(id, password) {
   if (error) throw error;
 }
 export async function signOut() { await sb.auth.signOut(); }
+// 로그인한 계정의 권한 {staff, partner, role} — DB(보안 1단계 SQL)가 정함. DB 에 아직 없으면 null
+export async function myAccess() {
+  const { data, error } = await sb.rpc('my_access');
+  return error ? null : data;
+}
 
 // ── 공간제작소 명세 (gonggan_sales · gonggan_docs) ──
 const noTable = (e, what) => new Error(/does not exist|relation|schema cache|could not find/i.test(e.message) ? `공유 DB 에 ${what} 표가 아직 없어요.` : e.message);

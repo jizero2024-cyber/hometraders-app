@@ -1,15 +1,16 @@
 // 공간제작소 페이지 (/gonggan/ · /gonggan-ace/) — 우리 업무 앱(app.js)과 완전히 따로 (10/23 대표 "공간제작소 관련된 건 사이트 코드 분리")
 //   이 페이지는 우리 업무 앱 코드를 하나도 불러오지 않음: 로그인 · 공간제작소 명세(gbms.js) · 거래명세표 그리기(stmt.js) 만.
-//   공간제작소 계정(space1234)은 코드 하나로 로그인. 직원 계정도 같은 화면 (직원만: 직접 등록 · 처음 화면 · 거래명세표 지우기).
-import * as S from './gonggan-store.js?v=7';
-import * as GB from './gbms.js?v=41';
+//   공간제작소 계정은 코드 한 칸으로 로그인. 직원 계정도 같은 화면 (직원만: 직접 등록 · 올릴 전표 · 처음 화면).
+//   권한(staff · edit · view)은 DB 의 staff_accounts · partner_accounts 가 정함 (2026-10-28-security-step1.sql).
+import * as S from './gonggan-store.js?v=8';
+import * as GB from './gbms.js?v=42';
 
 const app = document.getElementById('app');
-const GONG_ID = 'space1234';
-const GONG_MIN_LOGIN = '2026-10-25T05:37:00Z';   // 공간제작소 계정: 이 시각(10/25 14:37 — 비밀번호 바꾼 뒤) 전에 로그인한 기기는 다시 로그인해야 함 — 비밀번호 바꿀 때마다 이 값을 지금으로
+const CODE_LOGINS = { space1234: 'view', space1225: 'edit' };   // 코드 한 칸 로그인 계정 (권한은 DB 가 정하고, DB 에 아직 없을 때만 이 값)
+const GONG_MIN_LOGIN = '2026-10-25T05:37:00Z';   // 공간제작소 계정: 이 시각 전에 로그인한 기기는 다시 로그인해야 함
 const CLOSED = false;  // 공간제작소 계정 닫기 스위치 (10/23 닫음 → 10/25 대표 "이제 열어줘" → 10/27 오전 "아직 막아줘" → 10/27 대표 "기안확정·수정요청·다운받기만 되게 하고 이제 풀어줘"). 닫을 땐 true + DB 정책 gonggan_closed
 const HELPER = 'http://127.0.0.1:4180';   // 사무실 맥 도우미 — 직원이 직접 등록할 때 PDF·사진 읽기
-let me = '';
+let me = '', role = '';   // role: staff · edit · view
 let booted = false;
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -36,30 +37,37 @@ app.addEventListener('submit', (e) => {
   e.preventDefault();
   const code = e.target.code.value.trim(), err = document.getElementById('gg-err');
   if (err) err.textContent = '로그인 중…';
-  S.signIn(GONG_ID, code)
-    .catch(() => (/^[a-z]+\d+$/i.test(code) ? S.signIn(code.toLowerCase(), code) : Promise.reject()))   // space1225 = 우리 직원 계정 — 코드 = 그 아이디 (10/27 대표)
-    .catch(() => { if (err) err.textContent = '코드를 확인해 주세요'; });   // 코드 = space1234(현구 과장님) 계정 비밀번호 — 직원은 첫 화면에서 로그인하고 들어옴 (10/27 대표 "코드만, 그때처럼")   // 아이디는 space1234 고정, 코드 = 비밀번호 (10/23 대표: 비밀번호를 바꿔도 코드만 새로)
+  Object.keys(CODE_LOGINS).reduce((p, id) => p.catch(() => S.signIn(id, code)), Promise.reject())   // 직원은 첫 화면에서 로그인하고 들어옴
+    .catch(() => { if (err) err.textContent = '코드를 확인해 주세요'; });
 });
 
 async function boot() {
   const session = await S.getSession();
   if (!session) { booted = false; me = ''; if (!document.getElementById('gg-login')) showLogin(); return; }
   me = ((session.user && session.user.email) || '').split('@')[0];
-  const signedAt = Date.parse((session.user && session.user.last_sign_in_at) || '') || 0;
-  if (me === GONG_ID && signedAt < Date.parse(GONG_MIN_LOGIN)) {   // 이 시각 전에 들어온 공간제작소 로그인은 끊음 — 비밀번호 바꾼 뒤 예전 로그인이 남은 기기 (10/25 대표)
+  const acc = await S.myAccess();
+  role = acc ? (acc.staff ? 'staff' : acc.partner === '공간제작소' ? (acc.role === 'edit' ? 'edit' : 'view') : '') : (CODE_LOGINS[me] || 'staff');
+  if (!role) {   // 직원도 공간제작소 계정도 아님
     booted = false; me = '';
     await S.signOut();
     showLogin('코드를 확인해 주세요');
     return;
   }
-  if (me === GONG_ID && CLOSED) {   // 지금은 공간제작소 계정으로 못 들어옴 (10/23 대표 "나만 들어갈 수 있게") — 다시 열 때 CLOSED = false
+  const signedAt = Date.parse((session.user && session.user.last_sign_in_at) || '') || 0;
+  if (role !== 'staff' && signedAt < Date.parse(GONG_MIN_LOGIN)) {   // 이 시각 전에 들어온 공간제작소 로그인은 끊음 (10/25 대표)
+    booted = false; me = '';
+    await S.signOut();
+    showLogin('코드를 확인해 주세요');
+    return;
+  }
+  if (role !== 'staff' && CLOSED) {   // 지금은 공간제작소 계정으로 못 들어옴 (10/23 대표 "나만 들어갈 수 있게") — 다시 열 때 CLOSED = false
     booted = false; me = '';
     await S.signOut();
     showLogin('코드를 확인해 주세요');
     return;
   }
   booted = true;
-  if (location.hash === '#wait' && me !== GONG_ID) { GB.openWait(); history.replaceState(null, '', location.pathname); }   // 처음 화면 '공간 올릴 전표' 칸에서 (10/27)
+  if (location.hash === '#wait' && role === 'staff') { GB.openWait(); history.replaceState(null, '', location.pathname); }   // 처음 화면 '공간 올릴 전표' 칸에서 (10/27)
   render();
 }
 
@@ -98,19 +106,20 @@ async function helperFetch(path, body) {
   return j;
 }
 function helperUp() {
-  if (me === GONG_ID) return false;
+  if (role !== 'staff') return false;
   if (Date.now() - helper.at > 60000) { helper.at = Date.now(); helperFetch('/api/health').then(() => { helper.up = true; }).catch(() => { helper.up = false; }); }
   return helper.up;
 }
 
 GB.bind(app, {
   rerender: render,
-  goStart: () => { if (me !== GONG_ID) location.href = '/main'; },   // 직원만 (공간제작소 계정엔 버튼이 없음)
+  goStart: () => { if (role === 'staff') location.href = '/main'; },   // 직원만 (공간제작소 계정엔 버튼이 없음)
   go: (r) => { history.pushState(null, '', r === 'gonggan-ace' ? '/gonggan-ace/' : '/gonggan/'); render(); },
   me: () => me,
-  logout: () => { booted = false; me = ''; S.signOut().finally(() => showLogin()); },   // 같은 기기에서 직원 계정으로 바꿔 들어갈 때 (10/25)
-  slips: (text) => (me === GONG_ID ? Promise.resolve({ head: SLIP_HEAD, slips: [] }) : slipsFor(text)),
-  helper: (path, body) => (me === GONG_ID ? Promise.reject(new Error('사용할 수 없어요')) : helperFetch(path, body)),
+  role: () => role,
+  logout: () => { booted = false; me = ''; role = ''; S.signOut().finally(() => showLogin()); },   // 같은 기기에서 직원 계정으로 바꿔 들어갈 때 (10/25)
+  slips: (text) => (role !== 'staff' ? Promise.resolve({ head: SLIP_HEAD, slips: [] }) : slipsFor(text)),
+  helper: (path, body) => (role !== 'staff' ? Promise.reject(new Error('사용할 수 없어요')) : helperFetch(path, body)),
   helperUp,
 });
 window.addEventListener('popstate', render);

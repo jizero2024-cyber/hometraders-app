@@ -1,7 +1,7 @@
 // 공간제작소 BMS — 거래명세표 · 세금계산서 · 기안 (2026-10-23, 시안 https://claude.ai/artifact/Kmkve915nhwknjJYE76xGE)
 // 줄 = 이카운트 판매현황의 공간제작소 판매 줄(gonggan_sales, 맥 도우미가 올림) → 거래명세표 변환기(stmt.js)로 장마다 나눔.
 // 장마다 상태·세금계산서·수정요청 사유 = gonggan_docs. 홈트레이더스·현구 과장님 같은 화면.
-import * as S from './gonggan-store.js?v=7';   // 우리 업무 앱 저장소와 따로 (10/23)
+import * as S from './gonggan-store.js?v=8';   // 우리 업무 앱 저장소와 따로 (10/23)
 import * as SM from './stmt.js?v=101';
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -56,7 +56,7 @@ export async function load(biz, force) {
       .filter((d) => (G.docs[d.id] || {}).status !== '삭제')                         // 지운 장은 안 보임 (10/23)
       .sort((a, b) => (b.ymd + b.slip).localeCompare(a.ymd + a.slip));
     G.wait = [];                                         // 올릴 전표 (10/27) — 홈트 목록에만, 공간제작소 계정은 안 봄
-    if (ctx.me() !== 'space1234') {                      // 에이스 화면에서도 사이드바 숫자가 보이게 (10/27 대표)
+    if (ctx.role() === 'staff') {                        // 에이스 화면에서도 사이드바 숫자가 보이게 (10/27 대표)
       const ws = await S.getWaitSlips().catch(() => []);
       G.waitMeta = Object.fromEntries(ws.map((x) => [x.slip, x]));   // 전표 → {pdf, who}
       const w = ws.flatMap((x) => x.rows || []);
@@ -73,8 +73,8 @@ export async function load(biz, force) {
 }
 // 상태 직접 바꾸기 (10/23 대표 "기안중 결재전 이런 식으로") — 색 띠 모양 그대로 고르는 칸
 const statusPick = (id, st) => LIM() ? `<span style="display:inline-block;padding:4px 10px;border-radius:12px;font-size:12px;font-weight:700;${BADGE[st]}">${st}</span>` : `<select data-gb="setstatus" data-id="${esc(id)}" aria-label="상태 바꾸기" style="appearance:none;-webkit-appearance:none;border:0;cursor:pointer;padding:4px 10px;border-radius:12px;font:inherit;font-size:12px;font-weight:700;text-align:center;${BADGE[st]}">${STATUS.slice(1).map((k) => `<option style="color:#1F2328;background:#fff" ${k === st ? 'selected' : ''}>${k}</option>`).join('')}</select>`;
-// 현구대리님 계정(space1234) — 수정요청 · 기안 확정만 (10/27 대표). 최종완료는 우리가 입금 확인 후. 고치기·넣기·지우기 버튼은 안 보이고 눌려도 안 됨
-const LIM = () => ctx.me() === 'space1234';
+// 보기 계정(view) — 수정요청 · 기안 확정만 (10/27 대표). 최종완료는 우리가 입금 확인 후. 고치기·넣기·지우기 버튼은 안 보이고 눌려도 안 됨
+const LIM = () => ctx.role() === 'view';
 const LIM_ACTS = new Set(['editsite', 'edittitle', 'edittotal', 'delrow', 'delstmt', 'deltax', 'replace', 'addstmt', 'addtax', 'pend-save', 'pend-cancel', 'editno', 'reg', 'reg-save']);
 // 10/27 대표 "기안확정이랑 수정요청 그리고 다운받기만" — 이 계정은 아래 보기·다운로드·기안 확정·수정요청만 (나머지는 눌려도 안 됨)
 const LIM_OK = new Set(['row', 'close', 'overlay', 'panel', 'zoom', 'unzoom', 'both', 'draft', 'reject', 'reason', 'month', 'status', 'page', 'size', 'site', 'q', 'feed', 'biz', 'logout', 'copyno', 'pdf', 'copy', 'jpg', 'view']);
@@ -196,9 +196,9 @@ export function screen() {
     <div class="gb-logo" style="display:flex;align-items:center;gap:10px;padding:4px 8px 18px"><img src="/icons/partner-gongan.png" alt="공간제작소" style="height:40px"><span aria-hidden="true" style="color:#8A8A8A">×</span><img src="/icons/logo-full.png" alt="HOME TRADERS" style="height:36px"></div>
     <button type="button" data-gb="biz" data-v="homt" style="${navStyle(!isAce && G.view !== 'wait')}"><span>홈트레이더스</span><span>${isAce ? '' : G.list.length}</span></button>
     <button type="button" data-gb="biz" data-v="ace" style="${navStyle(isAce)}"><span>에이스</span><span>${isAce ? G.list.length : ''}</span></button>
-    ${ctx.me() === 'space1234' ? '' : `<button type="button" data-gb="view" data-v="${G.view === 'wait' && !isAce ? 'list' : 'wait'}" style="${navStyle(G.view === 'wait' && !isAce)};margin-top:10px"><span>올릴 전표</span><span style="${G.wait.length ? 'min-width:20px;padding:0 6px;border-radius:10px;background:#E8732C;color:#fff;font-size:12px;text-align:center' : ''}">${G.wait.length || ''}</span></button>`}
-    ${ctx.me() === 'space1234' ? '' : '<button type="button" data-gb="start" style="margin-top:auto;border:0;background:none;text-align:left;padding:14px 8px 4px;font:inherit;font-size:12px;color:#6B6B6B;cursor:pointer">‹ 처음 화면</button>'}
-    <button type="button" data-gb="logout" style="${ctx.me() === 'space1234' ? 'margin-top:auto;' : ''}border:0;background:none;text-align:left;padding:10px 8px 4px;font:inherit;font-size:12px;color:#9A9A9A;cursor:pointer">로그아웃</button>
+    ${ctx.role() !== 'staff' ? '' : `<button type="button" data-gb="view" data-v="${G.view === 'wait' && !isAce ? 'list' : 'wait'}" style="${navStyle(G.view === 'wait' && !isAce)};margin-top:10px"><span>올릴 전표</span><span style="${G.wait.length ? 'min-width:20px;padding:0 6px;border-radius:10px;background:#E8732C;color:#fff;font-size:12px;text-align:center' : ''}">${G.wait.length || ''}</span></button>`}
+    ${ctx.role() !== 'staff' ? '' : '<button type="button" data-gb="start" style="margin-top:auto;border:0;background:none;text-align:left;padding:14px 8px 4px;font:inherit;font-size:12px;color:#6B6B6B;cursor:pointer">‹ 처음 화면</button>'}
+    <button type="button" data-gb="logout" style="${ctx.role() !== 'staff' ? 'margin-top:auto;' : ''}border:0;background:none;text-align:left;padding:10px 8px 4px;font:inherit;font-size:12px;color:#9A9A9A;cursor:pointer">로그아웃</button>
   </nav>
   <main class="gb-main" style="flex:999 1 560px;min-width:0;padding:28px 32px 48px;box-sizing:border-box;display:flex;flex-direction:column;gap:18px">
     ${G.view === 'wait' && !isAce ? waitHtml() + '<div hidden>' : ''}
@@ -235,7 +235,7 @@ export function screen() {
       </table>
     </div>
     <nav aria-label="페이지" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
-      <span style="display:flex;align-items:center;gap:14px;font-size:13px;color:#5C5C5C">총 ${shown.length}건${ctx.me() === 'space1234' ? '' : '<button type="button" data-gb="reg" style="border:0;background:none;padding:0;font:inherit;font-size:12px;color:#9A9A9A;cursor:pointer;text-decoration:underline;text-underline-offset:3px">+ 직접 등록</button>'}</span>
+      <span style="display:flex;align-items:center;gap:14px;font-size:13px;color:#5C5C5C">총 ${shown.length}건${ctx.role() !== 'staff' ? '' : '<button type="button" data-gb="reg" style="border:0;background:none;padding:0;font:inherit;font-size:12px;color:#9A9A9A;cursor:pointer;text-decoration:underline;text-underline-offset:3px">+ 직접 등록</button>'}</span>
       <div style="display:flex;gap:4px">${Array.from({ length: pages }, (_, i) => i + 1).map((n) => `<button type="button" data-gb="page" data-v="${n}" style="min-width:36px;height:36px;padding:0 10px;border-radius:8px;font:inherit;font-size:13px;cursor:pointer;${n === G.page ? 'background:#1F2328;color:#fff;border:1px solid #1F2328;font-weight:700' : 'background:#fff;color:#1F2328;border:1px solid #E6E4DF'}">${n}</button>`).join('')}</div>
       <span style="position:relative;display:inline-flex"><select data-gb="size" aria-label="한 페이지에" style="height:36px;border:1px solid #E6E4DF;border-radius:8px;padding:0 40px 0 14px;font:inherit;font-size:13px;background:#fff;appearance:none;-webkit-appearance:none;cursor:pointer">${[20, 50, 100].map((n) => `<option value="${n}" ${G.size === n ? 'selected' : ''}>${n}개씩</option>`).join('')}</select>${CHEV}</span>
     </nav>

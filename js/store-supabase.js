@@ -566,6 +566,11 @@ export function onAuthChange(cb) { sb.auth.onAuthStateChange((_e, session) => cb
 // 이미 이메일 형식(@ 포함)이면 그대로 사용.
 export const ID_DOMAIN = '@hometraders.local';
 export const idToEmail = (id) => (id.includes('@') ? id.trim() : id.trim().toLowerCase() + ID_DOMAIN);
+// 로그인한 계정의 권한 {staff, partner, role} — DB(보안 1단계 SQL)가 정함. DB 에 아직 없으면 null
+export async function myAccess() {
+  const { data, error } = await sb.rpc('my_access');
+  return error ? null : data;
+}
 export async function signIn(id, password) {
   const { error } = await sb.auth.signInWithPassword({ email: idToEmail(id), password });
   if (error) throw error;
