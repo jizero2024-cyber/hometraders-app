@@ -108,7 +108,7 @@ function fetchLinks(r) {
 }
 // 송장 품목 — 출고일보 품목 글 '판재 124 · 코너 46 · …' 을 줄로
 function itemRows(txt) {
-  return String(txt || '').replace(/^[^:：]{0,40}[:：]\s*/, '').split(/\s*[·,/]\s*/).map((x) => x.trim()).filter(Boolean).slice(0, 30).map((x) => {
+  return String(txt || '').replace(/^[^:：]{0,40}[:：]\s*/, '').replace(/@\s*[\d,]+원?/g, '').replace(/\([^)]*\)|\[[^\]]*\]/g, '').split(/\s*·\s*|,\s+|\s+\/\s+/).map((x) => x.trim()).filter(Boolean).slice(0, 30).map((x) => {
     const m = x.match(/^(.*?)\s*(\d+(?:\.\d+)?)\s*(PLT|plt|박스|BOX|장|개|롤|봉|줄|대|EA|ea)?$/);
     return m ? { name: m[1].trim() || x, qty: m[2], unit: m[3] || '개' } : { name: x, qty: '', unit: '개' };
   });
