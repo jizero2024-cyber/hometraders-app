@@ -133,10 +133,58 @@ function esongScreen() {
     <div class="fm-tab"><div class="fm-th es"><span>품명</span><span>수량</span><span>단위</span><span></span></div>
       ${d.items.map((r, k) => `<div class="fm-tr es"><input data-fm-esr="${k}" data-f="name" value="${esc(r.name)}" placeholder="품명"><input data-fm-esr="${k}" data-f="qty" value="${esc(r.qty)}" inputmode="decimal" placeholder="수량"><input data-fm-esr="${k}" data-f="unit" value="${esc(r.unit)}" placeholder="단위"><button type="button" class="fm-x" data-fm="es-rdel" data-k="${k}" aria-label="줄 지우기">✕</button></div>`).join('')}
       <button type="button" class="fm-add" data-fm="es-radd">＋ 줄</button></div>
-    <div class="fm-row"><span class="sp"></span><button type="button" class="fm-btn" data-fm="es-make" ${f.busy ? 'disabled' : ''}>${f.busy ? '만드는 중…' : '송장 링크 만들기'}</button></div>
+    <div class="fm-row"><span class="sp"></span><button type="button" class="fm-btn ghost" data-fm="es-img">이미지</button><button type="button" class="fm-btn" data-fm="es-make" ${f.busy ? 'disabled' : ''}>${f.busy ? '만드는 중…' : '송장 링크 만들기'}</button></div>
     ${f.link ? `<div class="fm-link"><input readonly value="${esc(f.link)}" id="fm-es-link"><button type="button" class="fm-btn ghost" data-fm="es-copy">${f.copied ? '복사됨 ✓' : '복사'}</button>${f.made ? `<button type="button" class="fm-btn ghost" data-fm="es-msg">${f.copied === 'm' ? '복사됨 ✓' : '보낼 문구 복사'}</button>` : ''}${navigator.share ? '<button type="button" class="fm-btn ghost" data-fm="es-share">보내기</button>' : ''}<a class="fm-btn ghost" href="${esc(f.link)}" target="_blank" rel="noopener">열기</a></div>` : ''}
   </section>`;
   return inputCard(f, '.xlsx,.xlsm,.xls', '<button type="button" class="fm-btn ghost" data-fm="es-new">빈 양식</button>') + ed + esList();
+}
+// 납품송장 이미지 (10/28 대표 "전자 송장은 이미지로도, 납품송장 그 형식으로") — A5 가로, 장마다 PNG
+//   머리: 왼쪽 '납 품 송 장' + '<현장> · 납품일자', 오른쪽 로고 · 표 순번·품명·단위·수량·확인 · 아래 '주식회사 홈트레이더스 n / N' · 마지막 장 합계 · 인수자 서명
+async function esImage(d) {
+  const items = (d.items || []).filter((r) => String(r.name || '').trim());
+  if (!items.length) throw new Error('품명이 있는 줄이 없어요');
+  const W = 2480, Hh = 1748, M = 110, PER = 14, FONT = "Pretendard, 'Noto Sans KR', sans-serif";
+  const logo = await new Promise((ok) => { const im = new Image(); im.onload = () => ok(im); im.onerror = () => ok(null); im.src = './icons/logo-full.png'; });
+  const pages = []; for (let i = 0; i < items.length; i += PER) pages.push(items.slice(i, i + PER));
+  const site = String(d.site || '').trim(), ymd = String(d.ymd || today()), dt = new Date(ymd + 'T00:00:00');
+  const dateTxt = `${dt.getFullYear()}년 ${dt.getMonth() + 1}월 ${dt.getDate()}일 (${'일월화수목금토'[dt.getDay()]})`;
+  let no = 0;
+  for (let p = 0; p < pages.length; p++) {
+    const c = document.createElement('canvas'); c.width = W; c.height = Hh; const g = c.getContext('2d');
+    g.fillStyle = '#fff'; g.fillRect(0, 0, W, Hh); g.fillStyle = '#1F2328'; g.textBaseline = 'alphabetic';
+    g.font = `800 120px ${FONT}`; g.fillText('납 품 송 장', M, 200);
+    g.font = `400 46px ${FONT}`; g.fillText(`${site ? site + ' 현장' : (d.partner || '')}   ·   납품일자  ${dateTxt}`, M, 290);
+    if (logo) { const lh = 230, lw = logo.width * lh / logo.height; g.drawImage(logo, W - M - lw, 60, lw, lh); }
+    g.fillStyle = '#F0B347'; g.fillRect(M, 320, W - 2 * M, 6);
+    const top = 360, rh = 76, cols = [M, M + 150, W - M - 560, W - M - 380, W - M - 170, W - M];
+    g.fillStyle = '#F0B347'; g.fillRect(M, top, W - 2 * M, rh);
+    g.fillStyle = '#fff'; g.font = `700 44px ${FONT}`; g.textAlign = 'center';
+    ['순번', '품명', '단위', '수량', '확인'].forEach((h, i) => g.fillText(h, (cols[i] + cols[i + 1]) / 2, top + 52));
+    pages[p].forEach((r, i) => {
+      const y = top + rh * (i + 1);
+      if (i % 2) { g.fillStyle = '#F7F7F7'; g.fillRect(M, y, W - 2 * M, rh); }
+      g.fillStyle = '#1F2328'; no += 1;
+      g.textAlign = 'center'; g.font = `400 44px ${FONT}`; g.fillText(String(no), (cols[0] + cols[1]) / 2, y + 52);
+      g.textAlign = 'left'; g.font = `400 48px ${FONT}`;
+      let nm = String(r.name); while (g.measureText(nm).width > cols[2] - cols[1] - 40 && nm.length > 4) nm = nm.slice(0, -2) + '…';
+      g.fillText(nm, cols[1] + 20, y + 54);
+      g.textAlign = 'center'; g.font = `400 44px ${FONT}`; g.fillText(String(r.unit || ''), (cols[2] + cols[3]) / 2, y + 52);
+      g.font = `800 54px ${FONT}`; g.fillText(String(r.qty || ''), (cols[3] + cols[4]) / 2, y + 56);
+      g.strokeStyle = '#555'; g.lineWidth = 4; g.strokeRect((cols[4] + cols[5]) / 2 - 24, y + 14, 48, 48);
+      g.strokeStyle = '#E6E6E6'; g.lineWidth = 2; g.beginPath(); g.moveTo(M, y + rh); g.lineTo(W - M, y + rh); g.stroke();
+    });
+    const bottom = top + rh * (pages[p].length + 1);
+    g.strokeStyle = '#BDBDBD'; g.lineWidth = 3; g.strokeRect(M, top, W - 2 * M, bottom - top);
+    g.textAlign = 'left'; g.fillStyle = '#8A8A8A'; g.font = `400 40px ${FONT}`; g.fillText(`주식회사 홈트레이더스   ${p + 1} / ${pages.length}`, M, bottom + 70);
+    if (p === pages.length - 1) { g.textAlign = 'right'; g.fillStyle = '#1F2328'; g.font = `800 46px ${FONT}`; g.fillText(`합계  ${items.length}개 품목`, W - M, bottom + 70); }
+    g.textAlign = 'right'; g.fillStyle = '#1F2328'; g.font = `700 46px ${FONT}`; g.fillText('인수자', W - M - 900, Hh - 110);
+    g.fillStyle = '#8A8A8A'; g.font = `400 40px ${FONT}`; g.fillText('(서명)', W - M, Hh - 110);
+    g.strokeStyle = '#1F2328'; g.lineWidth = 3; g.beginPath(); g.moveTo(W - M - 860, Hh - 100); g.lineTo(W - M - 180, Hh - 100); g.stroke();
+    const blob = await new Promise((ok) => c.toBlob(ok, 'image/png'));
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = `송장_${ymd.replace(/-/g, '').slice(2)}_${String(d.partner || '').replace(/[\\/:*?"<>|\s]+/g, '_')}${site ? '_' + site.replace(/\s+/g, '_') : ''}${pages.length > 1 ? '_' + (p + 1) : ''}.png`;
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  }
 }
 // 발행한 송장 목록 — 열어 봄 · 체크 · 서명 (10/27 대표 "발행하고 나서 얼마나 확인했는지")
 const esLink = (x) => (x.code ? `${location.origin}/s/${x.code}` : `${location.origin}/songjang/?k=${x.id}`);
@@ -426,6 +474,7 @@ export function bind(app, c) {
       ctx.rerender();
     }
     else if (a === 'es-lcopy' || a === 'es-lmsg') { const x = (Array.isArray(f.list) ? f.list : []).find((y) => y.id === t.dataset.id); if (x) { await copyText(a === 'es-lcopy' ? esLink(x) : esMsg(x)); f.copiedId = x.id + (a === 'es-lmsg' ? 'm' : ''); ctx.rerender(); } }
+    else if (a === 'es-img') esImage(F.esong.doc).catch((e) => alert('이미지를 못 만들었어요 — ' + (e.message || e)));
     else if (a === 'es-copy') { const el = document.getElementById('fm-es-link'); try { await navigator.clipboard.writeText(f.link); } catch (_) { if (el) { el.select(); document.execCommand('copy'); } } f.copied = true; ctx.rerender(); }
     else if (a === 'es-share') { try { await navigator.share({ title: '납품 송장', text: `${f.doc.partner} 납품 송장`, url: f.link }); } catch (_) { /* 닫음 */ } }
   });

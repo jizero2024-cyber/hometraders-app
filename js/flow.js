@@ -2,7 +2,7 @@
 // 맥 도우미 flow_board.py 가 출고일보 줄을 출고 건(출고번호)마다 단계로 나눠 site_inbox 'flow:board' 에 올림 → 여기선 읽기만.
 // 버튼은 있는 화면을 그 건 값으로 엶: 배차 요청(/homt) · 전자 송장 · 납품확인서 · 자재승인원 · 견적서 · 공간 올릴 전표
 import * as S from './store-supabase.js?v=7';
-import * as FM from './forms.js?v=10';
+import * as FM from './forms.js?v=11';
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const sv = (d) => `<svg viewBox="0 0 24 24" aria-hidden="true">${d}</svg>`;
@@ -31,7 +31,7 @@ export function setGwait(n) { FL.gwait = n || 0; }
 
 const rowsOf = (k) => (FL.data ? FL.data.rows : []).filter((r) => r.steps.includes(k));
 const TODAY_ONLY = ['배차 요청', '배차 완료', '출고 완료'];   // 오늘 마감 — 오늘 건만 (10/28 대표). 견적 요청·발주는 날짜가 앞이라 다
-const listOf = (k) => (TODAY_ONLY.includes(k) ? rowsOf(k).filter((r) => r.day === (FL.data || {}).today) : rowsOf(k));
+const listOf = (k) => (!FL.all && TODAY_ONLY.includes(k) ? rowsOf(k).filter((r) => r.day === (FL.data || {}).today) : rowsOf(k));
 const countOf = (k) => (k === '전표' ? rowsOf('입력 누락').filter((r) => r.day === (FL.data || {}).today).length
   : ['명세표', '입금'].includes(k) ? 0 : listOf(k).length);
 const hotOf = (k) => (k === '전표' ? rowsOf('입력 누락').length > 0 : TODAY_ONLY.includes(k) && listOf(k).length > 0);
@@ -145,7 +145,8 @@ export function main(x) {
 
   if (FL.view === '누락') return `<section class="fl">${slipHtml('입력 누락')}</section>`;
   if (FL.view === '완료') return `<section class="fl">${slipHtml('입력 완료')}</section>`;
-  return `<section class="fl" id="fl-list" aria-label="오늘 마감">${stepsHtml()}<div class="fl-list">${listHtml()}</div></section>`;   // 출고 흐름과 같은 모양, 오늘 건만 (10/28 대표)
+  const tg = `<div class="fl-sub fl-tg"><button type="button" class="fl-sb mid ${FL.all ? '' : 'on'}" data-fl="all" data-k="0">오늘</button><button type="button" class="fl-sb mid ${FL.all ? 'on' : ''}" data-fl="all" data-k="1">전체보기</button></div>`;
+  return `<section class="fl" id="fl-list" aria-label="오늘 마감">${tg}${stepsHtml()}<div class="fl-list">${listHtml()}</div></section>`;   // 출고 흐름과 같은 모양, 오늘 건만 (10/28 대표)
 }
 export const panel = main;
 
@@ -180,6 +181,7 @@ export function bind(app, c) {
     const a = t.dataset.fl, r = FL.data && FL.data.rows.find((x) => x.no === t.dataset.no);
     if (a !== 'row') e.stopPropagation();
     if (a === 'step') { FL.cur = t.dataset.k; FL.sel = ''; ctx.rerender(); }
+    else if (a === 'all') { FL.all = t.dataset.k === '1'; FL.sel = ''; ctx.rerender(); }
     else if (a === 'old') { FL.old = !FL.old; ctx.rerender(); }
     else if (a === 'go') { const k = t.dataset.k; if (k === 'fare' || k === 'box') ctx.home(k); else if (k.startsWith('v-flow-')) { FL.view = 'flow'; FL.cur = k.slice(7); FL.sel = ''; ctx.rerender(); setTimeout(() => { const el = document.getElementById('fl-list'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 0); } else { FL.view = k.slice(2); ctx.rerender(); } }
     else if (a === 'close') { if (t.classList.contains('on')) alert('오늘 마감했어요'); }
