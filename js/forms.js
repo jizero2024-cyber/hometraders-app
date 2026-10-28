@@ -267,8 +267,8 @@ const TITLE = { ...Object.fromEntries(Object.entries(ST).map(([k, v]) => [k, v[0
 export function preset(route, doc) {   // 출고 흐름에서 그 건 값으로 열기 (10/28) — 지금은 전자 송장만
   if (route === 'esong') { F.esong.doc = { partner: doc.partner || '', site: doc.site || '', ymd: doc.ymd || today(), items: (doc.items && doc.items.length ? doc.items : [esRow()]).map((r) => ({ name: r.name || '', qty: r.qty || '', unit: r.unit || '개' })) }; F.esong.link = ''; F.esong.copied = false; }
 }
-export function presetQuote(text) {   // 출고 흐름 견적 요청 → 품목 글을 넣고 바로 읽기 (우리 품목명·종전가는 도우미 판독) (10/28 대표 "자동으로 품목 들어가고 견적서 나오게")
-  const q = F.quote; q.text = text; q.files = []; q.doc = null; q.out = null; q.err = '';
+export function presetQuote(text, partner, site) {   // 출고 흐름 견적 요청 → 품목 글을 넣고 바로 읽기 (우리 품목명·종전가는 도우미 판독) (10/28 대표 "자동으로 품목 들어가고 견적서 나오게")
+  const q = F.quote; q.text = text; q.files = []; q.doc = null; q.out = null; q.err = ''; q.preset = { partner: partner || '', site: site || '' };
   open('quote'); loadQuote();
 }
 export function open(route) { ROUTES.forEach((r) => { F[r].open = r === route; }); }
@@ -408,9 +408,10 @@ async function loadQuote() {
   if (!(ctx.helperUp() || await ctx.helperReady())) { q.err = '사무실 맥 도우미가 켜져 있어야 읽어요'; ctx.rerender(); return; }
   q.busy = true; q.err = ''; q.out = null; ctx.rerender();
   try {
-    const j = text ? await ctx.helper('/api/doc/read', { text }) : await ctx.helper('/api/doc/read', { name: q.files[0].name, data: await b64(q.files[0].file) });
+    const pre = q.preset || {}; q.preset = null;
+    const j = text ? await ctx.helper('/api/doc/read', { text, partner: pre.partner || '' }) : await ctx.helper('/api/doc/read', { name: q.files[0].name, data: await b64(q.files[0].file) });
     const d = j.doc || {};
-    q.doc = { partner: d.partner || '', owner: d.owner || '', manager: d.manager || '', site: d.site || '', doc_date: DL.isoDate(d.doc_date) || today(),
+    q.doc = { partner: d.partner || pre.partner || '', owner: d.owner || pre.site || '', manager: d.manager || '', site: d.site || '', doc_date: DL.isoDate(d.doc_date) || today(),
       lines: (d.lines || []).map((l) => ({ raw_name: l.raw_name || l.name || '', spec: l.spec || '', unit: l.unit || '', qty: l.qty || '',
         price: Number(l.price) || Number(l.unit_price) || (l.prev && Number(l.prev.price)) || '', prevSrc: l.prev && l.prev.price ? `${l.prev.src || '종전가'} ${l.prev.date || ''}` : '' })) };
   } catch (e) { q.err = e.message || String(e); }

@@ -2,7 +2,7 @@
 // 맥 도우미 flow_board.py 가 출고일보 줄을 출고 건(출고번호)마다 단계로 나눠 site_inbox 'flow:board' 에 올림 → 여기선 읽기만.
 // 버튼은 있는 화면을 그 건 값으로 엶: 배차 요청(/homt) · 전자 송장 · 납품확인서 · 자재승인원 · 견적서 · 공간 올릴 전표
 import * as S from './store-supabase.js?v=7';
-import * as FM from './forms.js?v=12';
+import * as FM from './forms.js?v=13';
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const sv = (d) => `<svg viewBox="0 0 24 24" aria-hidden="true">${d}</svg>`;
@@ -191,7 +191,7 @@ function closeQ() { const x = document.querySelector('.fl-qov'); if (x) x.remove
 function quoteFor(r) {
   const all = (FL.data && FL.data.kits) || {}, kits = /뉴하우징/.test(r.partner) ? all['뉴하우징'] || {} : /공간/.test(r.partner) ? all['공간제작소'] || {} : {};
   const names = Object.keys(kits);
-  if (!names.length) { FM.presetQuote(`거래처: ${r.partner}${r.site ? `\n현장: ${r.site}` : ''}\n${r.items || r.item || ''}`); ctx.rerender(); return; }
+  if (!names.length) { FM.presetQuote(String(r.items || r.item || '').split(/\s*·\s*/).join('\n'), r.partner, r.site); ctx.rerender(); return; }
   FL.qpick = { r, kits }; closeQ();
   const ov = document.createElement('div'); ov.className = 'hm-ov fl-qov';
   ov.innerHTML = `<div class="hm-modal fl-qm" role="dialog" aria-label="견적서"><div class="hm-mh"><b>${esc(r.partner)} 견적서</b><button type="button" class="hm-x" data-fl="qx" aria-label="닫기">✕</button></div>
@@ -230,9 +230,8 @@ export function bind(app, c) {
     else if (a === 'quote' && r) quoteFor(r);
     else if (a === 'qk' && FL.qpick) { const p = FL.qpick, k = t.dataset.k; FL.qpick = null; closeQ();
       const color = ((document.getElementById('fl-qc') || {}).value || '').trim();
-      const head = `거래처: ${p.r.partner}${p.r.site ? `\n현장: ${p.r.site}` : ''}`;
-      const body = k === '' ? String(p.r.items || p.r.item || '') : (p.kits[k] || []).map(([n, q, u]) => `${String(n).replace(/<색상>/g, color || '색상').replace(/<색>/g, '')} ${q} ${u || ''}`.trim()).join('\n');
-      FM.presetQuote(`${head}\n${body}`); ctx.rerender(); }
+      const body = k === '' ? String(p.r.items || p.r.item || '').split(/\s*·\s*/).join('\n') : (p.kits[k] || []).map(([n, q, u]) => `${String(n).replace(/<색상>/g, color || '색상').replace(/<색>/g, '')} ${q} ${u || ''}`.trim()).join('\n');
+      FM.presetQuote(body, p.r.partner, p.r.site); ctx.rerender(); }
     else if (a === 'qx') { FL.qpick = null; closeQ(); }
     else if (['deliv', 'approval', 'quote', 'stmt'].includes(a)) { FM.open(a === 'stmt' ? '' : a); if (a === 'stmt') ctx.go('stmt'); else ctx.rerender(); }
     else if (a === 'pdf') {
