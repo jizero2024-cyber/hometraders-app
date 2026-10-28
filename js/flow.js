@@ -1,8 +1,8 @@
 // 첫 화면 맨 위 '출고 흐름' (10/28 대표 "배차 뭐뭐 해야 하는지 간편하게") — 목업 https://claude.ai/artifact/4boELHQ3xhPF3WmLSqFXEt
 // 맥 도우미 flow_board.py 가 출고일보 줄을 출고 건(출고번호)마다 단계로 나눠 site_inbox 'flow:board' 에 올림 → 여기선 읽기만.
 // 버튼은 있는 화면을 그 건 값으로 엶: 배차 요청(/homt) · 전자 송장 · 납품확인서 · 자재승인원 · 견적서 · 공간 올릴 전표
-import * as S from './store-supabase.js?v=7';
-import * as FM from './forms.js?v=17';
+import * as S from './store-supabase.js?v=8';
+import * as FM from './forms.js?v=18';
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const sv = (d) => `<svg viewBox="0 0 24 24" aria-hidden="true">${d}</svg>`;
@@ -284,7 +284,7 @@ export function bind(app, c) {
       ov.addEventListener('click', (ev) => { if (ev.target === ov || ev.target.closest('.hm-x')) ov.remove(); });
       document.body.appendChild(ov);
     }
-    else if (a === 'slipok' && r) { const key = `slipok:${r.case || r.no}`; S.addFlowMark(key, `${r.partner} ${r.site}`, ctx.me ? ctx.me() : '').then((err) => { if (err) alert('저장 못 했어요 — ' + err); else { FL.marks[key] = { created_at: new Date().toISOString() }; ctx.rerender(); } }); }
+    else if (a === 'slipok' && r) { const key = `slipok:${r.case || r.no}`, me = ctx.me ? ctx.me() : ''; S.addFlowMark(key, `${r.partner} ${r.site}`, me).then((err) => { if (err) alert('저장 못 했어요 — ' + err); else { FL.marks[key] = { created_at: new Date().toISOString() }; caseRows(r).forEach((x) => S.setShipCase(x.no, { checked: true, checked_by: me || null }, me).catch(() => {})); ctx.rerender(); } }); }
     else if (a === 'sent' && r) { if (!confirm(`${r.partner} · ${r.site} 거래처 전달 체크할까요?`)) return; S.addFlowMark(`sent:${r.no}`, `${r.partner} ${r.site}`, ctx.me ? ctx.me() : '').then((err) => { if (err) alert('저장 못 했어요 — ' + err); else { FL.marks[`sent:${r.no}`] = { created_at: new Date().toISOString() }; ctx.rerender(); } }); }
     else if (a === 'stmtgo' && r) { FM.presetStmt(/공간/.test(r.partner) ? 'stmt-gong' : 'stmt-etc', (t.dataset.s || '').split(',').join(' '), r.salerows); ctx.rerender(); }
     else if (a === 'evx') {   // 카톡·문자 원문 — 같은 방 앞뒤 대화 (배차안내까지)

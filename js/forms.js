@@ -8,7 +8,7 @@
 //   화면 모양은 모두 같음 — 머리(‹ · 로고 · 이름) · 제목 · 불러오기 칸 · 결과 칸, 파일은 끌어다 놓기도 됨
 import * as SM from './stmt.js?v=103';
 import * as DL from './delivery.js';
-import * as S from './store-supabase.js?v=7';
+import * as S from './store-supabase.js?v=8';
 
 export const ROUTES = ['stmt-gong', 'stmt-etc', 'stmt-ace', 'deliv', 'approval', 'quote', 'deposit', 'esong'];
 const ST = { 'stmt-gong': ['공간제작소 거래명세표', 'homt'], 'stmt-etc': ['그 외 명세표', 'homt'], 'stmt-ace': ['에이스 거래명세표', 'ace'] };

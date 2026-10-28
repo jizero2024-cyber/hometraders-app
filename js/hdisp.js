@@ -2,7 +2,7 @@
 // 상차지·하차지 = 창고 + 거래처(공유 DB — 도우미 배차 주소록도 10/22 여기로 옮김) + 지난 출고에 적힌 상·하차지.
 // 맥 도우미 없이 누구 PC·휴대폰에서도 됨. 새로 적은 주소는 거래처에 저장돼 다음부터 모두에게 뜸.
 // 검색은 초성도 됨 (ㅇㅇㅋㅂ → 원익큐브). [배차 요청] = 배차요청톡 복사 + 출고 목록에 '출고예정'으로 등록.
-import * as S from './store-supabase.js?v=7';
+import * as S from './store-supabase.js?v=8';
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 // 품목 고르기 — 이음물류 톡 배차 요청(7/27~10/20, 282건)에 자주 나온 자재 순. 기본값 건축자재 (10/22 대표)
@@ -283,6 +283,7 @@ function submit(ctx) {
       loadPlace: cut(F.from.name, MAX.name), loadAddr: cut(F.from.addr, MAX.addr), unloadPlace: cut(F.to.name || F.to.addr, MAX.name), unloadAddr: cut(F.to.addr, MAX.addr),
       note: [FLOW_NO ? `배차 요청함 ${new Date().toTimeString().slice(0, 5)}(출고 흐름 ${FLOW_NO})` : '배차 요청함(홈트 첫 화면)', F.weight && `무게 ${cut(F.weight, MAX.phone)}`, F.sched && `일정 ${cut(F.sched, MAX.text)}`].filter(Boolean).join(' · '),
     });
+    if (FLOW_NO && S.setShipCase) S.setShipCase(FLOW_NO, { disp: `배차 요청함 ${new Date().toTimeString().slice(0, 5)}` }, (ctx && ctx.me && ctx.me()) || '').catch(() => {});   // 운영 DB 먼저
     alert('배차요청톡을 복사했어요. 이음물류 카톡방에 붙여넣으세요.\n출고 목록에도 \'출고예정\'으로 등록했어요.');
     Object.assign(F, { from: null, to: null, cars: [], vehicle: '', pay: '현불', goods: '건축자재', weight: '', sched: '', say: false, sayAs: '홈트레이더스', open: '', q: { from: '', to: '' } });
     ctx.rerender();
