@@ -43,7 +43,7 @@ const recOf = () => {   // 전표 확인 > 전체보기 — 거래처·기간·�
   return rowsOf('기록').filter((r) => (!q.p || r.partner === q.p) && (a == null || (r.md ?? 0) >= a) && (b == null || (r.md ?? 9999) <= b)
     && (!w || `${r.partner} ${r.site_full} ${r.site} ${r.boss} ${r.items} ${r.from} ${r.no} ${(r.lines || []).flatMap((l) => l.slips || []).join(' ')}`.toLowerCase().includes(w)));
 };
-const listOf = (k) => (k === '기록' ? recOf() : k === '입력 완료' ? (FL.data ? FL.data.rows.filter((r) => (r.lines || []).length && (slipOk(r) || (r.steps.includes('입력 완료') && !slipTodo().includes(r)))) : []) : FL.all || FL.view === '견적' ? rowsOf(k) : TODAY_ONLY.includes(k) ? rowsOf(k).filter((r) => r.day === (FL.data || {}).today || (k !== '출고 완료' && md(r.day) === tmr())) : k === '견적' ? rowsOf(k).filter(dueToday) : rowsOf(k));
+const listOf = (k) => (k === '기록' ? recOf() : k === '입력 완료' ? (FL.data ? FL.data.rows.filter((r) => (r.lines || []).length && (slipOk(r) || (r.steps.includes('입력 완료') && !slipTodo().includes(r)))) : []) : FL.all || FL.view === '견적' ? rowsOf(k) : TODAY_ONLY.includes(k) ? rowsOf(k).filter((r) => [r.day, r.arr].includes((FL.data || {}).today) || (k !== '출고 완료' && [md(r.day), r.arr].includes(tmr()))) : k === '견적' ? rowsOf(k).filter(dueToday) : rowsOf(k));
 const yst = () => { const x = new Date(Date.now() - 864e5); return `${String(x.getMonth() + 1).padStart(2, '0')}/${String(x.getDate()).padStart(2, '0')}`; };
 const slipOk = (r) => !!FL.marks[`slipok:${r.case || r.no}`];   // 전표 확인 체크 → 입력 완료로 (10/28 대표)
 const SHIP = ['배차 완료', '출고 완료', '기록', '입력 누락', '입력 완료'];
@@ -69,7 +69,9 @@ const allIn = (r) => caseRows(r).every(allIn1);   // 사건 전체 판매·구�
 const cmpBtn = (r) => (allIn(r) && (r.lines || []).some((l) => l.st === '입력' && (l.slips || []).length) ? `<button type="button" class="fl-gh sm" data-fl="cmp" data-no="${esc(r.no)}">대조</button>` : '');
 const md = (d) => { const m = /^(\d{2})\/(\d{2})$/.exec(d || ''); return m ? `${m[1]}/${m[2]}` : ''; };
 const tmr = () => { const x = new Date(Date.now() + 864e5); return `${String(x.getMonth() + 1).padStart(2, '0')}/${String(x.getDate()).padStart(2, '0')}`; };
-const dayLab = (r) => { const t = (FL.data || {}).today; if (r.day === t) return '오늘'; if (r.late) return '지난 날'; if (md(r.day) === tmr()) return '내일'; if (r.day === yst()) return '어제'; return r.day === '미정' ? '날짜 미정' : r.day; };
+const dday = (r) => (TODAY_ONLY.includes(FL.cur) && r.arr) || r.day;   // 배차·출고 목록은 도착 날로 묶음 (상차 오늘 → 내일 8시 착, 10/28 대표)
+const mdN = (d) => { const m = /^(\d{2})\/(\d{2})$/.exec(d || ''); return m ? +m[1] * 100 + +m[2] : 9999; };
+const dayLab = (r0) => { const t = (FL.data || {}).today, r = { ...r0, day: dday(r0) }; if (r.day === t) return '오늘'; if (r.late) return '지난 날'; if (md(r.day) === tmr()) return '내일'; if (r.day === yst()) return '어제'; return r.day === '미정' ? '날짜 미정' : r.day; };
 const BTN = { 견적: [['quote', '견적서']], 발주: [['esong', '전자 송장']], '배차 요청': [['disp', '배차 요청'], ['esong', '전자 송장']], '배차 완료': [['esong', '전자 송장']],
   '출고 완료': [['deliv', '납품확인서'], ['approval', '자재승인원'], ['esong', '전자 송장']] };
 BTN['기록'] = [...BTN['출고 완료'], ['cmp', '대조']];
@@ -96,7 +98,7 @@ function rowHtml(r) {
   const chips = [FL.cur === '입력 완료' && slipOk(r) ? '<span class="fl-chip ok">마감 확인</span>' : '', ...(r.imgs || []).map((x) => `<button type="button" class="fl-chip blu" data-fl="img" data-id="${esc(x.id)}" data-n="${esc(x.name)}">사진</button>`), cn > 1 ? `<span class="fl-chip blu">같은 주문 ${cn}건</span>` : '', ...(r.chips || []).map((c) => `<span class="fl-chip amb">${esc(c)}</span>`), asked ? `<span class="fl-chip blu">요청함 ${esc((String(asked.note).match(/요청함 (\d\d:\d\d)/) || ['', ''])[1])}</span>` : '', r.late && FL.cur === '배차 요청' ? '<span class="fl-chip no">누락</span>' : '', FL.cur === '배차 완료' && !r.driver ? '<span class="fl-chip amb">기사·운임 확인</span>' : ''].join('');
   const route = FL.cur === '견적' ? '' : `${esc(r.from || '상차지 확인')} → ${esc(r.site || '하차지 확인')}`;
   return `<div class="fl-row ${FL.sel === r.no ? 'sel' : ''}" data-fl="row" data-no="${esc(r.no)}">
-    <div class="fl-c fl-tm ${r.late || r.day === FL.data.today ? 'now' : ''}"><b>${esc(r.time || (r.day === '미정' ? '미정' : '시간 미정'))}</b><span>${esc(r.day)}</span></div>
+    <div class="fl-c fl-tm ${r.late || dday(r) === FL.data.today ? 'now' : ''}"><b>${esc(r.time || (r.day === '미정' ? '미정' : '시간 미정'))}</b><span>${esc(dday(r))}</span></div>
     <div class="fl-c fl-nm"><div class="fl-nmt">${title(r)}</div>${STMT_STEPS.includes(FL.cur) ? ioHtml(r) : ''}</div>
     <div class="fl-c fl-ds">${chips}${esc(r.item)}</div>
     <div class="fl-c fl-ds fl-rt">${route}</div>
@@ -145,7 +147,7 @@ function listHtml() {
     if (pls.length) h += `<div class="fl-tot"><span>총 순이익</span><b class="${net < 0 ? 'no' : ''}">${won(net)}</b><em>${sale ? Math.round((100 * net) / sale) : 0}% · ${pls.length}건${pls.length < rs.length ? ` (순이익 못 낸 ${rs.length - pls.length}건 빼고)` : ''}</em></div>`;
     return h;
   }
-  const rows = listOf(FL.cur).map((r, i) => [r, i]).sort((a, b) => ((a[0].md ?? 9999) - (b[0].md ?? 9999)) || (tkey(a[0].time) - tkey(b[0].time)) || (a[1] - b[1])).map((x) => x[0]);
+  const rows = listOf(FL.cur).map((r, i) => [r, i]).sort((a, b) => (mdN(dday(a[0])) - mdN(dday(b[0]))) || (tkey(a[0].time) - tkey(b[0].time)) || (a[1] - b[1])).map((x) => x[0]);
   if (FL.cur === '기록' || FL.cur === '입력 완료') rows.reverse();   // 최근 것 먼저
   if (!rows.length) return '<div class="fl-empty">없어요</div>';
   setTimeout(fitActs, 0);
