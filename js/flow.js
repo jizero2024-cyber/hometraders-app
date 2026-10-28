@@ -17,9 +17,8 @@ const IC = {
   입금: sv('<circle cx="12" cy="12" r="8.5"/><path d="M8 9l1.5 6L12 10l2.5 5L16 9M7.5 12h9"/>'),
 };
 const STEPS = ['견적', '발주', '배차 요청', '배차 완료', '출고 완료', '전표', '명세표', '입금'];
-const SUBS = ['입력 누락', '입력 완료', '올릴 전표'];
 const LABEL = { 견적: '견적 요청' };   // 10/28 대표 "견적 텍스트 견적요청으로"
-const FL = { data: null, err: '', at: 0, loading: false, cur: '배차 요청', sub: '입력 누락', sel: '', links: {}, gwait: 0 };
+const FL = { data: null, err: '', at: 0, loading: false, cur: '배차 요청', day: '', sel: '', links: {}, gwait: 0 };
 let ctx = { rerender: () => {}, openFrame: () => {} };
 
 export function load(force) {
@@ -31,7 +30,7 @@ export function load(force) {
 export function setGwait(n) { FL.gwait = n || 0; }
 
 const rowsOf = (k) => (FL.data ? FL.data.rows : []).filter((r) => r.steps.includes(k));
-const countOf = (k) => (k === '전표' ? rowsOf('입력 누락').length + rowsOf('입력 완료').length + (FL.gwait ? 1 : 0)
+const countOf = (k) => (k === '전표' ? rowsOf('입력 누락').length
   : ['명세표', '입금'].includes(k) ? 0 : rowsOf(k).length);
 const hotOf = (k) => (k === '전표' ? rowsOf('입력 누락').length > 0 : rowsOf(k).some((r) => r.late || r.day === (FL.data || {}).today));
 const title = (r) => `${esc(r.partner)} · ${r.site ? esc(r.site) : '<span class="fl-q">현장 확인</span>'}${r.boss ? ` · ${esc(r.boss)}` : ''}`;
@@ -81,12 +80,18 @@ function listHtml() {
   if (FL.err) return `<div class="fl-empty">${esc(FL.err)}</div>`;
   if (!FL.data) return '<div class="fl-empty">불러오는 중…</div>';
   if (FL.cur === '입금') return '<div class="fl-empty">준비 중</div>';
-  if (FL.cur === '명세표') return `<div class="fl-links"><a class="fl-go" href="/gonggan/">공간 협업툴</a><button type="button" class="fl-gh" data-fl="stmt">거래명세표</button></div>`;
-  if (FL.cur === '전표') {
-    const seg = `<div class="fl-sub">${SUBS.map((k) => `<button type="button" class="fl-sb ${k === '입력 누락' ? 'no' : k === '올릴 전표' ? 'ok' : 'mid'} ${FL.sub === k ? 'on' : ''}" data-fl="sub" data-k="${k}">${k}<b>${k === '올릴 전표' ? FL.gwait : rowsOf(k).length}</b></button>`).join('')}</div>`;
-    if (FL.sub === '올릴 전표') return seg + `<div class="fl-links"><a class="fl-go" href="/gonggan/#wait">공간 올릴 전표 ${FL.gwait}건</a></div>`;
-    const rows = rowsOf(FL.sub).slice().reverse();
-    return seg + (rows.map(evHtml).join('') || '<div class="fl-empty">없어요</div>');
+  if (FL.cur === '명세표') return `<div class="fl-links"><a class="fl-go" href="/gonggan/">공간 협업툴</a><a class="fl-go" href="/newhousing/">뉴하우징 협업툴</a><button type="button" class="fl-gh" data-fl="stmt">거래명세표</button></div>`;
+  if (FL.cur === '전표') {   // 날짜마다 — 그날 건은 그날 다 입력 (10/28 대표). 올릴 전표는 공간 협업툴에서
+    const all = [...rowsOf('입력 누락'), ...rowsOf('입력 완료')];
+    const days = [...new Set(all.map((r) => r.day))].sort().reverse();
+    if (!days.length) return '<div class="fl-empty">없어요</div>';
+    if (!days.includes(FL.day)) FL.day = days[0];
+    const t = FL.data.today, lab = (d) => (d === t ? '오늘' : d);
+    const tabs = `<div class="fl-sub fl-days">${days.slice(0, 14).map((d) => { const n = all.filter((r) => r.day === d && r.steps.includes('입력 누락')).length;
+      return `<button type="button" class="fl-sb ${n ? 'no' : 'ok'} ${FL.day === d ? 'on' : ''}" data-fl="day" data-k="${esc(d)}">${esc(lab(d))}${n ? `<b>${n}</b>` : ' ✓'}</button>`; }).join('')}</div>`;
+    const miss = all.filter((r) => r.day === FL.day && r.steps.includes('입력 누락')), ok = all.filter((r) => r.day === FL.day && r.steps.includes('입력 완료'));
+    return tabs + (miss.length ? `<div class="fl-day no">입력 누락 ${miss.length}</div>${miss.map(evHtml).join('')}` : '')
+      + (ok.length ? `<div class="fl-day ok">입력 완료 ${ok.length}</div>${ok.map(evHtml).join('')}` : '');
   }
   const rows = rowsOf(FL.cur);
   if (!rows.length) return '<div class="fl-empty">없어요</div>';
@@ -130,7 +135,7 @@ export function bind(app, c) {
     const a = t.dataset.fl, r = FL.data && FL.data.rows.find((x) => x.no === t.dataset.no);
     if (a !== 'row') e.stopPropagation();
     if (a === 'step') { FL.cur = t.dataset.k; FL.sel = ''; ctx.rerender(); }
-    else if (a === 'sub') { FL.sub = t.dataset.k; ctx.rerender(); }
+    else if (a === 'day') { FL.day = t.dataset.k; ctx.rerender(); }
     else if (a === 'row') { if (e.target.closest('button,a')) return; FL.sel = FL.sel === t.dataset.no ? '' : t.dataset.no; if (FL.sel && r) fetchLinks(r); ctx.rerender(); }
     else if (a === 'disp' && r) ctx.openFrame('배차 요청', dispSrc(r));
     else if (a === 'esong' && r) { FM.preset('esong', { partner: r.partner, site: r.site, ymd: '', items: itemRows(r.items) }); FM.open('esong'); ctx.rerender(); }
