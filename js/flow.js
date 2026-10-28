@@ -113,6 +113,7 @@ function detailHtml(r) {
     ${buys || `<div class="fl-it">${esc(r.items)}</div>`}
     ${r.veh ? `<div class="fl-k">차량</div><div class="fl-it">${esc(r.veh)}</div>` : ''}
     <div class="fl-k">전표</div><div>${linesHtml(r)}</div>
+    ${r.pl ? `<div class="fl-k">순이익</div><div class="fl-pld"><span>판매 ${won(r.pl.sale)}</span><i>−</i><span>구매 ${won(r.pl.buy)}</span><i>−</i><span>운반비 ${won(r.pl.fare)}</span><i>=</i><b class="${r.pl.net < 0 ? 'no' : ''}">${won(r.pl.net)}</b><em>${r.pl.sale ? Math.round((100 * r.pl.net) / r.pl.sale) : 0}% · 공급가</em></div>` : ''}
     ${(r.ev || []).length ? `<div class="fl-k">근거</div><div class="fl-memo">${evLinks(r.ev)}</div>` : ''}
     ${(r.imgs || []).length ? `<div class="fl-k">사진</div><div class="fl-imgs">${r.imgs.map((x) => `<iframe src="https://drive.google.com/file/d/${encodeURIComponent(x.id)}/preview" title="${esc(x.name)}" loading="lazy"></iframe>`).join('')}</div>` : ''}</div>`;   // 견적 요청 사진 — 펼치면 바로 (10/28 대표)
 }
