@@ -30,9 +30,11 @@ export function load(force) {
 export function setGwait(n) { FL.gwait = n || 0; }
 
 const rowsOf = (k) => (FL.data ? FL.data.rows : []).filter((r) => r.steps.includes(k));
+const TODAY_ONLY = ['배차 요청', '배차 완료', '출고 완료'];   // 오늘 마감 — 오늘 건만 (10/28 대표). 견적 요청·발주는 날짜가 앞이라 다
+const listOf = (k) => (TODAY_ONLY.includes(k) ? rowsOf(k).filter((r) => r.day === (FL.data || {}).today) : rowsOf(k));
 const countOf = (k) => (k === '전표' ? rowsOf('입력 누락').filter((r) => r.day === (FL.data || {}).today).length
-  : ['명세표', '입금'].includes(k) ? 0 : rowsOf(k).length);
-const hotOf = (k) => (k === '전표' ? rowsOf('입력 누락').length > 0 : rowsOf(k).some((r) => r.late || r.day === (FL.data || {}).today));
+  : ['명세표', '입금'].includes(k) ? 0 : listOf(k).length);
+const hotOf = (k) => (k === '전표' ? rowsOf('입력 누락').length > 0 : TODAY_ONLY.includes(k) && listOf(k).length > 0);
 const title = (r) => `${esc(r.partner)} · ${r.site ? esc(r.site) : '<span class="fl-q">현장 확인</span>'}${r.boss ? ` · ${esc(r.boss)}` : ''}`;
 const md = (d) => { const m = /^(\d{2})\/(\d{2})$/.exec(d || ''); return m ? `${m[1]}/${m[2]}` : ''; };
 const tmr = () => { const x = new Date(Date.now() + 864e5); return `${String(x.getMonth() + 1).padStart(2, '0')}/${String(x.getDate()).padStart(2, '0')}`; };
@@ -90,7 +92,7 @@ function listHtml() {
     const body = (tm.length ? `<div class="fl-day no">입력 누락 ${tm.length}</div>${tm.map(evHtml).join('')}` : '') + (to.length ? `<div class="fl-day ok">입력 완료 ${to.length}</div>${to.map(evHtml).join('')}` : '');
     return oldLine + (body || '<div class="fl-empty">오늘 하차한 건이 없어요</div>');
   }
-  const rows = rowsOf(FL.cur);
+  const rows = listOf(FL.cur);
   if (!rows.length) return '<div class="fl-empty">없어요</div>';
   let h = `<div class="fl-lh"><span>${FL.cur === '견적' ? '언제까지' : '도착'}</span><span>판매처 · 현장</span><span>품목</span><span>상차 → 하차</span><span>차량</span><span></span></div>`, last = null;
   rows.forEach((r) => { const g = dayLab(r); if (g !== last) { h += `<div class="fl-day">${esc(g)}</div>`; last = g; } h += rowHtml(r); });
@@ -102,7 +104,7 @@ export const counts = () => ({
   quote: rowsOf('견적').length, disp: rowsOf('배차 요청').length, songjang: [...rowsOf('배차 완료'), ...rowsOf('출고 완료')].filter((r) => r.day === today()).length,
 });
 export const view = () => FL.view;
-export function setView(v) { FL.view = v; FL.sel = ''; if (v === '견적') { FL.view = 'flow'; FL.cur = '견적'; } }
+export function setView(v) { FL.view = v === '마감' ? 'flow' : v; FL.sel = ''; if (v === '견적') { FL.view = 'flow'; FL.cur = '견적'; } }
 function slipHtml(kind) {   // 전표 확인 — 입력 누락(오늘 먼저 · 지난 날 아래) / 입력 완료(최근 것부터)
   if (!FL.data) return '<div class="fl-empty">불러오는 중…</div>';
   const t = today(), rows = rowsOf(kind).slice().reverse();
@@ -140,10 +142,10 @@ function closeHtml(x) {
 }
 export function main(x) {
   load();
-  if (FL.view === '마감') return `<section class="fl">${closeHtml(x || {})}</section>`;
+
   if (FL.view === '누락') return `<section class="fl">${slipHtml('입력 누락')}</section>`;
   if (FL.view === '완료') return `<section class="fl">${slipHtml('입력 완료')}</section>`;
-  return `<section class="fl" aria-label="출고 흐름">${stepsHtml()}<div class="fl-list">${listHtml()}</div></section>`;
+  return `<section class="fl" aria-label="오늘 마감">${closeHtml(x || {})}</section><section class="fl" id="fl-list">${stepsHtml()}<div class="fl-list">${listHtml()}</div></section>`;
 }
 export const panel = main;
 
@@ -179,7 +181,7 @@ export function bind(app, c) {
     if (a !== 'row') e.stopPropagation();
     if (a === 'step') { FL.cur = t.dataset.k; FL.sel = ''; ctx.rerender(); }
     else if (a === 'old') { FL.old = !FL.old; ctx.rerender(); }
-    else if (a === 'go') { const k = t.dataset.k; if (k === 'fare' || k === 'box') ctx.home(k); else if (k.startsWith('v-flow-')) { FL.view = 'flow'; FL.cur = k.slice(7); FL.sel = ''; ctx.rerender(); } else { FL.view = k.slice(2); ctx.rerender(); } }
+    else if (a === 'go') { const k = t.dataset.k; if (k === 'fare' || k === 'box') ctx.home(k); else if (k.startsWith('v-flow-')) { FL.view = 'flow'; FL.cur = k.slice(7); FL.sel = ''; ctx.rerender(); setTimeout(() => { const el = document.getElementById('fl-list'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 0); } else { FL.view = k.slice(2); ctx.rerender(); } }
     else if (a === 'close') { if (t.classList.contains('on')) alert('오늘 마감했어요'); }
     else if (a === 'row') { if (e.target.closest('button,a')) return; FL.sel = FL.sel === t.dataset.no ? '' : t.dataset.no; if (FL.sel && r) fetchLinks(r); ctx.rerender(); }
     else if (a === 'disp' && r) ctx.openFrame('배차 요청', dispSrc(r));
