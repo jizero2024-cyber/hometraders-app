@@ -3,7 +3,7 @@ import {
 } from './data.js?v=2';
 import * as S from './store-supabase.js?v=7';
 import { ECOUNT_ITEMS } from './ecount-items.js';
-import { makeMatcher, readPastedText, quotePrev } from './textread.js?v=2';
+import { makeMatcher, readPastedText, quotePrev } from './textread.js?v=3';
 import * as DL from './delivery.js';
 import * as SM from './stmt.js?v=103';
 import * as HD from './hdisp.js?v=8';
