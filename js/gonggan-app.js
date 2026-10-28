@@ -6,7 +6,7 @@ import * as S from './gonggan-store.js?v=8';
 import * as GB from './gbms.js?v=42';
 
 const app = document.getElementById('app');
-const CODE_LOGINS = { space1234: 'view', space1225: 'edit' };   // 코드 한 칸 로그인 계정 (권한은 DB 가 정하고, DB 에 아직 없을 때만 이 값)
+const CODE_LOGINS = { space1234: 'view', space1225: 'staff' };   // 코드 한 칸 로그인 계정 (권한은 DB 가 정하고, DB 에 아직 없을 때만 이 값)
 const GONG_MIN_LOGIN = '2026-10-25T05:37:00Z';   // 공간제작소 계정: 이 시각 전에 로그인한 기기는 다시 로그인해야 함
 const CLOSED = false;  // 공간제작소 계정 닫기 스위치 (10/23 닫음 → 10/25 대표 "이제 열어줘" → 10/27 오전 "아직 막아줘" → 10/27 대표 "기안확정·수정요청·다운받기만 되게 하고 이제 풀어줘"). 닫을 땐 true + DB 정책 gonggan_closed
 const HELPER = 'http://127.0.0.1:4180';   // 사무실 맥 도우미 — 직원이 직접 등록할 때 PDF·사진 읽기

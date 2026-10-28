@@ -32,11 +32,12 @@ grant execute on function public.my_partner() to authenticated;
 grant execute on function public.my_access() to authenticated;
 
 -- ── 2. 거래처 계정 ──
--- 공간제작소: space1234 = 현구 대리님(view), space1225 = 공간 편집(edit)
+-- 공간제작소: space1234 = 현구 대리님(view). space1225 는 우리 직원이 쓰는 계정 → 직원 명단 (10/28 대표 "space1225도 직원처럼 써야 해, 우리 직원만 씀")
 insert into public.partner_accounts (uid, partner, login, role)
-  select id, '공간제작소', split_part(email, '@', 1), case when email like 'space1234@%' then 'view' else 'edit' end
-  from auth.users where email in ('space1234@hometraders.local', 'space1225@hometraders.local')
+  select id, '공간제작소', split_part(email, '@', 1), 'view'
+  from auth.users where email = 'space1234@hometraders.local'
 on conflict (uid) do update set partner = excluded.partner, role = excluded.role;
+delete from public.partner_accounts where login = 'space1225';
 -- 뉴하우징 (10/28 대표: 공간제작소처럼 직원 계정 / 클라이언트 계정 따로) — 클라이언트 계정을 만들면 아래 두 줄의 '--' 를 지우고 아이디를 넣어 실행
 -- insert into public.partner_accounts (uid, partner, login, role)
 --   select id, '뉴하우징', split_part(email, '@', 1), 'view' from auth.users where email = '<아이디>@hometraders.local' on conflict (uid) do nothing;
@@ -55,6 +56,9 @@ insert into public.staff_accounts (uid, login)
   select u.id, split_part(u.email, '@', 1) from auth.users u
   where u.email not like 'space%'
     and not exists (select 1 from public.partner_accounts p where p.uid = u.id)
+on conflict (uid) do nothing;
+insert into public.staff_accounts (uid, login)
+  select id, 'space1225' from auth.users where email = 'space1225@hometraders.local'
 on conflict (uid) do nothing;
 delete from public.staff_accounts s using public.partner_accounts p where s.uid = p.uid;   -- 거래처 계정은 직원 명단에서 빠짐
 
