@@ -60,7 +60,14 @@ create table if not exists public.ship_evidence (
 );
 create index if not exists ship_evidence_no on public.ship_evidence (no);
 
--- 보안: 새 표 전부 직원만 (거래처 계정 0건)
+-- 보안: 직원 허용 규칙 + 새 표 전부 직원만 (거래처 계정 0건) — lock_tables 의 staff_only 는 '막는' 규칙이라 허용 규칙이 따로 있어야 읽고 씀
+do $$ declare t text; begin
+  foreach t in array array['ship_case', 'ship_line', 'ship_slip', 'ship_evidence'] loop
+    execute format('alter table public.%I enable row level security', t);
+    execute format('drop policy if exists staff_all on public.%I', t);
+    execute format('create policy staff_all on public.%I for all to authenticated using (public.is_staff()) with check (public.is_staff())', t);
+  end loop;
+end $$;
 select public.lock_tables();
 
 -- 확인: 표 4개가 staff_only 규칙으로 나오면 됨
