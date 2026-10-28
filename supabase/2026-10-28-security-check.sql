@@ -1,10 +1,11 @@
 -- 보안 1단계 확인 — Supabase SQL 창에서 실행 (아무것도 안 바꿈, 끝에 rollback)
 --   맨 위 아이디를 바꿔 가며 실행: 공간 계정 · 직원 계정
---   공간 계정: gonggan_docs · gonggan_sales 만 숫자, 나머지 0 (보안 1단계 SQL 전에는 다른 표도 숫자가 나옴)
+--   공간 계정(space1234): gonggan_docs · gonggan_sales 만 숫자, 나머지 0 (보안 1단계 SQL 전에는 다른 표도 숫자가 나옴)
 --   직원 계정: 전부 숫자
 begin;
 select set_config('request.jwt.claims',
-  json_build_object('role', 'authenticated', 'sub', (select id from auth.users where email = 'space1225@hometraders.local'))::text, true);
+  (select json_build_object('role', 'authenticated', 'sub', id, 'email', email, 'iat', extract(epoch from now())::int)::text
+     from auth.users where email = 'space1234@hometraders.local'), true);
 set local role authenticated;
 select 'partners' as t, count(*) from public.partners
 union all select 'items', count(*) from public.items
