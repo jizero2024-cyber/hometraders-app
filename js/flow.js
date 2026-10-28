@@ -2,7 +2,7 @@
 // 맥 도우미 flow_board.py 가 출고일보 줄을 출고 건(출고번호)마다 단계로 나눠 site_inbox 'flow:board' 에 올림 → 여기선 읽기만.
 // 버튼은 있는 화면을 그 건 값으로 엶: 배차 요청(/homt) · 전자 송장 · 납품확인서 · 자재승인원 · 견적서 · 공간 올릴 전표
 import * as S from './store-supabase.js?v=7';
-import * as FM from './forms.js?v=14';
+import * as FM from './forms.js?v=15';
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const sv = (d) => `<svg viewBox="0 0 24 24" aria-hidden="true">${d}</svg>`;
@@ -54,8 +54,8 @@ const saleSlips = (r) => [...new Set((r.lines || []).filter((l) => l.k === '판�
 function stmtHtml(r) {   // 거래명세표 — 판매전표 PDF 보기 · 전달했는지 (10/28 대표)
   const sl = saleSlips(r);
   if (!sl.length) return '<span class="fl-stm na">판매 미입력</span>';
-  const hit = sl.flatMap((x) => FL.links[x] || [])[0], mk = FL.marks[`sent:${r.no}`];
-  return `<span class="fl-stm">${hit ? `<button type="button" class="fl-in ok" data-fl="pdf" data-s="${esc(sl.join(','))}">명세표 ›</button>` : `<span class="fl-in na">명세표 PDF 대기</span>`}
+  const mk = FL.marks[`sent:${r.no}`];
+  return `<span class="fl-stm"><button type="button" class="fl-in ok" data-fl="stmtgo" data-no="${esc(r.no)}" data-s="${esc(sl.join(','))}">명세표 ›</button>
     ${mk ? `<span class="fl-chip ok">전달 ${esc(String(mk.created_at || '').slice(5, 10).replace('-', '/'))}</span>` : `<button type="button" class="fl-gh sm" data-fl="sent" data-no="${esc(r.no)}">전달함</button>`}</span>`;
 }
 function rowHtml(r) {
@@ -78,7 +78,7 @@ function detailHtml(r) {
     ${buys || `<div class="fl-it">${esc(r.items)}</div>`}
     ${r.veh ? `<div class="fl-k">차량</div><div class="fl-it">${esc(r.veh)}</div>` : ''}
     <div class="fl-k">전표</div><div>${linesHtml(r)}</div>
-    ${(r.ev || []).length ? `<div class="fl-k">근거</div><div class="fl-memo">${r.ev.map((e) => `<a class="fl-evl" href="${esc(e.u)}" target="_blank" rel="noopener">${esc(e.t)}</a>`).join('')}</div>` : ''}</div>`;
+    ${(r.ev || []).length ? `<div class="fl-k">근거</div><div class="fl-memo">${evLinks(r.ev)}</div>` : ''}</div>`;
 }
 function linesHtml(r) {
   return (r.lines || []).map((l) => {
@@ -88,8 +88,10 @@ function linesHtml(r) {
     return `<div class="fl-ln"><span class="fl-lk">${esc(l.k)}</span><span class="fl-c">${esc(l.who)}</span><span class="fl-by">${esc(l.by || '')}</span>${st}</div>`;
   }).join('');
 }
+const evLinks = (es) => (es || []).map((e) => (e.u ? `<a class="fl-evl" href="${esc(e.u)}" target="_blank" rel="noopener">${esc(e.t)}</a>`
+  : `<button type="button" class="fl-evl ${/^카톡/.test(e.t) ? 'k' : 'm'}" data-fl="evx" data-x="${esc(e.x || e.t)}">${esc(e.t)}</button>`)).join('');   // 카톡·문자는 출고일보 원문 시트 글 (10/28 대표 "톡·문자도")
 function evHtml(r) {
-  const ev = (r.ev || []).map((e) => `<a class="fl-evl" href="${esc(e.u)}" target="_blank" rel="noopener">${esc(e.t)}</a>`).join('');
+  const ev = evLinks(r.ev);
   return `<div class="fl-ev"><div class="fl-eh"><b>${title(r)}</b><span>${esc(r.day)}</span></div>${linesHtml(r)}${r.memo || ev ? `<div class="fl-memo">${r.memo ? `<span>${esc(r.memo)}</span>` : ''}${ev}</div>` : ''}</div>`;
 }
 function listHtml() {
@@ -154,7 +156,7 @@ function closeHtml(x) {
 export function main(x) {
   load();
 
-  if (FL.view === '견적') { FL.cur = '견적'; return `<section class="fl"><h1 class="fl-h1">견적 요청</h1><div class="fl-list" style="--acts:${[0, 130, 240, 350][(BTN[FL.cur] || []).length] + (STMT_STEPS.includes(FL.cur) ? 200 : 0)}px">${listHtml()}</div></section>`; }   // 사이드바 견적 요청 — 단계줄 없이 (10/28 대표)
+  if (FL.view === '견적') { FL.cur = '견적'; return `<section class="fl"><h1 class="fl-h1">견적 요청</h1><div class="fl-list" style="--acts:${[0, 130, 240, 350][(BTN[FL.cur] || []).length] + (STMT_STEPS.includes(FL.cur) ? 210 : 0)}px">${listHtml()}</div></section>`; }   // 사이드바 견적 요청 — 단계줄 없이 (10/28 대표)
   if (FL.view === '누락') return `<section class="fl">${slipHtml('입력 누락')}</section>`;
   if (FL.view === '완료') return `<section class="fl">${slipHtml('입력 완료')}</section>`;
   const tg = `<div class="fl-sub fl-tg"><button type="button" class="fl-sb mid ${FL.all ? '' : 'on'}" data-fl="all" data-k="0">오늘</button><button type="button" class="fl-sb mid ${FL.all ? 'on' : ''}" data-fl="all" data-k="1">전체보기</button></div>`;
@@ -211,6 +213,8 @@ export function bind(app, c) {
     if (a !== 'row') e.stopPropagation();
     if (a === 'step') { FL.cur = t.dataset.k; FL.sel = ''; ctx.rerender(); }
     else if (a === 'sent' && r) { if (!confirm(`${r.partner} · ${r.site} 거래명세표 전달함으로 표시할까요?`)) return; S.addFlowMark(`sent:${r.no}`, `${r.partner} ${r.site}`, ctx.me ? ctx.me() : '').then((err) => { if (err) alert('저장 못 했어요 — ' + err); else { FL.marks[`sent:${r.no}`] = { created_at: new Date().toISOString() }; ctx.rerender(); } }); }
+    else if (a === 'stmtgo' && r) { FM.presetStmt(/공간/.test(r.partner) ? 'stmt-gong' : 'stmt-etc', (t.dataset.s || '').split(',').join(' ')); ctx.rerender(); }
+    else if (a === 'evx') alert(t.dataset.x || '');
     else if (a === 'all') { FL.all = t.dataset.k === '1'; FL.sel = ''; ctx.rerender(); }
     else if (a === 'old') { FL.old = !FL.old; ctx.rerender(); }
     else if (a === 'go') { const k = t.dataset.k; if (k === 'fare' || k === 'box') ctx.home(k); else if (k.startsWith('v-flow-')) { FL.view = 'flow'; FL.cur = k.slice(7); FL.sel = ''; ctx.rerender(); setTimeout(() => { const el = document.getElementById('fl-list'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 0); } else { FL.view = k.slice(2); ctx.rerender(); } }

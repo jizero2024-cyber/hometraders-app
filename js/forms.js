@@ -267,6 +267,10 @@ const TITLE = { ...Object.fromEntries(Object.entries(ST).map(([k, v]) => [k, v[0
 export function preset(route, doc) {   // 출고 흐름에서 그 건 값으로 열기 (10/28) — 지금은 전자 송장만
   if (route === 'esong') { F.esong.doc = { partner: doc.partner || '', site: doc.site || '', ymd: doc.ymd || today(), items: (doc.items && doc.items.length ? doc.items : [esRow()]).map((r) => ({ name: r.name || '', qty: r.qty || '', unit: r.unit || '개' })) }; F.esong.link = ''; F.esong.copied = false; }
 }
+export function presetStmt(route, text) {   // 출고 흐름 [명세표] — 판매전표 번호로 바로 거래명세표 (10/28 대표 "배차 완료 탭에서는 판매 명세표가")
+  const f = F[route]; if (!f) return;
+  f.text = text; f.files = []; f.err = ''; open(route); loadStmt(route);
+}
 export function presetQuote(text, partner, site) {   // 출고 흐름 견적 요청 → 품목 글을 넣고 바로 읽기 (우리 품목명·종전가는 도우미 판독) (10/28 대표 "자동으로 품목 들어가고 견적서 나오게")
   const q = F.quote; q.text = text; q.files = []; q.doc = null; q.out = null; q.err = ''; q.preset = { partner: partner || '', site: site || '' };
   open('quote'); loadQuote();
