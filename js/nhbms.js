@@ -17,7 +17,7 @@ const DOWN = '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"
 const PEN = '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M10.5 2.5l3 3L6 13H3v-3z" fill="none" stroke="#1F2328" stroke-width="1.6" stroke-linejoin="round"></path></svg>';
 const TRASH = '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8.5h5.8l.6-8.5" fill="none" stroke="#D92D20" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
 
-const G = { loaded: false, loading: false, err: '', list: [], docs: {}, sites: {}, site: '', tab: 'stmt', status: '전체', open: null, zoom: '', reason: '', img: {}, full: {}, pend: null, panel: 'tax', syncAt: null };
+const G = { loaded: false, loading: false, err: '', list: [], docs: {}, sites: {}, site: ALL, tab: 'stmt', status: '전체', open: null, zoom: '', reason: '', img: {}, full: {}, pend: null, panel: 'tax', syncAt: null };
 let ctx = { rerender: () => {}, goStart: () => {}, me: () => '', role: () => 'view', logout: () => {} };
 const STAFF = () => ctx.role() === 'staff';
 
@@ -44,9 +44,9 @@ export async function load(force) {
       return { ...d, id, total: m.total ? Number(m.total) : itemsTotal(d), place: sl.map((k) => placeOf[k]).find(Boolean) || '', reg: sl.map((k) => regOf[k]).filter(Boolean).sort()[0] || '' };
     }).filter((d) => (G.docs[d.id] || {}).status !== '삭제').sort((a, b) => (b.ymd + b.slip).localeCompare(a.ymd + a.slip));
     G.syncAt = [...sales.map((r) => r.updated_at), ...docs.map((x) => x.updated_at), ...sites.map((x) => x.updated_at)].filter(Boolean).map((t) => new Date(t)).sort((a, b) => b - a)[0] || null;
-    if (!G.site || (G.site !== ALL && !siteList().some((s) => s.id === G.site))) G.site = (siteList()[0] || {}).id || ALL;
-    G.loaded = true;
-  } catch (e) { G.err = e.message || String(e); }
+    if (!G.picked || (G.site !== ALL && !siteList().some((s) => s.id === G.site))) G.site = (siteList()[0] || {}).id || ALL;
+  } catch (e) { G.err = e.message || String(e); if (!G.site) G.site = ALL; }
+  G.loaded = true;   // 실패해도 다시 부르지 않음 (계속 다시 부르던 것)
   G.loading = false; ctx.rerender();
 }
 function siteList() {   // 최근 출고 순
@@ -351,7 +351,7 @@ export function bind(app, c) {
     const a = t.dataset.nh, id = t.dataset.id, cur = G.open && G.list.find((d) => d.id === G.open);
     const staffOnly = ['addtax', 'pick', 'deltax', 'delrow', 'editsite', 'reject', 'draft', 'pend-save', 'pend-cancel', 'start'];
     if (!STAFF() && staffOnly.includes(a)) return;
-    if (a === 'site') { G.site = t.dataset.v; G.status = '전체'; G.open = null; ctx.rerender(); }
+    if (a === 'site') { G.site = t.dataset.v; G.picked = true; G.status = '전체'; G.open = null; ctx.rerender(); }
     else if (a === 'tab') { G.tab = t.dataset.v; ctx.rerender(); }
     else if (a === 'status') { G.status = t.dataset.v; ctx.rerender(); }
     else if (a === 'row') { if (e.target.closest('button, input, a, label, select')) return; G.open = id; G.reason = ''; G.zoom = ''; G.panel = 'tax'; ctx.rerender(); }
