@@ -4,6 +4,7 @@
 //   서류 화면은 모두 js/forms.js (같은 머리·카드·버튼)
 import * as S from './store-supabase.js?v=7';
 import * as FM from './forms.js?v=10';
+import * as FL from './flow.js?v=1';   // 맨 위 출고 흐름 (10/28)
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const won = (n) => Math.round(Number(n) || 0).toLocaleString();
@@ -25,7 +26,8 @@ const IC = {
 export function load(force) {
   if (H.loading || (!force && Date.now() - H.at < 60000)) return;
   H.loading = true; H.at = Date.now();
-  S.getGongganWaitCount().then((n) => { H.gwait = n; ctx.rerender(); }).catch(() => {});   // 공간 올릴 전표 (10/27)
+  S.getGongganWaitCount().then((n) => { H.gwait = n; FL.setGwait(n); ctx.rerender(); }).catch(() => {});   // 공간 올릴 전표 (10/27)
+  FL.load(force);
   Promise.allSettled([S.getFareUnpaid(), S.getInboxCounts()]).then(([f, i]) => {
     if (f.status === 'fulfilled') { H.fare = f.value; H.fareErr = ''; } else H.fareErr = f.reason.message;
     if (i.status === 'fulfilled') { H.inbox = i.value; H.inboxErr = ''; } else H.inboxErr = i.reason.message;
@@ -38,13 +40,17 @@ function top(back) {
   return `<header class="hm-top"><div class="hm-in">
     ${back ? `<button type="button" class="hm-back" data-hm="go" data-r="${back}">‹</button>` : ''}
     <img src="./icons/logo-full.png" alt="HOME TRADERS" class="hm-logo" data-hm="go" data-r="main">
-    <a class="hm-sheet fare" href="${FARE_SHEET}" target="_blank" rel="noopener">운송비 ↗</a>
+    ${fareBadge()}
     <span class="sp"></span><a class="hm-sheet" href="${BOARD_SHEET}" target="_blank" rel="noopener">출고일보 ↗</a><b class="hm-me">${esc(ctx.me())}</b>
     <button type="button" class="hm-link" data-hm="go" data-r="start">처음 화면</button></div></header>`;
 }
 
+function fareBadge() {   // 운송비 미송금 — 위쪽 배지, 누르면 펼침 (10/28 대표 "하단에 계속 안 붙어 다녀도 돼")
+  const n = (H.fare || []).filter((r) => !r.sent).length;
+  return n ? `<button type="button" class="hm-farebtn" data-hm="fare-open">운송비 미송금<span>${n}</span></button>` : `<a class="hm-sheet fare" href="${FARE_SHEET}" target="_blank" rel="noopener">운송비 ↗</a>`;
+}
 function farePanel() {
-  if (H.fareErr) return '';
+  if (H.fareErr || !H.fareOpen) return '';
   const list = (H.fare || []).filter((r) => !r.sent);
   if (!list.length) return '';
   const sum = list.reduce((a, r) => a + (Number(r.amount) || 0), 0);
@@ -57,7 +63,7 @@ function farePanel() {
       <span class="hm-acc">${r.account ? `${esc(r.bank)} <b>${esc(r.account)}</b> ${esc(r.holder)}` : `<i>${esc(r.todo || '계좌 받기')}</i>`}</span>
       <button type="button" class="hm-sent" data-hm="sent" data-id="${esc(r.id)}">보냄</button></div>`;
   return `<section class="hm-fare">
-    <div class="hm-fh"><b>운송비 미송금</b><span>${list.length}건 · ${won(sum)}원</span><span class="sp"></span>
+    <div class="hm-fh"><b>운송비 미송금</b><span>${list.length}건 · ${won(sum)}원</span><a class="hm-more" href="${FARE_SHEET}" target="_blank" rel="noopener">엑셀 ↗</a><span class="sp"></span>
       ${list.length > 5 ? `<button type="button" class="hm-more" data-hm="fare-all">${H.fareAll ? '접기 ▴' : `전체 ${list.length}건 ▾`}</button>` : ''}</div>
     <div class="hm-fl">${show.map(row).join('')}</div></section>`;
 }
@@ -105,7 +111,8 @@ export function screen(view) {
   }
   const wait = (H.inbox.wait || 0) + (H.inbox.got || 0), chk = H.inbox.check || 0;
   return `<div class="hm">${top('')}<main class="hm-main">
-    <div class="hm-grid">
+    ${FL.panel()}
+    <div class="hm-grid small">
       ${tile({ title: '배차 요청', icon: IC.truck, bg: '#FDF0E6', attr: 'data-hm="frame" data-src="/homt?embed=1" data-title="배차 요청"' })}
       ${tile({ title: '자료 넣기', icon: IC.up, bg: '#EAF1FB', cls: 'drop wide', sub: '카톡 글 · 거래명세표 · 발주서 · 사진 · PDF · 엑셀',
         badge: chk ? `확인 ${chk}` : wait ? `대기 ${wait}` : '', badgeStyle: chk ? 'background:#D92D20' : 'background:#1D4F91', attr: 'id="hm-drop" data-hm="box"',
@@ -156,12 +163,14 @@ async function putInbox(items) {
 
 export function bind(app, c) {
   ctx = c;
+  FL.bind(app, { rerender: () => ctx.rerender(), openFrame, go: (r) => ctx.go(r) });
   const on = () => app.querySelector('.hm');
   app.addEventListener('click', (e) => {
     const t = e.target.closest('[data-hm]'); if (!t || !on()) return;
     const a = t.dataset.hm;
     if (a === 'go') { FM.open(''); closeFrame(); ctx.go(t.dataset.r, t.dataset.mode); }   // 화면을 옮기면 열린 팝업은 닫음
     else if (a === 'fare-all') { H.fareAll = !H.fareAll; ctx.rerender(); }
+    else if (a === 'fare-open') { H.fareOpen = !H.fareOpen; ctx.rerender(); if (H.fareOpen) setTimeout(() => { const x = document.querySelector('.hm-fare'); if (x) x.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 0); }
     else if (a === 'sent') {
       const r = (H.fare || []).find((x) => x.id === t.dataset.id); if (!r) return;
       if (!confirm(`${r.driver} ${r.amount ? won(r.amount) + '원' : ''} — 보냄으로 표시할까요?`)) return;

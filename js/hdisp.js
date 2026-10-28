@@ -163,7 +163,27 @@ export function dispatchText() {
 }
 
 const EMBED = new URLSearchParams(location.search).has('embed');   // 첫 화면 팝업 안(/homt?embed=1) — 머리·제목 없이
+// 첫 화면 '출고 흐름'에서 그 출고 건 값으로 열기 (/homt?embed=1&f={from,to,toName,car,goods,sched,say}, 10/28) — 상차지는 주소록에서 찾고 없으면 직접 입력
+let RCTX = null, FLOW_NO = '';
+let PRE = (() => { try { const f = new URLSearchParams(location.search).get('f'); return f ? JSON.parse(f) : null; } catch (_) { return null; } })();
+function applyPre() {
+  if (!PRE) return;
+  const p = PRE, ready = S.getPartners().length > 0;
+  if (!ready && !applyPre.tried) { applyPre.tried = true; setTimeout(() => { if (PRE) { applyPre.late = true; if (RCTX) RCTX.rerender(); } }, 2500); return; }
+  if (!ready && !applyPre.late) return;
+  PRE = null;
+  FLOW_NO = cut(p.no || '', MAX.name);
+  const find = (q) => { const r = q ? search(q) : []; return r.length && hit(q, r[0].name) ? { ...r[0] } : null; };
+  if (p.from) F.from = find(cut(p.from, MAX.name)) || { name: cut(p.from, MAX.name), addr: '', phone: '', kind: '직접' };
+  if (p.to) F.to = { name: cut(p.toName || '', MAX.name), addr: cut(p.to, MAX.addr), phone: '', kind: '현장' };
+  const car = VEHICLES.find((v) => v === p.car);
+  if (car) F.cars = [car]; else if (p.car) F.vehicle = cut(p.car, MAX.text);
+  if (p.goods) F.goods = cut(p.goods, MAX.text);
+  if (p.sched) F.sched = cut(p.sched, MAX.text);
+  if (p.say) { F.say = true; F.sayAs = p.say === '에이스' ? '에이스' : '홈트레이더스'; }
+}
 export function homtScreen() {
+  applyPre();
   const chip = (k, v, on) => `<button type="button" class="hd-chip ${on ? 'on' : ''}" data-hd="set" data-k="${k}" data-v="${esc(v)}">${esc(v)}</button>`;
   return `<div class="hm">${EMBED ? '' : `<header class="hm-top"><div class="hm-in">
     <button type="button" class="hm-back" data-hd="back" aria-label="뒤로">‹</button><img src="./icons/logo-full.png" alt="HOME TRADERS" class="hm-logo" data-hd="back"></div></header>`}
@@ -190,6 +210,7 @@ export function homtScreen() {
 // ── 입력·클릭 ──────────────────────────────────────────
 // ctx = { rerender, goAce, goHomt, goStart }
 export function bind(app, ctx) {
+  RCTX = ctx;
   setInterval(() => { const el = document.getElementById('hd-dl'); if (el) el.outerHTML = dlHtml(); }, 30000);
   app.addEventListener('click', (e) => {
     const t = e.target.closest('[data-hd]');
@@ -260,7 +281,7 @@ function submit(ctx) {
       date: S.todayStr(), warehouse: cut(F.from.name, MAX.name), client: cut(F.to.name, MAX.name), status: '출고예정', method: '배차',
       name: cut(F.goods, MAX.text), qty: 0, unit: '', vehicle: cut(carText(), MAX.text), payment: F.pay,
       loadPlace: cut(F.from.name, MAX.name), loadAddr: cut(F.from.addr, MAX.addr), unloadPlace: cut(F.to.name || F.to.addr, MAX.name), unloadAddr: cut(F.to.addr, MAX.addr),
-      note: ['배차 요청함(홈트 첫 화면)', F.weight && `무게 ${cut(F.weight, MAX.phone)}`, F.sched && `일정 ${cut(F.sched, MAX.text)}`].filter(Boolean).join(' · '),
+      note: [FLOW_NO ? `배차 요청함 ${new Date().toTimeString().slice(0, 5)}(출고 흐름 ${FLOW_NO})` : '배차 요청함(홈트 첫 화면)', F.weight && `무게 ${cut(F.weight, MAX.phone)}`, F.sched && `일정 ${cut(F.sched, MAX.text)}`].filter(Boolean).join(' · '),
     });
     alert('배차요청톡을 복사했어요. 이음물류 카톡방에 붙여넣으세요.\n출고 목록에도 \'출고예정\'으로 등록했어요.');
     Object.assign(F, { from: null, to: null, cars: [], vehicle: '', pay: '현불', goods: '건축자재', weight: '', sched: '', say: false, sayAs: '홈트레이더스', open: '', q: { from: '', to: '' } });

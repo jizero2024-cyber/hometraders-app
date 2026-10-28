@@ -278,6 +278,18 @@ export async function getGongganWaitCount() {   // 공간 올릴 전표 수 (10/
   if (error) throw new Error(error.message);
   return count || 0;
 }
+export async function getFlowBoard() {   // 첫 화면 '출고 흐름' (10/28) — 맥 도우미 flow_board.py 가 출고일보 줄을 단계별로 올림 (직원 전용 표)
+  const { data, error } = await sb.from('site_inbox').select('body,updated_at').eq('id', 'flow:board').maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) return null;
+  try { return JSON.parse(data.body || '{}'); } catch (_) { return null; }
+}
+export async function getSlipLinks(slips) {   // 전표 번호(20261027-3) → 이카운트 전표 PDF 드라이브 링크
+  if (!slips.length) return {};
+  const { data, error } = await sb.from('slip_rows').select('drive_id,slip,kind').in('slip', slips);
+  if (error) throw new Error(error.message);
+  return (data || []).reduce((a, r) => { (a[r.slip] = a[r.slip] || []).push(r); return a; }, {});
+}
 export async function getInboxCounts() {
   const { data, error } = await sb.from('site_inbox').select('status').neq('kind', 'read').in('status', ['wait', 'got', 'check']);   // 'read' = 사진 읽기 부탁 (자료 아님)
   if (error) throw noTable(error, '자료');

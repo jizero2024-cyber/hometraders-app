@@ -216,6 +216,9 @@ async function makeEsong() {
 
 // 팝업 (10/23 대표 "팝업 형태로") — 첫 화면·거래명세표 화면 버튼은 모두 팝업. 주소(/deliv · /quote …)로 열면 전체 화면
 const TITLE = { ...Object.fromEntries(Object.entries(ST).map(([k, v]) => [k, v[0]])), deliv: '납품확인서', approval: '자재승인원', quote: '견적서', deposit: '입금표', esong: '전자 송장' };
+export function preset(route, doc) {   // 출고 흐름에서 그 건 값으로 열기 (10/28) — 지금은 전자 송장만
+  if (route === 'esong') { F.esong.doc = { partner: doc.partner || '', site: doc.site || '', ymd: doc.ymd || today(), items: (doc.items && doc.items.length ? doc.items : [esRow()]).map((r) => ({ name: r.name || '', qty: r.qty || '', unit: r.unit || '개' })) }; F.esong.link = ''; F.esong.copied = false; }
+}
 export function open(route) { ROUTES.forEach((r) => { F[r].open = r === route; }); }
 export function popup() {
   const r = ROUTES.find((x) => F[x].open);
