@@ -30,6 +30,10 @@ export function load(force) {
 }
 export function setGwait(n) { FL.gwait = n || 0; }
 
+const tkey = (t) => {   // 같은 날 안에서 도착 이른 것 먼저, 시간 미정은 맨 아래 (10/28 대표)
+  const m = String(t || '').match(/(\d{1,2})(?::(\d\d))?\s*시?/);
+  if (m) return +m[1] * 60 + (+m[2] || 0) + (/오후/.test(t) && +m[1] < 12 ? 720 : 0);
+  return /새벽/.test(t) ? 300 : /아침|오전/.test(t) ? 540 : /점심|정오/.test(t) ? 720 : /오후/.test(t) ? 840 : /저녁/.test(t) ? 1080 : 9999; };
 const rowsOf = (k) => (FL.data ? FL.data.rows : []).filter((r) => r.steps.includes(k));
 const TODAY_ONLY = ['배차 요청', '배차 완료', '출고 완료'];   // 오늘 마감 — 오늘 건만 (10/28 대표). 견적 요청·발주는 날짜가 앞이라 다
 const dueToday = (r) => { const t = (FL.data || {}).today || '', d = t.replace(/^0/, '');   // 견적 — 오늘까지 보내야 하는 것 (10/28 대표)
@@ -82,8 +86,8 @@ function detailHtml(r) {
 }
 function linesHtml(r) {
   return (r.lines || []).map((l) => {
-    const has = l.st === '입력' && l.slips && l.slips.some((s) => FL.links[s]);
-    const st = l.st === '입력' ? `<button type="button" class="fl-in ok" data-fl="pdf" data-s="${esc((l.slips || []).join(','))}">입력${has ? ' ›' : ''}</button>`
+    const kk = l.k === '판매' ? '판매' : '구매', has = l.st === '입력' && l.slips && l.slips.some((s) => (FL.links[s] || []).some((x) => !x.kind || x.kind === kk));
+    const st = l.st === '입력' ? `<button type="button" class="fl-in ok" data-fl="pdf" data-k="${l.k === '판매' ? '판매' : '구매'}" data-s="${esc((l.slips || []).join(','))}">입력${has ? ' ›' : ''}</button>`
       : `<span class="fl-in ${l.st === '미입력' || l.st === '누락' ? 'no' : 'na'}">${esc(l.st)}</span>`;
     return `<div class="fl-ln"><span class="fl-lk">${esc(l.k)}</span><span class="fl-c">${esc(l.who)}</span><span class="fl-by">${esc(l.by || '')}</span>${st}</div>`;
   }).join('');
@@ -104,7 +108,7 @@ function listHtml() {
     const miss = pick('입력 누락'), ok = pick('입력 완료');
     return (miss.length ? `<div class="fl-day no">입력 누락 ${miss.length}</div>${miss.map(evHtml).join('')}` : '') + (ok.length ? `<div class="fl-day ok">입력 완료 ${ok.length}</div>${ok.map(evHtml).join('')}` : '') || '<div class="fl-empty">없어요</div>';
   }
-  const rows = listOf(FL.cur);
+  const rows = listOf(FL.cur).map((r, i) => [r, i]).sort((a, b) => ((a[0].md ?? 9999) - (b[0].md ?? 9999)) || (tkey(a[0].time) - tkey(b[0].time)) || (a[1] - b[1])).map((x) => x[0]);
   if (!rows.length) return '<div class="fl-empty">없어요</div>';
   if (STMT_STEPS.includes(FL.cur)) setTimeout(() => rows.forEach(fetchLinks), 0);
   let h = `<div class="fl-lh"><span>${FL.cur === '견적' ? '언제까지' : '도착'}</span><span>판매처 · 현장</span><span>품목</span><span>${FL.cur === '견적' ? '' : '상차 → 하차'}</span><span>${FL.cur === '견적' ? '' : '차량'}</span><span></span></div>`, last = null;
@@ -243,7 +247,7 @@ export function bind(app, c) {
     else if (a === 'qx') { FL.qpick = null; closeQ(); }
     else if (['deliv', 'approval', 'quote', 'stmt'].includes(a)) { FM.open(a === 'stmt' ? '' : a); if (a === 'stmt') ctx.go('stmt'); else ctx.rerender(); }
     else if (a === 'pdf') {
-      const slips = (t.dataset.s || '').split(',').filter(Boolean), hit = slips.flatMap((s) => FL.links[s] || [])[0];
+      const slips = (t.dataset.s || '').split(',').filter(Boolean), kk = t.dataset.k, hit = slips.flatMap((s) => FL.links[s] || []).find((x) => !kk || !x.kind || x.kind === kk);
       if (hit) window.open(`https://drive.google.com/file/d/${encodeURIComponent(hit.drive_id)}/view`, '_blank', 'noopener');
       else if (slips.length) copyText(slips.join(' ')).then(() => alert(`전표 PDF가 아직 안 올라왔어요 — 전표 번호 ${slips.join(', ')} 복사함`));
     }
