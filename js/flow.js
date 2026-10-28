@@ -59,7 +59,7 @@ function stmtHtml(r) {   // 거래명세표 — 판매전표 PDF 보기 · 전�
   const sl = saleSlips(r);
   if (!sl.length) return '<span class="fl-stm na">판매 미입력</span>';
   const mk = FL.marks[`sent:${r.no}`];
-  return `<span class="fl-stm"><button type="button" class="fl-in ok" data-fl="stmtgo" data-no="${esc(r.no)}" data-s="${esc(sl.join(','))}">명세표 ›</button>
+  return `<span class="fl-stm"><button type="button" class="fl-in ok" data-fl="pdf" data-k="판매" data-s="${esc(sl.join(','))}">명세표 ›</button><button type="button" class="fl-gh" data-fl="stmtgo" data-no="${esc(r.no)}" data-s="${esc(sl.join(','))}">변환</button>
     ${mk ? `<span class="fl-chip ok">전달 ${esc(String(mk.created_at || '').slice(5, 10).replace('-', '/'))}</span>` : `<button type="button" class="fl-gh sm" data-fl="sent" data-no="${esc(r.no)}">전달함</button>`}</span>`;
 }
 function rowHtml(r) {
@@ -167,7 +167,7 @@ export function main(x) {
   if (FL.view === '누락') return `<section class="fl">${slipHtml('입력 누락')}</section>`;
   if (FL.view === '완료') return `<section class="fl">${slipHtml('입력 완료')}</section>`;
   const tg = `<div class="fl-sub fl-tg"><button type="button" class="fl-sb mid ${FL.all ? '' : 'on'}" data-fl="all" data-k="0">오늘</button><button type="button" class="fl-sb mid ${FL.all ? 'on' : ''}" data-fl="all" data-k="1">전체보기</button></div>`;
-  return `<section class="fl" id="fl-list" aria-label="오늘 마감">${tg}${stepsHtml()}<div class="fl-list" style="--acts:${[0, 130, 240, 350][(BTN[FL.cur] || []).length]}px">${listHtml()}</div></section>`;   // 출고 흐름과 같은 모양, 오늘 건만 (10/28 대표)
+  return `<section class="fl" id="fl-list" aria-label="오늘 마감">${tg}${stepsHtml()}<div class="fl-list" style="--acts:${[0, 130, 240, 350, 460][(BTN[FL.cur] || []).length] + (STMT_STEPS.includes(FL.cur) ? 290 : 0)}px">${listHtml()}</div></section>`;   // 출고 흐름과 같은 모양, 오늘 건만 (10/28 대표)
 }
 export const panel = main;
 
