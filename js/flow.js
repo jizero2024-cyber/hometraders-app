@@ -75,7 +75,7 @@ function rowHtml(r) {
   const route = FL.cur === '견적' ? '' : `${esc(r.from || '상차지 확인')} → ${esc(r.site || '하차지 확인')}`;
   return `<div class="fl-row ${FL.sel === r.no ? 'sel' : ''}" data-fl="row" data-no="${esc(r.no)}">
     <div class="fl-c fl-tm ${r.late || r.day === FL.data.today ? 'now' : ''}"><b>${esc(r.time || (r.day === '미정' ? '미정' : '시간 미정'))}</b><span>${esc(r.day)}</span></div>
-    <div class="fl-c fl-nm"><div class="fl-nmt">${title(r)}</div>${FL.cur === '견적' ? '' : ioHtml(r)}</div>
+    <div class="fl-c fl-nm"><div class="fl-nmt">${title(r)}</div>${STMT_STEPS.includes(FL.cur) ? ioHtml(r) : ''}</div>
     <div class="fl-c fl-ds">${chips}${esc(r.item)}</div>
     <div class="fl-c fl-ds fl-rt">${route}</div>
     <div class="fl-c fl-ds fl-v">${FL.cur === '견적' ? '' : esc(r.size || '')}</div>
