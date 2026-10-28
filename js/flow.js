@@ -18,7 +18,7 @@ const IC = {
 };
 const STEPS = ['견적', '발주', '배차 요청', '배차 완료', '출고 완료', '전표'];   // 전표 = 오늘 전표 확인 (10/28 대표 "오늘 마감에 전표 확인도")   // 전표는 사이드바 '전표 확인'으로 (10/28 대표)
 const LABEL = { 견적: '견적 요청', 전표: '전표 확인' };   // 10/28 대표 "견적 텍스트 견적요청으로"
-const FL = { marks: {}, data: null, err: '', at: 0, loading: false, cur: '배차 요청', view: 'flow', day: '', sel: '', links: {}, gwait: 0 };
+const FL = { marks: {}, data: null, err: '', at: 0, loading: false, cur: '배차 요청', view: 'flow', day: '', sel: '', links: {}, gwait: 0, acts: {} };
 let ctx = { rerender: () => {}, openFrame: () => {} };
 
 export function load(force) {
@@ -129,7 +129,6 @@ function listHtml() {
   const rows = listOf(FL.cur).map((r, i) => [r, i]).sort((a, b) => ((a[0].md ?? 9999) - (b[0].md ?? 9999)) || (tkey(a[0].time) - tkey(b[0].time)) || (a[1] - b[1])).map((x) => x[0]);
   if (FL.cur === '기록') rows.reverse();   // 최근 것 먼저
   if (!rows.length) return '<div class="fl-empty">없어요</div>';
-  if (STMT_STEPS.includes(FL.cur)) setTimeout(() => rows.forEach(fetchLinks), 0);
   setTimeout(fitActs, 0);
   let h = `<div class="fl-lh"><span>${FL.cur === '견적' ? '언제까지' : '도착'}</span><span>판매처 · 현장</span><span>품목</span><span>${FL.cur === '견적' ? '' : '상차 → 하차'}</span><span>${FL.cur === '견적' ? '' : '차량'}</span><span></span></div>`, last = null;
   rows.forEach((r) => { const g = dayLab(r); if (g !== last) { h += `<div class="fl-day">${esc(g)}</div>`; last = g; } h += rowHtml(r); });
@@ -139,7 +138,7 @@ function fitActs() {
   const L = document.querySelector('.fl-list');
   if (!L) return;
   const w = Math.max(0, ...[...L.querySelectorAll('.fl-row .fl-acts')].map((a) => [...a.children].reduce((s_, c) => s_ + c.getBoundingClientRect().width + 6, 0)));
-  if (w) L.style.setProperty('--acts', `${Math.ceil(w)}px`);
+  if (w && Math.abs(w - (FL.acts[FL.cur] || 0)) > 2) { FL.acts[FL.cur] = Math.ceil(w); L.style.setProperty('--acts', `${FL.acts[FL.cur]}px`); }
 }
 const today = () => (FL.data || {}).today;
 export const counts = () => ({
@@ -193,12 +192,12 @@ export function main(x) {
       <input type="search" class="fl-rqi" data-rq="q" placeholder="검색" value="${esc(q.q || '')}">
       <select data-rq="p"><option value="">거래처 전체</option>${ps.map((p_) => `<option ${q.p === p_ ? 'selected' : ''}>${esc(p_)}</option>`).join('')}</select>
       <input type="date" data-rq="from" value="${esc(q.from || '')}"><span>~</span><input type="date" data-rq="to" value="${esc(q.to || '')}">
-      <b class="fl-rqn">${recOf().length}건</b></div><div class="fl-list" id="fl-rec">${listHtml()}</div></section>`;
+      <b class="fl-rqn">${recOf().length}건</b></div><div class="fl-list" id="fl-rec" style="--acts:${FL.acts['기록'] || 760}px">${listHtml()}</div></section>`;
   }
   if (FL.view === '누락') return `<section class="fl">${slipHtml('입력 누락')}</section>`;
   if (FL.view === '완료') return `<section class="fl">${slipHtml('입력 완료')}</section>`;
   const tg = `<div class="fl-sub fl-tg"><button type="button" class="fl-sb mid ${FL.all ? '' : 'on'}" data-fl="all" data-k="0">오늘</button><button type="button" class="fl-sb mid ${FL.all ? 'on' : ''}" data-fl="all" data-k="1">전체보기</button></div>`;
-  return `<section class="fl" id="fl-list" aria-label="오늘 마감">${tg}${stepsHtml()}<div class="fl-list" style="--acts:${[0, 130, 240, 350, 460][(BTN[FL.cur] || []).length] + (STMT_STEPS.includes(FL.cur) ? 290 : 0)}px">${listHtml()}</div></section>`;   // 출고 흐름과 같은 모양, 오늘 건만 (10/28 대표)
+  return `<section class="fl" id="fl-list" aria-label="오늘 마감">${tg}${stepsHtml()}<div class="fl-list" style="--acts:${FL.acts[FL.cur] || [0, 130, 240, 350, 460][(BTN[FL.cur] || []).length] + (STMT_STEPS.includes(FL.cur) ? 290 : 0)}px">${listHtml()}</div></section>`;   // 출고 흐름과 같은 모양, 오늘 건만 (10/28 대표)
 }
 export const panel = main;
 
@@ -300,9 +299,12 @@ export function bind(app, c) {
     else if (a === 'deliv' && r) { FM.presetDeliv(saleSlips(r).join(' ')); ctx.rerender(); }
     else if (['deliv', 'approval', 'quote', 'stmt'].includes(a)) { FM.open(a === 'stmt' ? '' : a); if (a === 'stmt') ctx.go('stmt'); else ctx.rerender(); }
     else if (a === 'pdf') {
-      const slips = (t.dataset.s || '').split(',').filter(Boolean), kk = t.dataset.k, hit = slips.flatMap((s) => FL.links[s] || []).find((x) => !kk || !x.kind || x.kind === kk);
-      if (hit) window.open(`https://drive.google.com/file/d/${encodeURIComponent(hit.drive_id)}/view`, '_blank', 'noopener');
-      else if (slips.length) copyText(slips.join(' ')).then(() => alert(`전표 PDF가 아직 안 올라왔어요 — 전표 번호 ${slips.join(', ')} 복사함`));
+      const slips = (t.dataset.s || '').split(',').filter(Boolean), kk = t.dataset.k, w = window.open('', '_blank');   // 누를 때 받음 (미리 다 받으면 화면이 깜빡임)
+      S.getSlipLinks(slips).then((m) => {
+        const hit = slips.flatMap((s_) => m[s_] || []).find((x) => !kk || !x.kind || x.kind === kk);
+        if (hit) { if (w) w.location = `https://drive.google.com/file/d/${encodeURIComponent(hit.drive_id)}/view`; else window.open(`https://drive.google.com/file/d/${encodeURIComponent(hit.drive_id)}/view`, '_blank'); }
+        else { if (w) w.close(); if (slips.length) copyText(slips.join(' ')).then(() => alert(`전표 PDF가 아직 안 올라왔어요 — 전표 번호 ${slips.join(', ')} 복사함`)); }
+      }).catch((err) => { if (w) w.close(); alert('전표를 못 불러왔어요 — ' + (err.message || err)); });
     }
   };
   app.addEventListener('click', onClick);
