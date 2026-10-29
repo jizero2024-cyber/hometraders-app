@@ -102,3 +102,16 @@ button { font: inherit; }
 @keyframes crane { from { transform: rotate(-14deg) } to { transform: rotate(18deg) } }
 @keyframes cloud { from { transform: translateX(0) } to { transform: translateX(1900px) } }
 .pc:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.2) !important; }
+
+/* 앉기 · 일어나기 · 서로 체크 · 마을 입체 (10/29) */
+.spr img { transition: translate .35s ease, scale .35s ease; }
+.spr.sit img { translate: 0 5px; scale: 1.05 .9; }
+.spr.up { animation: none !important; }
+.spr.up img { translate: 0 -5px; scale: .98 1.05; }
+.chk { position: absolute; left: 50%; top: -14px; transform: translateX(-50%); width: 20px; height: 20px; border-radius: 50%; color: #fff; font-size: 12px; font-weight: 900; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 8px rgba(0,0,0,.2); animation: pop .3s ease-out both; }
+.chk.ok { background: #34C759; } .chk.no { background: #FF5A3C; }
+@keyframes smoke { 0% { transform: translate(0,0) scale(.5); opacity: 0 } 20% { opacity: .7 } 100% { transform: translate(12px,-40px) scale(1.8); opacity: 0 } }
+.smoke { position: absolute; width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,.85); animation: smoke 3.4s ease-out infinite; z-index: 3; pointer-events: none; }
+@keyframes flock { from { transform: translateX(-120px) } to { transform: translateX(1600px) } }
+@keyframes flap { from { transform: scaleY(1) } to { transform: scaleY(-.6) } }
+.flock { position: absolute; left: 0; animation: flock linear both; }

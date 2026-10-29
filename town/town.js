@@ -21,10 +21,42 @@ window.addEventListener('resize', fit);
 
 const truckSvg = (c, c2) => `<svg width="52" height="40" viewBox="0 0 58 44" aria-hidden="true" style="display:block"><ellipse cx="29" cy="40" rx="24" ry="4" fill="#000" opacity=".12"/><rect x="2" y="6" width="34" height="26" rx="7" fill="${c}"/><rect x="2" y="6" width="34" height="9" rx="6" fill="#fff" opacity=".25"/><rect x="34" y="14" width="20" height="18" rx="6" fill="${c2}"/><rect x="39" y="17" width="10" height="7" rx="2" fill="#E6F4FF"/><circle cx="13" cy="34" r="6" fill="#4A3F3A"/><circle cx="13" cy="34" r="2.5" fill="#D8D0CB"/><circle cx="44" cy="34" r="6" fill="#4A3F3A"/><circle cx="44" cy="34" r="2.5" fill="#D8D0CB"/></svg>`;
 const backBtn = (href, label) => `<a class="btn" href="${href}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>${label}</a>`;
-function walker(layer, w) {   // 길 따라 걷는 직원 — 가는 쪽을 보고 뒤뚱뒤뚱
-  const xs = (w.path.match(/-?\d+(\.\d+)?/g) || []).map(Number), flip = xs.length > 2 && xs[xs.length - 2] < xs[0] ? -1 : 1;
-  const n = el(`<div class="walker" style="offset-path: path('${w.path}'); animation-duration: ${w.dur || 8}s"><div class="w"><span class="shadow"></span><div style="position:absolute;left:50%;bottom:100%;transform:translateX(-50%);white-space:nowrap;margin-bottom:4px;padding:5px 9px;border-radius:12px;background:#fff;box-shadow:0 4px 12px rgba(30,60,110,.2);font-size:11px;font-weight:800;color:${w.c}">${esc(w.say)}</div><img class="gait" src="${IMG}${w.av}.webp" alt="${esc(w.name)}" style="width:${w.size || 38}px;display:block;--fx:${flip}"></div></div>`);
-  layer.appendChild(n); setTimeout(() => n.remove(), (w.dur || 8) * 1000 + 200);
+// 걷기 — 방향 따라 앞·옆·뒷모습 그림을 번갈아 (발걸음). 그림: img/walk/<이름>_0~5 (0 앞 서기, 1 앞 걸음, 2·3 옆(오른쪽), 4·5 뒤)
+const WALK = new Set(['seal', 'cat', 'beaver', 'dog', 'guppy', 'raccoon', 'squirrel', 'owl', 'turtle', 'otter', 'hedgehog', 'penguin', 'rabbit', 'panda', 'redpanda', 'driver', 'boss1', 'worker']);
+const wf = (av, k) => `${IMG}walk/${av}_${k}.webp`;
+function mover(layer, o) {   // o: {av, path(points [[x,y]...]), speed px/s, size, say, c, loop, done}
+  const pts = o.pts, segs = []; let total = 0;
+  for (let i = 1; i < pts.length; i++) { const dx = pts[i][0] - pts[i - 1][0], dy = pts[i][1] - pts[i - 1][1], L = Math.hypot(dx, dy); segs.push({ a: pts[i - 1], dx, dy, L, s: total }); total += L; }
+  const hasW = WALK.has(o.av), size = o.size || 38;
+  const n = el(`<div style="position:absolute;left:0;top:0;z-index:7;pointer-events:none;will-change:transform"><div style="position:absolute;left:0;top:0;transform:translate(-50%,-100%)">
+    ${o.say ? `<div style="position:absolute;left:50%;bottom:100%;transform:translateX(-50%);white-space:nowrap;margin-bottom:4px;padding:5px 9px;border-radius:12px;background:#fff;box-shadow:0 4px 12px rgba(30,60,110,.2);font-size:11px;font-weight:800;color:${o.c || '#4A3F3A'}">${esc(o.say)}</div>` : ''}
+    <span class="shadow"></span><img alt="" style="height:${Math.round(size * 1.05)}px;display:block"></div></div>`);
+  const img = n.querySelector('img'); layer.appendChild(n);
+  if (!hasW) img.src = `${IMG}${o.av}.webp`;
+  if (hasW) for (let k = 0; k < 6; k++) { const pre = new Image(); pre.src = wf(o.av, k); }
+  const speed = o.speed || 60, t0 = performance.now(); let d = 0, dir = 1, raf;
+  const step = (now) => {
+    if (!n.isConnected) return;
+    const t = (now - t0) / 1000; let dist = t * speed;
+    if (o.loop) { const cyc = dist % (total * 2); dist = cyc <= total ? cyc : total * 2 - cyc; dir = cyc <= total ? 1 : -1; } else if (dist >= total) { dist = total; }
+    let sg = segs[segs.length - 1]; for (const g of segs) { if (dist <= g.s + g.L) { sg = g; break; } }
+    const f = sg.L ? (dist - sg.s) / sg.L : 1, x = sg.a[0] + sg.dx * f, y = sg.a[1] + sg.dy * f;
+    n.style.transform = `translate(${x.toFixed(1)}px,${y.toFixed(1)}px)`;
+    const dx = sg.dx * dir, dy = sg.dy * dir, ph = Math.floor(now / 170) % 2, moving = o.loop || dist < total;
+    if (hasW) {
+      let k, flip = 1;
+      if (!moving) k = 0; else if (Math.abs(dx) > Math.abs(dy) * 0.8) { k = 2 + ph; flip = dx < 0 ? -1 : 1; } else if (dy > 0) k = ph; else k = 4 + ph;
+      const src = wf(o.av, k); if (img.dataset.k !== src) { img.src = src; img.dataset.k = src; } img.style.transform = `scaleX(${flip}) translateY(${moving && ph ? -2 : 0}px)`;
+    } else { img.style.transform = `scaleX(${dx < 0 ? -1 : 1}) translateY(${Math.floor(now / 170) % 2 ? -3 : 0}px)`; }
+    if (!o.loop && dist >= total) { if (o.done) o.done(n); else setTimeout(() => n.remove(), 300); return; }
+    raf = requestAnimationFrame(step);
+  };
+  raf = requestAnimationFrame(step); return n;
+}
+const ptsOf = (path) => { const a = (path.match(/-?\d+(\.\d+)?/g) || []).map(Number), out = []; for (let i = 0; i + 1 < a.length; i += 2) out.push([a[i], a[i + 1]]); return out; };
+function walker(layer, w) {   // 예전 호출 그대로 — 길(path 글자) 따라 걷기
+  const pts = ptsOf(w.path); let L = 0; for (let i = 1; i < pts.length; i++) L += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+  return mover(layer, { av: w.av, pts, speed: L / ((w.dur || 8) * 0.92), size: w.size || 38, say: w.say, c: w.c });
 }
 function sprite(layer, s) {   // 자리에 있는 직원 — 일하는 모양대로 움직임
   const FX = { keys: '<span class="fx fxk">타닥</span><span class="fx fxk" style="animation-delay:.5s;left:70%">탁</span>', coin: '<span class="fx fxc"></span><span class="fx fxc" style="animation-delay:.7s;left:65%"></span>',
@@ -87,7 +119,9 @@ const V = { jobs: [
 ], dispOpen: false, drops: [{ name: '원익_거래명세표(양산).png', t: '08:55', st: 2 }, { name: '이음물류_대화내역.txt', t: '08:58', st: 2 }], log: [] };
 
 function village() {
-  const v = el(`<div class="v" style="background:#8CC870">
+  const v = el(`<div class="v" style="background:linear-gradient(#BFE6FF 0%,#DDF2FF 22%,#9ED27F 40%,#8CC870 100%);perspective:1500px;perspective-origin:50% 0%">
+    <div id="sky" style="position:absolute;inset:0;pointer-events:none;z-index:7"></div>
+    <div id="tilt" style="position:absolute;inset:0;transform-origin:50% 62%;transform-style:preserve-3d;transition:transform .8s cubic-bezier(.2,.7,.2,1)">
     <div id="world" style="position:absolute;inset:0;transform-origin:0 0;transition:transform .25s ease-out;cursor:grab">
     <img src="${IMG}town.webp" alt="" style="position:absolute;left:-20px;top:0;width:1194px;height:900px">
     <div id="amb" style="position:absolute;inset:0;pointer-events:none"></div>
@@ -98,7 +132,7 @@ function village() {
       <span class="pill" style="position:absolute;left:50%;top:-20px;transform:translateX(-50%);background:#E8732C;color:#fff;font-size:11px;box-shadow:0 3px 10px rgba(232,115,44,.4)">자료 넣기 <b id="ndrop"></b></span>
     </button>
     <div id="night" style="position:absolute;inset:-200px;pointer-events:none;background:rgba(20,30,80,.32);mix-blend-mode:multiply;display:none;z-index:6"></div>
-    </div>
+    </div></div>
     <div style="position:absolute;right:24px;bottom:24px;display:flex;flex-direction:column;gap:6px;z-index:8"><button id="zin" type="button" class="btn" style="width:46px;justify-content:center;padding:0;font-size:22px">+</button><button id="zout" type="button" class="btn" style="width:46px;justify-content:center;padding:0;font-size:22px">−</button><button id="zre" type="button" class="btn" style="width:46px;justify-content:center;padding:0;font-size:12px">전체</button></div>
     <div style="position:absolute;left:20px;top:20px;display:flex;gap:10px;align-items:center;z-index:8">
       <div class="card" style="padding:9px 15px;border-radius:18px"><div style="font-size:12px;color:#8A7E77" id="vdate"></div><div style="font-size:24px;font-weight:800;letter-spacing:-.02em;line-height:1.1" id="vclock"></div></div>
@@ -142,20 +176,31 @@ function village() {
     const r = ROADS[i % ROADS.length], c = CARC[i % CARC.length], d = 18 + (i * 7) % 16;
     amb.appendChild(el(`<div style="position:absolute;left:0;top:0;offset-path:path('${TP(i % 2 ? r.slice().reverse() : r)}');offset-rotate:auto;animation:drive ${d}s linear ${-i * 3.1}s infinite;z-index:2"><svg width="22" height="12" viewBox="0 0 22 12" aria-hidden="true" style="display:block;margin:-6px 0 0 -11px"><rect x="0.5" y="0.5" width="21" height="11" rx="4" fill="${c}" stroke="rgba(0,0,0,.25)"/><rect x="12" y="2" width="6" height="8" rx="2" fill="#CFE8FF"/><rect x="3" y="2.5" width="4" height="7" rx="1.5" fill="#CFE8FF" opacity=".8"/></svg></div>`));
   }
-  const WALKS = [[[310, 520], [310, 300]], [[540, 600], [330, 575]], [[575, 200], [880, 250]], [[860, 520], [1100, 480]], [[320, 610], [320, 820]], [[580, 620], [500, 860]], [[600, 190], [600, 540]]];
-  WALKS.forEach((w, i) => { const flipd = w[1][0] < w[0][0] ? -1 : 1; amb.appendChild(el(`<div style="position:absolute;left:0;top:0;offset-path:path('${TP(w)}');offset-rotate:0deg;animation:drive ${14 + i * 3}s linear ${-i * 2}s infinite alternate;z-index:3"><img class="gait" src="${IMG}${['driver', 'boss1', 'boss2'][i % 3]}.webp" alt="" style="width:15px;display:block;margin:-20px 0 0 -7px;--fx:${flipd}"></div>`)); });
+  const WALKS = [[[310, 520], [310, 300]], [[540, 600], [330, 575]], [[575, 200], [880, 250]], [[860, 520], [1100, 480]], [[320, 610], [320, 820]], [[580, 620], [500, 860]], [[600, 190], [600, 540]],
+    [[20, 572], [290, 566]], [[320, 312], [550, 340]], [[850, 312], [1150, 340]], [[575, 150], [575, 20]], [[880, 480], [915, 250]], [[330, 190], [550, 178]], [[570, 340], [570, 560]]];
+  const PED = ['driver', 'boss1', 'worker', 'dog', 'driver', 'worker', 'cat', 'boss1', 'rabbit', 'worker', 'driver', 'squirrel', 'boss1', 'penguin'];
+  WALKS.forEach((w, i) => { mover(amb, { av: PED[i], pts: w.map(([x, y]) => T(x, y)), speed: 12 + (i % 4) * 3, size: ['driver', 'boss1', 'worker'].includes(PED[i]) ? 24 : 20, loop: true }); });
+  for (let i = 0; i < 3; i++) amb.appendChild(el(`<span style="position:absolute;top:${180 + i * 250}px;left:-400px;width:${340 + i * 70}px;height:${150 + i * 30}px;border-radius:50%;background:radial-gradient(ellipse,rgba(20,50,30,.16),rgba(20,50,30,0) 70%);animation:cloud ${70 + i * 25}s linear ${-i * 30 - 4}s infinite;z-index:1"></span>`));
+  Object.values(PLACES).forEach((p, i) => { if (i % 2) return; const [x, y] = T(...p.at); for (let j = 0; j < 3; j++) amb.appendChild(el(`<span class="smoke" style="left:${x + 14}px;top:${y + 10}px;animation-delay:${(i * .7 + j * 1.1).toFixed(1)}s"></span>`)); });
+  const sky = v.querySelector('#sky');
+  const flock = () => { const y = 80 + Math.random() * 500, n = el(`<div class="flock" style="top:${y}px;animation-duration:${22 + Math.random() * 10}s">${[0, 1, 2, 3, 4].map((k) => `<svg width="22" height="12" viewBox="0 0 22 12" style="position:absolute;left:${[0, 18, 18, 36, 36][k]}px;top:${[0, -10, 10, -20, 20][k]}px;animation:flap .5s ${k * .08}s ease-in-out infinite alternate" aria-hidden="true"><path d="M1 8 Q6 1 11 7 Q16 1 21 8" fill="none" stroke="#3F4A55" stroke-width="2" stroke-linecap="round"/></svg><span style="position:absolute;left:${[0, 18, 18, 36, 36][k] + 6}px;top:${[0, -10, 10, -20, 20][k] + 120}px;width:10px;height:4px;border-radius:50%;background:rgba(0,0,0,.12)"></span>`).join('')}</div>`); sky.appendChild(n); setTimeout(() => n.remove(), 34000); };
+  flock(); every(14000, flock);
   [[225, 70], [125, 330], [195, 560]].forEach(([x, y], i) => { const [X, Y] = T(x, y); amb.appendChild(el(`<svg width="120" height="110" viewBox="0 0 120 110" aria-hidden="true" style="position:absolute;left:${X - 20}px;top:${Y - 100}px;overflow:visible;z-index:3"><rect x="16" y="20" width="6" height="88" fill="#F5B400" stroke="#C98F00"/><g style="transform-origin:19px 22px;animation:crane ${7 + i}s ease-in-out infinite alternate"><rect x="0" y="18" width="96" height="5" fill="#F5B400" stroke="#C98F00"/><line x1="70" y1="23" x2="70" y2="58" stroke="#555" stroke-width="1.2"/><rect x="62" y="58" width="16" height="7" fill="#E8C78F" stroke="#B08A50"/></g></svg>`)); });
   for (let i = 0; i < 3; i++) amb.appendChild(el(`<span style="position:absolute;top:${120 + i * 260}px;left:-300px;width:${260 + i * 60}px;height:${110 + i * 20}px;border-radius:50%;background:radial-gradient(ellipse,rgba(255,255,255,.35),rgba(255,255,255,0) 70%);animation:cloud ${70 + i * 25}s linear ${-i * 30}s infinite;z-index:5"></span>`));
   const hr = new Date().getHours(); if (hr >= 18 || hr < 6) { v.querySelector('#night').style.display = 'block'; [[300, 300], [560, 330], [840, 300], [300, 552], [560, 588], [840, 502], [560, 168], [900, 232]].forEach(([x, y], i) => { const [X, Y] = T(x, y); amb.appendChild(el(`<span class="glow" style="left:${X}px;top:${Y - 18}px;width:10px;height:10px;z-index:7;animation-delay:${i * .3}s"></span>`)); }); }
   // 확대 · 끌기
   let Z = { s: 1, x: 0, y: 0 }, drag = null;
-  const apply = (anim) => { world.style.transition = anim ? 'transform .25s ease-out' : 'none'; Z.s = Math.min(3, Math.max(1, Z.s)); const mx = 1440 * (Z.s - 1), my = 900 * (Z.s - 1); Z.x = Math.min(0, Math.max(-mx, Z.x)); Z.y = Math.min(0, Math.max(-my, Z.y)); world.style.transform = `translate(${Z.x}px,${Z.y}px) scale(${Z.s})`; };
+  const apply = (anim) => { world.style.transition = anim ? 'transform .25s ease-out' : 'none'; Z.s = Math.min(3, Math.max(1, Z.s)); const mx = 1440 * (Z.s - 1), my = 900 * (Z.s - 1); Z.x = Math.min(0, Math.max(-mx, Z.x)); Z.y = Math.min(0, Math.max(-my, Z.y)); world.style.transform = `translate(${Z.x}px,${Z.y}px) scale(${Z.s}) scale(1.2265) translate(20px,-60px)`; tiltSet(); };
   const zoomAt = (px, py, f) => { const ns = Math.min(3, Math.max(1, Z.s * f)); Z.x = px - (px - Z.x) * (ns / Z.s); Z.y = py - (py - Z.y) * (ns / Z.s); Z.s = ns; apply(true); };
   const kk = () => stage.getBoundingClientRect().width / 1440;
   v.addEventListener('wheel', (e) => { if (e.target.closest('.card,.modal')) return; e.preventDefault(); const r = stage.getBoundingClientRect(); zoomAt((e.clientX - r.left) / kk(), (e.clientY - r.top) / kk(), Math.exp(-e.deltaY * 0.0016)); }, { passive: false });
   world.addEventListener('pointerdown', (e) => { if (e.target.closest('a,button,.pc')) return; drag = { x: e.clientX, y: e.clientY, zx: Z.x, zy: Z.y, moved: false }; world.style.cursor = 'grabbing'; });
   window.addEventListener('pointermove', (e) => { if (!drag) return; Z.x = drag.zx + (e.clientX - drag.x) / kk(); Z.y = drag.zy + (e.clientY - drag.y) / kk(); apply(false); });
   window.addEventListener('pointerup', () => { if (drag) { drag = null; world.style.cursor = 'grab'; } });
+  const tilt = v.querySelector('#tilt'); let RX = 16, RZ = 0;
+  const tiltSet = () => { tilt.style.transform = `rotateX(${(RX * (Z.s > 1.3 ? 0.4 : 1)).toFixed(1)}deg) rotateZ(${RZ.toFixed(2)}deg) scale(${(1.12 - (Z.s > 1.3 ? 0.06 : 0)).toFixed(2)})`; };
+  v.addEventListener('pointermove', (e) => { if (drag || e.target.closest('.card,.modal')) return; const r = stage.getBoundingClientRect(); const fx = (e.clientX - r.left) / r.width - 0.5, fy = (e.clientY - r.top) / r.height - 0.5; RX = 16 + fy * 6; RZ = fx * -2.2; tiltSet(); });
+  apply(false);
   v.querySelector('#zin').onclick = () => zoomAt(720, 450, 1.4); v.querySelector('#zout').onclick = () => zoomAt(720, 450, 1 / 1.4); v.querySelector('#zre').onclick = () => { Z = { s: 1, x: 0, y: 0 }; apply(true); };
 
   // 거래처 말풍선
@@ -386,6 +431,24 @@ function office() {
     '꼬북': ['nap', 'zz'], '펭송': ['nap', 'zz'], '눈썰미': ['nap', 'zz'] };
   const seats = STAFF.map((s) => { const r = REST[s.name], a = ACT[s.name] || ['type', 'keys']; return sprite(bld, { av: s.av, name: s.name, x: r ? r[0] : s.x, y: r ? r[1] : s.y + 44, size: r ? 34 : (s.av === 'guppy' ? 30 : 40), act: a[0], fx: a[1] }); });
   STAFF.forEach((s, i) => { if (REST[s.name]) { s.status = '쉬는 중 · 마당'; } });
+  const frame = (n, av, k, flip = 1) => { const im = n.querySelector('img'); if (!im) return; if (!im.dataset.base) im.dataset.base = im.src; im.src = k == null || !WALK.has(av) ? im.dataset.base : wf(av, k); im.style.transform = `scaleX(${flip})`; };
+  const sitN = (n, av) => { n.classList.remove('up'); n.classList.add('sit'); frame(n, av, null); };
+  const upN = (n, av, k = 0, flip = 1) => { n.classList.remove('sit'); n.classList.add('up'); frame(n, av, k, flip); };
+  seats.forEach((n, i) => { if (!REST[STAFF[i].name]) n.classList.add('sit'); });
+  const PEEK = [['부엉', '콩알', '판가 맞는지 볼게', true], ['고슴', '수달', '운임 송금했어?', false], ['콩알', '도토리', '명세표 전표랑 같아 ✔', true], ['김맥순', '이음이', '배차 몇 건 남았어?', true],
+    ['눈썰미', '콩알', '명세서 7장 다 넣었어?', false], ['도토리', '뚝딱', '견적 단가 확인 ✔', true], ['토깽', '펭송', '송장 링크 열어봤대?', true], ['수달', '고슴', '공간 전표 올렸어?', true]];
+  const mark = (n, ok) => { const m = el(`<span class="chk ${ok ? 'ok' : 'no'}">${ok ? '✔' : '!'}</span>`); n.appendChild(m); setTimeout(() => m.remove(), 2600); };
+  let pk = 0;
+  every(4300, () => {   // 일어나서 옆 사람 일 확인하고 다시 앉기 (10/29 대표 "서로 감시하고 체크")
+    const [a, b, txt, ok] = PEEK[pk++ % PEEK.length], ia = STAFF.findIndex((s) => s.name === a), ib = STAFF.findIndex((s) => s.name === b);
+    const A = seats[ia], B = seats[ib]; if (!A || !B || A.style.visibility === 'hidden' || B.style.visibility === 'hidden' || meeting) return;
+    const dx = parseFloat(B.style.left) - parseFloat(A.style.left), sameRow = Math.abs(parseFloat(B.style.top) - parseFloat(A.style.top)) < 30;
+    upN(A, STAFF[ia].av, sameRow ? 2 : (parseFloat(B.style.top) < parseFloat(A.style.top) ? 4 : 0), dx < 0 ? -1 : 1);
+    const bb = el(`<div class="bub" style="left:${A.style.left};top:${parseFloat(A.style.top) - 58}px"><div style="padding:6px 10px;border-radius:12px;background:#fff;box-shadow:0 6px 16px rgba(30,60,110,.2);font-size:11px;font-weight:700;white-space:nowrap"><b style="color:${STAFF[ia].c}">${esc(a)}</b> → ${esc(b)} · ${esc(txt)}</div><div class="tail" style="background:#fff"></div></div>`);
+    bld.appendChild(bb);
+    later(1300, () => { upN(B, STAFF[ib].av, 0); mark(B, ok); });
+    later(2800, () => { bb.remove(); if (!meeting) { sitN(A, STAFF[ia].av); sitN(B, STAFF[ib].av); } });
+  });
   const F = { 6: 142, 5: 238, 4: 330, 3: 426, 2: 522, 1: 634, 0: 737 };
   const wk = (x0, f0, x1, f1) => `M ${x0} ${F[f0]} L 470 ${F[f0]} L 516 ${F[f1]} L ${x1} ${F[f1]}`;
   const EV = [
@@ -423,18 +486,33 @@ function office() {
       return { s, i, tx, ty };
     });
     const seated = [];
-    later(6100, () => { ppl.forEach((p) => seated.push(sprite(bld, { av: p.s.av, name: p.s.name, x: p.tx, y: p.ty, size: 32, act: 'nod' }))); ob.style.display = 'none'; });
+    later(6100, () => { ppl.forEach((p) => { const n = sprite(bld, { av: p.s.av, name: p.s.name, x: p.tx, y: p.ty, size: 32, act: 'nod' }); sitN(n, p.s.av); seated.push(n); }); ob.style.display = 'none'; });
+    const stand = (p, k = 0, flip = 1) => { const n = seated[ppl.indexOf(p)]; if (n) upN(n, p.s.av, k, flip); return n; };
+    const sitp = (p) => { const n = seated[ppl.indexOf(p)]; if (n) sitN(n, p.s.av); };
     const rb = el('<div class="bub" style="display:none"></div>'); bld.appendChild(rb);
     const sayAt = (p, txt, c) => { rb.style.display = ''; rb.style.left = p.tx + 'px'; rb.style.top = (p.ty - 36) + 'px'; rb.innerHTML = `<div style="max-width:240px;padding:8px 12px;border-radius:14px;background:#fff;box-shadow:0 8px 20px rgba(30,60,110,.22);font-size:12px;line-height:1.4"><b style="color:${c}">${esc(txt[0])}</b> ${esc(txt[1])}</div><div class="tail" style="background:#fff"></div>`; rb.style.animation = 'none'; void rb.offsetWidth; rb.style.animation = ''; };
     let t0 = 6800;
-    ppl.forEach((p) => { later(t0, () => sayAt(p, [p.s.name, REPORT[p.s.name] || '보고할게요'], p.s.c)); t0 += 1900; });
+    ppl.forEach((p, j) => { later(t0, () => { if (j) sitp(ppl[j - 1]); stand(p); sayAt(p, [p.s.name, REPORT[p.s.name] || '보고할게요'], p.s.c); }); t0 += 1900; });
+    later(t0, () => sitp(ppl[ppl.length - 1]));
     TOSS.forEach(([a, b, msg]) => {
       later(t0, () => {
         const A = ppl.find((p) => p.s.name === a), Bp = ppl.find((p) => p.s.name === b); sayAt(A, [`${a} → ${b}`, msg], A.s.c);
+        stand(A, 2, Bp.tx < A.tx ? -1 : 1); later(1400, () => { stand(Bp, 0); }); later(2400, () => { sitp(A); sitp(Bp); });
         const doc = el(`<span style="position:absolute;left:0;top:0;width:16px;height:20px;background:#fff;border-radius:2px;box-shadow:0 2px 6px rgba(0,0,0,.3);border-top:4px solid ${A.s.c};offset-path:path('M ${A.tx} ${A.ty - 30} Q ${(A.tx + Bp.tx) / 2} ${Math.min(A.ty, Bp.ty) - 90} ${Bp.tx} ${Bp.ty - 30}');animation:drive 1.2s ease-in-out both;z-index:9"></span>`);
         bld.appendChild(doc); setTimeout(() => doc.remove(), 1600);
       });
       t0 += 2600;
+    });
+    // 서로 체크 — 넘긴 일 했는지 확인하고 ✔ / !
+    const CHECK = [['부엉', '콩알', '구매 6건 단가 확인', true], ['고슴', '수달', '운임 2건 아직', false], ['콩알', '도토리', '명세표 = 전표', true], ['김맥순', '이음이', '배차 5건 남음', false], ['도토리', '뚝딱', '견적 단가 맞음', true]];
+    CHECK.forEach(([a, b, msg, ok]) => {
+      later(t0, () => {
+        const A = ppl.find((p) => p.s.name === a), Bp = ppl.find((p) => p.s.name === b); if (!A || !Bp) return;
+        stand(A, 2, Bp.tx < A.tx ? -1 : 1); sayAt(A, [`${a} 체크 → ${b}`, `${msg} ${ok ? '✔' : '!'}`], ok ? '#2E9A5A' : '#E0452F');
+        const nb = seated[ppl.indexOf(Bp)]; if (nb) mark(nb, ok);
+        later(1800, () => sitp(A));
+      });
+      t0 += 2100;
     });
     later(t0, () => {
       rb.remove(); seated.forEach((n) => n.remove()); ob.style.display = '';
