@@ -49,3 +49,52 @@ button { font: inherit; }
 .newrow { animation: rowin .5s ease-out both; }
 .scroll { overflow-y: auto; scrollbar-width: thin; }
 .modal { position: absolute; inset: 0; z-index: 30; background: rgba(30,40,60,.35); display: flex; align-items: center; justify-content: center; }
+
+/* 직원 움직임 (10/29 대표 "실제처럼") */
+.spr { position: absolute; transform: translate(-50%,-100%); z-index: 3; pointer-events: none; transform-origin: 50% 100%; }
+.spr img { filter: drop-shadow(0 3px 3px rgba(0,0,0,.15)); }
+@keyframes type { 0%,100% { transform: translate(-50%,-100%) } 25% { transform: translate(-50%,calc(-100% - 2px)) } 50% { transform: translate(-50%,-100%) } 75% { transform: translate(-50%,calc(-100% - 1.5px)) } }
+@keyframes sway { 0%,100% { transform: translate(-50%,-100%) rotate(-3deg) } 50% { transform: translate(-50%,-100%) rotate(3deg) } }
+@keyframes nap { 0%,100% { transform: translate(-50%,-100%) scale(1,1) } 50% { transform: translate(-50%,-100%) scale(1.04,.95) } }
+@keyframes point { 0%,60%,100% { transform: translate(-50%,-100%) rotate(0) } 70% { transform: translate(-50%,-100%) rotate(-8deg) } 85% { transform: translate(-50%,-100%) rotate(4deg) } }
+@keyframes phone { 0%,100% { transform: translate(-50%,-100%) rotate(-2deg) } 30% { transform: translate(-50%,calc(-100% - 2px)) rotate(2deg) } 60% { transform: translate(-50%,-100%) rotate(-1deg) } }
+@keyframes hammer { 0%,100% { transform: translate(-50%,-100%) rotate(0) } 20% { transform: translate(-50%,calc(-100% - 3px)) rotate(-10deg) } 35% { transform: translate(-50%,-100%) rotate(6deg) } }
+.spr.type { animation: type .7s ease-in-out infinite } .spr.sway { animation: sway 3.2s ease-in-out infinite } .spr.nap { animation: nap 3.6s ease-in-out infinite }
+.spr.point { animation: point 3s ease-in-out infinite } .spr.phone { animation: phone 2.2s ease-in-out infinite } .spr.hammer { animation: hammer .55s ease-in-out infinite }
+@keyframes gait { 0%,100% { transform: scaleX(var(--fx,1)) translateY(0) rotate(-5deg) scaleY(1) } 25% { transform: scaleX(var(--fx,1)) translateY(-4px) rotate(0) scaleY(1.03) } 50% { transform: scaleX(var(--fx,1)) translateY(0) rotate(5deg) scaleY(.97) } 75% { transform: scaleX(var(--fx,1)) translateY(-4px) rotate(0) scaleY(1.03) } }
+.gait { animation: gait .5s linear infinite; transform-origin: 50% 100%; }
+.walker .w { animation: none !important; }
+.shadow { position: absolute; left: 50%; bottom: -3px; width: 70%; height: 6px; margin-left: -35%; border-radius: 50%; background: rgba(0,0,0,.18); }
+@keyframes puff { 0% { transform: scale(.3); opacity: .7 } 100% { transform: translate(6px,-14px) scale(1.6); opacity: 0 } }
+.puff { position: absolute; width: 10px; height: 10px; border-radius: 50%; background: rgba(210,190,160,.9); animation: puff 1.6s ease-out infinite; z-index: 3; pointer-events: none; }
+
+/* 업무별 움직임·효과 */
+@keyframes lean { 0%,100% { transform: translate(-50%,-100%) rotate(0) } 50% { transform: translate(-50%,-100%) rotate(7deg) translateY(1px) } }
+@keyframes nod { 0%,100% { transform: translate(-50%,-100%) } 30% { transform: translate(-50%,calc(-100% + 2px)) rotate(3deg) } 60% { transform: translate(-50%,-100%) rotate(-2deg) } }
+@keyframes stamp { 0%,55%,100% { transform: translate(-50%,-100%) } 65% { transform: translate(-50%,calc(-100% + 4px)) scale(1.06,.92) } 75% { transform: translate(-50%,calc(-100% - 3px)) } }
+@keyframes swim { 0%,100% { transform: translate(-50%,-100%) rotate(-6deg) } 50% { transform: translate(calc(-50% + 6px),calc(-100% - 5px)) rotate(6deg) } }
+.spr.lean { animation: lean 1.6s ease-in-out infinite } .spr.nod { animation: nod 1.4s ease-in-out infinite } .spr.stamp { animation: stamp 1.3s ease-in-out infinite } .spr.swim { animation: swim 2.4s ease-in-out infinite }
+.fx { position: absolute; left: 50%; top: 10%; pointer-events: none; }
+@keyframes rise { 0% { transform: translate(-50%,0) scale(.8); opacity: 0 } 20% { opacity: 1 } 100% { transform: translate(-50%,-22px) scale(1); opacity: 0 } }
+.fxk { font-size: 9px; font-weight: 800; color: #5D6B7A; animation: rise 1s ease-out infinite; white-space: nowrap; }
+.fxc { width: 9px; height: 9px; border-radius: 50%; background: #FFC531; box-shadow: inset -2px -2px 0 #E0A800; animation: rise 1.4s ease-out infinite; }
+.fxs { font-size: 10px; font-weight: 900; color: #E5483B; top: 55%; animation: rise 1.3s ease-out infinite; }
+.fxb { width: 6px; height: 6px; border-radius: 50%; border: 1.5px solid rgba(120,190,255,.9); animation: rise 1.8s ease-out infinite; }
+.fxm { font-size: 12px; font-weight: 900; color: #fff; background: #C9457E; border-radius: 8px; padding: 0 5px; line-height: 14px; top: -6%; animation: rise 1.6s ease-out infinite; }
+.fxz { font-size: 13px; font-weight: 800; color: #6B5E55; top: -10%; animation: rise 2.4s ease-out infinite; }
+@keyframes scan { 0%,100% { transform: translateX(-80%) } 50% { transform: translateX(20%) } }
+.fxg { width: 12px; height: 12px; border-radius: 50%; border: 2.5px solid #3A3A3A; top: 40%; animation: scan 1.6s ease-in-out infinite; }
+@keyframes tape { 0% { width: 0 } 100% { width: 18px } }
+.fxt { height: 4px; background: #C9A26B; top: 70%; left: 30%; animation: tape 1s linear infinite; }
+@keyframes drawl { 0% { width: 0; opacity: 1 } 80% { width: 16px; opacity: 1 } 100% { width: 16px; opacity: 0 } }
+.fxd { height: 2.5px; border-radius: 2px; background: #3F7FE0; top: 75%; left: 60%; animation: drawl 1.4s ease-out infinite; }
+@keyframes ping2 { 0% { transform: scale(.4); opacity: .9 } 100% { transform: scale(2); opacity: 0 } }
+.fxp { width: 8px; height: 8px; margin-left: -18px; top: 20%; border-radius: 50%; background: #FF6A5C; animation: ping2 1.4s ease-out infinite; }
+.fxcup { width: 7px; height: 9px; border-radius: 4px; background: rgba(255,255,255,.95); top: -4%; left: 72%; animation: rise 2.2s ease-out infinite; }
+@keyframes flipt { 0%,100% { transform: rotate(-10deg) } 50% { transform: rotate(14deg) } }
+.fxtag { width: 9px; height: 12px; background: #F2D3A5; border-radius: 2px; top: 45%; left: 78%; animation: flipt .9s ease-in-out infinite; transform-origin: 50% 0; }
+@keyframes filef { 0%,100% { transform: translateX(0) } 50% { transform: translateX(8px) } }
+.fxf { width: 8px; height: 11px; background: #3F7FE0; border-radius: 2px; top: 40%; left: 75%; animation: filef 1.2s ease-in-out infinite; }
+.fxn { font-size: 9px; font-weight: 800; color: #B07A2A; top: -4%; white-space: nowrap; animation: rise 1.6s ease-out infinite; }
+@keyframes prt { 0% { transform: translate(0,0) rotate(0); opacity: 0 } 20% { opacity: 1 } 100% { transform: translate(-22px,-16px) rotate(-20deg); opacity: 0 } }
+.fxpr { width: 9px; height: 12px; background: #fff; border-radius: 1px; box-shadow: 0 1px 2px rgba(0,0,0,.25); top: 30%; left: 20%; animation: prt 1.6s ease-out infinite; }

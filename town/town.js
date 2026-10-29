@@ -20,9 +20,21 @@ window.addEventListener('resize', fit);
 
 const truckSvg = (c, c2) => `<svg width="52" height="40" viewBox="0 0 58 44" aria-hidden="true" style="display:block"><ellipse cx="29" cy="40" rx="24" ry="4" fill="#000" opacity=".12"/><rect x="2" y="6" width="34" height="26" rx="7" fill="${c}"/><rect x="2" y="6" width="34" height="9" rx="6" fill="#fff" opacity=".25"/><rect x="34" y="14" width="20" height="18" rx="6" fill="${c2}"/><rect x="39" y="17" width="10" height="7" rx="2" fill="#E6F4FF"/><circle cx="13" cy="34" r="6" fill="#4A3F3A"/><circle cx="13" cy="34" r="2.5" fill="#D8D0CB"/><circle cx="44" cy="34" r="6" fill="#4A3F3A"/><circle cx="44" cy="34" r="2.5" fill="#D8D0CB"/></svg>`;
 const backBtn = (href, label) => `<a class="btn" href="${href}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>${label}</a>`;
-function walker(layer, w) {   // 길 따라 걷는 직원
-  const n = el(`<div class="walker" style="offset-path: path('${w.path}'); animation-duration: ${w.dur || 8}s"><div class="w"><div style="position:absolute;left:50%;bottom:100%;transform:translateX(-50%);white-space:nowrap;margin-bottom:4px;padding:5px 9px;border-radius:12px;background:#fff;box-shadow:0 4px 12px rgba(30,60,110,.2);font-size:11px;font-weight:800;color:${w.c}">${esc(w.say)}</div><img src="${IMG}${w.av}.webp" alt="${esc(w.name)}" style="width:${w.size || 38}px;display:block"></div></div>`);
+function walker(layer, w) {   // 길 따라 걷는 직원 — 가는 쪽을 보고 뒤뚱뒤뚱
+  const xs = (w.path.match(/-?\d+(\.\d+)?/g) || []).map(Number), flip = xs.length > 2 && xs[xs.length - 2] < xs[0] ? -1 : 1;
+  const n = el(`<div class="walker" style="offset-path: path('${w.path}'); animation-duration: ${w.dur || 8}s"><div class="w"><span class="shadow"></span><div style="position:absolute;left:50%;bottom:100%;transform:translateX(-50%);white-space:nowrap;margin-bottom:4px;padding:5px 9px;border-radius:12px;background:#fff;box-shadow:0 4px 12px rgba(30,60,110,.2);font-size:11px;font-weight:800;color:${w.c}">${esc(w.say)}</div><img class="gait" src="${IMG}${w.av}.webp" alt="${esc(w.name)}" style="width:${w.size || 38}px;display:block;--fx:${flip}"></div></div>`);
   layer.appendChild(n); setTimeout(() => n.remove(), (w.dur || 8) * 1000 + 200);
+}
+function sprite(layer, s) {   // 자리에 있는 직원 — 일하는 모양대로 움직임
+  const FX = { keys: '<span class="fx fxk">타닥</span><span class="fx fxk" style="animation-delay:.5s;left:70%">탁</span>', coin: '<span class="fx fxc"></span><span class="fx fxc" style="animation-delay:.7s;left:65%"></span>',
+    stamp: '<span class="fx fxs">쾅</span>', bub: '<span class="fx fxb"></span><span class="fx fxb" style="animation-delay:.6s;left:60%"></span><span class="fx fxb" style="animation-delay:1.2s;left:40%"></span>',
+    msg: '<span class="fx fxm">···</span>', scan: '<span class="fx fxg"></span>', tape: '<span class="fx fxt"></span>', draw: '<span class="fx fxd"></span>', zz: '<span class="fx fxz">z</span>',
+    map: '<span class="fx fxp"></span>', cup: '<span class="fx fxcup"></span>', tag: '<span class="fx fxtag"></span>', file: '<span class="fx fxf"></span>', count: '<span class="fx fxn">1·2·3</span>', print: '<span class="fx fxpr"></span>' };
+  const n = el(`<div class="spr ${s.act || 'type'}" style="left:${s.x}px;top:${s.y}px;animation-delay:${(Math.random() * -3).toFixed(2)}s"><img src="${IMG}${s.av}.webp" alt="${esc(s.name || '')}" style="width:${s.size || 40}px;display:block;transform:scaleX(${s.flip || 1})">${FX[s.fx] || ''}</div>`);
+  layer.appendChild(n); return n;
+}
+function puff(layer, x, y, d) {   // 공사장 먼지
+  layer.appendChild(el(`<span class="puff" style="left:${x}px;top:${y}px;animation-delay:${d}s"></span>`));
 }
 function leaver(layer, path, txt, c, c2) {   // 상차장에서 나가는 트럭
   const n = el(`<div class="truck" style="offset-path: path('${path}'); animation: walk 7s ease-in both"><div style="position:relative;margin:-34px 0 0 -26px;width:52px">${truckSvg(c, c2)}<span class="pill" style="position:absolute;left:50%;top:-24px;transform:translateX(-50%);background:#fff;color:${c2};box-shadow:0 2px 8px rgba(0,0,0,.12);font-size:11px">${esc(txt)}</span></div></div>`);
@@ -86,6 +98,7 @@ function village() {
       <div class="card" style="padding:9px 15px;border-radius:18px"><div style="font-size:12px;color:#8A7E77" id="vdate"></div><div style="font-size:24px;font-weight:800;letter-spacing:-.02em;line-height:1.1" id="vclock"></div></div>
       <button id="dispBtn" class="btn" type="button" style="height:48px"><img src="${IMG}cat.webp" alt="">배차 사무실 <b id="njobs"></b></button>
       <a class="btn or" href="#/campus" style="height:48px">우리 단지</a>
+      <button type="button" class="btn boardBtn" style="height:48px;background:#FFE680;color:#5A4A00">할 일 칠판</button>
     </div>
     <div id="disp" class="card pnl" style="position:absolute;left:20px;top:96px;width:260px;overflow:hidden;z-index:8;display:none"></div>
     <div style="position:absolute;left:22px;bottom:22px;display:flex;align-items:flex-end;gap:4px;z-index:8;pointer-events:none">
@@ -118,6 +131,8 @@ function village() {
       ${p.wait ? `<img class="bob" src="${IMG}${p.wait}.webp" alt="기다리는 거래처" style="width:38px;margin-bottom:2px">` : ''}
       <span class="pill" style="background:${k === 'home' ? '#E8732C' : 'rgba(255,255,255,.96)'};color:${k === 'home' ? '#fff' : '#4A3F3A'};font-size:11px;box-shadow:0 2px 6px rgba(0,0,0,.12)">${esc(p.name)}</span></div>`));
   });
+  // 공사장 — 망치질하는 일꾼 · 먼지
+  [[150, 380], [95, 420], [210, 640], [160, 690], [240, 150], [300, 175]].forEach(([x, y], i) => { const [X, Y] = T(x, y); sprite(lay, { av: 'driver', x: X, y: Y, size: 22, act: 'hammer' }); puff(lay, X + 10, Y - 6, i * 0.5); puff(lay, X - 8, Y - 2, i * 0.5 + 0.9); });
   // 트럭
   const addTruck = (t) => {
     const r = route(t.from, t.to), [c, c2] = COLORS[t.c % 5];
@@ -231,7 +246,7 @@ function campus() {
     <div style="position:absolute;left:24px;top:20px;display:flex;gap:10px;align-items:center;z-index:8">${backBtn('#/', '마을')}<div class="card" style="padding:8px 16px;border-radius:14px"><div style="font-size:12px;color:#8A7E77">천안 서북구 직산읍 신갈리</div><div style="font-size:18px;font-weight:800">홈트레이더스 단지</div></div></div>
     <div style="position:absolute;right:24px;top:20px;display:flex;gap:8px;z-index:8"><a class="btn or" href="#/office">사무실 들어가기</a><a class="btn" href="#/warehouse" style="color:#B07A2A">창고 들어가기</a></div>
     <div id="cp" style="position:absolute;left:24px;top:96px;width:1392px;height:779px">
-      <img src="${IMG}campus.webp" alt="홈트레이더스 단지 — 왼쪽 6층 사무실, 오른쪽 높은 창고, 가운데 넓은 앞마당" style="width:1392px;height:779px;display:block">
+      <img src="${IMG}campus_e.webp" alt="홈트레이더스 단지 — 왼쪽 6층 사무실, 오른쪽 높은 창고, 가운데 넓은 앞마당" style="width:1392px;height:779px;display:block">
       <img src="/icons/logo-full.png" alt="홈트레이더스 로고" style="position:absolute;left:357px;top:37px;width:58px;z-index:2">
       <a class="hot" href="#/office" aria-label="사무실 들어가기" style="left:92px;top:36px;width:420px;height:530px"></a>
       <a class="hot" href="#/warehouse" aria-label="창고 들어가기" style="left:846px;top:46px;width:448px;height:560px"></a>
@@ -248,6 +263,10 @@ function campus() {
     [1020, 512, '노훈님 · 5톤 상차 중', '#2E4A7A'], [330, 610, '쉬는 중 · 빈백', '#2E9A5A'], [780, 440, '와인바 18시 오픈', '#9A6A00'],
   ];
   cb.innerHTML = B.map(([x, y, t, c], i) => `<div class="bub" style="left:${x}px;top:${y}px;animation-delay:0s, ${(i % 3) * -0.6}s"><div style="max-width:200px;padding:7px 11px;border-radius:14px;background:#fff;color:${c};font-size:12px;font-weight:800;text-align:center;box-shadow:0 6px 16px rgba(30,60,110,.18)">${esc(t)}</div><div class="tail" style="background:#fff"></div></div>`).join('');
+  [['cat', 290, 632, 'nap', 34], ['rabbit', 380, 634, 'nap', 32], ['otter', 634, 482, 'nap', 30], ['driver', 1175, 424, 'phone', 34], ['dog', 1302, 522, 'type', 38], ['driver', 1024, 540, 'sway', 30],
+   ['seal', 300, 120, 'sway', 26], ['beaver', 218, 218, 'type', 24], ['owl', 280, 222, 'type', 22], ['raccoon', 186, 296, 'type', 22], ['otter', 250, 298, 'type', 22], ['hedgehog', 318, 296, 'type', 22],
+   ['squirrel', 240, 372, 'type', 22], ['turtle', 304, 372, 'type', 22], ['penguin', 364, 374, 'type', 22], ['cat', 214, 470, 'point', 22], ['rabbit', 276, 454, 'phone', 20], ['panda', 330, 464, 'type', 22], ['redpanda', 196, 540, 'type', 22]]
+    .forEach(([av, x, y, act, size]) => sprite(cp, { av, x, y, act, size }));
   const EV = [
     { name: '이음이', av: 'cat', c: '#5D6B7A', say: '창고 재고 보러 가요', path: 'M 300 560 L 470 600 L 700 620 L 900 570 L 1120 450' },
     { name: '빨리', av: 'dog', c: '#B07A2A', say: '재고 보고하러 사무실 가요', path: 'M 1120 450 L 900 570 L 700 620 L 470 600 L 300 560' },
@@ -282,7 +301,7 @@ function office() {
   const fl = [['6F 대표실', '#E8732C', 52], ['5F 견적·단가', '#9A6A3A', 162], ['4F 회계', '#5D6B7A', 258], ['3F 서류', '#E0662F', 350], ['2F 배차·통신', '#3F7FE0', 446], ['1F 디자인실·안내', '#C2551A', 538], ['마당 · 쉼터 · 와인바', '#2E9A5A', 642]];
   const v = el(`<div class="v" style="background:#D8E9FA">
     <div id="bld" style="position:absolute;left:376px;top:20px;width:688px;height:860px;transition:left .45s cubic-bezier(.3,.8,.3,1)">
-      <img src="${IMG}office.webp" alt="홈트레이더스 사무실 6층과 앞마당" style="width:688px;height:860px;display:block;border-radius:28px">
+      <img src="${IMG}office_e.webp" alt="홈트레이더스 사무실 6층과 앞마당" style="width:688px;height:860px;display:block;border-radius:28px">
       <img src="/icons/logo-full.png" alt="홈트레이더스 로고" style="position:absolute;left:392px;top:16px;width:64px">
       ${fl.map(([t, c, y]) => `<span class="pill" style="position:absolute;left:112px;top:${y}px;background:rgba(255,255,255,.92);color:${c};font-size:11px;z-index:2">${t}</span>`).join('')}
       <span class="paper" style="left:190px;top:372px"></span><span class="paper" style="left:190px;top:372px;animation-delay:1.1s"></span>
@@ -292,7 +311,8 @@ function office() {
       ${STAFF.map((s, i) => `<span class="pill tag" data-i="${i}" style="position:absolute;left:${s.x}px;top:${s.y + 4}px;transform:translate(-50%,-100%);padding:2px 7px;background:${s.c};color:#fff;font-size:10px;z-index:3">${esc(s.name)}</span>`).join('')}
       <div id="obub" class="bub"></div>
     </div>
-    <div style="position:absolute;left:24px;bottom:22px;display:flex;gap:8px;z-index:8">${backBtn('#/campus', '단지')}<a class="btn" href="#/warehouse" style="color:#B07A2A">창고 가기</a></div>
+    <div style="position:absolute;left:24px;bottom:22px;display:flex;gap:8px;z-index:8">${backBtn('#/campus', '단지')}<a class="btn" href="#/warehouse" style="color:#B07A2A">창고 가기</a><button type="button" class="btn boardBtn" style="background:#FFE680;color:#5A4A00">할 일 칠판</button></div>
+    <button type="button" class="boardBtn hot" aria-label="할 일 칠판 열기" style="position:absolute;left:740px;top:170px;width:90px;height:70px;border:0;background:transparent;cursor:pointer;z-index:4"></button>
     <button id="book" type="button" class="btn" style="position:absolute;right:28px;top:24px;z-index:9;height:48px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h11a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6z"/><path d="M6 3v18M4 7h4M4 12h4M4 17h4M10 8h6M10 12h6"/></svg>출석부 ${STAFF.length}</button>
     <div id="pnl" class="pnl" style="position:absolute;left:732px;right:24px;top:84px;bottom:20px;display:none;flex-direction:column;gap:12px;z-index:8">
       <div class="card" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px"><div><div style="font-size:12px;color:#8A7E77">천안 서북구 직산읍 신갈리</div><div style="font-size:22px;font-weight:800">홈트 사무실 · 직원 ${STAFF.length}명</div></div><div style="display:flex;gap:6px"><span class="pill" style="background:#FFF1E6;color:#C2551A">배차 5</span><span class="pill" style="background:#E6F0FF;color:#2F6BD6">가는 중 2</span><span class="pill" style="background:#E6F7EC;color:#1E8E3E">완료 11</span></div></div>
@@ -313,6 +333,14 @@ function office() {
   };
   v.querySelector('#cards').onclick = (e) => { const c = e.target.closest('[data-i]'); if (c) { held = true; show(+c.dataset.i); } };
   show(0); every(3600, () => { if (!held) show((cur + 1) % STAFF.length); });
+  // 자리마다 직원 (쉬는 직원은 마당 빈백·해먹)
+  const REST = { '꼬북': [123, 736, 'nap'], '펭송': [194, 736, 'nap'], '눈썰미': [330, 716, 'nap'] };
+  const ACT = {   // 업무마다 움직임 (10/29 대표 "자기 업무에 맞는 움직임")
+    '김맥순': ['sway', 'cup'], '뚝딱': ['lean', 'draw'], '부엉': ['nod', 'tag'], '콩알': ['type', 'keys'], '수달': ['type', 'coin'], '고슴': ['stamp', 'stamp'],
+    '도토리': ['lean', 'print'], '이음이': ['point', 'map'], '토깽': ['phone', 'msg'], '받아쓰기': ['swim', 'bub'], '그림이': ['lean', 'draw'],
+    '꼬북': ['nap', 'zz'], '펭송': ['nap', 'zz'], '눈썰미': ['nap', 'zz'] };
+  const seats = STAFF.map((s) => { const r = REST[s.name], a = ACT[s.name] || ['type', 'keys']; return sprite(bld, { av: s.av, name: s.name, x: r ? r[0] : s.x, y: r ? r[1] : s.y + 44, size: r ? 34 : (s.av === 'guppy' ? 30 : 40), act: a[0], fx: a[1] }); });
+  STAFF.forEach((s, i) => { if (REST[s.name]) { s.status = '쉬는 중 · 마당'; } });
   const F = { 6: 142, 5: 238, 4: 330, 3: 426, 2: 522, 1: 634, 0: 737 };
   const wk = (x0, f0, x1, f1) => `M ${x0} ${F[f0]} L 470 ${F[f0]} L 516 ${F[f1]} L ${x1} ${F[f1]}`;
   const EV = [
@@ -324,7 +352,15 @@ function office() {
     { name: '그림이', av: 'redpanda', c: '#C2551A', say: '팜플렛 시안 보고하러 가요', path: wk(230, 1, 360, 6) },
     { name: '수달', av: 'otter', c: '#8A6A4A', say: '와인바에서 잠깐 쉬어요', path: wk(286, 4, 540, 0) },
   ];
-  let e = 0; const go = () => walker(bld, { ...EV[e++ % EV.length], size: 34, dur: 7 }); go(); every(8000, go);
+  let e = 0;
+  const go = () => {   // 자리에서 일어나 다녀오기 — 그동안 자리는 비어 있음
+    const w = EV[e++ % EV.length], i = STAFF.findIndex((s) => s.name === w.name); const seat = seats[i];
+    if (seat) seat.style.visibility = 'hidden';
+    walker(bld, { ...w, size: 34, dur: 7 });
+    later(9000, () => { const back = 'M ' + w.path.replace(/^M\s*/, '').split(' L ').reverse().join(' L '); walker(bld, { ...w, say: '자리로 돌아가요', path: back, size: 34, dur: 7 }); });
+    later(16200, () => { if (seat) seat.style.visibility = ''; });
+  };
+  go(); every(9000, go);
 }
 
 // ── 창고 ───────────────────────────────────────────────
@@ -341,7 +377,7 @@ function warehouse() {
   const stock = [['구조재 2*6*12', '120본', '캐나다 SPF', '#B07A2A'], ['구조재 2*6*16', '64본', 'J-GRADE', '#B07A2A'], ['실리콘 박스', '86박스', 'SS9000 · 원익', '#3F7FE0'], ['메가타이 철물', '32상자', 'HD3 · R1 · H-CLIP', '#5D6B7A'], ['단열재 R37', '6롤', '삼양 대기', '#C9A227'], ['세라믹 판재', '20장', '2층 자재칸', '#6A52D8']];
   const v = el(`<div class="v" style="background:#D8E9FA">
     <div id="wh" style="position:absolute;left:40px;top:20px;width:688px;height:860px">
-      <img src="${IMG}warehouse.webp" alt="홈트 창고 — 구조재 랙, 실리콘 박스, 철물 벽, 키오스크, 상차장" style="width:688px;height:860px;display:block;border-radius:28px">
+      <img src="${IMG}warehouse_e.webp" alt="홈트 창고 — 구조재 랙, 실리콘 박스, 철물 벽, 키오스크, 상차장" style="width:688px;height:860px;display:block;border-radius:28px">
       <span style="position:absolute;left:444px;top:486px;width:44px;height:44px;border-radius:50%;background:radial-gradient(circle,rgba(120,200,255,.9),rgba(120,200,255,0) 70%);animation:glow 1.6s ease-in-out infinite;z-index:3"></span>
       <div id="wbub" class="bub"></div>
     </div>
@@ -360,14 +396,84 @@ function warehouse() {
   const wb = v.querySelector('#wbub'); let i = 0;
   const show = () => { const [x, y, n, c, t] = SB[i++ % SB.length]; wb.style.left = x + 'px'; wb.style.top = (y - 12) + 'px'; wb.innerHTML = `<div style="min-width:180px;max-width:250px;padding:9px 13px;border-radius:16px;background:#fff;box-shadow:0 10px 26px rgba(30,60,110,.22)"><div style="font-size:12px;font-weight:800;color:${c}">${n}</div><div style="font-size:13px;line-height:1.4">${t}</div></div><div class="tail" style="background:#fff;width:14px;height:9px"></div>`; wb.style.animation = 'none'; void wb.offsetWidth; wb.style.animation = ''; };
   show(); every(3400, show);
+  const wh = v.querySelector('#wh');
+  sprite(wh, { av: 'driver', name: '기사님', x: 452, y: 572, size: 40, act: 'phone', fx: 'msg' });
+  sprite(wh, { av: 'dog', name: '빨리', x: 574, y: 706, size: 46, act: 'nod', fx: 'count' });
+  sprite(wh, { av: 'driver', name: '노훈님', x: 236, y: 700, size: 38, act: 'sway', flip: -1 });
+  sprite(wh, { av: 'rabbit', name: '토깽', x: 515, y: 196, size: 30, act: 'nod', fx: 'file' });
+  const drv = () => walker(wh, { name: '기사님', av: 'driver', c: '#E07B1F', say: '상차증 받았어요', path: 'M 540 570 L 560 640 L 470 700 L 380 720', size: 38, dur: 6 });
+  drv(); every(12000, drv);
   const leaves = ['서생행 출발', '매향리행 출발', '순천 택배 출발']; let e = 0;
   const go = () => { leaver(v.querySelector('#wh'), 'M 470 770 L 560 800 L 720 860', leaves[e % 3], ...COLORS[e % 2]); e++; }; go(); every(9000, go);
+}
+
+
+// ── 할 일 칠판 (10/29 대표 "포스트잇처럼 · 옮기고 · 그림도") — 지금은 이 기기에만 저장
+const NOTE_C = ['#FFE680', '#FFC9D6', '#C8F0C9', '#C9E4FF', '#FFD9B0'];
+const NOTES0 = [
+  ['대림우드 세금계산서 실수 고치기', 0], ['삼일아이앤씨 10월 원장 보내기', 1], ['우림 구매 10/28-20 맞는지 확인', 3], ['군산 OSB 기사·운임 확인', 2],
+  ['케이에스우드 900원 단가 단위 확인', 4], ['순천 판재 30장 → 공간 다음 현장으로', 0], ['콜센터 30만 예약 취소됐는지', 1], ['서생 정소장 기사번호·운임 받기', 2],
+  ['에디톤 바로 가는지 이충혁 소장께', 3], ['실리콘 판매·택배비 이카운트 입력', 4],
+].map(([t, c], i) => ({ id: 'n' + i, t, c, x: 60 + (i % 5) * 250, y: 110 + Math.floor(i / 5) * 230, r: ((i * 37) % 9) - 4 }));
+function loadBoard() { try { const b = JSON.parse(localStorage.getItem('town:board') || 'null'); if (b && b.notes) return b; } catch (e) { /* 무시 */ } return { notes: NOTES0, draw: '' }; }
+function saveBoard(b) { try { localStorage.setItem('town:board', JSON.stringify(b)); } catch (e) { /* 무시 */ } }
+function openBoard() {
+  const B = loadBoard();
+  const m = el(`<div class="modal" style="background:rgba(30,40,60,.45)"><div style="position:relative;width:1360px;height:820px;border-radius:28px;background:#F7F4EC;box-shadow:0 20px 60px rgba(0,0,0,.3), inset 0 0 0 14px #C9A26B;overflow:hidden">
+    <div style="position:absolute;left:28px;top:22px;right:28px;display:flex;align-items:center;gap:10px;z-index:5">
+      <div style="font-size:22px;font-weight:800;margin-right:auto;padding-left:8px">할 일 칠판</div>
+      ${NOTE_C.map((c, i) => `<button type="button" data-add="${i}" aria-label="포스트잇 추가" style="width:38px;height:38px;border:0;border-radius:8px;background:${c};box-shadow:0 2px 6px rgba(0,0,0,.15);cursor:pointer;font-size:20px;font-weight:800;color:#6B5E55">+</button>`).join('')}
+      <span style="width:1px;height:30px;background:#D8CDB8;margin:0 4px"></span>
+      <button type="button" id="pen" class="btn" style="height:40px">그리기</button>
+      ${['#2B2522', '#E5483B', '#3F7FE0', '#2E9A5A'].map((c) => `<button type="button" data-pc="${c}" aria-label="펜 색" style="width:26px;height:26px;border-radius:50%;border:3px solid #fff;background:${c};box-shadow:0 1px 4px rgba(0,0,0,.2);cursor:pointer"></button>`).join('')}
+      <button type="button" id="clr" class="btn" style="height:40px">그림 지우기</button>
+      <button type="button" id="bx" class="btn" style="height:40px">닫기</button>
+    </div>
+    <canvas id="cv" width="1360" height="820" style="position:absolute;inset:0;z-index:1"></canvas>
+    <div id="nl" style="position:absolute;inset:0;z-index:2"></div>
+    <div id="trash" style="position:absolute;right:28px;bottom:24px;width:120px;height:56px;border-radius:16px;border:2px dashed #D8B8A8;color:#B08070;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;z-index:3">여기로 버리기</div>
+  </div></div>`);
+  stage.appendChild(m);
+  const nl = m.querySelector('#nl'), cv = m.querySelector('#cv'), ctx = cv.getContext('2d'), trash = m.querySelector('#trash');
+  if (B.draw) { const im = new Image(); im.onload = () => ctx.drawImage(im, 0, 0); im.src = B.draw; }
+  const k = () => cv.getBoundingClientRect().width / 1360;
+  const draw = () => {
+    nl.innerHTML = B.notes.map((n) => `<div class="note" data-id="${n.id}" style="position:absolute;left:${n.x}px;top:${n.y}px;width:210px;min-height:170px;padding:30px 16px 14px;background:${NOTE_C[n.c]};border-radius:4px 4px 18px 4px;box-shadow:0 8px 16px rgba(0,0,0,.14);transform:rotate(${n.r}deg);cursor:grab;touch-action:none"><span style="position:absolute;left:50%;top:8px;width:14px;height:14px;margin-left:-7px;border-radius:50%;background:#E5483B;box-shadow:0 2px 3px rgba(0,0,0,.3)"></span><div class="nt" contenteditable="true" spellcheck="false" style="font-size:18px;font-weight:700;line-height:1.45;color:#3A3128;outline:none;cursor:text">${esc(n.t)}</div></div>`).join('');
+  };
+  draw();
+  let pen = false, color = '#2B2522', drag = null, drawing = false;
+  m.querySelector('#bx').onclick = () => { saveBoard(B); m.remove(); };
+  m.querySelectorAll('[data-add]').forEach((b) => { b.onclick = () => { B.notes.push({ id: 'n' + Date.now(), t: '할 일 적기', c: +b.dataset.add, x: 560 + Math.random() * 120, y: 300 + Math.random() * 120, r: Math.round(Math.random() * 8 - 4) }); draw(); saveBoard(B); }; });
+  m.querySelector('#pen').onclick = (e) => { pen = !pen; e.currentTarget.classList.toggle('or', pen); cv.style.zIndex = pen ? 4 : 1; cv.style.cursor = pen ? 'crosshair' : ''; };
+  m.querySelectorAll('[data-pc]').forEach((b) => { b.onclick = () => { color = b.dataset.pc; if (!pen) m.querySelector('#pen').click(); }; });
+  m.querySelector('#clr').onclick = () => { ctx.clearRect(0, 0, 1360, 820); B.draw = ''; saveBoard(B); };
+  nl.addEventListener('input', (e) => { const n = B.notes.find((x) => x.id === e.target.closest('.note').dataset.id); if (n) { n.t = e.target.innerText; saveBoard(B); } });
+  nl.addEventListener('pointerdown', (e) => {
+    const note = e.target.closest('.note'); if (!note || e.target.closest('.nt') && document.activeElement === e.target.closest('.nt')) return;
+    const n = B.notes.find((x) => x.id === note.dataset.id); drag = { n, note, sx: e.clientX, sy: e.clientY, x: n.x, y: n.y, moved: false }; note.style.cursor = 'grabbing'; note.style.zIndex = 10; note.setPointerCapture(e.pointerId);
+  });
+  nl.addEventListener('pointermove', (e) => {
+    if (!drag) return; const dx = (e.clientX - drag.sx) / k(), dy = (e.clientY - drag.sy) / k(); if (Math.abs(dx) + Math.abs(dy) > 4) drag.moved = true;
+    if (!drag.moved) return; drag.n.x = drag.x + dx; drag.n.y = drag.y + dy; drag.note.style.left = drag.n.x + 'px'; drag.note.style.top = drag.n.y + 'px';
+    const tr = trash.getBoundingClientRect(); trash.style.background = e.clientX > tr.left && e.clientY > tr.top ? '#FFE4DE' : '';
+  });
+  nl.addEventListener('pointerup', (e) => {
+    if (!drag) return; const tr = trash.getBoundingClientRect();
+    if (drag.moved && e.clientX > tr.left && e.clientY > tr.top) { B.notes = B.notes.filter((x) => x !== drag.n); draw(); }
+    else { drag.note.style.cursor = 'grab'; drag.note.style.zIndex = ''; if (!drag.moved) drag.note.querySelector('.nt').focus(); }
+    trash.style.background = ''; drag = null; saveBoard(B);
+  });
+  const pos = (e) => { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) / k(), (e.clientY - r.top) / k()]; };
+  cv.addEventListener('pointerdown', (e) => { if (!pen) return; drawing = true; const [x, y] = pos(e); ctx.strokeStyle = color; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.beginPath(); ctx.moveTo(x, y); cv.setPointerCapture(e.pointerId); });
+  cv.addEventListener('pointermove', (e) => { if (!drawing) return; const [x, y] = pos(e); ctx.lineTo(x, y); ctx.stroke(); });
+  cv.addEventListener('pointerup', () => { if (!drawing) return; drawing = false; B.draw = cv.toDataURL(); saveBoard(B); });
 }
 
 // ── 화면 바꾸기 · 직원 계정만 ───────────────────────────
 const VIEWS = { '': village, campus, office, warehouse };
 function show() {
   clearAll(); stage.innerHTML = '';
+  setTimeout(() => stage.querySelectorAll('.boardBtn').forEach((b) => { b.onclick = openBoard; }), 0);
   const key = (location.hash.replace(/^#\/?/, '') || '').split('?')[0];
   (VIEWS[key] || village)();
 }
