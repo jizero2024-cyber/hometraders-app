@@ -2,7 +2,7 @@
 // 직원(AI 작업)·물건은 실제 자료 숫자만 보여 줌 — 숫자는 town.js 가 공유 DB 에서 읽어 tag()/setIdle() 로 넣음.
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { critter } from './kit3d.js?v=1';
+import { critter } from './kit3d.js?v=2';
 
 function base(host, o) {
   let W = window.innerWidth, H = window.innerHeight;

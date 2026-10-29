@@ -1,63 +1,93 @@
-// 홈트 마을 3D 캐릭터 (10/29 대표 "캐릭터가 마을이랑 이질감") — 그림(스프라이트) 대신 마을과 같은 단순 3D 도형.
-// 빛·그림자·밤을 같이 받고, 걷는 방향으로 몸을 돌리고, 다리·팔이 번갈아 움직임. 앞(+z)을 보고 서 있음.
+// 홈트 마을 3D 캐릭터 (10/29 대표 "힉스필드로 만든 캐릭터 참고해서 귀엽게") — 말랑한 점토 인형 느낌:
+// 머리와 몸이 붙은 둥근 몸 · 짧은 팔다리 · 작은 눈과 볼터치 · 직업 소품(헬멧·헤드셋·스카프·안경…).
+// 빛·그림자·밤을 같이 받고, 걷는 방향으로 몸을 돌림. 앞(+z)을 보고 서 있음.
 import * as THREE from 'three';
 
 const MC = {};
-const m = (c) => (MC[c] ||= new THREE.MeshStandardMaterial({ color: c, roughness: 0.75 }));
+const m = (c, r = 0.62) => (MC[c + r] ||= new THREE.MeshStandardMaterial({ color: c, roughness: r, metalness: 0 }));
 const G = {
-  sph: new THREE.SphereGeometry(1, 20, 14), cap: new THREE.CapsuleGeometry(1, 1, 6, 14), cone: new THREE.ConeGeometry(1, 1, 14),
-  cyl: new THREE.CylinderGeometry(1, 1, 1, 18), box: new THREE.BoxGeometry(1, 1, 1), tor: new THREE.TorusGeometry(1, 0.32, 10, 24),
+  sph: new THREE.SphereGeometry(1, 28, 20), cap: new THREE.CapsuleGeometry(1, 1, 8, 16), cone: new THREE.ConeGeometry(1, 1, 18),
+  cyl: new THREE.CylinderGeometry(1, 1, 1, 24), box: new THREE.BoxGeometry(1, 1, 1), tor: new THREE.TorusGeometry(1, 0.28, 12, 28),
+  half: new THREE.SphereGeometry(1, 28, 14, 0, Math.PI * 2, 0, Math.PI / 2), arc: new THREE.TorusGeometry(1, 0.1, 10, 28, Math.PI), rbox: new THREE.CapsuleGeometry(1, 0.6, 4, 8),
 };
-function part(parent, geo, c, [x, y, z], [sx, sy, sz], rot) {
-  const o = new THREE.Mesh(G[geo], m(c)); o.position.set(x, y, z); o.scale.set(sx, sy, sz); if (rot) o.rotation.set(...rot); o.castShadow = true; parent.add(o); return o;
+function P(parent, geo, c, [x, y, z], [sx, sy, sz], rot, rough) {
+  const o = new THREE.Mesh(G[geo], m(c, rough)); o.position.set(x, y, z); o.scale.set(sx, sy, sz); if (rot) o.rotation.set(...rot); o.castShadow = true; parent.add(o); return o;
 }
-// 동물마다 몸 색 · 머리 장식
+// 힉스필드 걷기 그림 18명과 같은 색 · 소품
 const SPEC = {
-  seal: { b: '#F2F1EC', h: 1 }, cat: { b: '#9AA0A6', h: 1 }, dog: { b: '#E9D2B0', h: 1 }, beaver: { b: '#A86F43', h: 1 }, raccoon: { b: '#8E8E8E', h: 1 },
-  squirrel: { b: '#E2733A', h: 1 }, owl: { b: '#9C8A78', h: 1 }, penguin: { b: '#2E3440', h: 1 }, rabbit: { b: '#F5F2EE', h: 1 }, otter: { b: '#8C6A4E', h: 1 },
-  hedgehog: { b: '#E6CFAE', h: 1 }, panda: { b: '#F4F4F2', h: 1 }, redpanda: { b: '#D9692E', h: 1 }, turtle: { b: '#8CC66A', h: 1 }, guppy: { b: '#8FD0F0', h: 1 },
-  driver: { b: '#2E4A7A', human: 1 }, worker: { b: '#8E9AA8', human: 1 }, boss1: { b: '#7E6AD8', human: 1 }, boss2: { b: '#3F7F5A', human: 1 },
+  seal: { b: '#F3F2EE', belly: '#FFFFFF' }, cat: { b: '#8F959C', inner: '#F4B8C0' }, dog: { b: '#EBD3B0', inner: '#F4B8C0', muzzle: '#7A5E4E' },
+  beaver: { b: '#A8693E', belly: '#C58A5C' }, raccoon: { b: '#8D8D8F' }, squirrel: { b: '#E8703A', belly: '#FBE3C8' }, owl: { b: '#A39383', belly: '#F2E6D6' },
+  turtle: { b: '#94CC6E', belly: '#F2E08A' }, otter: { b: '#9A7456', belly: '#E9D6BE' }, hedgehog: { b: '#F0DCC0', spike: '#8E735C' }, penguin: { b: '#2F3542', belly: '#FFFFFF' },
+  rabbit: { b: '#F7F3EE', inner: '#F4B8C0' }, panda: { b: '#F7F7F5', patch: '#1F1F1F' }, redpanda: { b: '#D6612A' }, guppy: { b: '#BFE7FA' },
+  driver: { human: 1, shirt: '#2E4370', pants: '#2B3A63', vest: '#F28C28', hat: '#2B3A63' }, worker: { human: 1, shirt: '#2E3E63', pants: '#2B3A63', vest: '#24324F', hat: '#2B3A63' },
+  boss1: { human: 1, shirt: '#E8E6F2', pants: '#3A4258', vest: '#A79BE0', hat: '#FFFFFF', helmet: 1 }, boss2: { human: 1, shirt: '#EDEFE8', pants: '#3A4258', vest: '#7FC29B', hat: '#FFFFFF', helmet: 1 },
+};
+const face = (head, r, y, { eye = '#26201E', blush = '#F7A6A6', mouth = 1 } = {}) => {
+  [-1, 1].forEach((s) => { P(head, 'sph', eye, [s * r * 0.3, y, r * 0.93], [0.075, 0.09, 0.04], null, 0.3); P(head, 'sph', '#FFFFFF', [s * r * 0.3 + 0.025, y + 0.035, r * 0.96], [0.022, 0.022, 0.01], null, 0.2); P(head, 'sph', blush, [s * r * 0.55, y - 0.13, r * 0.8], [0.11, 0.065, 0.03], null, 0.9); });
+  if (mouth) P(head, 'tor', eye, [0, y - 0.14, r * 0.95], [0.05, 0.035, 0.03], [0, 0, Math.PI], 0.4);
 };
 export function critter(kind) {
   const sp = SPEC[kind] || SPEC.worker, g = new THREE.Group(), body = new THREE.Group(); g.add(body);
-  const human = !!sp.human, skin = human ? '#F2C9A5' : sp.b, hr = human ? 0.42 : 0.52, hy = human ? 1.95 : 1.8;
-  const legC = human ? '#2B3550' : sp.b === '#2E3440' ? '#F2A33A' : sp.b;
-  const legs = [-1, 1].map((s) => { const p = new THREE.Group(); p.position.set(s * 0.24, 0.62, 0); body.add(p); part(p, 'cap', legC, [0, -0.3, 0], [0.15, 0.22, 0.15]); return p; });
-  part(body, 'cap', sp.b, [0, 1.08, 0], [0.5, 0.32, 0.42]);   // 몸통
-  const arms = [-1, 1].map((s) => { const p = new THREE.Group(); p.position.set(s * 0.52, 1.32, 0); body.add(p); part(p, 'cap', human ? skin : sp.b, [0, -0.28, 0], [0.12, 0.2, 0.12]); return p; });
-  const head = new THREE.Group(); head.position.y = hy; body.add(head);
-  part(head, 'sph', skin, [0, 0, 0], [hr, hr * 0.95, hr * 0.92]);
-  [-1, 1].forEach((s) => { part(head, 'sph', '#1E1B1A', [s * hr * 0.36, 0.04, hr * 0.86], [0.065, 0.075, 0.04]); part(head, 'sph', '#F6A8A8', [s * hr * 0.6, -0.14, hr * 0.74], [0.09, 0.06, 0.03]); });
-  const ears = (c, w, hgt, y = 0.85) => [-1, 1].forEach((s) => part(head, 'cone', c, [s * hr * 0.55, hr * y, 0], [w, hgt, w * 0.7], [0, 0, -s * 0.25]));
-  switch (kind) {
-    case 'seal': part(body, 'tor', '#E8732C', [0, 1.45, 0], [0.42, 0.42, 0.42], [Math.PI / 2, 0, 0]); part(head, 'sph', '#FFFFFF', [0, -0.12, hr * 0.85], [0.18, 0.12, 0.1]); break;
-    case 'cat': ears('#9AA0A6', 0.16, 0.3); part(head, 'tor', '#2B2B2B', [0, 0.05, 0], [hr * 1.02, hr * 1.02, hr * 1.02], [0, Math.PI / 2, 0]); part(head, 'sph', '#2B2B2B', [hr * 0.95, -0.05, 0.1], [0.1, 0.13, 0.1]); break;
-    case 'dog': ears('#E9D2B0', 0.18, 0.32); part(head, 'sph', '#8A6A55', [0, -0.12, hr * 0.82], [0.2, 0.14, 0.12]); part(head, 'sph', '#F5C431', [0, hr * 0.5, 0], [hr * 0.9, hr * 0.5, hr * 0.9]); part(head, 'cyl', '#F5C431', [0, hr * 0.45, 0.06], [hr * 1.05, 0.04, hr * 1.1]); break;
-    case 'beaver': ears('#8A5532', 0.1, 0.12, 0.8); part(body, 'box', '#5A3A22', [0, 0.45, -0.5], [0.45, 0.08, 0.6], [0.5, 0, 0]); part(body, 'tor', '#E8732C', [0, 0.92, 0], [0.48, 0.48, 0.4], [Math.PI / 2, 0, 0]); part(head, 'box', '#FFFFFF', [0, -0.24, hr * 0.85], [0.12, 0.1, 0.03]); break;
-    case 'raccoon': ears('#6E6E6E', 0.14, 0.24); part(head, 'box', '#3A3A3A', [0, 0.04, hr * 0.78], [hr * 1.3, 0.16, 0.12]); part(body, 'cap', '#5A5A5A', [0, 0.6, -0.5], [0.13, 0.35, 0.13], [0.9, 0, 0]); break;
-    case 'squirrel': ears('#E2733A', 0.12, 0.22); part(body, 'sph', '#E2733A', [0, 1.2, -0.6], [0.32, 0.55, 0.3]); part(body, 'sph', '#F0A06A', [0, 1.75, -0.55], [0.26, 0.26, 0.24]); break;
-    case 'owl': ears('#7A6A5A', 0.08, 0.2, 0.9); part(body, 'sph', '#EADBC8', [0, 1.05, 0.25], [0.32, 0.36, 0.2]); part(head, 'cone', '#F2A33A', [0, -0.08, hr * 0.95], [0.06, 0.12, 0.06], [Math.PI / 2, 0, 0]); break;
-    case 'penguin': part(body, 'sph', '#FFFFFF', [0, 1.05, 0.22], [0.36, 0.42, 0.24]); part(head, 'sph', '#2B3A5A', [0, hr * 0.55, 0], [hr * 0.92, hr * 0.42, hr * 0.92]); part(head, 'cone', '#F2A33A', [0, -0.1, hr * 0.95], [0.07, 0.14, 0.07], [Math.PI / 2, 0, 0]); break;
-    case 'rabbit': [-1, 1].forEach((s) => part(head, 'cap', '#F5F2EE', [s * 0.2, hr + 0.35, 0], [0.11, 0.3, 0.08], [0, 0, -s * 0.12])); break;
-    case 'otter': ears('#7A5A40', 0.09, 0.1, 0.8); part(head, 'sph', '#D9C2A6', [0, -0.12, hr * 0.8], [0.2, 0.13, 0.12]); part(body, 'cap', '#7A5A40', [0, 0.55, -0.5], [0.12, 0.3, 0.12], [1.0, 0, 0]); break;
-    case 'hedgehog': part(head, 'ico' in G ? 'sph' : 'sph', '#8A6A4E', [0, 0.1, -0.2], [hr * 1.1, hr * 1.05, hr * 0.9]); part(body, 'sph', '#8A6A4E', [0, 1.15, -0.25], [0.5, 0.5, 0.35]); break;
-    case 'panda': [-1, 1].forEach((s) => { part(head, 'sph', '#1E1E1E', [s * hr * 0.6, hr * 0.8, 0], [0.14, 0.14, 0.1]); part(head, 'sph', '#2A2A2A', [s * hr * 0.36, 0.04, hr * 0.8], [0.12, 0.14, 0.06]); }); arms.forEach((a) => a.children[0].material = m('#1E1E1E')); break;
-    case 'redpanda': ears('#D9692E', 0.15, 0.22); part(head, 'sph', '#FFFFFF', [0, -0.12, hr * 0.82], [0.2, 0.12, 0.1]); part(head, 'sph', '#3A2A22', [0, hr * 0.7, -0.05], [hr * 0.75, 0.16, hr * 0.75]); part(body, 'cap', '#A84A1E', [0, 0.65, -0.5], [0.14, 0.38, 0.14], [0.9, 0, 0]); break;
-    case 'driver': part(head, 'sph', '#2E4A7A', [0, hr * 0.5, 0], [hr * 1.02, hr * 0.5, hr * 1.02]); part(head, 'box', '#2E4A7A', [0, hr * 0.42, hr * 0.8], [hr * 1.2, 0.05, 0.4]); part(body, 'cap', '#F28C28', [0, 1.1, 0], [0.52, 0.22, 0.44]); break;
-    case 'worker': part(head, 'sph', '#FFFFFF', [0, hr * 0.5, 0], [hr * 1.08, hr * 0.62, hr * 1.08]); part(head, 'cyl', '#FFFFFF', [0, hr * 0.38, 0], [hr * 1.2, 0.04, hr * 1.2]); break;
-    case 'boss1': case 'boss2': part(head, 'sph', '#FFFFFF', [0, hr * 0.5, 0], [hr * 1.08, hr * 0.62, hr * 1.08]); part(head, 'cyl', '#FFFFFF', [0, hr * 0.38, 0], [hr * 1.2, 0.04, hr * 1.2]); break;
-    default: break;
+  let legs, arms, head;
+  if (sp.human) {   // 사람 — 큰 머리 2등신
+    legs = [-1, 1].map((s) => { const p = new THREE.Group(); p.position.set(s * 0.2, 0.72, 0); body.add(p); P(p, 'cap', sp.pants, [0, -0.3, 0], [0.15, 0.22, 0.15]); P(p, 'sph', '#2A2A2E', [0, -0.66, 0.06], [0.17, 0.1, 0.22]); return p; });
+    P(body, 'cap', sp.shirt, [0, 1.05, 0], [0.38, 0.22, 0.3]); P(body, 'cap', sp.vest, [0, 1.07, 0.02], [0.4, 0.2, 0.32]);
+    if (kind === 'driver' || kind === 'worker') P(body, 'box', '#E9EEF2', [0, 1.0, 0.33], [0.62, 0.06, 0.02], null, 0.3);
+    arms = [-1, 1].map((s) => { const p = new THREE.Group(); p.position.set(s * 0.43, 1.3, 0); body.add(p); P(p, 'cap', sp.shirt, [0, -0.22, 0], [0.11, 0.16, 0.11]); P(p, 'sph', '#F3CBA8', [0, -0.48, 0], [0.11, 0.11, 0.11]); return p; });
+    head = new THREE.Group(); head.position.y = 1.95; body.add(head);
+    P(head, 'sph', '#F6D2B2', [0, 0, 0], [0.56, 0.54, 0.52]); P(head, 'sph', '#4A3426', [0, 0.1, -0.1], [0.58, 0.5, 0.5]);
+    face(head, 0.52, -0.02, { blush: '#F5A5A0' });
+    if (sp.helmet) { P(head, 'half', sp.hat, [0, 0.12, 0], [0.62, 0.55, 0.6], null, 0.35); P(head, 'cyl', sp.hat, [0, 0.12, 0.05], [0.68, 0.04, 0.68], null, 0.35); }
+    else { P(head, 'half', sp.hat, [0, 0.14, 0], [0.6, 0.48, 0.58]); P(head, 'box', sp.hat, [0, 0.16, 0.5], [0.62, 0.05, 0.38]); }
+  } else {   // 동물 — 머리와 몸이 붙은 둥근 몸
+    legs = [-1, 1].map((s) => { const p = new THREE.Group(); p.position.set(s * 0.32, 0.36, 0.05); body.add(p); P(p, 'cap', kind === 'penguin' || kind === 'owl' ? '#F3B13E' : kind === 'panda' ? sp.patch : sp.b, [0, -0.16, 0.04], [0.17, 0.1, 0.2]); return p; });
+    P(body, 'sph', sp.b, [0, 0.9, 0], [0.72, 0.7, 0.64]);
+    if (sp.belly) P(body, 'sph', sp.belly, [0, 0.8, 0.28], [0.46, 0.45, 0.38]);
+    arms = [-1, 1].map((s) => { const p = new THREE.Group(); p.position.set(s * 0.64, 1.0, 0.1); body.add(p); P(p, 'cap', kind === 'panda' ? sp.patch : kind === 'penguin' ? sp.b : sp.b, [0, -0.15, 0], [0.13, 0.12, 0.13]); return p; });
+    head = new THREE.Group(); head.position.y = 1.62; body.add(head);
+    P(head, 'sph', sp.b, [0, 0, 0], [0.82, 0.72, 0.74]);
+    const r = 0.74;
+    const ears = (c, inner, w, h, x = 0.46, y = 0.8, tilt = 0.3) => [-1, 1].forEach((s) => { P(head, 'cone', c, [s * x, y, 0], [w, h, w * 0.6], [0, 0, -s * tilt]); if (inner) P(head, 'cone', inner, [s * x, y - 0.02, 0.05], [w * 0.6, h * 0.75, w * 0.3], [0, 0, -s * tilt]); });
+    const roundEars = (c, w = 0.16, x = 0.5, y = 0.56) => [-1, 1].forEach((s) => P(head, 'sph', c, [s * x, y, -0.05], [w, w, w * 0.7]));
+    switch (kind) {
+      case 'seal': face(head, r, 0.02); P(head, 'sph', '#FFFFFF', [0, -0.12, r * 0.86], [0.2, 0.12, 0.1]); [-1, 1].forEach((s) => P(head, 'sph', '#2A2A2A', [s * 0.06, -0.06, r * 0.95], [0.03, 0.025, 0.02]));
+        P(body, 'tor', '#F07E2E', [0, 1.3, 0], [0.62, 0.62, 0.55], [Math.PI / 2, 0, 0]); P(body, 'cap', '#F07E2E', [0.25, 1.05, 0.55], [0.1, 0.18, 0.06], [0.2, 0, 0.3]); break;
+      case 'cat': ears(sp.b, sp.inner, 0.2, 0.32); face(head, r, 0.02); P(head, 'arc', '#262626', [0, 0.02, 0], [0.84, 0.82, 0.84]); [-1, 1].forEach((s) => P(head, 'cyl', '#262626', [s * 0.82, -0.02, 0], [0.18, 0.08, 0.18], [0, 0, Math.PI / 2])); P(head, 'cap', '#262626', [0.62, -0.24, 0.42], [0.03, 0.18, 0.03], [1.1, 0.5, 0]); break;
+      case 'dog': ears(sp.b, sp.inner, 0.26, 0.4, 0.5, 0.78, 0.35); face(head, r, 0.06, { mouth: 0 }); P(head, 'sph', sp.muzzle, [0, -0.15, r * 0.82], [0.3, 0.2, 0.18]); P(head, 'sph', '#2A2A2A', [0, -0.07, r * 0.98], [0.07, 0.05, 0.04]);
+        P(head, 'half', '#F7C82F', [0, 0.46, 0], [0.6, 0.4, 0.6], null, 0.35); P(head, 'cyl', '#F7C82F', [0, 0.46, 0.08], [0.68, 0.04, 0.72], null, 0.35); break;
+      case 'beaver': roundEars('#8E5530', 0.12); face(head, r, 0.04, { mouth: 0 }); P(head, 'box', '#FFFFFF', [0, -0.2, r * 0.95], [0.14, 0.12, 0.03]); P(head, 'sph', '#5A3520', [0, -0.07, r * 0.98], [0.07, 0.05, 0.04]);
+        P(body, 'tor', '#F08A2C', [0, 0.72, 0], [0.74, 0.74, 0.62], [Math.PI / 2, 0, 0]); P(body, 'cap', '#6E4528', [0, 0.35, -0.72], [0.3, 0.05, 0.4], [1.3, 0, 0]); break;
+      case 'raccoon': ears('#6E6E70', '#4A4A4C', 0.18, 0.26); face(head, r, 0.02);
+        [-1, 1].forEach((s) => P(head, 'tor', '#2A2A2A', [s * 0.21, 0.02, r * 0.95], [0.12, 0.12, 0.12], null, 0.3)); P(head, 'box', '#2A2A2A', [0, 0.02, r * 0.97], [0.12, 0.02, 0.02]);
+        [0, 1, 2].forEach((i) => P(body, 'cap', i % 2 ? '#5A5A5C' : '#A7A7A9', [0, 0.55 + i * 0.05, -0.75 - i * 0.18], [0.16, 0.08, 0.16], [1.2, 0, 0])); break;
+      case 'squirrel': ears(sp.b, "#F6B48E", 0.15, 0.32, 0.4, 0.82, 0.15); face(head, r, 0.02); P(head, 'sph', sp.belly, [0, -0.18, r * 0.72], [0.34, 0.24, 0.2]);
+        P(body, 'sph', sp.b, [0, 1.25, -0.72], [0.42, 0.75, 0.38]); P(body, 'sph', sp.b, [0, 1.95, -0.55], [0.36, 0.34, 0.32]); break;
+      case 'owl': [-1, 1].forEach((s) => P(head, 'cone', '#8A7A6A', [s * 0.48, 0.7, 0], [0.1, 0.26, 0.07], [0, 0, -s * 0.3])); P(head, 'sph', '#F2E6D6', [0, 0, r * 0.55], [0.55, 0.45, 0.3]); face(head, r, 0.05, { mouth: 0 }); P(head, 'cone', '#F3B13E', [0, -0.1, r * 0.98], [0.07, 0.14, 0.07], [Math.PI / 2, 0, 0]); break;
+      case 'turtle': face(head, r, 0.02); P(head, 'half', '#F7C82F', [0, 0.46, 0], [0.6, 0.4, 0.6], null, 0.35); P(head, 'cyl', '#F7C82F', [0, 0.46, 0.08], [0.68, 0.04, 0.72], null, 0.35);
+        P(body, 'half', '#4E9A3E', [0, 0.75, -0.25], [0.72, 0.72, 0.62], [-1.2, 0, 0]); P(body, 'box', '#3F7FE0', [-0.34, 0.95, 0.62], [0.26, 0.32, 0.06]); break;
+      case 'otter': roundEars('#7A5A40', 0.1); face(head, r, 0.06, { mouth: 0 }); P(head, 'sph', sp.belly, [0, -0.14, r * 0.78], [0.34, 0.22, 0.2]); P(head, 'sph', '#3A2A20', [0, -0.06, r * 0.98], [0.06, 0.045, 0.04]);
+        P(body, 'cap', '#7A5A40', [0, 0.5, -0.7], [0.14, 0.32, 0.14], [1.1, 0, 0]); P(body, 'box', '#3F7FE0', [-0.32, 0.95, 0.62], [0.26, 0.32, 0.06]); P(body, 'cyl', '#F2C33A', [0.35, 0.95, 0.62], [0.13, 0.04, 0.13], [Math.PI / 2, 0, 0], 0.3); break;
+      case 'hedgehog': P(head, 'sph', sp.spike, [0, 0.12, -0.22], [0.8, 0.72, 0.62], null, 0.95); P(body, 'sph', sp.spike, [0, 1.0, -0.3], [0.84, 0.78, 0.6], null, 0.95);
+        roundEars('#C9A57E', 0.11, 0.42, 0.42); face(head, r, 0.02); P(head, 'sph', '#3A2A20', [0, -0.08, r * 0.98], [0.05, 0.04, 0.03]); P(body, 'tor', '#B9A7E0', [0, 1.3, 0], [0.64, 0.64, 0.56], [Math.PI / 2, 0, 0]); break;
+      case 'penguin': P(head, 'sph', sp.belly, [0, -0.06, r * 0.5], [0.5, 0.48, 0.32]); face(head, r, 0.02, { mouth: 0 }); P(head, 'cone', '#F3B13E', [0, -0.12, r * 0.98], [0.07, 0.13, 0.06], [Math.PI / 2, 0, 0]);
+        P(head, 'half', '#26365E', [0, 0.42, 0], [0.66, 0.4, 0.66]); P(head, 'box', '#26365E', [0, 0.44, 0.62], [0.62, 0.05, 0.36]); P(body, 'box', '#C9945A', [0, 0.95, 0.68], [0.5, 0.38, 0.3]); break;
+      case 'rabbit': [-1, 1].forEach((s) => { P(head, 'cap', sp.b, [s * 0.2, 0.85, -0.02], [0.13, 0.36, 0.09], [0, 0, -s * 0.1]); P(head, 'cap', sp.inner, [s * 0.2, 0.85, 0.05], [0.07, 0.28, 0.03], [0, 0, -s * 0.1]); }); face(head, r, 0.02); P(body, 'box', '#F6A6C6', [0.32, 1.0, 0.62], [0.2, 0.32, 0.06]); break;
+      case 'panda': roundEars(sp.patch, 0.18, 0.52, 0.58); [-1, 1].forEach((s) => P(head, 'sph', sp.patch, [s * 0.24, 0.02, r * 0.85], [0.15, 0.17, 0.08], [0, 0, s * 0.4])); face(head, r, 0.02); [-1, 1].forEach((s) => P(head, 'tor', '#C9A13A', [s * 0.22, 0.03, r * 0.98], [0.12, 0.12, 0.12], null, 0.3)); break;
+      case 'redpanda': ears(sp.b, '#FFFFFF', 0.2, 0.26); P(head, 'sph', '#FFFFFF', [0, -0.14, r * 0.8], [0.3, 0.2, 0.18]); face(head, r, 0.05, { mouth: 0 }); P(head, 'sph', '#2A2A2A', [0, -0.06, r * 0.98], [0.05, 0.04, 0.03]);
+        P(head, 'sph', '#2E2420', [0.05, 0.66, -0.05], [0.52, 0.15, 0.52]); [0, 1, 2].forEach((i) => P(body, 'cap', i % 2 ? '#7A3417' : '#E07A3E', [0, 0.55 + i * 0.05, -0.75 - i * 0.18], [0.17, 0.09, 0.17], [1.2, 0, 0])); break;
+      case 'guppy': face(head, r, 0.02); P(body, 'cone', '#F7A6C8', [0, 1.0, -0.85], [0.45, 0.5, 0.2], [Math.PI / 2, 0, 0]); P(head, 'cone', '#FFD36B', [0, 0.65, 0], [0.12, 0.3, 0.08]); break;
+      default: face(head, r, 0.02);
+    }
   }
-  if (human) { part(head, 'sph', '#3A2A20', [0, hr * 0.25, -0.12], [hr * 0.98, hr * 0.7, hr * 0.9]); }
-  const sh = new THREE.Mesh(new THREE.CircleGeometry(0.55, 16), new THREE.MeshBasicMaterial({ color: '#000', transparent: true, opacity: 0.16, depthWrite: false })); sh.rotation.x = -Math.PI / 2; sh.position.y = 0.05; g.add(sh);
+  const sh = new THREE.Mesh(new THREE.CircleGeometry(0.62, 18), new THREE.MeshBasicMaterial({ color: '#000', transparent: true, opacity: 0.16, depthWrite: false })); sh.rotation.x = -Math.PI / 2; sh.position.y = 0.04; g.add(sh);
   let ph = Math.random() * 6;
   return {
     g,
-    walk(dt, speed = 1) { ph += dt * 9 * speed; const a = Math.sin(ph) * 0.7; legs[0].rotation.x = a; legs[1].rotation.x = -a; arms[0].rotation.x = -a * 0.8; arms[1].rotation.x = a * 0.8; body.position.y = Math.abs(Math.cos(ph)) * 0.08; },
-    idle(dt) { ph += dt * 2; legs.forEach((l) => { l.rotation.x = 0; }); arms[0].rotation.x = Math.sin(ph) * 0.06; arms[1].rotation.x = -Math.sin(ph) * 0.06; body.position.y = Math.sin(ph) * 0.02; },
-    hammer(dt) { ph += dt * 7; arms[1].rotation.x = -1.6 + Math.abs(Math.sin(ph)) * 1.2; arms[0].rotation.x = -0.4; body.rotation.x = 0.15; },
-    type(dt) { ph += dt * 14; arms[0].rotation.x = -1.1 + Math.sin(ph) * 0.12; arms[1].rotation.x = -1.1 - Math.sin(ph) * 0.12; },
-    sit() { legs.forEach((l) => { l.rotation.x = -1.45; }); body.position.y = -0.5; },
+    walk(dt, speed = 1) { ph += dt * 10 * speed; const a = Math.sin(ph) * 0.6; legs[0].rotation.x = a; legs[1].rotation.x = -a; arms[0].rotation.x = -a * 0.7; arms[1].rotation.x = a * 0.7; body.position.y = Math.abs(Math.cos(ph)) * 0.1; body.rotation.z = Math.sin(ph) * 0.06; },
+    idle(dt) { ph += dt * 2; legs.forEach((l) => { l.rotation.x = 0; }); body.rotation.z = 0; arms[0].rotation.x = Math.sin(ph) * 0.06; arms[1].rotation.x = -Math.sin(ph) * 0.06; body.position.y = Math.sin(ph) * 0.02; },
+    hammer(dt) { ph += dt * 7; arms[1].rotation.x = -1.8 + Math.abs(Math.sin(ph)) * 1.3; arms[0].rotation.x = -0.4; body.rotation.x = 0.12; head.rotation.x = 0.1; },
+    type(dt) { ph += dt * 14; arms[0].rotation.x = -1.0 + Math.sin(ph) * 0.15; arms[1].rotation.x = -1.0 - Math.sin(ph) * 0.15; head.rotation.y = Math.sin(ph * 0.08) * 0.15; },
+    sit() { legs.forEach((l) => { l.rotation.x = -1.4; }); body.position.y = -0.3; body.rotation.z = 0; },
     face(dx, dz) { if (dx || dz) g.rotation.y = Math.atan2(dx, dz); },
   };
 }
