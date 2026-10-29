@@ -88,13 +88,18 @@ const V = { jobs: [
 
 function village() {
   const v = el(`<div class="v" style="background:#8CC870">
+    <div id="world" style="position:absolute;inset:0;transform-origin:0 0;transition:transform .25s ease-out;cursor:grab">
     <img src="${IMG}town.webp" alt="" style="position:absolute;left:-20px;top:0;width:1194px;height:900px">
+    <div id="amb" style="position:absolute;inset:0;pointer-events:none"></div>
     <div id="lay" style="position:absolute;inset:0"></div>
     <a class="hot" href="#/campus" aria-label="홈트레이더스 단지 들어가기" style="left:326px;top:196px;width:520px;height:300px"></a>
     <button id="mail" type="button" aria-label="자료 넣기" style="position:absolute;left:512px;top:536px;width:54px;height:64px;border:0;background:transparent;cursor:pointer;z-index:4;transition:transform .2s">
       <span style="position:absolute;left:7px;top:34px;width:40px;height:18px;border-radius:50%;background:#E8732C;animation:pulse 1.8s ease-out infinite"></span>
       <span class="pill" style="position:absolute;left:50%;top:-20px;transform:translateX(-50%);background:#E8732C;color:#fff;font-size:11px;box-shadow:0 3px 10px rgba(232,115,44,.4)">자료 넣기 <b id="ndrop"></b></span>
     </button>
+    <div id="night" style="position:absolute;inset:-200px;pointer-events:none;background:rgba(20,30,80,.32);mix-blend-mode:multiply;display:none;z-index:6"></div>
+    </div>
+    <div style="position:absolute;right:24px;bottom:24px;display:flex;flex-direction:column;gap:6px;z-index:8"><button id="zin" type="button" class="btn" style="width:46px;justify-content:center;padding:0;font-size:22px">+</button><button id="zout" type="button" class="btn" style="width:46px;justify-content:center;padding:0;font-size:22px">−</button><button id="zre" type="button" class="btn" style="width:46px;justify-content:center;padding:0;font-size:12px">전체</button></div>
     <div style="position:absolute;left:20px;top:20px;display:flex;gap:10px;align-items:center;z-index:8">
       <div class="card" style="padding:9px 15px;border-radius:18px"><div style="font-size:12px;color:#8A7E77" id="vdate"></div><div style="font-size:24px;font-weight:800;letter-spacing:-.02em;line-height:1.1" id="vclock"></div></div>
       <button id="dispBtn" class="btn" type="button" style="height:48px"><img src="${IMG}cat.webp" alt="">배차 사무실 <b id="njobs"></b></button>
@@ -125,16 +130,53 @@ function village() {
   </div>`);
   stage.appendChild(v);
   const lay = v.querySelector('#lay');
+  // 동네 살아 움직이게 — 차 · 사람 · 크레인 · 구름 · 밤
+  const amb = v.querySelector('#amb'), world = v.querySelector('#world');
+  const TP = (pts) => 'M ' + pts.map(([x, y]) => T(x, y).join(' ')).join(' L ');
+  const ROADS = [
+    [[0, 560], [300, 552], [560, 588], [840, 502], [1168, 468]], [[300, 180], [560, 168], [900, 232], [1168, 250]], [[300, 0], [300, 180], [300, 552], [290, 880]],
+    [[560, 0], [560, 168], [560, 588], [470, 880]], [[840, 502], [900, 232], [930, 0]], [[0, 300], [300, 300], [560, 330], [840, 300], [1168, 330]],
+  ];
+  const CARC = ['#FF6B5E', '#5D9BF2', '#FFC531', '#FFFFFF', '#7ED39B', '#B98AF5', '#FF9E5E', '#9AA5B1'];
+  for (let i = 0; i < 12; i++) {
+    const r = ROADS[i % ROADS.length], c = CARC[i % CARC.length], d = 18 + (i * 7) % 16;
+    amb.appendChild(el(`<div style="position:absolute;left:0;top:0;offset-path:path('${TP(i % 2 ? r.slice().reverse() : r)}');offset-rotate:auto;animation:drive ${d}s linear ${-i * 3.1}s infinite;z-index:2"><svg width="22" height="12" viewBox="0 0 22 12" aria-hidden="true" style="display:block;margin:-6px 0 0 -11px"><rect x="0.5" y="0.5" width="21" height="11" rx="4" fill="${c}" stroke="rgba(0,0,0,.25)"/><rect x="12" y="2" width="6" height="8" rx="2" fill="#CFE8FF"/><rect x="3" y="2.5" width="4" height="7" rx="1.5" fill="#CFE8FF" opacity=".8"/></svg></div>`));
+  }
+  const WALKS = [[[310, 520], [310, 300]], [[540, 600], [330, 575]], [[575, 200], [880, 250]], [[860, 520], [1100, 480]], [[320, 610], [320, 820]], [[580, 620], [500, 860]], [[600, 190], [600, 540]]];
+  WALKS.forEach((w, i) => { const flipd = w[1][0] < w[0][0] ? -1 : 1; amb.appendChild(el(`<div style="position:absolute;left:0;top:0;offset-path:path('${TP(w)}');offset-rotate:0deg;animation:drive ${14 + i * 3}s linear ${-i * 2}s infinite alternate;z-index:3"><img class="gait" src="${IMG}${['driver', 'boss1', 'boss2'][i % 3]}.webp" alt="" style="width:15px;display:block;margin:-20px 0 0 -7px;--fx:${flipd}"></div>`)); });
+  [[225, 70], [125, 330], [195, 560]].forEach(([x, y], i) => { const [X, Y] = T(x, y); amb.appendChild(el(`<svg width="120" height="110" viewBox="0 0 120 110" aria-hidden="true" style="position:absolute;left:${X - 20}px;top:${Y - 100}px;overflow:visible;z-index:3"><rect x="16" y="20" width="6" height="88" fill="#F5B400" stroke="#C98F00"/><g style="transform-origin:19px 22px;animation:crane ${7 + i}s ease-in-out infinite alternate"><rect x="0" y="18" width="96" height="5" fill="#F5B400" stroke="#C98F00"/><line x1="70" y1="23" x2="70" y2="58" stroke="#555" stroke-width="1.2"/><rect x="62" y="58" width="16" height="7" fill="#E8C78F" stroke="#B08A50"/></g></svg>`)); });
+  for (let i = 0; i < 3; i++) amb.appendChild(el(`<span style="position:absolute;top:${120 + i * 260}px;left:-300px;width:${260 + i * 60}px;height:${110 + i * 20}px;border-radius:50%;background:radial-gradient(ellipse,rgba(255,255,255,.35),rgba(255,255,255,0) 70%);animation:cloud ${70 + i * 25}s linear ${-i * 30}s infinite;z-index:5"></span>`));
+  const hr = new Date().getHours(); if (hr >= 18 || hr < 6) { v.querySelector('#night').style.display = 'block'; [[300, 300], [560, 330], [840, 300], [300, 552], [560, 588], [840, 502], [560, 168], [900, 232]].forEach(([x, y], i) => { const [X, Y] = T(x, y); amb.appendChild(el(`<span class="glow" style="left:${X}px;top:${Y - 18}px;width:10px;height:10px;z-index:7;animation-delay:${i * .3}s"></span>`)); }); }
+  // 확대 · 끌기
+  let Z = { s: 1, x: 0, y: 0 }, drag = null;
+  const apply = (anim) => { world.style.transition = anim ? 'transform .25s ease-out' : 'none'; Z.s = Math.min(3, Math.max(1, Z.s)); const mx = 1440 * (Z.s - 1), my = 900 * (Z.s - 1); Z.x = Math.min(0, Math.max(-mx, Z.x)); Z.y = Math.min(0, Math.max(-my, Z.y)); world.style.transform = `translate(${Z.x}px,${Z.y}px) scale(${Z.s})`; };
+  const zoomAt = (px, py, f) => { const ns = Math.min(3, Math.max(1, Z.s * f)); Z.x = px - (px - Z.x) * (ns / Z.s); Z.y = py - (py - Z.y) * (ns / Z.s); Z.s = ns; apply(true); };
+  const kk = () => stage.getBoundingClientRect().width / 1440;
+  v.addEventListener('wheel', (e) => { if (e.target.closest('.card,.modal')) return; e.preventDefault(); const r = stage.getBoundingClientRect(); zoomAt((e.clientX - r.left) / kk(), (e.clientY - r.top) / kk(), Math.exp(-e.deltaY * 0.0016)); }, { passive: false });
+  world.addEventListener('pointerdown', (e) => { if (e.target.closest('a,button,.pc')) return; drag = { x: e.clientX, y: e.clientY, zx: Z.x, zy: Z.y, moved: false }; world.style.cursor = 'grabbing'; });
+  window.addEventListener('pointermove', (e) => { if (!drag) return; Z.x = drag.zx + (e.clientX - drag.x) / kk(); Z.y = drag.zy + (e.clientY - drag.y) / kk(); apply(false); });
+  window.addEventListener('pointerup', () => { if (drag) { drag = null; world.style.cursor = 'grab'; } });
+  v.querySelector('#zin').onclick = () => zoomAt(720, 450, 1.4); v.querySelector('#zout').onclick = () => zoomAt(720, 450, 1 / 1.4); v.querySelector('#zre').onclick = () => { Z = { s: 1, x: 0, y: 0 }; apply(true); };
+
   // 거래처 말풍선
   Object.entries(PLACES).forEach(([k, p]) => {
     const [x, y] = T(...p.at), [bg, fg] = TONE[p.tone];
     lay.appendChild(el(`<div style="position:absolute;left:${x}px;top:${y}px;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center;z-index:4;pointer-events:none">
       <div class="${p.tone === 'red' ? 'bob' : ''}" style="margin-bottom:4px;display:flex;flex-direction:column;align-items:center"><span style="max-width:180px;padding:6px 10px;border-radius:14px;background:${bg};color:${fg};font-size:11px;font-weight:800;line-height:1.3;text-align:center;box-shadow:0 4px 12px rgba(40,60,90,.18)">${esc(p.msg)}</span><span class="tail" style="background:${bg}"></span></div>
       ${p.wait ? `<img class="bob" src="${IMG}${p.wait}.webp" alt="기다리는 거래처" style="width:38px;margin-bottom:2px">` : ''}
-      <span class="pill" style="background:${k === 'home' ? '#E8732C' : 'rgba(255,255,255,.96)'};color:${k === 'home' ? '#fff' : '#4A3F3A'};font-size:11px;box-shadow:0 2px 6px rgba(0,0,0,.12)">${esc(p.name)}</span></div>`));
+      <button type="button" class="pill pc" data-pk="${k}" style="border:0;cursor:pointer;pointer-events:auto;background:${k === 'home' ? '#E8732C' : 'rgba(255,255,255,.96)'};color:${k === 'home' ? '#fff' : '#4A3F3A'};font-size:11px;box-shadow:0 2px 6px rgba(0,0,0,.12)">${esc(p.name)}</button></div>`));
   });
   // 공사장 — 망치질하는 일꾼 · 먼지
   [[150, 380], [95, 420], [210, 640], [160, 690], [240, 150], [300, 175]].forEach(([x, y], i) => { const [X, Y] = T(x, y); sprite(lay, { av: 'driver', x: X, y: Y, size: 22, act: 'hammer' }); puff(lay, X + 10, Y - 6, i * 0.5); puff(lay, X - 8, Y - 2, i * 0.5 + 0.9); });
+  lay.addEventListener('click', (e) => {   // 거래처 카드
+    const b = e.target.closest('[data-pk]'); if (!b) return; const k = b.dataset.pk, p = PLACES[k]; if (k === 'home') { location.hash = '#/campus'; return; }
+    const ORD = { gonggan: ['10/29 구조재 2*6*12 6PLT · 배차 필요', '10/28 유도모음통 15BOX · 하차 완료', '발주 3일째: 루나우드 1PLT · 용마루벤트'], anmyeon: ['10/29 원바 · 배차 기다림 4시간'], hanlim: ['10/28 SPF 2*4*12 80 · 명세서 받음', '10/29 OSB 40장 → 군산 이동 중'], wonik: ['10/29 세라믹 판재 · 실리콘 박스 출고 준비'], woorim: ['10/28 메가타이 철물 · 창고 입고 · 구매 10/28-20'] };
+    const m = el(`<div class="modal"><div class="card pnl" style="width:460px;border-radius:26px;padding:22px 24px;display:flex;flex-direction:column;gap:12px"><div style="display:flex;align-items:center;gap:10px"><div style="flex:1"><div style="font-size:12px;color:#8A7E77">거래처</div><div style="font-size:22px;font-weight:800">${esc(p.name.replace(/[←↓]/g, '').trim())}</div></div><button type="button" class="x" style="width:40px;height:40px;border:0;border-radius:12px;background:#F4EFEA;font-size:18px;cursor:pointer">✕</button></div>
+      <div style="padding:10px 12px;border-radius:14px;background:${TONE[p.tone][0] === '#FFFFFF' ? '#F6F2EE' : TONE[p.tone][0]};color:${TONE[p.tone][1] === '#FFFFFF' ? '#fff' : TONE[p.tone][1]};font-weight:800;font-size:14px">${esc(p.msg)}</div>
+      <div style="font-size:13px;font-weight:800;color:#8A7E77">진행 중</div>${(ORD[k] || ['진행 중인 출고 없음']).map((o) => `<div style="padding:9px 12px;border-radius:12px;background:#FBF8F5;font-size:13px">${esc(o)}</div>`).join('')}
+      <div style="display:flex;gap:8px;margin-top:4px"><button type="button" class="btn or x2">배차 요청</button><button type="button" class="btn x2">견적 요청</button><button type="button" class="btn x2">카톡 보기</button></div></div></div>`);
+    v.appendChild(m); m.onclick = (ev) => { if (ev.target === m || ev.target.closest('.x')) m.remove(); if (ev.target.closest('.x2')) { ev.target.textContent = '준비 중'; } };
+  });
   // 트럭
   const addTruck = (t) => {
     const r = route(t.from, t.to), [c, c2] = COLORS[t.c % 5];

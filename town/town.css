@@ -98,3 +98,7 @@ button { font: inherit; }
 .fxn { font-size: 9px; font-weight: 800; color: #B07A2A; top: -4%; white-space: nowrap; animation: rise 1.6s ease-out infinite; }
 @keyframes prt { 0% { transform: translate(0,0) rotate(0); opacity: 0 } 20% { opacity: 1 } 100% { transform: translate(-22px,-16px) rotate(-20deg); opacity: 0 } }
 .fxpr { width: 9px; height: 12px; background: #fff; border-radius: 1px; box-shadow: 0 1px 2px rgba(0,0,0,.25); top: 30%; left: 20%; animation: prt 1.6s ease-out infinite; }
+
+@keyframes crane { from { transform: rotate(-14deg) } to { transform: rotate(18deg) } }
+@keyframes cloud { from { transform: translateX(0) } to { transform: translateX(1900px) } }
+.pc:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.2) !important; }
