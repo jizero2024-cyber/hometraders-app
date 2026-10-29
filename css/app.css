@@ -1082,3 +1082,27 @@ body.kiosk #app { max-width: none; background: #F2F2F7; }
 .ks-kv b.no { color: #E8732C; } .ks-kv b.ok { color: #1C1C1E; }
 .ki-h { display: flex; justify-content: space-between; align-items: flex-start; }
 .ki-logo { width: 24cqw; height: auto; margin-top: 1.4cqw; }
+/* 키오스크 글라스모피즘 (10/30 대표) — 은은한 그라데이션 바탕 + 반투명 유리 카드 */
+body.kiosk, body.kiosk #app { background: #EEF1F6; }
+body.kiosk #app::before { content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background: radial-gradient(60vh 60vh at 12% 8%, rgba(255,170,120,.55), transparent 70%),
+              radial-gradient(70vh 70vh at 92% 30%, rgba(160,190,255,.45), transparent 70%),
+              radial-gradient(70vh 70vh at 20% 85%, rgba(200,180,255,.40), transparent 70%),
+              radial-gradient(60vh 60vh at 85% 95%, rgba(255,205,160,.45), transparent 70%); }
+.ki-box { position: relative; z-index: 1; }
+.ki-t > div, .ki-card, .ki-out { background: rgba(255,255,255,.52); border: 1px solid rgba(255,255,255,.75);
+  -webkit-backdrop-filter: blur(22px) saturate(160%); backdrop-filter: blur(22px) saturate(160%);
+  box-shadow: 0 8px 32px rgba(60,70,110,.10), inset 0 1px 0 rgba(255,255,255,.6); }
+.ki-t .k-need { background: rgba(255,244,236,.62); }
+.ki-t i, .ki-hi, .ki-out i { background: rgba(255,255,255,.7); }
+.ki-t .k-need i, .ki-s.k-need .ki-hi { background: #E8732C; }
+.ki-w { background: rgba(255,255,255,.6); }
+.ki-s.k-need .ki-w, .ki-r.late .ki-w { background: rgba(255,236,222,.75); }
+.ki-r { border-bottom-color: rgba(255,255,255,.65); }
+.ki-s h2 em { background: rgba(255,255,255,.6); }
+.ki-s.k-need h2 em { background: rgba(255,236,222,.8); }
+.ks-ov { background: rgba(40,45,70,.18); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.ks { background: rgba(255,255,255,.72); -webkit-backdrop-filter: blur(28px) saturate(170%); backdrop-filter: blur(28px) saturate(170%); border-top: 1px solid rgba(255,255,255,.85); }
+.ks-g, .ks-box { background: rgba(255,255,255,.6); }
+.ks-b { background: rgba(255,255,255,.75); }
+.ki-toast { background: rgba(28,28,30,.72); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
