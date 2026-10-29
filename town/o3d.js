@@ -57,7 +57,7 @@ export function office(host, o) {
     const y = f * FH; box(FW, 0.5, FD, c, 0, y, 0).castShadow = false; box(FW, FH, 0.5, '#FFFFFF', 0, y + 0.5, -FD / 2);
     const lp = new THREE.PointLight('#FFF1DA', 40, 40, 1.4); lp.position.set(0, y + FH - 1, 2); scene.add(lp);
     box(0.5, FH, FD, '#F4F1EC', -FW / 2, y + 0.5, 0); const gl = box(0.3, FH - 0.5, FD, '#CDE6F5', FW / 2, y + 0.5, 0, scene, { transparent: true, opacity: 0.35, roughness: 0.1 }); gl.castShadow = false;
-    tag(null, pill(name, 'rgba(255,255,255,.92)', '#6B5E55'), -FW / 2 + 5, y + FH - 0.6, FD / 2 - 1).d.style.pointerEvents = 'none';
+    tag(null, pill(name, 'rgba(255,255,255,.92)', '#6B5E55'), FW / 2 - 4, y + 1.2, FD / 2 - 0.5).d.style.pointerEvents = 'none';
   });
   box(FW + 1, 0.8, FD + 1, '#E8732C', 0, NF * FH, 0).castShadow = false;   // 지붕
   const logoT = new THREE.TextureLoader().load('/icons/logo-full.png'); logoT.colorSpace = THREE.SRGBColorSpace;

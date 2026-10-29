@@ -3,7 +3,7 @@
 import * as S from '/js/store-supabase.js?v=9t1';
 import * as JIM from './jim.js?v=2';
 import * as W3D from './v3d.js?v=15';
-import * as O3D from './o3d.js?v=8';
+import * as O3D from './o3d.js?v=9';
 import { portrait, KINDS } from './kit3d.js?v=3';
 
 const stage = document.getElementById('stage');
