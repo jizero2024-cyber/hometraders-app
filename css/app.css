@@ -992,27 +992,10 @@ body.kiosk { background: #F2F2F7; margin: 0; }
 body.kiosk #app { max-width: none; background: #F2F2F7; }
 .ki-box { container-type: inline-size; width: 100%; max-width: min(100vw, 62vh); margin: 0 auto; }
 .ki { font-family: Pretendard, -apple-system, sans-serif; color: #1C1C1E; padding: 4cqw 4cqw 3cqw; box-sizing: border-box; min-height: 100vh; font-size: 3.4cqw; letter-spacing: -0.01em; }
-.ki-h { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 3cqw; align-items: stretch; margin-bottom: 3cqw; }
+.ki-h { margin-bottom: 3.6cqw; padding: 0 1cqw; }
 .ki-clk { display: flex; flex-direction: column; justify-content: center; }
 .ki-clk span { font-size: 3.6cqw; font-weight: 600; color: #8E8E93; }
-.ki-clk b { font-size: 15cqw; font-weight: 700; letter-spacing: -0.04em; line-height: 1; margin-top: 0.6cqw; }
-.kw { background: linear-gradient(160deg, #4A90E2, #2D6CC4); color: #fff; border-radius: 4.4cqw; padding: 3cqw 3.4cqw 2.4cqw; }
-.kw-top { display: flex; justify-content: space-between; }
-.kw-loc { font-size: 3.2cqw; font-weight: 600; }
-.kw-t { font-size: 11cqw; font-weight: 300; line-height: 1; letter-spacing: -0.04em; }
-.kw-r { text-align: right; display: flex; flex-direction: column; align-items: flex-end; }
-.kw-r svg { width: 7cqw; height: 7cqw; }
-.kw-n { font-size: 3cqw; font-weight: 600; margin-top: 0.4cqw; }
-.kw-hl { font-size: 2.6cqw; opacity: .85; }
-.kw-hrs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border-top: 1px solid rgba(255,255,255,.25); margin-top: 1.8cqw; padding-top: 1.4cqw; text-align: center; }
-.kw-hr span, .kw-hr em { display: block; font-size: 2.4cqw; font-style: normal; opacity: .85; min-height: 2.8cqw; }
-.kw-hr svg { width: 5cqw; height: 5cqw; margin: 0.4cqw 0; }
-.kw-hr b { display: block; font-size: 3cqw; font-weight: 600; }
-.kw-hr em { color: #CFE6FF; opacity: 1; }
-.kw-tm { display: flex; align-items: center; gap: 1.4cqw; border-top: 1px solid rgba(255,255,255,.25); margin-top: 1.2cqw; padding-top: 1.4cqw; font-size: 2.7cqw; }
-.kw-tm svg { width: 4.4cqw; height: 4.4cqw; }
-.kw-tm b { margin-left: auto; font-weight: 700; }
-.kw-tm.wet b { background: #fff; color: #2D6CC4; border-radius: 9cqw; padding: 0.3cqw 1.8cqw; }
+.ki-clk b { font-size: 17cqw; font-weight: 700; letter-spacing: -0.04em; line-height: 1; margin-top: 0.6cqw; }
 .ki-t { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2cqw; margin-bottom: 3.6cqw; }
 .ki-t div { background: #fff; border-radius: 3.6cqw; padding: 2.6cqw 1cqw 2.2cqw; text-align: center; }
 .ki-t b { display: block; font-size: 10cqw; font-weight: 700; line-height: 1.05; letter-spacing: -0.03em; }
