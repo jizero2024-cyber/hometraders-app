@@ -51,11 +51,11 @@ export function screen() {
   const g = groups(), at = K.data.at ? String(K.data.at).slice(11, 16) : '';
   return `<div class="ki">
     <header class="ki-h"><span>${mdOf(n)} (${wd})</span><b>${p2(n.getHours())}:${p2(n.getMinutes())}</b></header>
-    <div class="ki-t"><div class="need"><b>${g.need.length}</b><span>배차 해야 함</span></div><div><b>${g.car.length}</b><span>차 잡힘</span></div>
-      <div><b>${g.order.length}</b><span>발주 요청</span></div><div class="out"><b>${g.out.length}</b><span>출고 완료</span></div></div>
-    ${sec('need', '배차 해야 함', g.need, 9, true)}
-    ${sec('car', '차 잡힘 · 도착 확인', g.car, 5, false)}
-    ${sec('order', '발주 요청', g.order, 5, false)}
+    <div class="ki-t"><div class="k-need"><b>${g.need.length}</b><span>배차 해야 함</span></div><div><b>${g.car.length}</b><span>차 잡힘</span></div>
+      <div><b>${g.order.length}</b><span>발주 요청</span></div><div class="k-out"><b>${g.out.length}</b><span>출고 완료</span></div></div>
+    ${sec('k-need', '배차 해야 함', g.need, 9, true)}
+    ${sec('k-car', '차 잡힘 · 도착 확인', g.car, 5, false)}
+    ${sec('k-order', '발주 요청', g.order, 5, false)}
     <div class="ki-out"><span>오늘 출고 완료</span><span>${g.out.length}</span></div>
     ${at ? `<div class="ki-at">${esc(at)}</div>` : ''}
   </div>`;

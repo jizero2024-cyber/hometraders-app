@@ -997,11 +997,11 @@ body.kiosk { background: #fff; margin: 0; }
 .ki-t div { background: #F6F6F4; border-radius: 2.4vw; padding: 2.2vw 1vw; text-align: center; }
 .ki-t b { display: block; font-size: 9vw; font-weight: 800; line-height: 1.05; }
 .ki-t span { font-size: 2.8vw; color: #666; }
-.ki-t .need { background: #FDF1E9; } .ki-t .need b { color: #E8732C; }
-.ki-t .out b { color: #1E8E3E; }
+.ki-t .k-need { background: #FDF1E9; } .ki-t .k-need b { color: #E8732C; }
+.ki-t .k-out b { color: #1E8E3E; }
 .ki-s { margin-bottom: 3vw; }
 .ki-s h2 { display: flex; justify-content: space-between; margin: 0 0 1vw; padding: 1.2vw 0; font-size: 4.4vw; font-weight: 800; border-bottom: 0.6vw solid currentColor; }
-.ki-s.need h2 { color: #E8732C; } .ki-s.car h2 { color: #1a1a1a; } .ki-s.order h2 { color: #777; }
+.ki-s.k-need h2 { color: #E8732C; } .ki-s.k-car h2 { color: #1a1a1a; } .ki-s.k-order h2 { color: #777; }
 .ki-r { display: grid; grid-template-columns: 17vw minmax(0, 1fr); gap: 2vw; padding: 1.6vw 0; border-bottom: 1px solid #ECECEC; }
 .ki-w b { display: block; font-size: 4.8vw; font-weight: 800; line-height: 1.15; }
 .ki-w span { font-size: 2.7vw; color: #888; }
