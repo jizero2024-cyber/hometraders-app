@@ -357,6 +357,25 @@ export async function addInbox(row) {   // 실패하면 글자, 되면 null
   const { error } = await sb.from('site_inbox').insert(row);
   return error ? error.message : null;
 }
+export async function getTownAI() {   // 홈트 마을 AI 직원 상태 (10/29) — 맥 town_status.py 가 site_inbox 'town:ai' 로 올림
+  const { data, error } = await sb.from('site_inbox').select('body,updated_at').eq('id', 'town:ai').maybeSingle();
+  if (error) throw new Error(error.message);
+  try { return data ? JSON.parse(data.body || '{}') : null; } catch (_) { return null; }
+}
+export async function getTownInbox() {   // 마을 우체통 — 최근 자료 넣기 (파일 내용은 빼고)
+  const { data, error } = await sb.from('site_inbox').select('id,kind,name,status,note,created_by,created_at').in('kind', ['text', 'file']).order('created_at', { ascending: false }).limit(20);
+  if (error) throw new Error(error.message);
+  return data || [];
+}
+export async function getTownChecks() {   // 마을 체크리스트 (팜플렛 등) — site_inbox kind 'townchk'
+  const { data, error } = await sb.from('site_inbox').select('id,name,status,created_by,updated_at').eq('kind', 'townchk');
+  if (error) throw new Error(error.message);
+  return data || [];
+}
+export async function setTownCheck(id, name, on, by) {
+  const { error } = await sb.from('site_inbox').upsert({ id, kind: 'townchk', status: on ? 'on' : 'off', name, created_by: by || null, updated_at: new Date().toISOString() });
+  return error ? error.message : null;
+}
 // 실시간 구독은 딱 1회만. 이미 붙은 채널이 있으면 제거 후 재구독(재진입 안전) →
 // "cannot add postgres_changes callbacks after subscribe()" 방지.
 let _realtimeOn = false;

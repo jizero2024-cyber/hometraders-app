@@ -2,6 +2,7 @@
 // 마우스로 돌리기 · 확대 · 끌기. 거래처 건물 · 사무실 · 창고 · 우체통 눌러서 씀.
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { critter } from './kit3d.js?v=1';
 
 const GX = [-120, -60, 0, 60, 120], GZ = [-100, -50, 0, 50, 100];   // 길 격자
 // 거래처 자리 (블록 가운데). 블록 = 60×50
@@ -275,11 +276,10 @@ export function mount(host, o) {
   const texC = {}; const loader = new THREE.TextureLoader();
   const tex = (url) => { if (!texC[url]) { const t = loader.load(url); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; texC[url] = t; } return texC[url]; };
   const people = [];
-  const person = (av, pts, v, h = 3.2) => {
-    const mtl = new THREE.SpriteMaterial({ map: tex(o.wf(av, 0)), transparent: true, alphaTest: 0.15 }); const s = new THREE.Sprite(mtl); s.center.set(0.5, 0); s.scale.set(h * 0.82, h, 1); scene.add(s);
-    const sh = new THREE.Mesh(new THREE.CircleGeometry(h * 0.25, 16), new THREE.MeshBasicMaterial({ color: '#000', transparent: true, opacity: 0.18 })); sh.rotation.x = -Math.PI / 2; scene.add(sh);
+  const person = (av, pts, v) => {   // 3D 캐릭터 (10/29 대표 "이질감") — 마을과 같은 도형 · 빛 · 그림자
+    const c = critter(av); scene.add(c.g);
     let L = 0; for (let i = 1; i < pts.length; i++) L += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
-    people.push({ av, pts, v, L, s, sh, h, t: Math.random() * L * 2, last: '' });
+    people.push({ c, pts, v, L, t: Math.random() * L * 2 });
   };
   const WALKERS = [
     ['driver', [[-60, -45], [-60, 45]]], ['boss1', [[-115, 6], [-5, 6]]], ['worker', [[6, -95], [6, 95]]], ['dog', [[20, 6], [55, 6]]], ['cat', [[66, -45], [66, 45]]],
@@ -289,7 +289,7 @@ export function mount(host, o) {
   WALKERS.forEach(([av, p], i) => person(av, p, 2.6 + (i % 3) * 0.5));
   // 공사장 인부 (망치질)
   const hammer = [];
-  Object.entries(LOTS).forEach(([k, [x, z, kind]]) => { if (kind !== 'site') return; [[-4, 8.5], [5, 8.6], [11, -2]].forEach(([a, b], i) => { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex(o.wf('worker', i === 2 ? 2 : 0)), transparent: true, alphaTest: 0.15 })); s.center.set(0.5, 0); s.scale.set(2.5, 3, 1); s.position.set(x + a, 0.6, z + b - 2); scene.add(s); hammer.push({ s, ph: Math.random() * 6, y: 0.6 }); }); });
+  Object.entries(LOTS).forEach(([k, [x, z, kind]]) => { if (kind !== 'site') return; [[-4, 8.5, 0], [5, 8.6, 0.6], [11, -2, -1.4]].forEach(([a, b, r]) => { const c = critter('worker'); c.g.position.set(x + a, 0.6, z + b - 2); c.g.rotation.y = r + Math.PI; scene.add(c.g); hammer.push(c); }); });
 
   // 이름표 (HTML) — 3D 위치 따라감
   const tags = [];
@@ -326,18 +326,13 @@ export function mount(host, o) {
     if (snow.visible) { const a = snowG.attributes.position.array; for (let i = 0; i < SNOW_N; i++) { let y = a[i * 3 + 1] - dt * 7; if (y < 0) y += 130; a[i * 3 + 1] = y; a[i * 3] += Math.sin(now + i) * dt * 0.8; } snowG.attributes.position.needsUpdate = true; }
     if (WX.code >= 95 && Math.random() < 0.004) { hemi.intensity += 2.5; setTimeout(applyEnv, 120); }
     cars.forEach((c) => { c.t = (c.t + dt * c.v) % 248; const p = -124 + (c.dir > 0 ? c.t : 248 - c.t), off = c.dir * 2; if (c.horiz) { c.m.position.set(p, 0.2, c.line + off); c.m.rotation.y = c.dir > 0 ? 0 : Math.PI; } else { c.m.position.set(c.line - off, 0.2, Math.max(-104, Math.min(104, p * 0.84))); c.m.rotation.y = c.dir > 0 ? -Math.PI / 2 : Math.PI / 2; } });
-    hammer.forEach((h) => { h.s.position.y = h.y + Math.abs(Math.sin(now * 5 + h.ph)) * 0.25; });
+    hammer.forEach((c) => c.hammer(dt));
     people.forEach((p) => {
       p.t += dt * p.v; const cyc = p.t % (p.L * 2), fwd = cyc <= p.L, d = fwd ? cyc : p.L * 2 - cyc;
       let acc = 0, x = p.pts[0][0], z = p.pts[0][1], dx = 0, dz = 0;
       for (let i = 1; i < p.pts.length; i++) { const a = p.pts[i - 1], b = p.pts[i], L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (d <= acc + L || i === p.pts.length - 1) { const f = Math.min(1, (d - acc) / L); x = a[0] + (b[0] - a[0]) * f; z = a[1] + (b[1] - a[1]) * f; dx = (b[0] - a[0]) / L; dz = (b[1] - a[1]) / L; break; } acc += L; }
       if (!fwd) { dx = -dx; dz = -dz; }
-      p.s.position.set(x, 0.3, z); p.sh.position.set(x, 0.42, z);
-      // 카메라에서 본 방향: 멀어지면 뒷모습, 다가오면 앞모습, 옆이면 옆모습
-      const away = dx * camDir.x + dz * camDir.z, right = dx * -camDir.z + dz * camDir.x, ph = Math.floor(now / 0.17 + p.h) % 2;
-      let k2, flip = 1; if (Math.abs(right) > Math.abs(away) * 0.9) { k2 = 2 + ph; flip = right > 0 ? -1 : 1; } else if (away > 0) k2 = 4 + ph; else k2 = ph;
-      const url = o.wf(p.av, k2); if (p.last !== url + flip) { p.s.material.map = tex(url); p.s.material.needsUpdate = true; p.last = url + flip; p.s.scale.x = Math.abs(p.s.scale.x) * flip; }
-      p.s.position.y = 0.3 + (ph ? 0.12 : 0);
+      p.c.g.position.set(x + dz * 1.6, 0.3, z - dx * 1.6); p.c.face(dx, dz); p.c.walk(dt, p.v / 2.6);   // 보도 쪽으로 비켜 걷기
     });
     trucks.forEach((t) => { const tt = performance.now() / 1000 - t.T0; let d; if (tt < t.wait) d = 0; else { const f = (tt - t.wait) / t.dur; d = (t.loop ? f % 1 : Math.min(1, f)) * t.r.L; } const q = at(t.r.pts, d); t.m.position.set(q.x, 0.25, q.z); t.m.rotation.y = q.a; v3.set(q.x, 7, q.z); proj(v3, t.lab); });
     tags.forEach((t) => proj(t.p, t.d));
