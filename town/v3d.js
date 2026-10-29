@@ -277,7 +277,7 @@ export function mount(host, o) {
   const tex = (url) => { if (!texC[url]) { const t = loader.load(url); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; texC[url] = t; } return texC[url]; };
   const people = [];
   const person = (av, pts, v) => {   // 3D 캐릭터 (10/29 대표 "이질감") — 마을과 같은 도형 · 빛 · 그림자
-    const c = critter(av); scene.add(c.g);
+    const c = critter(av); c.g.scale.setScalar(1.7); scene.add(c.g);
     let L = 0; for (let i = 1; i < pts.length; i++) L += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
     people.push({ c, pts, v, L, t: Math.random() * L * 2 });
   };
@@ -289,7 +289,7 @@ export function mount(host, o) {
   WALKERS.forEach(([av, p], i) => person(av, p, 2.6 + (i % 3) * 0.5));
   // 공사장 인부 (망치질)
   const hammer = [];
-  Object.entries(LOTS).forEach(([k, [x, z, kind]]) => { if (kind !== 'site') return; [[-4, 8.5, 0], [5, 8.6, 0.6], [11, -2, -1.4]].forEach(([a, b, r]) => { const c = critter('worker'); c.g.position.set(x + a, 0.6, z + b - 2); c.g.rotation.y = r + Math.PI; scene.add(c.g); hammer.push(c); }); });
+  Object.entries(LOTS).forEach(([k, [x, z, kind]]) => { if (kind !== 'site') return; [[-4, 8.5, 0], [5, 8.6, 0.6], [11, -2, -1.4]].forEach(([a, b, r]) => { const c = critter('worker'); c.g.scale.setScalar(1.5); c.g.position.set(x + a, 0.6, z + b - 2); c.g.rotation.y = r + Math.PI; scene.add(c.g); hammer.push(c); }); });
 
   // 이름표 (HTML) — 3D 위치 따라감
   const tags = [];
@@ -332,7 +332,7 @@ export function mount(host, o) {
       let acc = 0, x = p.pts[0][0], z = p.pts[0][1], dx = 0, dz = 0;
       for (let i = 1; i < p.pts.length; i++) { const a = p.pts[i - 1], b = p.pts[i], L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (d <= acc + L || i === p.pts.length - 1) { const f = Math.min(1, (d - acc) / L); x = a[0] + (b[0] - a[0]) * f; z = a[1] + (b[1] - a[1]) * f; dx = (b[0] - a[0]) / L; dz = (b[1] - a[1]) / L; break; } acc += L; }
       if (!fwd) { dx = -dx; dz = -dz; }
-      p.c.g.position.set(x + dz * 1.6, 0.3, z - dx * 1.6); p.c.face(dx, dz); p.c.walk(dt, p.v / 2.6);   // 보도 쪽으로 비켜 걷기
+      p.c.g.position.set(x + dz * 3.6, 0.3, z - dx * 3.6); p.c.face(dx, dz); p.c.walk(dt, p.v / 2.6);   // 보도 쪽으로 비켜 걷기
     });
     trucks.forEach((t) => { const tt = performance.now() / 1000 - t.T0; let d; if (tt < t.wait) d = 0; else { const f = (tt - t.wait) / t.dur; d = (t.loop ? f % 1 : Math.min(1, f)) * t.r.L; } const q = at(t.r.pts, d); t.m.position.set(q.x, 0.25, q.z); t.m.rotation.y = q.a; v3.set(q.x, 7, q.z); proj(v3, t.lab); });
     tags.forEach((t) => proj(t.p, t.d));
