@@ -265,7 +265,7 @@ export async function saveGongganDoc(row) {   // 실패하면 글자, 되면 nul
 // ── 새 첫 화면 (site_inbox · fare_unpaid, 2026-10-23) ──
 const noTable = (e, what) => new Error(/does not exist|relation|schema cache|could not find/i.test(e.message) ? `공유 DB 에 ${what} 표가 아직 없어요.` : e.message);
 export async function getFareUnpaid() {
-  const { data, error } = await sb.from('fare_unpaid').select('id,section,sort,urgent,driver,phone,job,amount,bank,account,holder,todo,note,sent').order('sort');
+  const { data, error } = await sb.from('fare_unpaid').select('id,section,sort,urgent,driver,phone,job,amount,bank,account,holder,todo,note,sent,updated_at').order('sort');
   if (error) throw noTable(error, '운임');
   return data || [];
 }

@@ -1,7 +1,7 @@
 // 첫 화면 맨 위 '출고 흐름' (10/28 대표 "배차 뭐뭐 해야 하는지 간편하게") — 목업 https://claude.ai/artifact/4boELHQ3xhPF3WmLSqFXEt
 // 맥 도우미 flow_board.py 가 출고일보 줄을 출고 건(출고번호)마다 단계로 나눠 site_inbox 'flow:board' 에 올림 → 여기선 읽기만.
 // 버튼은 있는 화면을 그 건 값으로 엶: 배차 요청(/homt) · 전자 송장 · 납품확인서 · 자재승인원 · 견적서 · 공간 올릴 전표
-import * as S from './store-supabase.js?v=9';
+import * as S from './store-supabase.js?v=10';
 import * as FM from './forms.js?v=19';
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

@@ -2,7 +2,7 @@
 // 맨 위 빨간 칸 = 기사 운임 미송금 (fare_unpaid — 맥 도우미가 출고일보 폴더 '기사_운임_미송금_정리' 엑셀에서 올림. '보냄' 누르면 엑셀 보냄 칸에 O)
 // 버튼: 배차 요청 · 자료 넣기(site_inbox — 출고일보 업데이트 때 판매·구매입력) · 거래명세표(공간제작소 · 그 외 · 에이스) · 납품확인서 · 자재승인원 · 견적서 · 입금표
 //   서류 화면은 모두 js/forms.js (같은 머리·카드·버튼)
-import * as S from './store-supabase.js?v=9';
+import * as S from './store-supabase.js?v=10';
 import * as FM from './forms.js?v=19';
 import * as FL from './flow.js?v=57';   // 맨 위 출고 흐름 (10/28)
 
@@ -45,9 +45,17 @@ function top(back) {
     <button type="button" class="hm-link" data-hm="go" data-r="start">처음 화면</button></div></header>`;
 }
 
+// 운송비 '업데이트 MM/DD HH:MM' = 정리 엑셀을 마지막으로 고친 시각 (10/29 대표)
+function fareAt() {
+  const t = (H.fare || []).map((r) => r.updated_at || '').sort().pop();
+  const d = t ? new Date(t) : null;
+  if (!d || isNaN(d)) return '';
+  const p = (n) => String(n).padStart(2, '0');
+  return `${p(d.getMonth() + 1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
 function fareBadge() {   // 운송비 미송금 — 위쪽 배지, 누르면 펼침 (10/28 대표 "하단에 계속 안 붙어 다녀도 돼")
   const n = (H.fare || []).filter((r) => !r.sent).length;
-  return n ? `<button type="button" class="hm-farebtn" data-hm="fare-open">운송비 미송금<span>${n}</span></button>` : `<a class="hm-sheet fare" href="${FARE_SHEET}" target="_blank" rel="noopener">운송비 ↗</a>`;
+  return n ? `<button type="button" class="hm-farebtn" data-hm="fare-open" title="${fareAt() ? '업데이트 ' + fareAt() : ''}">운송비 미송금<span>${n}</span></button>` : `<a class="hm-sheet fare" href="${FARE_SHEET}" target="_blank" rel="noopener">운송비 ↗</a>`;
 }
 function farePanel() {
   if (H.fareErr || !H.fareOpen) return '';
@@ -63,7 +71,7 @@ function farePanel() {
       <span class="hm-acc">${r.account ? `${esc(r.bank)} <b>${esc(r.account)}</b> ${esc(r.holder)}` : `<i>${esc(r.todo || '계좌 받기')}</i>`}</span>
       <button type="button" class="hm-sent" data-hm="sent" data-id="${esc(r.id)}">보냄</button></div>`;
   return `<section class="hm-fare">
-    <div class="hm-fh"><b>운송비 미송금</b><span>${list.length}건 · ${won(sum)}원</span><a class="hm-more" href="${FARE_SHEET}" target="_blank" rel="noopener">엑셀 ↗</a><span class="sp"></span>
+    <div class="hm-fh"><b>운송비 미송금</b><span>${list.length}건 · ${won(sum)}원</span>${fareAt() ? `<span class="hm-fat">업데이트 ${fareAt()}</span>` : ''}<a class="hm-more" href="${FARE_SHEET}" target="_blank" rel="noopener">엑셀 ↗</a><span class="sp"></span>
       ${list.length > 5 ? `<button type="button" class="hm-more" data-hm="fare-all">${H.fareAll ? '접기 ▴' : `전체 ${list.length}건 ▾`}</button>` : ''}</div>
     <div class="hm-fl">${show.map(row).join('')}</div></section>`;
 }

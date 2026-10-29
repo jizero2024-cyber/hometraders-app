@@ -1,6 +1,6 @@
 // 세로형 키오스크 '/kiosk' (10/29 대표 "세로형 화면에도 한눈에 — 배차 요청해야 하는 건·배차 완료·발주 요청")
 // 첫 화면 출고 흐름과 같은 자료(site_inbox 'flow:board'), 1분마다 새로 받음. 줄 누르면 상세 + 배차 완료·출고 완료 (10/29 대표) — 저장은 첫 화면과 같은 S.setShipCase
-import * as S from './store-supabase.js?v=9';
+import * as S from './store-supabase.js?v=10';
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const K = { data: null, err: '', timer: 0, clock: 0, lock: null, sel: '', ask: '', busy: false, toast: '', me: '', over: {} };   // over = 방금 누른 건 (맥 도우미가 새 판을 올릴 때까지 화면에 유지)

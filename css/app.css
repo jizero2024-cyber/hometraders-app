@@ -549,6 +549,7 @@ textarea{resize:vertical;line-height:1.5;}
 .hm-fh { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: #D92D20; color: #fff; }
 .hm-fh b { font-size: 17px; }
 .hm-fh span { font-size: 15px; font-weight: 700; }
+.hm-fh .hm-fat { font-size: 13px; font-weight: 500; opacity: .85; }
 .hm-fh .sp { flex: 1; }
 .hm-more { border: 1px solid rgba(255,255,255,.7); background: none; color: #fff; font: inherit; font-size: 13px; padding: 4px 10px; border-radius: 12px; cursor: pointer; }
 .hm-fl { display: flex; flex-direction: column; }
