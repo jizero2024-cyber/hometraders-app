@@ -986,3 +986,30 @@ button.fl-chip { border: 0; cursor: pointer; font: inherit; }
 .fl-ms em{font-style:normal;font-weight:700;margin-left:auto}
 .fl-ms em.no{color:#D93025}
 .fl-ms em.ok{color:#1E8E3E}
+
+/* 세로형 키오스크 /kiosk (10/29) — 화면 폭에 맞춰 커짐 */
+body.kiosk { background: #fff; margin: 0; }
+.ki { font-family: Pretendard, sans-serif; color: #1a1a1a; padding: 3vw 4vw; box-sizing: border-box; min-height: 100vh; font-size: 3.4vw; }
+.ki-h { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 2.4vw; }
+.ki-h span { font-size: 5vw; font-weight: 700; }
+.ki-h b { font-size: 8vw; font-weight: 800; letter-spacing: -0.02em; }
+.ki-t { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1.6vw; margin-bottom: 3.2vw; }
+.ki-t div { background: #F6F6F4; border-radius: 2.4vw; padding: 2.2vw 1vw; text-align: center; }
+.ki-t b { display: block; font-size: 9vw; font-weight: 800; line-height: 1.05; }
+.ki-t span { font-size: 2.8vw; color: #666; }
+.ki-t .need { background: #FDF1E9; } .ki-t .need b { color: #E8732C; }
+.ki-t .out b { color: #1E8E3E; }
+.ki-s { margin-bottom: 3vw; }
+.ki-s h2 { display: flex; justify-content: space-between; margin: 0 0 1vw; padding: 1.2vw 0; font-size: 4.4vw; font-weight: 800; border-bottom: 0.6vw solid currentColor; }
+.ki-s.need h2 { color: #E8732C; } .ki-s.car h2 { color: #1a1a1a; } .ki-s.order h2 { color: #777; }
+.ki-r { display: grid; grid-template-columns: 17vw minmax(0, 1fr); gap: 2vw; padding: 1.6vw 0; border-bottom: 1px solid #ECECEC; }
+.ki-w b { display: block; font-size: 4.8vw; font-weight: 800; line-height: 1.15; }
+.ki-w span { font-size: 2.7vw; color: #888; }
+.ki-r.late .ki-w b, .ki-r.late .ki-w span { color: #D93025; }
+.ki-p { font-size: 4.2vw; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ki-i { font-size: 3.1vw; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ki-c { font-size: 2.8vw; color: #E8732C; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ki-z { font-size: 3.4vw; color: #aaa; padding: 2vw 0; }
+.ki-more { font-size: 3.2vw; color: #888; padding-top: 1.2vw; text-align: right; }
+.ki-out { display: flex; justify-content: space-between; background: #EAF3DE; color: #27500A; border-radius: 2.4vw; padding: 2.4vw 3vw; font-size: 4vw; font-weight: 800; }
+.ki-at { text-align: right; font-size: 2.4vw; color: #bbb; margin-top: 1.6vw; }

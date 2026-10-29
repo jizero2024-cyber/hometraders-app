@@ -1,8 +1,8 @@
 // 오프라인 대비 캐시 — 네트워크 우선(온라인이면 항상 최신 코드), 오프라인이면 캐시.
-const CACHE = 'ht-v292';
+const CACHE = 'ht-v293';
 const ASSETS = [
   './', './index.html', './convert.html', './deposit.html', './css/app.css', './css/erp.css',
-  './js/app.js', './js/stmt.js', './js/stmt-ocr.js', './js/stmt-assets.js', './js/store-supabase.js', './js/data.js', './js/ecount-items.js', './js/textread.js', './js/delivery.js', './js/supabase-config.js', './js/partners-seed.js', './js/hdisp.js', './js/gbms.js', './js/gonggan-store.js', './js/gonggan-app.js', './js/home.js', './js/forms.js', './js/flow.js',
+  './js/app.js', './js/stmt.js', './js/stmt-ocr.js', './js/stmt-assets.js', './js/store-supabase.js', './js/data.js', './js/ecount-items.js', './js/textread.js', './js/delivery.js', './js/supabase-config.js', './js/partners-seed.js', './js/hdisp.js', './js/gbms.js', './js/gonggan-store.js', './js/gonggan-app.js', './js/home.js', './js/forms.js', './js/flow.js', './js/kiosk.js',
   './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/logo-full.png', './icons/confirm-logo.png', './icons/favicon.png', './icons/apple-touch-icon.png',
 ];
 

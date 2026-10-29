@@ -9,6 +9,7 @@ import * as SM from './stmt.js?v=103';
 import * as HD from './hdisp.js?v=10';
 import * as HM from './home.js?v=67';
 import * as FM from './forms.js?v=19';
+import * as KI from './kiosk.js?v=1';   // 세로형 키오스크 /kiosk (10/29)
 
 // 창고 아이콘 세트 (무채색)
 const WH_ICONS = {
@@ -4943,7 +4944,7 @@ const TITLES = { home: ['홈트레이더스', '재고 · 출고 관리'], quote:
 
 // 주소에 화면 이름 — erp.hometraders.co.kr/homt · /chat · /ship … (10/22 대표). 첫 화면은 / .
 //   그 주소로 바로 열어도(즐겨찾기·공유) 그 화면, 뒤로가기는 앞 화면. 서버에 없는 주소는 404.html(=index.html)이 앱을 띄움.
-const routeOk = (r) => r === 'start' || r === 'main' || r === 'stmt' || FM.ROUTES.includes(r) || r === 'homt' || r === 'chat' || r === 'gonggan' || r === 'gonggan-ace' || !!TITLES[r] || !!DESK_TITLES[r];
+const routeOk = (r) => r === 'start' || r === 'kiosk' || r === 'main' || r === 'stmt' || FM.ROUTES.includes(r) || r === 'homt' || r === 'chat' || r === 'gonggan' || r === 'gonggan-ace' || !!TITLES[r] || !!DESK_TITLES[r];
 function routeFromPath() {
   const r = decodeURIComponent(location.pathname).replace(/^\/+|\/+$/g, '').replace(/\.html$/, '');
   return r && r !== 'index' && routeOk(r) ? r : 'start';
@@ -4970,6 +4971,14 @@ function render() {
     app.innerHTML = FM.screen(state.route);
     return;
   }
+  document.body.classList.toggle('kiosk', state.route === 'kiosk');
+  if (state.route === 'kiosk') {   // 세로형 키오스크 (10/29 대표) — 누르는 곳 없이 1분마다 새로
+    document.body.classList.remove('erp');
+    app.innerHTML = KI.screen();
+    KI.start(() => { if (state.route === 'kiosk') app.innerHTML = KI.screen(); });
+    return;
+  }
+  KI.stop();
   if (state.route === 'main' || state.route === 'stmt') {   // 홈트 새 첫 화면 (10/23) — 미송금 · 배차 요청 · 자료 넣기 · 거래명세표 …
     document.body.classList.remove('erp');
     app.innerHTML = HM.screen(state.route);
