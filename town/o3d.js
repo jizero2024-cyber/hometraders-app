@@ -46,7 +46,7 @@ export const DOT = { ok: '#34C759', bad: '#FF453A', run: '#2F7BF6', idle: '#B4B2
 
 // ── 사무실: 5층 + 앞마당 ──
 export function office(host, o) {
-  const K = base(host, { ...o, cam: [30, 52, 108], target: [0, 18, 0], bg: '#D8E9FA' });
+  const K = base(host, { ...o, cam: [16, 22, 96], target: [0, 17, 4], bg: '#D8E9FA' });
   const { scene, box, cyl, mat, clickable, tag, ticks } = K;
   const FW = 46, FD = 20, FH = 7.2, NF = 5;
   box(420, 1, 300, '#9ED27F', 0, -1.2, 20); box(90, 1, 60, '#D9D3C6', 0, -1, 8); box(420, 0.2, 10, '#6B7280', 0, -0.2, 46);   // 땅 · 앞 길 (양옆까지)
