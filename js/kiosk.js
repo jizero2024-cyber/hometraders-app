@@ -71,7 +71,7 @@ function sheet() {
     <div class="ks-hd"><div><div class="ks-st">${esc(st)}</div><div class="ks-t">${r.site ? esc(r.site) : '현장 확인'}</div><div class="ks-s">${esc(r.partner || '')}${r.boss ? ' · ' + esc(r.boss) : ''}</div></div>
       <button type="button" class="ks-x" data-ki="close" aria-label="닫기">✕</button></div>
     <div class="ks-g">
-      ${kv('도착', [dayOf(r), r.time].filter(Boolean).join(' '))}${kv('주소', r.site_full)}${kv('상차', r.from)}${kv('차량', r.veh || (r.car && !/^—$/.test(r.car) ? r.car : ''))}${kv('규격', r.size)}${missHtml(r)}
+      ${kv('도착', [dayOf(r), r.time].filter(Boolean).join(' '))}${kv('주소', r.site_full)}${kv('상차', r.from)}${kv('차량', r.veh || (r.car && !/^—$|^배차 필요$|^확인$/.test(r.car) ? r.car : ''))}${kv('규격', r.size)}${missHtml(r)}
     </div>
     <div class="ks-k">품목</div><div class="ks-box">${esc(r.items || r.item || '')}</div>
     ${memo.length ? `<div class="ks-k">할 일</div><div class="ks-box">${memo.map((t) => `<div>${esc(t)}</div>`).join('')}</div>` : ''}
