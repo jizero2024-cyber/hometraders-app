@@ -375,7 +375,7 @@ function office() {
     if (meeting) return; meeting = true; clearInterval(walkT); const mb = v.querySelector('#meet'); mb.textContent = '회의 중…';
     const ppl = STAFF.map((s, i) => {
       const seat = seats[i], sx = parseFloat(seat.style.left), sy = parseFloat(seat.style.top), [tx, ty] = spots[i];
-      seat.style.visibility = 'hidden';
+      seat.style.visibility = 'hidden'; v.querySelectorAll('.tag').forEach((t) => { t.style.visibility = 'hidden'; });
       const path = REST[s.name] ? `M ${sx} ${sy} L ${tx} ${ty}` : `M ${sx} ${sy} L 470 ${F[fnum(s.floor)]} L 516 737 L ${tx} ${ty}`;
       walker(bld, { name: s.name, av: s.av, c: s.c, say: '회의 가요', path, size: 32, dur: 6 });
       return { s, i, tx, ty };
@@ -397,7 +397,7 @@ function office() {
     later(t0, () => {
       rb.remove(); seated.forEach((n) => n.remove()); ob.style.display = '';
       ppl.forEach((p) => { const seat = seats[p.i], sx = parseFloat(seat.style.left), sy = parseFloat(seat.style.top); const path = REST[p.s.name] ? `M ${p.tx} ${p.ty} L ${sx} ${sy}` : `M ${p.tx} ${p.ty} L 516 737 L 470 ${F[fnum(p.s.floor)]} L ${sx} ${sy}`; walker(bld, { name: p.s.name, av: p.s.av, c: p.s.c, say: '자리로', path, size: 32, dur: 6 }); });
-      later(6100, () => { seats.forEach((n) => { n.style.visibility = ''; }); meeting = false; mb.textContent = '회의 소집'; every(9000, go); });
+      later(6100, () => { seats.forEach((n) => { n.style.visibility = ''; }); v.querySelectorAll('.tag').forEach((t) => { t.style.visibility = ''; }); meeting = false; mb.textContent = '회의 소집'; every(9000, go); });
     });
   };
 }
