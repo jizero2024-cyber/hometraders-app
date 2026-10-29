@@ -3,6 +3,7 @@
 // 맥 도우미 없이 누구 PC·휴대폰에서도 됨. 새로 적은 주소는 거래처에 저장돼 다음부터 모두에게 뜸.
 // 검색은 초성도 됨 (ㅇㅇㅋㅂ → 원익큐브). [배차 요청] = 배차요청톡 복사 + 출고 목록에 '출고예정'으로 등록.
 import * as S from './store-supabase.js?v=9';
+import * as W from './weights.js?v=1';
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 // 품목 고르기 — 이음물류 톡 배차 요청(7/27~10/20, 282건)에 자주 나온 자재 순. 기본값 건축자재 (10/22 대표)
@@ -182,9 +183,15 @@ function applyPre() {
   if (p.sched) F.sched = cut(p.sched, MAX.text);
   if (p.say) { F.say = true; F.sayAs = p.say === '에이스' ? '에이스' : '홈트레이더스'; }
 }
+const chip = (k, v, on) => `<button type="button" class="hd-chip ${on ? 'on' : ''}" data-hd="set" data-k="${k}" data-v="${esc(v)}">${esc(v)}</button>`;
+// 무게 칩 — 품목 글로 계산한 예상 무게(적재가능 무게 표, weights.js)를 누르면 무게 칸에 들어감 (10/29 대표)
+const wtEst = () => { const e = W.estimate(F.goods); return e ? W.label(e.kg) : ''; };
+function wtChips() {
+  const est = wtEst();
+  return `${est ? chip('weight', est, F.weight === est) : ''}${chip('weight', '최대중량', F.weight === '최대중량')}`;
+}
 export function homtScreen() {
   applyPre();
-  const chip = (k, v, on) => `<button type="button" class="hd-chip ${on ? 'on' : ''}" data-hd="set" data-k="${k}" data-v="${esc(v)}">${esc(v)}</button>`;
   return `<div class="hm">${EMBED ? '' : `<header class="hm-top"><div class="hm-in">
     <button type="button" class="hm-back" data-hd="back" aria-label="뒤로">‹</button><img src="./icons/logo-full.png" alt="HOME TRADERS" class="hm-logo" data-hd="back"></div></header>`}
     <div class="hd-page">${EMBED ? '' : '<h1 class="hm-h1" style="margin:12px 0 16px">배차 요청</h1>'}
@@ -197,8 +204,8 @@ export function homtScreen() {
     <div class="hd-field"><label>${IC.cash} 운임</label><div class="hd-seg">${['현불', '착불'].map((v) => `<button type="button" class="${F.pay === v ? 'on' : ''}" data-hd="set" data-k="pay" data-v="${v}">${v}</button>`).join('')}</div></div>
     <div class="hd-field"><label>${IC.box} 품목</label><div class="hd-chips">${GOODS.map((v) => chip('goods', v, F.goods === v)).join('')}</div>
       <input class="hd-in" data-hd-in="goods" maxlength="100" value="${esc(GOODS.includes(F.goods) ? '' : F.goods)}" placeholder="직접 입력 (예: 방킬라이 1PLT · 3m)"></div>
-    <div class="hd-field"><label>${IC.scale} 무게</label><div class="hd-chips">${chip('weight', '최대중량', F.weight === '최대중량')}</div>
-      <input class="hd-in" data-hd-in="weight" maxlength="100" value="${esc(F.weight === '최대중량' ? '' : F.weight)}" placeholder="예: 600kg"></div>
+    <div class="hd-field"><label>${IC.scale} 무게</label><div class="hd-chips" id="hd-wt">${wtChips()}</div>
+      <input class="hd-in" data-hd-in="weight" maxlength="100" value="${esc(F.weight === '최대중량' || (F.weight && F.weight === wtEst()) ? '' : F.weight)}" placeholder="예: 600kg"></div>
     <div class="hd-field"><label>${IC.clock} 일정</label><div class="hd-chips">${chip('sched', '오늘 상차 / 내일 하차', F.sched === '오늘 상차 / 내일 하차')}${chip('sched', '바로 상차 / 바로 하차', F.sched === '바로 상차 / 바로 하차')}</div>
       <input class="hd-in" data-hd-in="sched" maxlength="100" value="${esc(['오늘 상차 / 내일 하차', '바로 상차 / 바로 하차'].includes(F.sched) ? '' : F.sched)}" placeholder="예: 내일 오전 8시 착"></div>
     <div class="hd-field"><label>배차요청톡 미리보기</label><pre class="hd-pre" id="hd-pre">${esc(dispatchText())}</pre></div>
@@ -244,6 +251,7 @@ export function bind(app, ctx) {
     if (!f || !IN_KEYS.has(f.dataset.hdIn)) return;
     const [a, b] = f.dataset.hdIn.split('.');
     if (b) { if (F[a]) F[a][b] = f.value; } else F[a] = f.value;
+    if (a === 'goods') { const w = document.getElementById('hd-wt'); if (w) w.innerHTML = wtChips(); }
     const pre = document.getElementById('hd-pre'); if (pre) pre.textContent = dispatchText();
   });
 }
