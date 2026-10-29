@@ -32,12 +32,12 @@ export function mount(host, o) {
 
   const hr = new Date().getHours(), night = hr >= 18 || hr < 6;
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(night ? '#141D38' : '#BFE3FF'); scene.fog = new THREE.Fog(scene.background, 260, 520);
+  scene.background = new THREE.Color(night ? '#141D38' : '#BFE3FF'); scene.fog = new THREE.Fog(scene.background, 300, 700);
   const cam = new THREE.PerspectiveCamera(32, W / H, 1, 1200); cam.position.set(92, 108, 138);
   const onResize = () => { W = window.innerWidth; H = window.innerHeight; renderer.setSize(W, H, false); cam.aspect = W / H; cam.updateProjectionMatrix(); };
   window.addEventListener('resize', onResize);
   const ctl = new OrbitControls(cam, renderer.domElement);
-  ctl.target.set(8, 0, 4); ctl.enableDamping = true; ctl.dampingFactor = 0.08; ctl.minDistance = 40; ctl.maxDistance = 420; ctl.maxPolarAngle = 1.22; ctl.minPolarAngle = 0.35; ctl.screenSpacePanning = false;
+  ctl.target.set(8, 0, 4); ctl.enableDamping = true; ctl.dampingFactor = 0.08; ctl.minDistance = 40; ctl.maxDistance = 380; ctl.maxPolarAngle = 1.22; ctl.minPolarAngle = 0.35; ctl.screenSpacePanning = false;
   ctl.update();
 
   const hemi = new THREE.HemisphereLight('#EAF6FF', '#7AA35A', 1.15); scene.add(hemi);
@@ -53,7 +53,7 @@ export function mount(host, o) {
   const pick = []; const clickable = (obj, key) => { obj.traverse((m) => { if (m.isMesh) { m.userData.key = key; pick.push(m); } }); };
 
   // 땅 — 섬처럼 (흙 옆면)
-  const island = new THREE.Mesh(new THREE.BoxGeometry(300, 8, 250), [mat('#9C7A55'), mat('#9C7A55'), mat('#8CCB6A'), mat('#9C7A55'), mat('#9C7A55'), mat('#9C7A55')]);
+  const island = new THREE.Mesh(new THREE.BoxGeometry(760, 8, 560), [mat('#9C7A55'), mat('#9C7A55'), mat('#8CCB6A'), mat('#9C7A55'), mat('#9C7A55'), mat('#9C7A55')]);
   island.position.y = -4; island.receiveShadow = true; scene.add(island);
   const seaM = new THREE.MeshStandardMaterial({ color: '#8FD3F4', roughness: 0.35 }); const sea = new THREE.Mesh(new THREE.PlaneGeometry(1400, 1400), seaM); sea.rotation.x = -Math.PI / 2; sea.position.y = -7; scene.add(sea);
 
@@ -201,6 +201,15 @@ export function mount(host, o) {
   for (let i = 0; i < 46; i++) { const x = -145 + Math.random() * 290, z = -120 + Math.random() * 240; if (GX.some((g) => Math.abs(g - x) < 9) || GZ.some((g) => Math.abs(g - z) < 9)) continue; const inLot = Object.values(LOTS).some(([lx, lz]) => Math.abs(lx - x) < 20 && Math.abs(lz - z) < 16); if (inLot) continue; tree(x, z, 0.8 + Math.random() * 0.5, ['#5DBB5A', '#4FAE6E', '#7FCB5A', '#3E9E57'][i % 4]); }
   [-90, -30, 30, 90].forEach((bx) => [-75, -25, 25, 75].forEach((bz) => { if (bx === 30 && bz === -25) return; [[-23, -18], [23, -18], [-23, 18], [23, 18], [0, -19]].forEach(([a, b], i) => tree(bx + a, bz + b, 0.7 + (i % 3) * 0.12, ['#5DBB5A', '#4FAE6E', '#7FCB5A'][i % 3])); }));
   [-148, 148].forEach((x) => { for (let z = -115; z <= 115; z += 14) tree(x, z, 0.9 + (Math.abs(z) % 3) * 0.1); });
+  // 마을 바깥 — 논밭 · 숲 · 산 (10/29 대표 "양옆 빈 공간") — 나무는 InstancedMesh 로 가볍게
+  { const fieldC = ['#A8C96A', '#C9B36A', '#8FBF5A', '#B9D17A'];
+    for (let i = 0; i < 26; i++) { const sx = i % 2 ? 1 : -1, x = sx * (175 + (i * 37) % 170), z = -230 + (i * 71) % 460; box(40 + (i % 3) * 12, 0.3, 26 + (i % 4) * 6, fieldC[i % 4], x, 0, z); }
+    for (let i = 0; i < 14; i++) { const x = -330 + (i * 53) % 660, z = (i % 2 ? 1 : -1) * (150 + (i * 29) % 100); box(36, 0.3, 22, fieldC[(i + 1) % 4], x, 0, z); }
+    const tg = new THREE.IcosahedronGeometry(2.6, 0), tm = new THREE.MeshStandardMaterial({ color: '#4E9E52', flatShading: true, roughness: 0.9 }), N = 900, im = new THREE.InstancedMesh(tg, tm, N), d = new THREE.Object3D(); let n = 0;
+    for (let i = 0; i < N * 3 && n < N; i++) { const x = -370 + Math.random() * 740, z = -270 + Math.random() * 540; if (Math.abs(x) < 155 && Math.abs(z) < 125) continue; if (Math.random() < 0.35) continue; const k = 0.8 + Math.random() * 1.1; d.position.set(x, 2.2 * k, z); d.scale.set(k, k * 1.3, k); d.rotation.y = Math.random() * 6; d.updateMatrix(); im.setMatrixAt(n++, d.matrix); }
+    im.count = n; im.castShadow = true; scene.add(im);
+    const hm = new THREE.MeshStandardMaterial({ color: '#6FA85E', flatShading: true, roughness: 1 });
+    for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2, r = 330 + (i % 3) * 30, hgt = 40 + (i * 13) % 50; const h = new THREE.Mesh(new THREE.ConeGeometry(70 + (i % 4) * 15, hgt, 7), hm); h.position.set(Math.cos(a) * r * 1.2, hgt / 2 - 4, Math.sin(a) * r * 0.85); scene.add(h); } }
 
   // 구름
   const clouds = [];
@@ -229,7 +238,7 @@ export function mount(host, o) {
     nightK = Math.max(0, Math.min(1, (0.12 - elev) / 0.2));
     let sky = mix('#26345E', '#BFE3FF', day); sky.lerp(C('#F4A57A'), Math.max(0, low) * 0.55); sky.lerp(C(day > 0.3 ? '#A8B3BF' : '#2A3142'), gloom * 0.65);
     scene.background.copy(sky); scene.fog.color.copy(sky);
-    const fog = WX.code === 45 || WX.code === 48; scene.fog.near = fog ? 60 : isRain() || isSnow() ? 170 : 260; scene.fog.far = fog ? 240 : isRain() || isSnow() ? 420 : 520;
+    const fog = WX.code === 45 || WX.code === 48; scene.fog.near = fog ? 60 : isRain() || isSnow() ? 200 : 300; scene.fog.far = fog ? 240 : isRain() || isSnow() ? 480 : 700;
     const a = f >= 0 && f <= 1 ? Math.PI * f : Math.PI * 0.5; sun.position.set(Math.cos(a) * 220, 30 + 220 * Math.max(0.12, elev), 90);
     sun.color.copy(nightK > 0.5 ? C('#9FB4FF') : mix('#FFB37A', '#FFF3DD', elev * 2)); sun.intensity = nightK > 0.5 ? 0.7 : (0.4 + 2.0 * Math.max(0, elev)) * (1 - gloom * 0.6);
     hemi.color.copy(mix('#8EA2DA', '#EAF6FF', day)); hemi.groundColor.copy(mix('#3C4A5E', '#7AA35A', day)); hemi.intensity = (0.95 + 0.25 * day) * (1 - gloom * 0.2);

@@ -49,7 +49,8 @@ export function office(host, o) {
   const K = base(host, { ...o, cam: [30, 52, 108], target: [0, 18, 0], bg: '#D8E9FA' });
   const { scene, box, cyl, mat, clickable, tag, ticks } = K;
   const FW = 46, FD = 20, FH = 7.2, NF = 5;
-  box(70, 1, 50, '#D9D3C6', 0, -1, 8);   // 땅
+  box(420, 1, 300, '#9ED27F', 0, -1.2, 20); box(90, 1, 60, '#D9D3C6', 0, -1, 8); box(420, 0.2, 10, '#6B7280', 0, -0.2, 46);   // 땅 · 앞 길 (양옆까지)
+  for (let i = 0; i < 40; i++) { const sx = i % 2 ? 1 : -1, x = sx * (52 + (i * 17) % 120), z = -30 + (i * 23) % 70; const t = new THREE.Mesh(new THREE.IcosahedronGeometry(2.8, 0), mat('#5DAA58', { flatShading: true })); t.position.set(x, 4, z); t.castShadow = true; scene.add(t); box(0.6, 2, 0.6, '#8A5A35', x, -0.5, z); }
   box(64, 0.3, 22, '#8CCB6A', 0, 0, 22);   // 마당 잔디
   const FLOORS = [['#F6F1EA', '1F 디자인실'], ['#EEF3FA', '2F 배차 · 통신'], ['#FBF4EC', '3F 서류 · 확인'], ['#F1EFEA', '4F 회계'], ['#FFF3E8', '5F 대표실']];
   FLOORS.forEach(([c, name], f) => {
@@ -112,7 +113,7 @@ export function warehouse(host, o) {
   const K = base(host, { ...o, cam: [20, 46, 92], target: [0, 8, 0], bg: '#E6E2DA' });
   const { scene, box, cyl, clickable, tag, ticks } = K;
   const WW = 70, WD = 40, WH = 22;
-  box(WW, 0.6, WD, '#C9C4BA', 0, -0.6, 0); box(WW, WH, 0.6, '#EDEFF2', 0, 0, -WD / 2); box(0.6, WH, WD, '#E4E7EB', -WW / 2, 0, 0); box(0.6, WH, WD, '#E4E7EB', WW / 2, 0, 0);
+  box(420, 1, 300, '#B9B3A6', 0, -1.6, 30); box(WW, 0.6, WD, '#C9C4BA', 0, -0.6, 0); box(WW, WH, 0.6, '#EDEFF2', 0, 0, -WD / 2); box(0.6, WH, WD, '#E4E7EB', -WW / 2, 0, 0); box(0.6, WH, WD, '#E4E7EB', WW / 2, 0, 0);
   box(WW + 1, 0.8, 4, '#3F7FE0', 0, WH, -WD / 2 + 1.4);
   for (let i = -3; i <= 3; i++) box(0.3, 0.02, WD - 4, '#F5C431', i * 9, 0.01, 0);
   // 선반 — 실제 품목 (o.items: [{key,name,qty,unit,cat}])
