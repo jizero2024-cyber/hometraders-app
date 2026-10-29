@@ -39,7 +39,7 @@ const itemsOf = (r) => String(r.items || r.item || '').replace(/^[^:·]{1,20}:\s
 function row(r, red) {
   const lt = red && late(r), w = when(r), sub = tm(r) === w ? '' : w;
   return `<div class="ki-r ${lt ? 'late' : ''}" data-ki="row" data-no="${esc(r.no)}"><div class="ki-w"><b>${esc(tm(r))}</b>${sub || lt ? `<span>${esc(lt ? '지남' : sub)}</span>` : ''}</div>
-    <div class="ki-m"><div class="ki-p">${esc(r.site || r.partner || '현장 확인')}</div><div class="ki-i">${esc(r.site ? who(r) : '')}</div>${(() => { const it = itemsOf(r); return it.length ? `<div class="ki-its">${it.slice(0, 3).map((x) => `<div class="ki-it">${esc(x)}</div>`).join('')}${it.length > 3 ? `<div class="ki-it more">+${it.length - 3}</div>` : ''}</div>` : ''; })()}${r.car && !/^배차 (필요|완료)$|^—$|^확인$/.test(r.car) ? `<div class="ki-c">${esc(r.car)}</div>` : ''}</div><i class="ki-ch" aria-hidden="true">›</i></div>`;
+    <div class="ki-m"><div class="ki-p">${esc(who(r) || r.site || '거래처 확인')}</div><div class="ki-a">${esc(r.site && who(r) ? r.site : '')}</div><div class="ki-i">${esc(itemsOf(r).join(' · '))}</div>${r.car && !/^배차 (필요|완료)$|^—$|^확인$/.test(r.car) ? `<div class="ki-c">${esc(r.car)}</div>` : ''}</div><i class="ki-ch" aria-hidden="true">›</i></div>`;
 }
 function sec(cls, name, rs, max, red) {
   const more = rs.length - max;

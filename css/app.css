@@ -1171,3 +1171,8 @@ body.kiosk #app::before { background: radial-gradient(60vh 60vh at 10% 6%, rgba(
 .ks-its div { padding-left: 3cqw; position: relative; }
 .ks-its div::before { content: ''; position: absolute; left: 0.4cqw; top: 1.6cqw; width: 1.2cqw; height: 1.2cqw; border-radius: 50%; background: #C7C7CC; }
 .ks-its div + div { border-top: 0; margin-top: 1cqw; padding-top: 0; }
+/* 키오스크 목록: 거래처명 크게·굵게, 주소 작게, 품목 한 줄 (10/30 대표) */
+.ki-p { font-size: 5cqw; font-weight: 800; letter-spacing: -0.02em; }
+.ki-a { font-size: 2.9cqw; font-weight: 500; color: #8E8E93; margin-top: 0.4cqw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ki-a:empty { display: none; }
+.ki-i { font-size: 3.2cqw; font-weight: 500; color: #3A3A3C; margin-top: 0.8cqw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
