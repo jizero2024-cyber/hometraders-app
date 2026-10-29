@@ -362,6 +362,11 @@ export async function getTownAI() {   // 홈트 마을 AI 직원 상태 (10/29) 
   if (error) throw new Error(error.message);
   try { return data ? JSON.parse(data.body || '{}') : null; } catch (_) { return null; }
 }
+export async function getTownStock() {   // 마을 창고 — 실사 재고표(재고.xlsx) 를 맥 town_status.py 가 'town:stock' 으로 올림 (10/30)
+  const { data, error } = await sb.from('site_inbox').select('body,updated_at').eq('id', 'town:stock').maybeSingle();
+  if (error) throw new Error(error.message);
+  try { return data ? JSON.parse(data.body || '{}') : null; } catch (_) { return null; }
+}
 export async function getTownInbox() {   // 마을 우체통 — 최근 자료 넣기 (파일 내용은 빼고)
   const { data, error } = await sb.from('site_inbox').select('id,kind,name,status,note,created_by,created_at').in('kind', ['text', 'file']).order('created_at', { ascending: false }).limit(20);
   if (error) throw new Error(error.message);
