@@ -33,9 +33,9 @@ export function mount(host, o) {
   const hr = new Date().getHours(), night = hr >= 18 || hr < 6;
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(night ? '#1D2A4A' : '#BFE3FF'); scene.fog = new THREE.Fog(scene.background, 260, 520);
-  const cam = new THREE.PerspectiveCamera(32, W / H, 1, 1200); cam.position.set(150, 175, 215);
+  const cam = new THREE.PerspectiveCamera(32, W / H, 1, 1200); cam.position.set(92, 108, 138);
   const ctl = new OrbitControls(cam, renderer.domElement);
-  ctl.target.set(10, 0, 0); ctl.enableDamping = true; ctl.dampingFactor = 0.08; ctl.minDistance = 40; ctl.maxDistance = 420; ctl.maxPolarAngle = 1.22; ctl.minPolarAngle = 0.35; ctl.screenSpacePanning = false;
+  ctl.target.set(8, 0, 4); ctl.enableDamping = true; ctl.dampingFactor = 0.08; ctl.minDistance = 40; ctl.maxDistance = 420; ctl.maxPolarAngle = 1.22; ctl.minPolarAngle = 0.35; ctl.screenSpacePanning = false;
   ctl.update();
 
   scene.add(new THREE.HemisphereLight(night ? '#5A6FA8' : '#EAF6FF', night ? '#2A2F3A' : '#7AA35A', night ? 0.55 : 1.15));
@@ -56,10 +56,11 @@ export function mount(host, o) {
   const sea = new THREE.Mesh(new THREE.PlaneGeometry(1400, 1400), mat(night ? '#2B4A7A' : '#8FD3F4', { roughness: 0.35 })); sea.rotation.x = -Math.PI / 2; sea.position.y = -7; scene.add(sea);
 
   // 길 · 보도 · 차선 · 횡단보도
-  const roadM = mat('#5B6470'), walkM = mat('#E9E4DA'), lineM = mat('#FFFFFF', { roughness: 0.6 });
+  const roadM = mat('#6B7280'), walkM = mat('#E9E4DA'), lineM = mat('#FFFFFF', { roughness: 0.6 });
   const strip = (x, z, w, d, m, y) => { const s = new THREE.Mesh(new THREE.BoxGeometry(w, 0.3, d), m); s.position.set(x, y, z); s.receiveShadow = true; scene.add(s); };
-  GZ.forEach((z) => { strip(0, z, 248, 11, walkM, 0.12); strip(0, z, 248, 8, roadM, 0.2); });
-  GX.forEach((x) => { strip(x, 0, 11, 208, walkM, 0.13); strip(x, 0, 8, 208, roadM, 0.21); });
+  GZ.forEach((z) => { strip(0, z, 248, 9, walkM, 0.12); strip(0, z, 248, 6, roadM, 0.2); });
+  GX.forEach((x) => { strip(x, 0, 9, 208, walkM, 0.13); strip(x, 0, 6, 208, roadM, 0.21); });
+  [-90, -30, 30, 90].forEach((bx) => [-75, -25, 25, 75].forEach((bz) => { strip(bx, bz, 50, 40, mat('#9ED87C'), 0.15); }));
   const dash = new THREE.InstancedMesh(new THREE.BoxGeometry(3, 0.1, 0.45), lineM, 400); let di = 0; const dm = new THREE.Object3D();
   GZ.forEach((z) => { for (let x = -122; x < 122; x += 7) { if (GX.some((g) => Math.abs(g - x) < 6)) continue; dm.position.set(x, 0.38, z); dm.rotation.set(0, 0, 0); dm.updateMatrix(); dash.setMatrixAt(di++, dm.matrix); } });
   GX.forEach((x) => { for (let z = -102; z < 102; z += 7) { if (GZ.some((g) => Math.abs(g - z) < 6)) continue; dm.position.set(x, 0.38, z); dm.rotation.set(0, Math.PI / 2, 0); dm.updateMatrix(); dash.setMatrixAt(di++, dm.matrix); } });
@@ -178,11 +179,12 @@ export function mount(host, o) {
   // 길가 나무 · 가로등
   GX.forEach((gx) => GZ.forEach((gz) => { lamp(gx + 7, gz + 7); }));
   for (let i = 0; i < 46; i++) { const x = -145 + Math.random() * 290, z = -120 + Math.random() * 240; if (GX.some((g) => Math.abs(g - x) < 9) || GZ.some((g) => Math.abs(g - z) < 9)) continue; const inLot = Object.values(LOTS).some(([lx, lz]) => Math.abs(lx - x) < 20 && Math.abs(lz - z) < 16); if (inLot) continue; tree(x, z, 0.8 + Math.random() * 0.5, ['#5DBB5A', '#4FAE6E', '#7FCB5A', '#3E9E57'][i % 4]); }
+  [-90, -30, 30, 90].forEach((bx) => [-75, -25, 25, 75].forEach((bz) => { if (bx === 30 && bz === -25) return; [[-23, -18], [23, -18], [-23, 18], [23, 18], [0, -19]].forEach(([a, b], i) => tree(bx + a, bz + b, 0.7 + (i % 3) * 0.12, ['#5DBB5A', '#4FAE6E', '#7FCB5A'][i % 3])); }));
   [-148, 148].forEach((x) => { for (let z = -115; z <= 115; z += 14) tree(x, z, 0.9 + (Math.abs(z) % 3) * 0.1); });
 
   // 구름
   const clouds = [];
-  for (let i = 0; i < 6; i++) { const c = new THREE.Group(); [[0, 0, 0, 6], [5, -1, 1, 4.5], [-5, -1, -1, 4.5], [2, 2, -1, 4]].forEach(([a, b, d, r]) => { const m = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 1), mat('#FFFFFF', { flatShading: true, roughness: 1 })); m.position.set(a, b, d); m.castShadow = true; c.add(m); }); c.position.set(-200 + i * 75, 70 + (i % 3) * 10, -90 + (i * 47) % 180); scene.add(c); clouds.push(c); }
+  for (let i = 0; i < 6; i++) { const c = new THREE.Group(); [[0, 0, 0, 6], [5, -1, 1, 4.5], [-5, -1, -1, 4.5], [2, 2, -1, 4]].forEach(([a, b, d, r]) => { const m = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 1), mat('#FFFFFF', { flatShading: true, roughness: 1 })); m.position.set(a, b, d); m.castShadow = true; c.add(m); }); c.position.set(-200 + i * 75, 115 + (i % 3) * 12, -90 + (i * 47) % 180); scene.add(c); clouds.push(c); }
 
   // 차 — 길 따라 돌기
   const cars = [], CARC = ['#FF6B5E', '#5D9BF2', '#FFC531', '#FFFFFF', '#7ED39B', '#B98AF5', '#FF9E5E'];
@@ -279,7 +281,7 @@ export function mount(host, o) {
   return {
     addTruck,
     zoom: (f) => { const off = cam.position.clone().sub(ctl.target); off.multiplyScalar(f); const L = off.length(); if (L < ctl.minDistance || L > ctl.maxDistance) return; cam.position.copy(ctl.target).add(off); },
-    reset: () => { cam.position.set(150, 175, 215); ctl.target.set(10, 0, 0); },
+    reset: () => { cam.position.set(92, 108, 138); ctl.target.set(8, 0, 4); },
     focus: (key) => { const L0 = LOTS[key]; if (!L0) return; const off = cam.position.clone().sub(ctl.target).setLength(110); ctl.target.set(L0[0], 0, L0[1]); cam.position.copy(ctl.target).add(off); },
     stop: () => { alive = false; },
   };
