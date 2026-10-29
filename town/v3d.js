@@ -32,13 +32,13 @@ export function mount(host, o) {
 
   const hr = new Date().getHours(), night = hr >= 18 || hr < 6;
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(night ? '#1D2A4A' : '#BFE3FF'); scene.fog = new THREE.Fog(scene.background, 260, 520);
+  scene.background = new THREE.Color(night ? '#141D38' : '#BFE3FF'); scene.fog = new THREE.Fog(scene.background, 260, 520);
   const cam = new THREE.PerspectiveCamera(32, W / H, 1, 1200); cam.position.set(92, 108, 138);
   const ctl = new OrbitControls(cam, renderer.domElement);
   ctl.target.set(8, 0, 4); ctl.enableDamping = true; ctl.dampingFactor = 0.08; ctl.minDistance = 40; ctl.maxDistance = 420; ctl.maxPolarAngle = 1.22; ctl.minPolarAngle = 0.35; ctl.screenSpacePanning = false;
   ctl.update();
 
-  scene.add(new THREE.HemisphereLight(night ? '#5A6FA8' : '#EAF6FF', night ? '#2A2F3A' : '#7AA35A', night ? 0.55 : 1.15));
+  const hemi = new THREE.HemisphereLight('#EAF6FF', '#7AA35A', 1.15); scene.add(hemi);
   const sun = new THREE.DirectionalLight(night ? '#9FB4FF' : '#FFF3DD', night ? 0.6 : 2.3); sun.position.set(-120, 200, 90); sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048); Object.assign(sun.shadow.camera, { left: -180, right: 180, top: 160, bottom: -160, near: 10, far: 500 }); sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.6;
   scene.add(sun);
@@ -53,7 +53,7 @@ export function mount(host, o) {
   // 땅 — 섬처럼 (흙 옆면)
   const island = new THREE.Mesh(new THREE.BoxGeometry(300, 8, 250), [mat('#9C7A55'), mat('#9C7A55'), mat('#8CCB6A'), mat('#9C7A55'), mat('#9C7A55'), mat('#9C7A55')]);
   island.position.y = -4; island.receiveShadow = true; scene.add(island);
-  const sea = new THREE.Mesh(new THREE.PlaneGeometry(1400, 1400), mat(night ? '#2B4A7A' : '#8FD3F4', { roughness: 0.35 })); sea.rotation.x = -Math.PI / 2; sea.position.y = -7; scene.add(sea);
+  const seaM = new THREE.MeshStandardMaterial({ color: '#8FD3F4', roughness: 0.35 }); const sea = new THREE.Mesh(new THREE.PlaneGeometry(1400, 1400), seaM); sea.rotation.x = -Math.PI / 2; sea.position.y = -7; scene.add(sea);
 
   // 길 · 보도 · 차선 · 횡단보도
   const roadM = mat('#6B7280'), walkM = mat('#E9E4DA'), lineM = mat('#FFFFFF', { roughness: 0.6 });
@@ -77,10 +77,12 @@ export function mount(host, o) {
     [[0, 1.6, 0, 1.9], [0.9, 1.0, 0.4, 1.3], [-0.8, 1.1, -0.3, 1.25], [0.1, 2.7, 0.1, 1.2]].forEach(([a, b, cc, r]) => { const m = new THREE.Mesh(new THREE.IcosahedronGeometry(r * s, 1), mat(c, { flatShading: true })); m.position.set(a * s, b * s, cc * s); m.castShadow = true; top.add(m); });
     trees.push({ top, ph: Math.random() * 6 }); return g;
   };
-  const lamp = (x, z) => { cyl(0.15, 0.2, 5, '#4A5058', x, 0, z, 8); const b = new THREE.Mesh(new THREE.SphereGeometry(0.55, 12, 8), mat('#FFF2C4', { emissive: night ? '#FFD27A' : '#000000', emissiveIntensity: 1.6 })); b.position.set(x, 5.3, z); scene.add(b); };
+  const lampM = new THREE.MeshStandardMaterial({ color: '#FFF2C4', emissive: '#FFD27A', emissiveIntensity: 0 });
+  const lamp = (x, z) => { cyl(0.15, 0.2, 5, '#4A5058', x, 0, z, 8); const b = new THREE.Mesh(new THREE.SphereGeometry(0.55, 12, 8), lampM); b.position.set(x, 5.3, z); scene.add(b); };
   // 집
   const gable = (w, h, d, c) => { const sh = new THREE.Shape(); sh.moveTo(-w / 2, 0); sh.lineTo(w / 2, 0); sh.lineTo(0, h); sh.lineTo(-w / 2, 0); const g = new THREE.ExtrudeGeometry(sh, { depth: d, bevelEnabled: false }); g.translate(0, 0, -d / 2); const m = new THREE.Mesh(g, mat(c)); m.castShadow = true; m.receiveShadow = true; return m; };
-  const winM = mat('#BFE6FF', { roughness: 0.2, emissive: night ? '#FFC870' : '#000000', emissiveIntensity: night ? 0.9 : 0 });
+  const winM = new THREE.MeshStandardMaterial({ color: '#BFE6FF', roughness: 0.2, emissive: '#FFC870', emissiveIntensity: 0 });
+  const glassM = new THREE.MeshStandardMaterial({ color: '#BFE0F2', roughness: 0.15, emissive: '#FFC870', emissiveIntensity: 0, transparent: true, opacity: 0.88 });
   const windows = (g, w, h, d, y0, rows, cols) => { for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) { const x = -w / 2 + (c + 0.5) * (w / cols); [[d / 2 + 0.06, 0], [-d / 2 - 0.06, Math.PI]].forEach(([zz, ry]) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w / cols * 0.45, 1.3), winM); m.position.set(x, y0 + r * 3 + 1.4, zz); m.rotation.y = ry; g.add(m); }); } };
   const house = (x, z, ry, wall, roof, s = 1) => {
     const g = group(x, z, ry), w = 9 * s, d = 8 * s, h = 5 * s;
@@ -124,7 +126,7 @@ export function mount(host, o) {
     const g = group(30, -25);
     box(56, 0.4, 46, '#DCE8D0', 0, 0, 0, g);
     const tower = new THREE.Group(); tower.position.set(-14, 0, -4); g.add(tower);
-    for (let f = 0; f < 6; f++) { box(14, 0.5, 12, '#F4F1EC', 0, f * 3.4, 0, tower); const glass = new THREE.Mesh(new THREE.BoxGeometry(13.4, 2.9, 11.4), mat('#BFE0F2', { roughness: 0.15, emissive: night ? '#FFC870' : '#000000', emissiveIntensity: night ? 0.6 : 0, transparent: true, opacity: 0.88 })); glass.position.y = f * 3.4 + 0.5 + 1.45; glass.castShadow = true; tower.add(glass); }
+    for (let f = 0; f < 6; f++) { box(14, 0.5, 12, '#F4F1EC', 0, f * 3.4, 0, tower); const glass = new THREE.Mesh(new THREE.BoxGeometry(13.4, 2.9, 11.4), glassM); glass.position.y = f * 3.4 + 0.5 + 1.45; glass.castShadow = true; tower.add(glass); }
     box(14.4, 0.8, 12.4, '#E8732C', 0, 20.4, 0, tower);
     const tex = new THREE.TextureLoader().load('/icons/logo-full.png'); tex.colorSpace = THREE.SRGBColorSpace;
     const logo = new THREE.Mesh(new THREE.PlaneGeometry(9, 4.5), new THREE.MeshBasicMaterial({ map: tex, transparent: true })); logo.position.set(0, 23.6, 0); tower.add(logo);
@@ -184,7 +186,52 @@ export function mount(host, o) {
 
   // 구름
   const clouds = [];
-  for (let i = 0; i < 6; i++) { const c = new THREE.Group(); [[0, 0, 0, 6], [5, -1, 1, 4.5], [-5, -1, -1, 4.5], [2, 2, -1, 4]].forEach(([a, b, d, r]) => { const m = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 1), mat('#FFFFFF', { flatShading: true, roughness: 1 })); m.position.set(a, b, d); m.castShadow = true; c.add(m); }); c.position.set(-200 + i * 75, 115 + (i % 3) * 12, -90 + (i * 47) % 180); scene.add(c); clouds.push(c); }
+  const cloudM = new THREE.MeshStandardMaterial({ color: '#FFFFFF', flatShading: true, roughness: 1 });
+  for (let i = 0; i < 10; i++) { const c = new THREE.Group(); [[0, 0, 0, 6], [5, -1, 1, 4.5], [-5, -1, -1, 4.5], [2, 2, -1, 4]].forEach(([a, b, d, r]) => { const m = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 1), cloudM); m.position.set(a, b, d); m.castShadow = true; c.add(m); }); c.position.set(-240 + i * 48, 110 + (i % 3) * 12, -110 + (i * 53) % 220); scene.add(c); clouds.push(c); }
+
+
+  // 실제 날씨 · 낮밤 (10/29 대표) — 천안 직산 기준 Open-Meteo, 해 뜨고 지는 시각으로 빛
+  const RAIN_N = 1600, rainG = new THREE.BufferGeometry(), rp = new Float32Array(RAIN_N * 6);
+  for (let i = 0; i < RAIN_N; i++) { const x = -160 + Math.random() * 320, y = Math.random() * 130, z = -130 + Math.random() * 260; rp.set([x, y, z, x - 0.4, y - 2.6, z], i * 6); }
+  rainG.setAttribute('position', new THREE.BufferAttribute(rp, 3));
+  const rain = new THREE.LineSegments(rainG, new THREE.LineBasicMaterial({ color: '#B8CCE0', transparent: true, opacity: 0.55 })); rain.visible = false; scene.add(rain);
+  const SNOW_N = 1400, snowG = new THREE.BufferGeometry(), sp = new Float32Array(SNOW_N * 3);
+  for (let i = 0; i < SNOW_N; i++) sp.set([-160 + Math.random() * 320, Math.random() * 130, -130 + Math.random() * 260], i * 3);
+  snowG.setAttribute('position', new THREE.BufferAttribute(sp, 3));
+  const snow = new THREE.Points(snowG, new THREE.PointsMaterial({ color: '#FFFFFF', size: 0.9, transparent: true, opacity: 0.9 })); snow.visible = false; scene.add(snow);
+  const WX = { code: 0, cover: 20, temp: null, rise: null, set: null };
+  const LBL = (c) => (c === 0 ? '맑음' : c === 1 ? '대체로 맑음' : c === 2 ? '구름 조금' : c === 3 ? '흐림' : c <= 48 ? '안개' : c <= 57 ? '이슬비' : c <= 67 ? '비' : c <= 77 ? '눈' : c <= 82 ? '소나기' : c <= 86 ? '눈' : '뇌우');
+  const isRain = () => (WX.code >= 51 && WX.code <= 67) || (WX.code >= 80 && WX.code <= 82) || WX.code >= 95, isSnow = () => (WX.code >= 71 && WX.code <= 77) || WX.code === 85 || WX.code === 86;
+  const C = (h) => new THREE.Color(h), mix = (a, b, t) => C(a).lerp(C(b), Math.max(0, Math.min(1, t)));
+  let elev = 0.6, nightK = 0;
+  function applyEnv() {
+    const now = Date.now(), rise = WX.rise || new Date().setHours(6, 50, 0, 0), set = WX.set || new Date().setHours(17, 40, 0, 0);
+    const f = (now - rise) / (set - rise); elev = f >= 0 && f <= 1 ? Math.sin(Math.PI * f) : -0.4;
+    const day = Math.max(0, Math.min(1, (elev + 0.1) / 0.5)), low = elev > -0.15 && elev < 0.3 ? 1 - Math.abs(elev - 0.05) / 0.25 : 0, gloom = Math.min(1, WX.cover / 100 * (isRain() || isSnow() ? 1 : 0.6));
+    nightK = Math.max(0, Math.min(1, (0.12 - elev) / 0.2));
+    let sky = mix('#141D38', '#BFE3FF', day); sky.lerp(C('#F4A57A'), Math.max(0, low) * 0.55); sky.lerp(C(day > 0.3 ? '#A8B3BF' : '#2A3142'), gloom * 0.65);
+    scene.background.copy(sky); scene.fog.color.copy(sky);
+    const fog = WX.code === 45 || WX.code === 48; scene.fog.near = fog ? 60 : isRain() || isSnow() ? 170 : 260; scene.fog.far = fog ? 240 : isRain() || isSnow() ? 420 : 520;
+    const a = f >= 0 && f <= 1 ? Math.PI * f : Math.PI * 0.5; sun.position.set(Math.cos(a) * 220, 30 + 220 * Math.max(0.12, elev), 90);
+    sun.color.copy(nightK > 0.5 ? C('#9FB4FF') : mix('#FFB37A', '#FFF3DD', elev * 2)); sun.intensity = nightK > 0.5 ? 0.35 : (0.4 + 2.0 * Math.max(0, elev)) * (1 - gloom * 0.6);
+    hemi.color.copy(mix('#5A6FA8', '#EAF6FF', day)); hemi.groundColor.copy(mix('#2A2F3A', '#7AA35A', day)); hemi.intensity = (0.45 + 0.75 * day) * (1 - gloom * 0.25);
+    seaM.color.copy(mix('#24406E', '#8FD3F4', day)).lerp(C('#7F98AA'), gloom * 0.5);
+    const lit = Math.max(nightK, gloom * 0.5 * (1 - day * 0.6)); winM.emissiveIntensity = 0.9 * nightK; glassM.emissiveIntensity = 0.6 * nightK; lampM.emissiveIntensity = 1.6 * lit;
+    cloudM.color.copy(mix('#FFFFFF', isRain() ? '#7E8894' : '#B9C0C8', gloom)).lerp(C('#3A4258'), nightK * 0.7);
+    clouds.forEach((c, i) => { c.visible = i < Math.round(1 + WX.cover / 100 * 9); });
+    rain.visible = isRain(); snow.visible = isSnow();
+    renderer.toneMappingExposure = 1.05 - nightK * 0.15;
+  }
+  async function loadWx() {
+    try {
+      const r = await fetch('https://api.open-meteo.com/v1/forecast?latitude=36.889&longitude=127.196&current=temperature_2m,weather_code,cloud_cover&daily=sunrise,sunset&timezone=Asia%2FSeoul&forecast_days=1');
+      const j = await r.json(); const c = j.current || {}, d = j.daily || {};
+      Object.assign(WX, { code: c.weather_code ?? 0, cover: c.cloud_cover ?? 20, temp: c.temperature_2m, rise: d.sunrise ? Date.parse(d.sunrise[0] + ':00+09:00') : null, set: d.sunset ? Date.parse(d.sunset[0] + ':00+09:00') : null });
+      if (o.onWeather) o.onWeather({ temp: WX.temp, label: LBL(WX.code), code: WX.code });
+    } catch (e) { /* 날씨 못 받아도 시계 기준 낮밤은 그대로 */ }
+    applyEnv();
+  }
+  applyEnv(); loadWx(); const wxT = setInterval(loadWx, 15 * 60e3), envT = setInterval(applyEnv, 30e3);
 
   // 차 — 길 따라 돌기
   const cars = [], CARC = ['#FF6B5E', '#5D9BF2', '#FFC531', '#FFFFFF', '#7ED39B', '#B98AF5', '#FF9E5E'];
@@ -252,12 +299,15 @@ export function mount(host, o) {
   const v3 = new THREE.Vector3(), camDir = new THREE.Vector3(), clock = new THREE.Clock(); let alive = true;
   const proj = (p, el2) => { v3.copy(p).project(cam); const vis = v3.z < 1 && Math.abs(v3.x) < 1.15 && Math.abs(v3.y) < 1.15; el2.style.display = vis ? '' : 'none'; if (vis) el2.style.transform = `translate(${((v3.x + 1) / 2 * W).toFixed(1)}px,${((1 - v3.y) / 2 * H).toFixed(1)}px) translate(-50%,-100%)`; };
   function frame() {
-    if (!alive || !renderer.domElement.isConnected) { alive = false; renderer.dispose(); return; }
+    if (!alive || !renderer.domElement.isConnected) { alive = false; clearInterval(wxT); clearInterval(envT); renderer.dispose(); return; }
     const dt = Math.min(0.05, clock.getDelta()), now = clock.elapsedTime;
     ctl.update(); cam.getWorldDirection(camDir);
     trees.forEach((t) => { t.top.rotation.z = Math.sin(now * 1.3 + t.ph) * 0.035; t.top.rotation.x = Math.cos(now * 1.1 + t.ph) * 0.025; });
     cranes.forEach((c) => { c.jib.rotation.y = Math.sin(now * 0.18 + c.ph) * 1.2; const hx = 10 + Math.sin(now * 0.3 + c.ph) * 6, drop = 6 + Math.sin(now * 0.5 + c.ph) * 4; c.rope.position.set(hx, -drop / 2, 0); c.rope.scale.y = drop; c.load.position.set(hx, -drop - 0.4, 0); });
     clouds.forEach((c, i) => { c.position.x += dt * (2 + i * 0.3); if (c.position.x > 240) c.position.x = -240; });
+    if (rain.visible) { const a = rainG.attributes.position.array; for (let i = 0; i < RAIN_N; i++) { let y = a[i * 6 + 1] - dt * 95; if (y < 0) y += 130; a[i * 6 + 1] = y; a[i * 6 + 4] = y - 2.6; } rainG.attributes.position.needsUpdate = true; }
+    if (snow.visible) { const a = snowG.attributes.position.array; for (let i = 0; i < SNOW_N; i++) { let y = a[i * 3 + 1] - dt * 7; if (y < 0) y += 130; a[i * 3 + 1] = y; a[i * 3] += Math.sin(now + i) * dt * 0.8; } snowG.attributes.position.needsUpdate = true; }
+    if (WX.code >= 95 && Math.random() < 0.004) { hemi.intensity += 2.5; setTimeout(applyEnv, 120); }
     cars.forEach((c) => { c.t = (c.t + dt * c.v) % 248; const p = -124 + (c.dir > 0 ? c.t : 248 - c.t), off = c.dir * 2; if (c.horiz) { c.m.position.set(p, 0.2, c.line + off); c.m.rotation.y = c.dir > 0 ? 0 : Math.PI; } else { c.m.position.set(c.line - off, 0.2, Math.max(-104, Math.min(104, p * 0.84))); c.m.rotation.y = c.dir > 0 ? -Math.PI / 2 : Math.PI / 2; } });
     hammer.forEach((h) => { h.s.position.y = h.y + Math.abs(Math.sin(now * 5 + h.ph)) * 0.25; });
     people.forEach((p) => {

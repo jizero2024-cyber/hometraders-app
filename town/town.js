@@ -2,7 +2,7 @@
 // 주소 뒤 #/campus · #/office · #/warehouse 로 화면 바뀜. 직원 계정만 (공간 계정 막음)
 import * as S from '/js/store-supabase.js?v=9';
 import * as JIM from './jim.js?v=2';
-import * as W3D from './v3d.js?v=3';
+import * as W3D from './v3d.js?v=4';
 
 const stage = document.getElementById('stage');
 const IMG = './img/';
@@ -125,7 +125,7 @@ function village() {
     <button id="mail" type="button" aria-label="자료 넣기" style="display:none"><b id="ndrop"></b></button>
     <div style="position:absolute;right:24px;bottom:24px;display:flex;flex-direction:column;gap:6px;z-index:8"><button id="zin" type="button" class="btn" style="width:46px;justify-content:center;padding:0;font-size:22px">+</button><button id="zout" type="button" class="btn" style="width:46px;justify-content:center;padding:0;font-size:22px">−</button><button id="zre" type="button" class="btn" style="width:46px;justify-content:center;padding:0;font-size:12px">전체</button></div>
     <div style="position:absolute;left:20px;top:20px;display:flex;gap:10px;align-items:center;z-index:8">
-      <div class="card" style="padding:9px 15px;border-radius:18px"><div style="font-size:12px;color:#8A7E77" id="vdate"></div><div style="font-size:24px;font-weight:800;letter-spacing:-.02em;line-height:1.1" id="vclock"></div></div>
+      <div class="card" style="padding:9px 15px;border-radius:18px"><div style="font-size:12px;color:#8A7E77" id="vdate"></div><div style="display:flex;align-items:baseline;gap:8px"><div style="font-size:24px;font-weight:800;letter-spacing:-.02em;line-height:1.1" id="vclock"></div><div id="vwx" style="font-size:13px;font-weight:700;color:#5B6B7C"></div></div></div>
       <button id="dispBtn" class="btn" type="button" style="height:48px"><img src="${IMG}cat.webp" alt="">배차 사무실 <b id="njobs"></b></button>
       <a class="btn or" href="#/campus" style="height:48px">우리 단지</a>
       <button type="button" class="btn boardBtn" style="height:48px;background:#FFE680;color:#5A4A00">할 일 칠판</button>
@@ -156,7 +156,7 @@ function village() {
   // 진짜 3D 마을 (10/29 대표 "진짜 3D로 다시")
   const W = W3D.mount(v.querySelector('#w3d'), { places: PLACES, tone: TONE, esc, img: IMG, wf,
     onPick: (k) => { if (k === 'office') location.hash = '#/office'; else if (k === 'warehouse') location.hash = '#/warehouse'; else if (k === 'mail') v.querySelector('#mail').click(); else openPlace(k); },
-    onDrop: (f) => addDrops(f) });
+    onDrop: (f) => addDrops(f), onWeather: (w) => { v.querySelector('#vwx').textContent = `${w.temp != null ? Math.round(w.temp) + '° ' : ''}${w.label}`; } });
   v.querySelector('#zin').onclick = () => W.zoom(0.75); v.querySelector('#zout').onclick = () => W.zoom(1.33); v.querySelector('#zre').onclick = () => W.reset();
   v.addEventListener('click', (e) => { const b = e.target.closest('[data-pk]'); if (b) openPlace(b.dataset.pk); });
   function openPlace(k) {   // 거래처 카드
