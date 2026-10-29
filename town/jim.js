@@ -49,17 +49,25 @@ export function blocksOf(it) {
   return out;
 }
 
-// 짐칸에 놓기 — 긴 것부터, 폭 방향으로 줄(레인)을 나눠 앞에서 뒤로
-export function pack(blocks, t) {
-  const bs = blocks.map((b, i) => ({ ...b, i })).sort((a, b) => b.L - a.L || b.W - a.W), lanes = [], placed = [], over = [];
-  let usedW = 0;
+// 짐칸에 놓기 — 5cm 칸으로 나눠, 긴 것부터 앞쪽·왼쪽 빈자리에 (돌려서도 맞춰 봄)
+export function pack(blocks, t) {   // 1단에 다 안 들어가면 같은 크기 짐 위에 2단으로
+  const one = pack1(blocks, t); if (!one.over.length) return one;
+  const two = pack1(one.over, t); two.placed.forEach((p) => { p.layer = 2; });
+  return { placed: one.placed.concat(two.placed), over: two.over, kg: one.kg + two.kg };
+}
+function pack1(blocks, t) {
+  const G = 0.05, NL = Math.floor(t.L / G + 1e-6), NW = Math.floor(t.W / G + 1e-6), grid = new Uint8Array(NL * NW);
+  const free = (y, x, l, w) => { if (y + l > NL || x + w > NW) return false; for (let a = y; a < y + l; a++) for (let b = x; b < x + w; b++) if (grid[a * NW + b]) return false; return true; };
+  const fill = (y, x, l, w) => { for (let a = y; a < y + l; a++) for (let b = x; b < x + w; b++) grid[a * NW + b] = 1; };
+  const bs = blocks.map((b, i) => ({ ...b, i })).sort((a, b) => b.L * b.W - a.L * a.W || b.L - a.L), placed = [], over = [];
   bs.forEach((b) => {
-    let L = b.L, W = b.W;
-    if (L > t.L && W <= t.L && L <= t.W) { [L, W] = [W, L]; }
-    let lane = lanes.filter((l) => l.w >= W - 1e-6 && l.used + L <= t.L + 1e-6).sort((a, z) => a.used - z.used)[0];
-    if (!lane && usedW + W <= t.W + 1e-6 && L <= t.L + 1e-6) { lane = { x: usedW, w: W, used: 0 }; lanes.push(lane); usedW += W; }
-    if (!lane) { over.push(b); return; }
-    placed.push({ ...b, x: lane.x, y: lane.used, L, W }); lane.used += L;
+    const opts = [[b.L, b.W], [b.W, b.L]].map(([L, W]) => [L, W, Math.ceil(L / G - 1e-6), Math.ceil(W / G - 1e-6)]);
+    let done = false;
+    for (let y = 0; y < NL && !done; y++) for (let x = 0; x < NW && !done; x++) {
+      if (grid[y * NW + x]) continue;
+      for (const [L, W, l, w] of opts) { if (free(y, x, l, w)) { fill(y, x, l, w); placed.push({ ...b, x: x * G, y: y * G, L, W }); done = true; break; } }
+    }
+    if (!done) over.push(b);
   });
   return { placed, over, kg: blocks.reduce((a, b) => a + b.kg, 0) };
 }
@@ -146,8 +154,8 @@ export function mount(root, opts = {}) {
     b.innerHTML = `<div style="position:absolute;inset:-10px;border-radius:10px;background:#D9DDE3;box-shadow:inset 0 0 0 3px #B8BEC8"></div>
       <div style="position:absolute;right:-58px;top:50%;transform:translateY(-50%);width:44px;height:${Math.min(truck.W * sc, 120)}px;border-radius:10px 20px 20px 10px;background:#7FB2FF"><div style="position:absolute;left:8px;top:10px;right:8px;height:30%;border-radius:6px;background:#E6F4FF"></div></div>
       <div style="position:absolute;inset:0;background:repeating-linear-gradient(90deg,#EEF0F3 0 ${sc - 1}px,#E2E6EB ${sc - 1}px ${sc}px)"></div>
-      ${layout.placed.map((p, j) => `<div class="jb" data-j="${j}" style="position:absolute;left:${p.y * sc}px;top:${p.x * sc}px;width:${p.L * sc - 3}px;height:${p.W * sc - 3}px;border-radius:6px;background:${p.c};box-shadow:inset 0 0 0 2px rgba(0,0,0,.12), 0 3px 6px rgba(0,0,0,.12);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;cursor:grab;touch-action:none;overflow:hidden;padding:2px">
-        <span style="font-size:${Math.max(10, Math.min(14, p.W * sc / 4))}px;font-weight:800;color:#3A3128;white-space:nowrap">${esc(p.label)}</span><span style="font-size:11px;color:#5E534C;white-space:nowrap">${esc(p.sub)} · ${p.kg >= 1000 ? (p.kg / 1000).toFixed(1) + '톤' : Math.round(p.kg) + 'kg'}</span></div>`).join('')}
+      ${layout.placed.map((p, j) => `<div class="jb" data-j="${j}" style="position:absolute;left:${p.y * sc}px;top:${p.x * sc}px;width:${p.L * sc - 3}px;height:${p.W * sc - 3}px;border-radius:6px;background:${p.c};box-shadow:inset 0 0 0 2px rgba(0,0,0,.12), 0 3px 6px rgba(0,0,0,.12)${p.layer === 2 ? ', 0 0 0 3px #E8732C' : ''};${p.layer === 2 ? `background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.35) 0 6px,transparent 6px 12px);transform:translate(6px,-6px);z-index:2;` : ''}display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;cursor:grab;touch-action:none;overflow:hidden;padding:2px">
+        <span style="font-size:${Math.max(10, Math.min(14, p.W * sc / 4))}px;font-weight:800;color:#3A3128;white-space:nowrap">${p.layer === 2 ? '2단 · ' : ''}${esc(p.label)}</span><span style="font-size:11px;color:#5E534C;white-space:nowrap">${esc(p.sub)} · ${p.kg >= 1000 ? (p.kg / 1000).toFixed(1) + '톤' : Math.round(p.kg) + 'kg'}</span></div>`).join('')}
       <div style="position:absolute;left:0;bottom:-30px;font-size:12px;color:#8A7E77">뒤 (문)</div><div style="position:absolute;right:0;bottom:-30px;font-size:12px;color:#8A7E77">앞 (운전석)</div>`;
     layout.sc = sc;
   }
@@ -172,7 +180,7 @@ export function mount(root, opts = {}) {
     const sc = 120, M = 40, cw = truck.L * sc + M * 2 + 60, chh = truck.W * sc + M * 2 + 60, c = document.createElement('canvas'); c.width = cw; c.height = chh; const g = c.getContext('2d');
     g.fillStyle = '#fff'; g.fillRect(0, 0, cw, chh); g.fillStyle = '#2B2522'; g.font = 'bold 22px Pretendard, sans-serif'; g.fillText(`${truck.name} · 총 ${(layout.kg / 1000).toFixed(2)}톤 · 짐칸 ${truck.L}×${truck.W}m`, M, 30);
     g.fillStyle = '#E2E6EB'; g.fillRect(M, M + 20, truck.L * sc, truck.W * sc); g.strokeStyle = '#9AA2AE'; g.lineWidth = 3; g.strokeRect(M, M + 20, truck.L * sc, truck.W * sc);
-    layout.placed.forEach((p) => { const x = M + p.y * sc, y = M + 20 + p.x * sc, w = p.L * sc - 3, h = p.W * sc - 3; g.fillStyle = p.c; g.fillRect(x, y, w, h); g.strokeStyle = 'rgba(0,0,0,.25)'; g.lineWidth = 2; g.strokeRect(x, y, w, h); g.fillStyle = '#3A3128'; g.font = 'bold 15px Pretendard, sans-serif'; g.textAlign = 'center'; g.fillText(p.label, x + w / 2, y + h / 2 - 4); g.font = '13px Pretendard, sans-serif'; g.fillText(`${p.sub} · ${p.kg >= 1000 ? (p.kg / 1000).toFixed(1) + '톤' : Math.round(p.kg) + 'kg'}`, x + w / 2, y + h / 2 + 14); g.textAlign = 'left'; });
+    layout.placed.forEach((p) => { const x = M + p.y * sc, y = M + 20 + p.x * sc, w = p.L * sc - 3, h = p.W * sc - 3; g.fillStyle = p.c; g.fillRect(x, y, w, h); g.strokeStyle = 'rgba(0,0,0,.25)'; g.lineWidth = 2; g.strokeRect(x, y, w, h); g.fillStyle = '#3A3128'; g.font = 'bold 15px Pretendard, sans-serif'; g.textAlign = 'center'; g.fillText((p.layer === 2 ? '2단 · ' : '') + p.label, x + w / 2, y + h / 2 - 4); g.font = '13px Pretendard, sans-serif'; g.fillText(`${p.sub} · ${p.kg >= 1000 ? (p.kg / 1000).toFixed(1) + '톤' : Math.round(p.kg) + 'kg'}`, x + w / 2, y + h / 2 + 14); g.textAlign = 'left'; });
     g.fillStyle = '#8A7E77'; g.font = '13px Pretendard, sans-serif'; g.fillText('← 뒤 (문)', M, M + 20 + truck.W * sc + 22); g.textAlign = 'right'; g.fillText('앞 (운전석) →', M + truck.L * sc, M + 20 + truck.W * sc + 22);
     const a = document.createElement('a'); const d = new Date(); a.download = `짐짜기_${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}_${truck.name}.png`; a.href = c.toDataURL('image/png'); a.click();
   };

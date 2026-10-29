@@ -1,7 +1,7 @@
 // 홈트 마을 /town (10/29 대표 "게임처럼 · 디자인만 먼저") — 마을 · 단지 · 사무실 · 창고 네 화면, 아직 예시 자료
 // 주소 뒤 #/campus · #/office · #/warehouse 로 화면 바뀜. 직원 계정만 (공간 계정 막음)
 import * as S from '/js/store-supabase.js?v=9';
-import * as JIM from './jim.js?v=1';
+import * as JIM from './jim.js?v=2';
 
 const stage = document.getElementById('stage');
 const IMG = './img/';
@@ -9,7 +9,7 @@ const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&':
 const hm = (d = new Date()) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 const el = (html) => { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; };
 let timers = [];
-const every = (ms, fn) => timers.push(setInterval(fn, ms));
+const every = (ms, fn) => { const t = setInterval(fn, ms); timers.push(t); return t; };
 const later = (ms, fn) => timers.push(setTimeout(fn, ms));
 const clearAll = () => { timers.forEach((t) => { clearInterval(t); clearTimeout(t); }); timers = []; };
 
@@ -315,6 +315,7 @@ function office() {
     </div>
     <div style="position:absolute;left:24px;bottom:22px;display:flex;gap:8px;z-index:8">${backBtn('#/campus', '단지')}<a class="btn" href="#/warehouse" style="color:#B07A2A">창고 가기</a><button type="button" class="btn boardBtn" style="background:#FFE680;color:#5A4A00">할 일 칠판</button></div>
     <button type="button" class="boardBtn hot" aria-label="할 일 칠판 열기" style="position:absolute;left:740px;top:170px;width:90px;height:70px;border:0;background:transparent;cursor:pointer;z-index:4"></button>
+    <button id="meet" type="button" class="btn" style="position:absolute;right:190px;top:24px;z-index:9;height:48px;background:#2E9A5A;color:#fff">회의 소집</button>
     <button id="book" type="button" class="btn" style="position:absolute;right:28px;top:24px;z-index:9;height:48px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h11a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6z"/><path d="M6 3v18M4 7h4M4 12h4M4 17h4M10 8h6M10 12h6"/></svg>출석부 ${STAFF.length}</button>
     <div id="pnl" class="pnl" style="position:absolute;left:732px;right:24px;top:84px;bottom:20px;display:none;flex-direction:column;gap:12px;z-index:8">
       <div class="card" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px"><div><div style="font-size:12px;color:#8A7E77">천안 서북구 직산읍 신갈리</div><div style="font-size:22px;font-weight:800">홈트 사무실 · 직원 ${STAFF.length}명</div></div><div style="display:flex;gap:6px"><span class="pill" style="background:#FFF1E6;color:#C2551A">배차 5</span><span class="pill" style="background:#E6F0FF;color:#2F6BD6">가는 중 2</span><span class="pill" style="background:#E6F7EC;color:#1E8E3E">완료 11</span></div></div>
@@ -362,7 +363,43 @@ function office() {
     later(9000, () => { const back = 'M ' + w.path.replace(/^M\s*/, '').split(' L ').reverse().join(' L '); walker(bld, { ...w, say: '자리로 돌아가요', path: back, size: 34, dur: 7 }); });
     later(16200, () => { if (seat) seat.style.visibility = ''; });
   };
-  go(); every(9000, go);
+  const walkT = every(9000, go); go();
+  // 회의 — 마당 의자로 모여서 한 사람씩 보고 → 서로 일 넘기기 → 자리로
+  const REPORT = { '김맥순': '오늘 출고 11건, 배차 5건 남았어요', '뚝딱': '매향리 견적서 2개 냈어요', '부엉': '판가 낮은 거 2건 찾았어요', '콩알': '구매 6건 · 판매 4건 넣었어요', '수달': '운임 미송금 2건 남았어요',
+    '고슴': '공간 전표 3장 올렸어요', '도토리': '명세표 5장 뽑았어요', '꼬북': '오웬스 승인원 묶었어요', '펭송': '송장 3건 보냈어요', '이음이': '매향리 · 서생 배차 잡았어요', '토깽': '내일 아침 공지 준비 끝', '눈썰미': '명세서 7장 읽었어요', '받아쓰기': '통화 12건 요약했어요', '그림이': '실리콘 박스 시안 3개' };
+  const TOSS = [['김맥순', '콩알', '우림 구매 날짜 확인해줘'], ['이음이', '수달', '서생 정소장 운임 보내줘'], ['뚝딱', '도토리', '견적 그대로 명세표로!'], ['눈썰미', '콩알', '원익 명세서 7장 입력 부탁'], ['토깽', '펭송', '청주 송장 링크 다시 보내줘']];
+  const fnum = (f) => +String(f).replace(/\D/g, '') || 1;
+  const spots = STAFF.map((s, i) => (i < 8 ? [170 + i * 56, 726] : [200 + (i - 8) * 62, 756]));
+  let meeting = false;
+  v.querySelector('#meet').onclick = () => {
+    if (meeting) return; meeting = true; clearInterval(walkT); const mb = v.querySelector('#meet'); mb.textContent = '회의 중…';
+    const ppl = STAFF.map((s, i) => {
+      const seat = seats[i], sx = parseFloat(seat.style.left), sy = parseFloat(seat.style.top), [tx, ty] = spots[i];
+      seat.style.visibility = 'hidden';
+      const path = REST[s.name] ? `M ${sx} ${sy} L ${tx} ${ty}` : `M ${sx} ${sy} L 470 ${F[fnum(s.floor)]} L 516 737 L ${tx} ${ty}`;
+      walker(bld, { name: s.name, av: s.av, c: s.c, say: '회의 가요', path, size: 32, dur: 6 });
+      return { s, i, tx, ty };
+    });
+    const seated = [];
+    later(6100, () => { ppl.forEach((p) => seated.push(sprite(bld, { av: p.s.av, name: p.s.name, x: p.tx, y: p.ty, size: 32, act: 'nod' }))); ob.style.display = 'none'; });
+    const rb = el('<div class="bub" style="display:none"></div>'); bld.appendChild(rb);
+    const sayAt = (p, txt, c) => { rb.style.display = ''; rb.style.left = p.tx + 'px'; rb.style.top = (p.ty - 36) + 'px'; rb.innerHTML = `<div style="max-width:240px;padding:8px 12px;border-radius:14px;background:#fff;box-shadow:0 8px 20px rgba(30,60,110,.22);font-size:12px;line-height:1.4"><b style="color:${c}">${esc(txt[0])}</b> ${esc(txt[1])}</div><div class="tail" style="background:#fff"></div>`; rb.style.animation = 'none'; void rb.offsetWidth; rb.style.animation = ''; };
+    let t0 = 6800;
+    ppl.forEach((p) => { later(t0, () => sayAt(p, [p.s.name, REPORT[p.s.name] || '보고할게요'], p.s.c)); t0 += 1900; });
+    TOSS.forEach(([a, b, msg]) => {
+      later(t0, () => {
+        const A = ppl.find((p) => p.s.name === a), Bp = ppl.find((p) => p.s.name === b); sayAt(A, [`${a} → ${b}`, msg], A.s.c);
+        const doc = el(`<span style="position:absolute;left:0;top:0;width:16px;height:20px;background:#fff;border-radius:2px;box-shadow:0 2px 6px rgba(0,0,0,.3);border-top:4px solid ${A.s.c};offset-path:path('M ${A.tx} ${A.ty - 30} Q ${(A.tx + Bp.tx) / 2} ${Math.min(A.ty, Bp.ty) - 90} ${Bp.tx} ${Bp.ty - 30}');animation:drive 1.2s ease-in-out both;z-index:9"></span>`);
+        bld.appendChild(doc); setTimeout(() => doc.remove(), 1600);
+      });
+      t0 += 2600;
+    });
+    later(t0, () => {
+      rb.remove(); seated.forEach((n) => n.remove()); ob.style.display = '';
+      ppl.forEach((p) => { const seat = seats[p.i], sx = parseFloat(seat.style.left), sy = parseFloat(seat.style.top); const path = REST[p.s.name] ? `M ${p.tx} ${p.ty} L ${sx} ${sy}` : `M ${p.tx} ${p.ty} L 516 737 L 470 ${F[fnum(p.s.floor)]} L ${sx} ${sy}`; walker(bld, { name: p.s.name, av: p.s.av, c: p.s.c, say: '자리로', path, size: 32, dur: 6 }); });
+      later(6100, () => { seats.forEach((n) => { n.style.visibility = ''; }); meeting = false; mb.textContent = '회의 소집'; every(9000, go); });
+    });
+  };
 }
 
 // ── 창고 ───────────────────────────────────────────────
