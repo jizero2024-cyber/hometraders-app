@@ -53,21 +53,22 @@ export function office(host, o) {
   box(64, 0.3, 22, '#8CCB6A', 0, 0, 22);   // 마당 잔디
   const FLOORS = [['#F6F1EA', '1F 디자인실'], ['#EEF3FA', '2F 배차 · 통신'], ['#FBF4EC', '3F 서류 · 확인'], ['#F1EFEA', '4F 회계'], ['#FFF3E8', '5F 대표실']];
   FLOORS.forEach(([c, name], f) => {
-    const y = f * FH; box(FW, 0.5, FD, c, 0, y, 0); box(FW, FH, 0.5, '#FFFFFF', 0, y + 0.5, -FD / 2);
+    const y = f * FH; box(FW, 0.5, FD, c, 0, y, 0).castShadow = false; box(FW, FH, 0.5, '#FFFFFF', 0, y + 0.5, -FD / 2);
+    const lp = new THREE.PointLight('#FFF1DA', 40, 40, 1.4); lp.position.set(0, y + FH - 1, 2); scene.add(lp);
     box(0.5, FH, FD, '#F4F1EC', -FW / 2, y + 0.5, 0); const gl = box(0.3, FH - 0.5, FD, '#CDE6F5', FW / 2, y + 0.5, 0, scene, { transparent: true, opacity: 0.35, roughness: 0.1 }); gl.castShadow = false;
     tag(null, pill(name, 'rgba(255,255,255,.92)', '#6B5E55'), -FW / 2 + 5, y + FH - 0.6, FD / 2 - 1).d.style.pointerEvents = 'none';
   });
-  box(FW + 1, 0.8, FD + 1, '#E8732C', 0, NF * FH, 0);   // 지붕
+  box(FW + 1, 0.8, FD + 1, '#E8732C', 0, NF * FH, 0).castShadow = false;   // 지붕
   const logoT = new THREE.TextureLoader().load('/icons/logo-full.png'); logoT.colorSpace = THREE.SRGBColorSpace;
   const logo = new THREE.Mesh(new THREE.PlaneGeometry(12, 6), new THREE.MeshBasicMaterial({ map: logoT, transparent: true })); logo.position.set(0, NF * FH + 4.5, 0); scene.add(logo);
   // 계단 (오른쪽 바깥)
   for (let f = 0; f < NF; f++) for (let i = 0; i < 8; i++) box(5, 0.4, 2, '#E3DED6', FW / 2 + 3.5, f * FH + i * (FH / 8), -FD / 2 + 2 + i * 2.1);
-  const desk = (x, f, z = -2, c = '#D9B88C') => { const y = f * FH + 0.5; box(6, 0.3, 3, c, x, y + 2.2, z); [-2.7, 2.7].forEach((a) => box(0.3, 2.2, 2.6, '#BFA27A', x + a, y, z)); box(2.6, 1.6, 0.2, '#2B2F36', x, y + 2.5, z - 1.1); box(2.4, 1.4, 0.05, '#7FB7E8', x, y + 2.6, z - 0.98, scene, { emissive: '#7FB7E8', emissiveIntensity: 0.4 }); };
+  const desk = (x, f, z = -1, c = '#D9B88C') => { const y = f * FH + 0.5; box(6, 0.3, 3, c, x, y + 1.6, z); [-2.7, 2.7].forEach((a) => box(0.3, 1.6, 2.6, '#BFA27A', x + a, y, z)); box(0.2, 1.4, 2, '#2B2F36', x + 2.2, y + 1.9, z); box(0.05, 1.2, 1.8, '#7FB7E8', x + 2.1, y + 2.0, z, scene, { emissive: '#7FB7E8', emissiveIntensity: 0.5 }); };
   // 직원 자리 (AI 작업) — o.staff: [{k,who,f,x}]
   const seats = {};
   (o.staff || []).forEach((s) => {
-    desk(s.x, s.f); const c = critter(s.av); c.g.scale.setScalar(1.6); c.g.position.set(s.x, s.f * FH + 0.5, -4.6); c.g.rotation.y = 0; scene.add(c.g); clickable(c.g, s.k);
-    seats[s.k] = { c, home: [s.x, s.f * FH + 0.5, -4.6], at: 'desk', s };
+    desk(s.x, s.f); const c = critter(s.av); c.g.scale.setScalar(2.1); c.g.position.set(s.x - 0.6, s.f * FH + 0.5, -4.2); c.g.rotation.y = 0; scene.add(c.g); clickable(c.g, s.k);
+    seats[s.k] = { c, home: [s.x - 0.6, s.f * FH + 0.5, -4.2], at: 'desk', s };
   });
   // 물건
   const OBJ = {};

@@ -3,7 +3,7 @@
 import * as S from '/js/store-supabase.js?v=9t1';
 import * as JIM from './jim.js?v=2';
 import * as W3D from './v3d.js?v=8';
-import * as O3D from './o3d.js?v=1';
+import * as O3D from './o3d.js?v=2';
 
 const stage = document.getElementById('stage');
 const IMG = './img/';
