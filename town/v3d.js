@@ -88,11 +88,36 @@ export function mount(host, o) {
   const winM = new THREE.MeshStandardMaterial({ color: '#BFE6FF', roughness: 0.2, emissive: '#FFC870', emissiveIntensity: 0 });
   const glassM = new THREE.MeshStandardMaterial({ color: '#BFE0F2', roughness: 0.15, emissive: '#FFC870', emissiveIntensity: 0, transparent: true, opacity: 0.88 });
   const windows = (g, w, h, d, y0, rows, cols) => { for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) { const x = -w / 2 + (c + 0.5) * (w / cols); [[d / 2 + 0.06, 0], [-d / 2 - 0.06, Math.PI]].forEach(([zz, ry]) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w / cols * 0.45, 1.3), winM); m.position.set(x, y0 + r * 3 + 1.4, zz); m.rotation.y = ry; g.add(m); }); } };
+  // 집 — 2층 가게집 (10/29 대표 사진 "집은 이런 식으로"): 기와 박공지붕 · 나무 틀 2층 · 격자 창 · 발코니 화분 · 1층 차양과 줄전구 · 불 켜진 가게 앞
+  const strL = [];   // 줄전구 (밤에 켜짐) — lampM 같이 씀
   const house = (x, z, ry, wall, roof, s = 1) => {
-    const g = group(x, z, ry), w = 9 * s, d = 8 * s, h = 5 * s;
-    box(w, h, d, wall, 0, 0, 0, g); const rf = gable(d + 1.4, 3.6 * s, w + 1.2, roof); rf.rotation.y = Math.PI / 2; rf.position.y = h; g.add(rf);
-    box(1.6 * s, 2.6 * s, 0.3, '#8A5A35', 0, 0, d / 2 + 0.1, g); windows(g, w, h, d, 0.4, 1, 3);
-    box(1, 2.4 * s, 1, '#B85C46', w / 3, h + 1.2 * s, -d / 5, g);
+    const g = group(x, z, ry), w = 9 * s, d = 7.5 * s, h1 = 3.6 * s, h2 = 3.4 * s, H = h1 + h2;
+    box(w + 3, 0.25, d + 3.2, '#D9B99A', 0, 0, 0.4, g);   // 보도 타일
+    box(w, h1, d, wall || '#F4F0E8', 0, 0.25, 0, g);   // 1층
+    const fr = mat('#3A2E2A');
+    box(w * 0.62, h1 * 0.62, 0.12, '#3A2E2A', -w * 0.12, 0.45, d / 2 + 0.02, g); const shop = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.58, h1 * 0.56), winM); shop.position.set(-w * 0.12, 0.45 + h1 * 0.31, d / 2 + 0.1); g.add(shop);
+    box(1.5 * s, h1 * 0.7, 0.15, '#2F5E52', w * 0.32, 0.25, d / 2 + 0.05, g);   // 문
+    box(w + 0.8, 0.22, 1.9 * s, '#E7A35A', 0, 0.25 + h1 - 0.2, d / 2 + 0.85 * s, g).rotation.x = 0.28;   // 차양
+    for (let i = 0; i < 9; i++) { const b = new THREE.Mesh(lampG, lampM); b.scale.setScalar(0.35); b.position.set(-w / 2 + 0.5 + i * (w - 1) / 8, 0.25 + h1 - 0.75 - Math.sin(i / 8 * Math.PI) * 0.25, d / 2 + 1.75 * s); g.add(b); }
+    const sign = box(2.8 * s, 1.1 * s, 0.2, '#5A3E2E', w * 0.18, 0.25 + h1 + 0.15, d / 2 + 0.15, g); sign.position.y = 0.25 + h1 + 0.6 * s;
+    // 2층 — 나무 틀 + 격자 창
+    const y2 = 0.25 + h1; box(w - 0.2, h2, d - 0.4, '#EFE6D6', 0, y2, -0.1, g); box(w - 0.1, 0.35, d - 0.3, '#6B4A34', 0, y2, -0.1, g);
+    [-w / 2 + 0.1, w / 2 - 0.1].forEach((xx) => box(0.3, h2, 0.3, '#6B4A34', xx, y2, d / 2 - 0.35, g)); box(0.3, h2, 0.3, '#6B4A34', 0.6 * s, y2, d / 2 - 0.35, g);
+    [[-w * 0.22, w * 0.36], [w * 0.3, w * 0.24]].forEach(([cx, ww]) => { const gl = new THREE.Mesh(new THREE.PlaneGeometry(ww, h2 * 0.55), winM); gl.position.set(cx, y2 + h2 * 0.5, d / 2 - 0.28); g.add(gl);
+      for (let k = 0; k <= 3; k++) { const mm = new THREE.Mesh(new THREE.BoxGeometry(0.08, h2 * 0.58, 0.08), fr); mm.position.set(cx - ww / 2 + k * ww / 3, y2 + h2 * 0.5, d / 2 - 0.24); g.add(mm); }
+      [0, 0.5, 1].forEach((t) => { const mm = new THREE.Mesh(new THREE.BoxGeometry(ww, 0.08, 0.08), fr); mm.position.set(cx, y2 + h2 * (0.22 + t * 0.56), d / 2 - 0.24); g.add(mm); }); });
+    // 발코니 · 화분
+    box(w * 0.42, 0.18, 1.1 * s, '#6B4A34', -w * 0.22, y2 + 0.25, d / 2 + 0.25, g);
+    for (let k = 0; k < 7; k++) box(0.08, 0.9, 0.08, '#4A3428', -w * 0.43 + k * w * 0.07, y2 + 0.43, d / 2 + 0.75, g); box(w * 0.42, 0.1, 0.1, '#4A3428', -w * 0.22, y2 + 1.3, d / 2 + 0.75, g);
+    [[-w * 0.36, 0], [-w * 0.1, 1]].forEach(([px, j]) => { cyl(0.32, 0.24, 0.45, '#B8613E', px, y2 + 0.43, d / 2 + 0.45, 10, g); const lf = new THREE.Mesh(new THREE.IcosahedronGeometry(0.55 + j * 0.15, 0), mat('#4E9E52', { flatShading: true })); lf.position.set(px, y2 + 1.25 + j * 0.1, d / 2 + 0.45); g.add(lf); });
+    // 아래 처마 (왼쪽 앞) · 기와 큰 지붕
+    const tileRoof = (W2, Hr, L, c, yy, zz = 0) => { const rf = gable(W2, Hr, L, c); rf.rotation.y = Math.PI / 2; rf.position.set(0, yy, zz); g.add(rf);
+      const A = Math.atan2(Hr, W2 / 2), dark = mat(new THREE.Color(c).multiplyScalar(0.72).getStyle());
+      for (let i = 1; i <= 5; i++) { const t = i / 6; [1, -1].forEach((sg) => { const st = new THREE.Mesh(new THREE.BoxGeometry(L + 0.1, 0.12, 0.28), dark); st.position.set(0, yy + Hr * (1 - t) + 0.08, zz + sg * (W2 / 2) * t); st.rotation.x = sg * A; st.castShadow = true; g.add(st); }); }
+      const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, L + 0.4, 10), dark); cap.rotation.z = Math.PI / 2; cap.position.set(0, yy + Hr + 0.05, zz); g.add(cap); };
+    tileRoof(d + 1.6, 3.4 * s, w + 1.4, roof, 0.25 + H);
+    const eave = new THREE.Mesh(new THREE.BoxGeometry(w * 0.55, 0.25, 2.2 * s), mat(roof)); eave.position.set(-w * 0.2, y2 - 0.1, d / 2 + 1.0); eave.rotation.x = 0.42; eave.castShadow = true; g.add(eave);
+    box(1.4 * s, 1.6 * s, 0.9, '#6E7884', w / 2 + 0.2, 0.25 + h1 * 0.55, d / 4, g);   // 실외기
     return g;
   };
   // 공장 · 창고 (둥근 지붕)
@@ -171,7 +196,7 @@ export function mount(host, o) {
   });
   // 빈 블록 — 동네 집 · 공원 · 밭
   [[90, -25], [-30, 25], [30, 25]].forEach(([bx, bz], bi) => {
-    const W2 = ['#FFF6E8', '#FFE3D3', '#E5F1FF', '#F0FFE8', '#FFF0F5'], R2 = ['#E86A5A', '#5D7FBF', '#7A6A5A', '#4FAE6E', '#E8A33C'];
+    const W2 = ['#F4F0E8', '#F2E9DC', '#EEF0EC', '#F6EFE4', '#EFE8E0'], R2 = ['#3F5A7A', '#B8573E', '#4E6E5A', '#4A4E5A', '#7A5A44'];
     for (let i = 0; i < 4; i++) house(bx - 15 + (i % 2) * 30 * 0.66 + (i > 1 ? 4 : 0), bz - 10 + Math.floor(i / 2) * 18, (i % 2 ? Math.PI : 0) + (bi - 1) * 0.1, W2[(i + bi) % 5], R2[(i + bi * 2) % 5], 0.9);
     tree(bx + 18, bz - 12, 1.1); tree(bx + 20, bz + 10, 0.9); tree(bx - 22, bz + 2, 1);
   });
@@ -243,7 +268,7 @@ export function mount(host, o) {
     sun.color.copy(nightK > 0.5 ? C('#9FB4FF') : mix('#FFB37A', '#FFF3DD', elev * 2)); sun.intensity = nightK > 0.5 ? 0.7 : (0.4 + 2.0 * Math.max(0, elev)) * (1 - gloom * 0.6);
     hemi.color.copy(mix('#8EA2DA', '#EAF6FF', day)); hemi.groundColor.copy(mix('#3C4A5E', '#7AA35A', day)); hemi.intensity = (0.95 + 0.25 * day) * (1 - gloom * 0.2);
     seaM.color.copy(mix('#24406E', '#8FD3F4', day)).lerp(C('#7F98AA'), gloom * 0.5);
-    const lit = Math.max(nightK, gloom * 0.5 * (1 - day * 0.6)); winM.emissiveIntensity = 0.9 * nightK; glassM.emissiveIntensity = 0.6 * nightK; lampM.emissiveIntensity = 1.8 * lit; glowM.opacity = 0.75 * lit; storeLight.intensity = 60 * lit; signM.emissiveIntensity = 0.3 + 1.2 * lit; shopWinM.emissiveIntensity = 0.2 + 1.1 * lit;
+    const lit = Math.max(nightK, gloom * 0.5 * (1 - day * 0.6)); winM.emissiveIntensity = 0.25 + 0.95 * nightK; glassM.emissiveIntensity = 0.6 * nightK; lampM.emissiveIntensity = 1.8 * lit; glowM.opacity = 0.75 * lit; storeLight.intensity = 60 * lit; signM.emissiveIntensity = 0.3 + 1.2 * lit; shopWinM.emissiveIntensity = 0.2 + 1.1 * lit;
     cloudM.color.copy(mix('#FFFFFF', isRain() ? '#7E8894' : '#B9C0C8', gloom)).lerp(C('#3A4258'), nightK * 0.7);
     clouds.forEach((c, i) => { c.visible = i < Math.round(1 + WX.cover / 100 * 9); });
     rain.visible = isRain(); snow.visible = isSnow();
@@ -303,11 +328,13 @@ export function mount(host, o) {
   // 이름표 (HTML) — 3D 위치 따라감
   const tags = [];
   const tag = (html, x, y, z, cls = '') => { const d = document.createElement('div'); d.className = cls; d.style.cssText = 'position:absolute;left:0;top:0;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center;z-index:2;pointer-events:none'; d.innerHTML = html; over.appendChild(d); tags.push({ d, p: new THREE.Vector3(x, y, z) }); return d; };
-  Object.entries(o.places).forEach(([key, p]) => {
-    const L0 = LOTS[key]; if (!L0) return; const [bg, fg] = o.tone[p.tone], hgt = key === 'home' ? 30 : L0[2] === 'site' ? 26 : 14;
-    tag(`<div class="${p.tone === 'red' ? 'bob' : ''}" style="margin-bottom:4px;display:flex;flex-direction:column;align-items:center"><span style="max-width:180px;padding:6px 10px;border-radius:14px;background:${bg};color:${fg};font-size:11px;font-weight:800;line-height:1.3;text-align:center;box-shadow:0 4px 12px rgba(40,60,90,.18)">${o.esc(p.msg)}</span><span class="tail" style="background:${bg}"></span></div>
-      ${p.wait ? `<img class="bob" src="${o.img}${p.wait}.webp" alt="기다리는 거래처" style="width:40px;margin-bottom:2px">` : ''}
-      <button type="button" class="pill pc" data-pk="${key}" style="border:0;cursor:pointer;pointer-events:auto;background:${key === 'home' ? '#E8732C' : 'rgba(255,255,255,.96)'};color:${key === 'home' ? '#fff' : '#4A3F3A'};font-size:11px;box-shadow:0 2px 6px rgba(0,0,0,.12)">${o.esc(p.name.replace(/[←↓]/g, '').trim())}</button>`, L0[0], hgt, L0[1] - 4);
+  const placeTag = {};
+  const placeHtml = (key, p) => { const [bg, fg] = o.tone[p.tone] || o.tone.blue; return `${p.msg ? `<div class="${p.tone === 'red' ? 'bob' : ''}" style="margin-bottom:4px;display:flex;flex-direction:column;align-items:center"><span style="max-width:200px;padding:6px 10px;border-radius:14px;background:${bg};color:${fg};font-size:11px;font-weight:800;line-height:1.3;text-align:center;box-shadow:0 4px 12px rgba(40,60,90,.18)">${o.esc(p.msg)}</span><span class="tail" style="background:${bg}"></span></div>` : ''}
+      ${p.wait ? `<img class="bob" src="${o.portrait ? o.portrait(p.wait) : o.img + p.wait + '.webp'}" alt="기다리는 거래처" style="width:46px;margin-bottom:2px">` : ''}
+      <button type="button" class="pill pc" data-pk="${key}" style="border:0;cursor:pointer;pointer-events:auto;background:${key === 'home' ? '#E8732C' : 'rgba(255,255,255,.96)'};color:${key === 'home' ? '#fff' : '#4A3F3A'};font-size:11px;box-shadow:0 2px 6px rgba(0,0,0,.12)">${o.esc(p.name.replace(/[←↓]/g, '').trim())}</button>`; };
+  Object.entries(o.places).forEach(([key, p]) => {   // 말풍선은 처음엔 이름만 — town.js 가 실제 출고 건으로 setPlace
+    const L0 = LOTS[key]; if (!L0) return; const hgt = key === 'home' ? 30 : L0[2] === 'site' ? 26 : 16;
+    placeTag[key] = { d: tag(placeHtml(key, { name: p.name, tone: 'blue' }), L0[0], hgt, L0[1] - 4), name: p.name };
   });
   tag('<span class="pill" style="background:#E8732C;color:#fff;font-size:11px;box-shadow:0 3px 10px rgba(232,115,44,.4);pointer-events:auto;cursor:pointer" data-mail="1">자료 넣기</span>', o.mailPos[0], 9, o.mailPos[2]);
 
@@ -319,7 +346,7 @@ export function mount(host, o) {
   renderer.domElement.addEventListener('pointermove', (e) => { if (e.buttons) return; const k2 = hit(e); if (k2 !== hoverKey) { hoverKey = k2; renderer.domElement.style.cursor = k2 ? 'pointer' : 'grab'; } });
   over.addEventListener('click', (e) => { if (e.target.closest('[data-mail]')) o.onPick('mail'); });
   host.addEventListener('dragover', (e) => e.preventDefault());
-  host.addEventListener('drop', (e) => { e.preventDefault(); const f = [...(e.dataTransfer.files || [])].map((x) => x.name); if (f.length && o.onDrop) o.onDrop(f); });
+  host.addEventListener('drop', (e) => { e.preventDefault(); const f = [...(e.dataTransfer.files || [])]; if (f.length && o.onDrop) o.onDrop(f); });
 
   // 그리기
   const v3 = new THREE.Vector3(), camDir = new THREE.Vector3(), clock = new THREE.Clock(); let alive = true;
@@ -350,6 +377,7 @@ export function mount(host, o) {
   }
   requestAnimationFrame(frame);
   return {
+    setPlace: (key, msg, tone, wait) => { const t = placeTag[key]; if (t) t.d.innerHTML = placeHtml(key, { name: t.name, msg, tone, wait }); },
     addTruck,
     zoom: (f) => { const off = cam.position.clone().sub(ctl.target); off.multiplyScalar(f); const L = off.length(); if (L < ctl.minDistance || L > ctl.maxDistance) return; cam.position.copy(ctl.target).add(off); },
     reset: () => { cam.position.set(92, 108, 138); ctl.target.set(8, 0, 4); },

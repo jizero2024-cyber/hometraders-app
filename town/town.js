@@ -2,7 +2,7 @@
 // 주소 뒤 #/campus · #/office · #/warehouse 로 화면 바뀜. 직원 계정만 (공간 계정 막음)
 import * as S from '/js/store-supabase.js?v=9t1';
 import * as JIM from './jim.js?v=2';
-import * as W3D from './v3d.js?v=11';
+import * as W3D from './v3d.js?v=12';
 import * as O3D from './o3d.js?v=5';
 import { portrait, KINDS } from './kit3d.js?v=3';
 
@@ -156,7 +156,7 @@ function village() {
   stage.appendChild(v);
   // 진짜 3D 마을 (10/29 대표 "진짜 3D로 다시")
   const host = el('<div class="w3host" style="position:fixed;inset:0;z-index:0;background:#BFE3FF"></div>'); document.body.querySelectorAll('.w3host').forEach((n) => n.remove()); document.body.prepend(host);   // 화면 꽉 (10/29 대표 "양옆도 꽉")
-  const W = W3D.mount(host, { alive: () => v.isConnected, places: PLACES, tone: TONE, esc, img: IMG, wf,
+  const W = W3D.mount(host, { alive: () => v.isConnected, portrait, places: PLACES, tone: TONE, esc, img: IMG, wf,
     onPick: (k) => { if (k === 'office') location.hash = '#/office'; else if (k === 'warehouse') location.hash = '#/warehouse'; else if (k === 'mail') v.querySelector('#mail').click(); else openPlace(k); },
     onDrop: (f) => addDrops(f), onWeather: (w) => { v.querySelector('#vwx').textContent = `${w.temp != null ? Math.round(w.temp) + '° ' : ''}${w.label}`; } });
   v.querySelector('#zin').onclick = () => W.zoom(0.75); v.querySelector('#zout').onclick = () => W.zoom(1.33); v.querySelector('#zre').onclick = () => W.reset();
@@ -172,108 +172,77 @@ function village() {
   }
   // 트럭
   const addTruck = (t) => { const [c, c2] = COLORS[t.c % 5]; return W.addTruck({ from: t.from, to: t.to, c, c2, title: `${esc(short(t.from))} <span style="color:${c2}">→</span> ${esc(short(t.to))}`, sub: t.sub, dur: t.dur, delay: t.delay, loop: t.delay < 0 }); };
+  // 거래처 말풍선 = 실제 출고 건 (10/29 대표 "응, 실제로")
+  function placeMsgs(L) {
+    const rows = (L.flow && L.flow.rows) || [], today = (L.flow && L.flow.today) || mdOf(new Date()), tmr = mdOf(new Date(Date.now() + 864e5));
+    const has = (x, k) => (x.steps || []).includes(k), by = {};
+    rows.forEach((x) => { const k = lotOf(x); if (k) (by[k] = by[k] || []).push(x); });
+    const sup = {}; L.today.forEach((x) => { const f = (FROM.find(([re]) => re.test(`${x.from || ''} ${x.memo || ''}`)) || [])[1]; if (f) sup[f] = (sup[f] || 0) + 1; });
+    Object.keys(PLACES).forEach((k) => {
+      if (k === 'home') { W.setPlace(k, `오늘 출고 ${L.shipped.length} / ${L.today.length}${L.needDisp.length ? ` · 배차 요청 ${L.needDisp.length}` : ''}`, L.needDisp.length ? 'amb' : 'ok'); return; }
+      const rs = by[k] || [], nd = rs.filter((x) => has(x, '배차 요청') && [today, tmr].includes(x.day)), sh = rs.filter((x) => x.day === today && (has(x, '배차 완료') || has(x, '출고 완료')));
+      const old = rs.filter((x) => (has(x, '발주') || has(x, '배차 요청')) && (x.md || 0) && x.day < today && !has(x, '배차 완료') && !has(x, '출고 완료'));
+      if (old.length) W.setPlace(k, `기다림 ${old.length}건 · ${old[0].item || old[0].site || ''}`.slice(0, 34), 'red', k === 'anmyeon' ? 'boss2' : 'boss1');
+      else if (nd.length) W.setPlace(k, `배차 요청 ${nd.length} · ${nd[0].day}${nd[0].time ? ' ' + nd[0].time : ''}`, 'amb');
+      else if (sh.length) W.setPlace(k, `오늘 출고 ${sh.length} · ${sh[0].veh || sh[0].site || ''}`.slice(0, 34), 'ok');
+      else if (sup[k]) W.setPlace(k, `오늘 상차 ${sup[k]}`, 'blue');
+      else W.setPlace(k, '');
+    });
+  }
   // 트럭 = 오늘 실제 배차·출고 건만 (10/29 대표 "안 싣고 다니는 차는 없애") — 거래처 이름으로 마을 자리 찾기
-  const LOT = [[/공간/, 'gonggan'], [/한림/, 'hanlim'], [/원익/, 'wonik'], [/우림/, 'woorim'], [/뉴하우징/, 'gunsan'], [/나인/, 'anmyeon'], [/사람사는/, 'cheongdo']];
   const FROM = [[/원익/, 'wonik'], [/한림/, 'hanlim'], [/우림/, 'woorim']];
   live().then((L) => { if (!v.isConnected) return; L.shipped.slice(0, 8).forEach((x, i) => {
-    const to = (LOT.find(([re]) => re.test(x.partner || '')) || [])[1]; if (!to) return;
+    const to = lotOf(x); if (!to) return;
     const from = (FROM.find(([re]) => re.test(`${x.from || ''} ${x.memo || ''}`)) || [])[1] || 'home'; if (from === to) return;
     const done = (x.steps || []).includes('출고 완료');
     addTruck({ from, to, c: i, dur: 50 + i * 7, delay: -(i * 9 + 5), sub: `${done ? '출고 완료' : '배차 완료'} · ${x.site || ''} · ${x.veh || ''} ${x.time || ''}`.replace(/\s+/g, ' ').trim() });
   }); });
-  // 배차 사무실
-  const disp = v.querySelector('#disp');
+  // 배차 사무실 — 실제 배차 요청 건 (출고 흐름과 같은 자료)
+  const disp = v.querySelector('#disp'); let LL = null;
   const drawDisp = () => {
-    v.querySelector('#njobs').textContent = V.jobs.filter((j) => j.st === 'open').length;
-    disp.innerHTML = `<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:#FFF1E6"><img src="${IMG}cat.webp" alt="" style="width:40px"><div><div style="font-size:15px;font-weight:800">배차 사무실</div><div style="font-size:12px;color:#C2551A;font-weight:700">배차 해야 함 ${V.jobs.filter((j) => j.st === 'open').length}</div></div></div>
-      <div style="padding:6px 8px 8px">${V.jobs.map((j) => `<div style="display:flex;align-items:center;gap:8px;padding:8px;border-radius:14px"><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(PLACES[j.to].name.replace(/[←↓]/g, '').trim())}</div><div style="font-size:11px;color:#8A7E77;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">천안 창고 상차 · ${esc(j.item)}</div></div>${j.st === 'open' ? `<button type="button" data-go="${j.id}" style="height:34px;padding:0 12px;border:0;border-radius:11px;background:#E8732C;color:#fff;font-size:13px;font-weight:800;cursor:pointer">배차</button>` : `<span class="pill" style="background:#E6F7EC;color:#1E8E3E">${{ load: '상차 중', drive: '이동 중', drop: '하차 중', done: '도착' }[j.st]}</span>`}</div>`).join('')}</div>`;
+    const nd = LL ? LL.needDisp : []; v.querySelector('#njobs').textContent = nd.length || '';
+    disp.innerHTML = `<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:#FFF1E6"><img src="${portrait('cat')}" alt="" style="width:40px"><div><div style="font-size:15px;font-weight:800">배차 사무실</div><div style="font-size:12px;color:#C2551A;font-weight:700">배차 요청 ${nd.length}</div></div></div>
+      <div class="scroll" style="padding:6px 8px 8px;max-height:420px">${nd.map((x) => `<div style="padding:8px;border-radius:12px"><div style="font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(x.partner)} · ${esc(x.site || '')}</div><div style="font-size:11px;color:#8A7E77;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(x.day)} ${esc(x.time || '')} · ${esc(x.item || '')}</div></div>`).join('') || '<div style="padding:10px;font-size:13px;color:#8A7E77">배차 요청 없음</div>'}
+      <a class="btn or" href="/" target="_blank" rel="noopener" style="margin:6px 4px 2px;height:40px;font-size:13px">출고 흐름 열기 ↗</a></div>`;
   };
-  drawDisp();
   v.querySelector('#dispBtn').onclick = () => { V.dispOpen = !V.dispOpen; disp.style.display = V.dispOpen ? 'block' : 'none'; };
-  disp.onclick = (e) => {
-    const b = e.target.closest('[data-go]'); if (!b) return;
-    const j = V.jobs.find((x) => x.id === b.dataset.go); if (!j || j.st !== 'open') return;
-    const r = W3D.route('home', j.to), km = Math.round(r.L * 1.1), hrs = km / 70, eta = new Date(Date.now() + hrs * 3600e3);
-    const LOAD = 3, DRIVE = Math.max(6, Math.min(18, r.L / 14)), DROP = 3;
-    const t = addTruck({ from: 'home', to: j.to, c: 2 + (Math.random() * 3 | 0), dur: DRIVE, delay: LOAD, sub: `상차 중 · ${j.item}` });
-    const set = (st, sub) => { j.st = st; drawDisp(); t.setSub(sub); };
-    set('load', `상차 중 · ${j.item}`); say(`${PLACES[j.to].name} 배차 넣었어요. 창고에서 상차 중이에요.`);
-    later(LOAD * 1000, () => { set('drive', `이동 중 · ${j.item} · ${hm(eta)} 도착 · ${km}km`); say(`상차 끝, 출발했어요. 약 ${Math.floor(hrs)}시간 ${Math.round((hrs % 1) * 60)}분 걸려요.`); });
-    later((LOAD + DRIVE) * 1000, () => { set('drop', `하차 중 · ${j.item}`); say(`${PLACES[j.to].name} 도착, 하차 중이에요.`); });
-    later((LOAD + DRIVE + DROP) * 1000, () => { set('done', `하차 끝 · ${j.item}`); say(`${PLACES[j.to].name} 하차 끝! 구매·판매 입력할게요.`); setTimeout(() => t.remove(), 4000); });
-  };
-  // 김맥순 대화
+  // 김맥순 대화 — 붙여 넣은 카톡은 실제 자료 넣기로 (15분 빠른 반영이 출고일보에 넣음)
   const chat = v.querySelector('#chat'), chatP = v.querySelector('#chatP'), chatBtn = v.querySelector('#chatBtn');
-  chatBtn.onclick = () => { const o = chatP.style.display !== 'flex'; chatP.style.display = o ? 'flex' : 'none'; chatBtn.classList.toggle('or', o); };
-  const bubble = (html, me) => { chat.appendChild(el(`<div style="align-self:${me ? 'flex-end' : 'flex-start'};max-width:${me ? 290 : 320}px;padding:11px 14px;border-radius:${me ? '18px 18px 6px 18px' : '18px 18px 18px 6px'};background:${me ? '#E8732C' : '#fff'};color:${me ? '#fff' : 'inherit'};font-size:14px;line-height:1.5;white-space:${me ? 'pre-line' : 'normal'};box-shadow:0 1px 3px rgba(0,0,0,.05);animation:rowin .35s ease-out both">${html}</div>`)); chat.scrollTop = chat.scrollHeight; };
+  chatBtn.onclick = () => { const o2 = chatP.style.display !== 'flex'; chatP.style.display = o2 ? 'flex' : 'none'; chatBtn.classList.toggle('or', o2); };
+  const bubble = (html, me) => { chat.appendChild(el(`<div style="align-self:${me ? 'flex-end' : 'flex-start'};max-width:${me ? 290 : 320}px;padding:11px 14px;border-radius:${me ? '18px 18px 6px 18px' : '18px 18px 18px 6px'};background:${me ? '#E8732C' : '#fff'};color:${me ? '#fff' : 'inherit'};font-size:14px;line-height:1.5;white-space:pre-line;box-shadow:0 1px 3px rgba(0,0,0,.05);animation:rowin .35s ease-out both">${html}</div>`)); chat.scrollTop = chat.scrollHeight; };
   const say = (t) => bubble(esc(t));
-  say('이음 톡 보니까 매향리 1.4톤 배차 됐어요. 운반비 13만 현불로 구매 입력할게요.');
-  v.querySelector('#csend').onclick = () => {
-    const ta = v.querySelector('#cin'), t = ta.value.trim(); if (!t) return; ta.value = '';
-    bubble(esc(t), true);
-    setTimeout(() => {
-      bubble(`<div>공간제작소 매향리 건이네요. 지난번엔 이렇게 물어봤어요.</div>
-        <div style="margin-top:8px;display:flex;flex-direction:column;gap:6px;font-size:13px"><div style="display:flex;justify-content:space-between;padding:8px 10px;border-radius:12px;background:#F6F2EE"><span>원익큐브 · 10/27 견적</span><b>1,382,000</b></div><div style="display:flex;justify-content:space-between;padding:8px 10px;border-radius:12px;background:#F6F2EE"><span>한림 · 10/21 견적</span><b>1,419,000</b></div></div>
-        <div style="margin-top:10px;font-weight:700">운송비까지 보면</div>
-        <div style="margin-top:6px;display:flex;flex-direction:column;gap:6px;font-size:13px"><div style="display:flex;justify-content:space-between;padding:8px 10px;border-radius:12px;background:#FFF1E6"><span><b style="color:#C2551A">원익 여주 → 매향리</b><br>1톤 이음 지난 기록</span><b style="color:#C2551A">11만</b></div><div style="display:flex;justify-content:space-between;padding:8px 10px;border-radius:12px;background:#F6F2EE"><span><b>한림 청주 → 매향리</b><br>1톤 추정</span><b>14만</b></div></div>
-        <div style="margin-top:10px">원익이 합계 <b>6만 원</b> 싸요.</div>
-        <div style="display:flex;gap:8px;margin-top:10px"><button type="button" data-buy="원익" style="height:42px;padding:0 14px;border:0;border-radius:13px;background:#E8732C;color:#fff;font-weight:800;cursor:pointer">원익에서 구매</button><button type="button" data-buy="한림" style="height:42px;padding:0 14px;border:0;border-radius:13px;background:#F1ECE7;color:#4A3F3A;font-weight:700;cursor:pointer">한림에서 구매</button></div>`);
-    }, 600);
+  v.querySelector('#cin').value = '';
+  v.querySelector('#csend').onclick = async () => {
+    const ta = v.querySelector('#cin'), t = ta.value.trim(); if (!t) return; ta.value = ''; bubble(esc(t), true);
+    const r = await putInbox([t]); say(r.err ? `못 넣었어요 — ${r.err}` : '자료 넣기에 넣었어요. 15분 안에 출고일보에 반영돼요.'); load();
   };
-  chat.onclick = (e) => {
-    const b = e.target.closest('[data-buy]'); if (!b) return;
-    b.parentElement.remove(); const f = b.dataset.buy;
-    bubble(`${esc(f)}에서 구매할게`, true);
-    setTimeout(() => bubble(`<div>배차 요청 글이에요. 배차 사무실에도 올려 뒀어요.</div><div style="margin-top:8px;padding:10px 12px;border-radius:12px;background:#F6F2EE;font-size:13px;line-height:1.6;white-space:pre-line">배차 요청드립니다.
-10/30(금) 오전 ${f === '원익' ? '여주 원익큐브' : '청주 한림'} 상차
-→ 화성 우정읍 매향리 989 (공간제작소)
-1톤 · 유도모음통 15BOX 외 · 현불</div>`), 500);
-    V.jobs.push({ id: 'n' + Date.now(), to: 'gonggan', item: '유도모음통 15BOX 외', st: 'open' }); drawDisp();
-  };
-  // 자료 넣기
+  // 자료 넣기 (우체통) — 실제로 올림
   const mail = v.querySelector('#mail');
-  const ndrop = () => { v.querySelector('#ndrop').textContent = V.drops.filter((d) => d.st < 2).length || ''; };
-  ndrop();
-  const addDrops = (names) => {
-    const t = hm(); const items = names.map((n) => ({ name: n, t, st: 0 })); V.drops.unshift(...items); ndrop(); drawDrop();
-    say(`자료 ${items.length}개 받았어요. 읽고 출고 건에 넣을게요.`);
-    later(1500, () => { items.forEach((x) => { x.st = 1; }); drawDrop(); ndrop(); });
-    later(4500, () => { items.forEach((x) => { x.st = 2; }); drawDrop(); ndrop(); });
-  };
-  mail.ondragover = (e) => { e.preventDefault(); mail.style.transform = 'scale(1.18)'; };
-  mail.ondragleave = () => { mail.style.transform = ''; };
-  mail.ondrop = (e) => { e.preventDefault(); mail.style.transform = ''; const f = [...(e.dataTransfer.files || [])].map((x) => x.name); if (f.length) addDrops(f); };
-  let modal = null;
-  const drawDrop = () => {
-    if (!modal) return;
-    const kind = (n) => (/\.(png|jpe?g|heic|webp)$/i.test(n) ? ['IMG', '#E6F0FF', '#2F6BD6'] : /\.pdf$/i.test(n) ? ['PDF', '#FFE9E6', '#D93025'] : /\.(xlsx?|csv)$/i.test(n) ? ['XLS', '#E6F7EC', '#1E8E3E'] : ['TXT', '#F2ECE6', '#6B5E55']);
-    modal.querySelector('#dlist').innerHTML = V.drops.map((d) => { const [k, bg, fg] = kind(d.name), st = [['받음', '#FFF1E6', '#C2551A'], ['김맥순 읽는 중', '#E6F0FF', '#2F6BD6'], ['출고 건에 반영', '#E6F7EC', '#1E8E3E']][d.st];
-      return `<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:14px;background:#FBF8F5"><span style="width:34px;height:34px;border-radius:10px;background:${bg};color:${fg};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex:none">${k}</span><span style="flex:1;min-width:0"><span style="display:block;font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(d.name)}</span><span style="display:block;font-size:11px;color:#8A7E77">${d.t}</span></span><span class="pill" style="background:${st[1]};color:${st[2]}">${st[0]}</span></div>`; }).join('');
-  };
+  const addDrops = async (files) => { const r = await putInbox(files); say(r.err ? `못 넣었어요 — ${r.err}` : `자료 ${r.ok}개 넣었어요. 읽고 출고 건에 넣을게요.`); load(); };
   mail.onclick = () => {
-    modal = el(`<div class="modal"><div class="card" style="width:620px;border-radius:28px;padding:22px 24px;display:flex;flex-direction:column;gap:14px">
-      <div style="display:flex;align-items:center;gap:12px"><div style="flex:1"><div style="font-size:20px;font-weight:800">자료 넣기</div><div style="font-size:12px;color:#8A7E77">카톡 · 사진 · PDF · 엑셀 · 명세서</div></div><button type="button" id="mx" aria-label="닫기" style="width:40px;height:40px;border:0;border-radius:12px;background:#F4EFEA;font-size:18px;cursor:pointer">✕</button></div>
-      <label id="zone" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;height:170px;border:2.5px dashed #EAD9C9;border-radius:22px;background:#FFFBF7;cursor:pointer;transition:all .2s">
-        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#E8732C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
-        <span style="font-size:16px;font-weight:800;color:#4A3F3A">여기에 끌어다 놓기</span><span style="font-size:13px;color:#8A7E77">또는 눌러서 파일 고르기</span>
-        <input id="fin" type="file" multiple style="display:none"></label>
-      <div style="display:flex;gap:8px;align-items:flex-end"><textarea id="dt" rows="2" placeholder="카톡 내용 붙여 넣기" aria-label="카톡 내용 붙여 넣기" style="flex:1;resize:none;border:1.5px solid #F0E6DD;border-radius:14px;padding:10px 12px;font:inherit;font-size:13px;outline:none"></textarea><button type="button" id="dadd" class="btn or" style="height:48px">넣기</button></div>
-      <div id="dlist" class="scroll" style="display:flex;flex-direction:column;gap:6px;max-height:200px"></div></div></div>`);
-    v.appendChild(modal); drawDrop();
-    const zone = modal.querySelector('#zone');
-    modal.querySelector('#mx').onclick = () => { modal.remove(); modal = null; };
-    modal.onclick = (e) => { if (e.target === modal) { modal.remove(); modal = null; } };
-    zone.ondragover = (e) => { e.preventDefault(); zone.style.borderColor = '#E8732C'; zone.style.background = '#FFF1E6'; };
-    zone.ondragleave = () => { zone.style.borderColor = '#EAD9C9'; zone.style.background = '#FFFBF7'; };
-    zone.ondrop = (e) => { e.preventDefault(); zone.ondragleave(); const f = [...(e.dataTransfer.files || [])].map((x) => x.name); if (f.length) addDrops(f); };
-    modal.querySelector('#fin').onchange = (e) => { const f = [...(e.target.files || [])].map((x) => x.name); if (f.length) addDrops(f); e.target.value = ''; };
-    modal.querySelector('#dadd').onclick = () => { const ta = modal.querySelector('#dt'), t = ta.value.trim(); if (!t) return; ta.value = ''; addDrops([t.split('\n')[0].slice(0, 40) + ' (붙여넣기)']); };
+    const st = { wait: ['받음', '#C2551A'], got: ['읽는 중', '#2F7BF6'], done: ['반영', '#1E8E3E'], check: ['확인 필요', '#B07A00'] };
+    const m = el(`<div class="modal"><div class="card" style="width:600px;border-radius:28px;padding:22px 24px;display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:center;gap:12px"><div style="flex:1"><div style="font-size:20px;font-weight:800">자료 넣기</div><div style="font-size:12px;color:#8A7E77">카톡 · 사진 · PDF · 엑셀 · 명세서</div></div><button type="button" class="mx" aria-label="닫기" style="width:40px;height:40px;border:0;border-radius:12px;background:#F4EFEA;font-size:18px;cursor:pointer">✕</button></div>
+      <label class="zone" style="display:flex;align-items:center;justify-content:center;height:130px;border:2.5px dashed #EAD9C9;border-radius:22px;background:#FFFBF7;cursor:pointer;font-size:16px;font-weight:800;color:#4A3F3A">여기에 끌어다 놓기<input type="file" multiple style="display:none"></label>
+      <div style="display:flex;gap:8px;align-items:flex-end"><textarea rows="2" placeholder="카톡 내용 붙여 넣기" style="flex:1;resize:none;border:1.5px solid #F0E6DD;border-radius:14px;padding:10px 12px;font:inherit;font-size:13px;outline:none"></textarea><button type="button" class="btn or dadd" style="height:48px">넣기</button></div>
+      <div class="dmsg" style="font-size:12px;color:#8A7E77"></div>
+      <div class="scroll" style="display:flex;flex-direction:column;gap:6px;max-height:220px">${(LL ? LL.inbox : []).slice(0, 12).map((x) => prow(`${esc(x.name || '')} <span style="color:#8A7E77">${esc(x.created_by || '')} ${tOf(x.created_at)}</span>`, (st[x.status] || [x.status])[0], `color:${(st[x.status] || [0, '#8A7E77'])[1]}`)).join('')}</div></div></div>`);
+    v.appendChild(m);
+    const go = async (its) => { m.querySelector('.dmsg').textContent = '올리는 중…'; const r = await putInbox(its); m.querySelector('.dmsg').textContent = r.err ? `못 넣었어요 — ${r.err}` : `${r.ok}건 넣었어요`; load(); };
+    m.onclick = (e) => { if (e.target === m || e.target.closest('.mx')) m.remove(); };
+    const z = m.querySelector('.zone'); z.ondragover = (e) => { e.preventDefault(); z.style.borderColor = '#E8732C'; }; z.ondragleave = () => { z.style.borderColor = '#EAD9C9'; }; z.ondrop = (e) => { e.preventDefault(); z.ondragleave(); go([...(e.dataTransfer.files || [])]); };
+    m.querySelector('input[type=file]').onchange = (e) => go([...(e.target.files || [])]);
+    m.querySelector('.dadd').onclick = () => { const t = m.querySelector('textarea').value.trim(); if (t) go([t]); };
   };
-  // 시계 · 김맥순 말
-  const lines = ['배차 사무실에서 배차 누르면 트럭이 출발해요!', '공간제작소 소장님이 발주 3일째 기다리고 있어요.', '한림 트럭이 군산으로 가는 중이에요.', '오늘 출고 11건 끝났어요. 저녁에 보고할게요.'];
-  let li = 0; const tick = () => { const n = new Date(); v.querySelector('#vclock').textContent = hm(n); v.querySelector('#vdate').textContent = `${n.getMonth() + 1}월 ${n.getDate()}일 ${'일월화수목금토'[n.getDay()]}요일`; };
+  // 시계 · 김맥순 말 — 실제 숫자로
+  let lines = ['자료 불러오는 중이에요.'], li = 0;
+  const tick = () => { const n = new Date(); v.querySelector('#vclock').textContent = hm(n); v.querySelector('#vdate').textContent = `${n.getMonth() + 1}월 ${n.getDate()}일 ${'일월화수목금토'[n.getDay()]}요일`; };
   const say2 = () => { v.querySelector('#kbub').textContent = lines[li++ % lines.length]; };
-  tick(); say2(); every(20000, tick); every(4200, say2);
+  const load = () => live().then((L) => { if (!v.isConnected) return; LL = L; drawDisp(); placeMsgs(L);
+    const bad = ((L.ai && L.ai.workers) || []).filter((w) => w.st === 'bad');
+    lines = [`오늘 출고 ${L.shipped.length} / ${L.today.length}건이에요.`, L.needDisp.length ? `배차 요청 ${L.needDisp.length}건 남았어요.` : '배차 요청은 다 잡혔어요.', L.checks.length ? `확인 칠판에 전표 ${L.checks.length}건 있어요.` : '확인할 전표 없어요.', ...bad.map((w) => `${w.who}: ${w.note}`), L.unpaid.length ? `기사님 운임 미송금 ${L.unpaid.length}건이에요.` : ''].filter(Boolean); });
+  say('카톡을 붙여 넣으면 자료 넣기에 넣어요. 15분 안에 출고일보에 반영돼요.');
+  tick(); say2(); load(); every(20000, tick); every(4200, say2); every(60000, load);
 }
 
 // ── 단지 ───────────────────────────────────────────────
@@ -351,6 +320,12 @@ const AI = [   // 실제로 돌아가는 AI 작업만. kind: task = 할 일 0 �
 const PAMPH = ['표지', '제품 소개', '부속자재', '시공 순서', '기능 상세', '뒷표지 주소', '인쇄소 보내기'];
 const mdOf = (d) => `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
 const tOf = (iso) => (iso ? String(iso).slice(11, 16) : '');
+function lotOf(x) {   // 출고 건 → 마을 자리 (거래처 + 현장 이름)
+  const p = x.partner || '', t = `${x.site_full || ''} ${x.site || ''} ${x.item || ''}`;
+  if (/공간/.test(p)) return /서생|울산/.test(t) ? 'seosaeng' : /순천|낙안/.test(t) ? 'suncheon' : 'gonggan';
+  if (/뉴하우징/.test(p)) return /파주/.test(t) ? 'paju' : 'gunsan';
+  return [[/한림/, 'hanlim'], [/원익/, 'wonik'], [/우림/, 'woorim'], [/나인/, 'anmyeon'], [/사람사는/, 'cheongdo']].reduce((a, [re, k]) => a || (re.test(p) ? k : ''), '') || '';
+}
 async function live() {
   const r = await Promise.allSettled([S.getTownAI(), S.getFlowBoard(), S.getFlowMarks(), S.getFareUnpaid(), S.listSongjang(), S.getGongganWaitCount(), S.getTownInbox(), S.getTownChecks()]);
   const g = (i, d) => (r[i].status === 'fulfilled' && r[i].value != null ? r[i].value : d);
@@ -383,6 +358,16 @@ async function live() {
 const tagHtml = (who, line, st, n) => `<div style="display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:#fff;box-shadow:0 3px 12px rgba(30,40,60,.2);font:800 11px Pretendard,sans-serif;color:#4A3F3A;white-space:nowrap"><span style="width:8px;height:8px;border-radius:50%;background:${O3D.DOT[st] || O3D.DOT.ok}"></span>${esc(who)}<span style="font-weight:600;color:#8A7E77">${esc(line)}</span>${n ? `<span style="padding:1px 7px;border-radius:999px;background:#FF453A;color:#fff">${n}</span>` : ''}</div>`;
 const objHtml = (t, n, c = '#E8732C') => `<div style="display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:12px;background:#FFF6D8;box-shadow:0 3px 12px rgba(30,40,60,.18);font:800 11px Pretendard,sans-serif;color:#7A5A00;white-space:nowrap">${esc(t)}${n != null ? `<span style="padding:1px 7px;border-radius:999px;background:${c};color:#fff">${n}</span>` : ''}</div>`;
 const newId = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+async function putInbox(its) {   // 자료 넣기 실제 올리기 — 첫 화면 자료 넣기와 같은 꼴 (site_inbox wait)
+  let ok = 0, err = '';
+  for (const it of its) {
+    const row = { id: newId(), created_by: ME, status: 'wait' };
+    if (typeof it === 'string') Object.assign(row, { kind: 'text', name: it.trim().split('\n')[0].slice(0, 60), body: it });
+    else { if (it.size > 8e6) { err = `${it.name}: 8MB 넘음`; continue; } const data = await new Promise((r2) => { const fr = new FileReader(); fr.onload = () => r2(fr.result); fr.readAsDataURL(it); }); Object.assign(row, { kind: 'file', name: it.name, mime: it.type, data }); }
+    const e = await S.addInbox(row); if (e) err = e; else ok += 1;
+  }
+  return { ok, err };
+}
 function host3d(bg) { document.body.querySelectorAll('.w3host').forEach((n) => n.remove()); const h = el(`<div class="w3host" style="position:fixed;inset:0;z-index:0;background:${bg}"></div>`); document.body.prepend(h); return h; }
 function panelBox(v) {
   const p = el('<div class="card pnl" style="position:absolute;right:24px;top:84px;bottom:24px;width:400px;border-radius:26px;display:none;flex-direction:column;overflow:hidden;z-index:8"><div style="display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid #F3EEE9"><div style="flex:1"><div class="pt" style="font-size:18px;font-weight:800"></div><div class="ps" style="font-size:12px;color:#8A7E77"></div></div><button type="button" class="px" aria-label="닫기" style="width:38px;height:38px;border:0;border-radius:12px;background:#F4EFEA;font-size:17px;cursor:pointer">✕</button></div><div class="pb scroll" style="flex:1;padding:14px 18px;display:flex;flex-direction:column;gap:8px"></div></div>');
