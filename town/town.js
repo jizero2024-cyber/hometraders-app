@@ -474,21 +474,23 @@ function office() {
     '고슴': '공간 전표 3장 올렸어요', '도토리': '명세표 5장 뽑았어요', '꼬북': '오웬스 승인원 묶었어요', '펭송': '송장 3건 보냈어요', '이음이': '매향리 · 서생 배차 잡았어요', '토깽': '내일 아침 공지 준비 끝', '눈썰미': '명세서 7장 읽었어요', '받아쓰기': '통화 12건 요약했어요', '그림이': '실리콘 박스 시안 3개' };
   const TOSS = [['김맥순', '콩알', '우림 구매 날짜 확인해줘'], ['이음이', '수달', '서생 정소장 운임 보내줘'], ['뚝딱', '도토리', '견적 그대로 명세표로!'], ['눈썰미', '콩알', '원익 명세서 7장 입력 부탁'], ['토깽', '펭송', '청주 송장 링크 다시 보내줘']];
   const fnum = (f) => +String(f).replace(/\D/g, '') || 1;
-  const spots = STAFF.map((s, i) => (i < 8 ? [170 + i * 56, 726] : [200 + (i - 8) * 62, 756]));
+  const MSEAT = [[323, 596, 1], [286, 602, 1], [360, 601, 1], [292, 634, 1], [356, 633, 1], [418, 614, 1], [442, 614, 1], [466, 614, 1],
+    [248, 646, 0], [400, 648, 0], [228, 616, 0], [270, 658, 0], [330, 662, 0], [386, 660, 0]];   // 1층 회의 테이블 의자 5 · 소파 3 · 둘러서기 (x, y, 앉음)
+  const spots = STAFF.map((s, i) => MSEAT[i % MSEAT.length]);
   let meeting = false;
-  v.querySelector('#meet').onclick = () => {
+  const startMeeting = () => {
     if (meeting) return; meeting = true; clearInterval(walkT); const mb = v.querySelector('#meet'); mb.textContent = '회의 중…';
     const ppl = STAFF.map((s, i) => {
       const seat = seats[i], sx = parseFloat(seat.style.left), sy = parseFloat(seat.style.top), [tx, ty] = spots[i];
       seat.style.visibility = 'hidden'; v.querySelectorAll('.tag').forEach((t) => { t.style.visibility = 'hidden'; });
-      const path = REST[s.name] ? `M ${sx} ${sy} L ${tx} ${ty}` : `M ${sx} ${sy} L 470 ${F[fnum(s.floor)]} L 516 737 L ${tx} ${ty}`;
+      const path = REST[s.name] ? `M ${sx} ${sy} L 330 690 L ${tx} ${ty}` : `M ${sx} ${sy} L 470 ${F[fnum(s.floor)]} L 500 ${F[1]} L ${tx} ${ty}`;
       walker(bld, { name: s.name, av: s.av, c: s.c, say: '회의 가요', path, size: 32, dur: 6 });
       return { s, i, tx, ty };
     });
     const seated = [];
-    later(6100, () => { ppl.forEach((p) => { const n = sprite(bld, { av: p.s.av, name: p.s.name, x: p.tx, y: p.ty, size: 32, act: 'nod' }); sitN(n, p.s.av); seated.push(n); }); ob.style.display = 'none'; });
+    later(6100, () => { ppl.forEach((p) => { const n = sprite(bld, { av: p.s.av, name: p.s.name, x: p.tx, y: p.ty, size: 32, act: 'nod' }); if (spots[p.i][2]) sitN(n, p.s.av); seated.push(n); }); ob.style.display = 'none'; });
     const stand = (p, k = 0, flip = 1) => { const n = seated[ppl.indexOf(p)]; if (n) upN(n, p.s.av, k, flip); return n; };
-    const sitp = (p) => { const n = seated[ppl.indexOf(p)]; if (n) sitN(n, p.s.av); };
+    const sitp = (p) => { const n = seated[ppl.indexOf(p)]; if (!n) return; if (spots[p.i][2]) sitN(n, p.s.av); else { n.classList.remove('up'); frame(n, p.s.av, 0); } };
     const rb = el('<div class="bub" style="display:none"></div>'); bld.appendChild(rb);
     const sayAt = (p, txt, c) => { rb.style.display = ''; rb.style.left = p.tx + 'px'; rb.style.top = (p.ty - 36) + 'px'; rb.innerHTML = `<div style="max-width:240px;padding:8px 12px;border-radius:14px;background:#fff;box-shadow:0 8px 20px rgba(30,60,110,.22);font-size:12px;line-height:1.4"><b style="color:${c}">${esc(txt[0])}</b> ${esc(txt[1])}</div><div class="tail" style="background:#fff"></div>`; rb.style.animation = 'none'; void rb.offsetWidth; rb.style.animation = ''; };
     let t0 = 6800;
@@ -516,10 +518,41 @@ function office() {
     });
     later(t0, () => {
       rb.remove(); seated.forEach((n) => n.remove()); ob.style.display = '';
-      ppl.forEach((p) => { const seat = seats[p.i], sx = parseFloat(seat.style.left), sy = parseFloat(seat.style.top); const path = REST[p.s.name] ? `M ${p.tx} ${p.ty} L ${sx} ${sy}` : `M ${p.tx} ${p.ty} L 516 737 L 470 ${F[fnum(p.s.floor)]} L ${sx} ${sy}`; walker(bld, { name: p.s.name, av: p.s.av, c: p.s.c, say: '자리로', path, size: 32, dur: 6 }); });
+      ppl.forEach((p) => { const seat = seats[p.i], sx = parseFloat(seat.style.left), sy = parseFloat(seat.style.top); const path = REST[p.s.name] ? `M ${p.tx} ${p.ty} L 330 690 L ${sx} ${sy}` : `M ${p.tx} ${p.ty} L 500 ${F[1]} L 470 ${F[fnum(p.s.floor)]} L ${sx} ${sy}`; walker(bld, { name: p.s.name, av: p.s.av, c: p.s.c, say: '자리로', path, size: 32, dur: 6 }); });
       later(6100, () => { seats.forEach((n) => { n.style.visibility = ''; }); v.querySelectorAll('.tag').forEach((t) => { t.style.visibility = ''; }); meeting = false; mb.textContent = '회의 소집'; every(9000, go); });
     });
   };
+  v.querySelector('#meet').onclick = startMeeting;
+  // 눌러서 쓰는 곳 — 회의 테이블 = 회의, 빈백 · 해먹 · 와인바 · 소파 = 가서 앉기
+  const SPOTS = [
+    { k: '회의 테이블', x: 262, y: 568, w: 124, h: 76, go: startMeeting },
+    { k: '빈백', x: 92, y: 690, w: 64, h: 52, at: [122, 728, 1] }, { k: '빈백', x: 164, y: 690, w: 62, h: 52, at: [192, 728, 1] },
+    { k: '해먹', x: 280, y: 690, w: 100, h: 34, at: [330, 712, 1] }, { k: '소파', x: 392, y: 584, w: 96, h: 40, at: [440, 614, 1] },
+    { k: '와인바', x: 480, y: 640, w: 110, h: 66, at: [520, 694, 1] }, { k: '마당 테이블', x: 428, y: 690, w: 80, h: 46, at: [448, 722, 1] },
+  ];
+  const busy = new Set();
+  SPOTS.forEach((p) => {
+    const b = el(`<button type="button" class="hot use" aria-label="${p.k}" style="left:${p.x}px;top:${p.y}px;width:${p.w}px;height:${p.h}px;border:0;background:transparent;cursor:pointer;z-index:4"><span class="pill" style="position:absolute;left:50%;top:-8px;transform:translate(-50%,-100%);background:#fff;color:#4A3F3A;font-size:11px;box-shadow:0 3px 10px rgba(0,0,0,.12)">${p.k}</span></button>`);
+    bld.appendChild(b);
+    b.onclick = () => {
+      if (p.go) return p.go();
+      if (meeting || busy.has(p.k + p.x)) return;
+      const cand = STAFF.map((s, i) => i).filter((i) => seats[i].style.visibility !== 'hidden' && !REST[STAFF[i].name]); if (!cand.length) return;
+      const i = cand[Math.floor(Math.random() * cand.length)], s = STAFF[i], seat = seats[i], sx = parseFloat(seat.style.left), sy = parseFloat(seat.style.top), [tx, ty] = p.at;
+      busy.add(p.k + p.x); seat.style.visibility = 'hidden';
+      const tag = v.querySelector(`.tag[data-i="${i}"]`); if (tag) tag.style.visibility = 'hidden';
+      const there = `M ${sx} ${sy} L 470 ${F[fnum(s.floor)]} L 500 ${F[1]} L ${p.y > 660 ? '330 690 L ' : ''}${tx} ${ty}`;
+      walker(bld, { name: s.name, av: s.av, c: s.c, say: `${p.k} 가요`, path: there, size: 32, dur: 6 });
+      later(6100, () => {
+        const n = sprite(bld, { av: s.av, name: s.name, x: tx, y: ty, size: 32, act: p.k === '와인바' ? 'sway' : 'nap', fx: p.k === '와인바' ? 'cup' : '' }); sitN(n, s.av);
+        later(8000, () => {
+          upN(n, s.av, 0); later(500, () => { n.remove(); const back = 'M ' + there.replace(/^M\s*/, '').split(' L ').reverse().join(' L ');
+            walker(bld, { name: s.name, av: s.av, c: s.c, say: '자리로', path: back, size: 32, dur: 6 });
+            later(6100, () => { seat.style.visibility = ''; if (tag) tag.style.visibility = ''; busy.delete(p.k + p.x); }); });
+        });
+      });
+    };
+  });
 }
 
 // ── 창고 ───────────────────────────────────────────────

@@ -115,3 +115,5 @@ button { font: inherit; }
 @keyframes flock { from { transform: translateX(-120px) } to { transform: translateX(1600px) } }
 @keyframes flap { from { transform: scaleY(1) } to { transform: scaleY(-.6) } }
 .flock { position: absolute; left: 0; animation: flock linear both; }
+.hot.use .pill { opacity: 0; transition: opacity .2s; }
+.hot.use:hover .pill, .hot.use:focus-visible .pill { opacity: 1; }
