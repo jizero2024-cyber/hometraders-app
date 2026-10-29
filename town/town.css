@@ -117,3 +117,12 @@ button { font: inherit; }
 .flock { position: absolute; left: 0; animation: flock linear both; }
 .hot.use .pill { opacity: 0; transition: opacity .2s; }
 .hot.use:hover .pill, .hot.use:focus-visible .pill { opacity: 1; }
+
+/* 3D 마을 — 캔버스는 창 전체 뒤에, 판(stage)은 버튼만 눌림 (10/29) */
+#fit { z-index: 1; pointer-events: none; }
+#stage > .v:not(.v3) { pointer-events: auto; }
+.v3 { pointer-events: none; }
+.v3 .btn, .v3 .card, .v3 button, .v3 a, .v3 textarea, .v3 input, .v3 label { pointer-events: auto; }
+.v3 .card.np, .v3 [style*="pointer-events:none"] .card { pointer-events: none; }
+.v3 .modal { pointer-events: auto; }
+#stage > div:not(.v) a, #stage > div:not(.v) button { pointer-events: auto; }

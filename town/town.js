@@ -2,7 +2,7 @@
 // 주소 뒤 #/campus · #/office · #/warehouse 로 화면 바뀜. 직원 계정만 (공간 계정 막음)
 import * as S from '/js/store-supabase.js?v=9';
 import * as JIM from './jim.js?v=2';
-import * as W3D from './v3d.js?v=4';
+import * as W3D from './v3d.js?v=5';
 
 const stage = document.getElementById('stage');
 const IMG = './img/';
@@ -120,8 +120,7 @@ const V = { jobs: [
 ], dispOpen: false, drops: [{ name: '원익_거래명세표(양산).png', t: '08:55', st: 2 }, { name: '이음물류_대화내역.txt', t: '08:58', st: 2 }], log: [] };
 
 function village() {
-  const v = el(`<div class="v" style="background:#BFE3FF">
-    <div id="w3d" style="position:absolute;inset:0"></div>
+  const v = el(`<div class="v v3">
     <button id="mail" type="button" aria-label="자료 넣기" style="display:none"><b id="ndrop"></b></button>
     <div style="position:absolute;right:24px;bottom:24px;display:flex;flex-direction:column;gap:6px;z-index:8"><button id="zin" type="button" class="btn" style="width:46px;justify-content:center;padding:0;font-size:22px">+</button><button id="zout" type="button" class="btn" style="width:46px;justify-content:center;padding:0;font-size:22px">−</button><button id="zre" type="button" class="btn" style="width:46px;justify-content:center;padding:0;font-size:12px">전체</button></div>
     <div style="position:absolute;left:20px;top:20px;display:flex;gap:10px;align-items:center;z-index:8">
@@ -154,7 +153,8 @@ function village() {
   </div>`);
   stage.appendChild(v);
   // 진짜 3D 마을 (10/29 대표 "진짜 3D로 다시")
-  const W = W3D.mount(v.querySelector('#w3d'), { places: PLACES, tone: TONE, esc, img: IMG, wf,
+  const host = el('<div class="w3host" style="position:fixed;inset:0;z-index:0;background:#BFE3FF"></div>'); document.body.querySelectorAll('.w3host').forEach((n) => n.remove()); document.body.prepend(host);   // 화면 꽉 (10/29 대표 "양옆도 꽉")
+  const W = W3D.mount(host, { alive: () => v.isConnected, places: PLACES, tone: TONE, esc, img: IMG, wf,
     onPick: (k) => { if (k === 'office') location.hash = '#/office'; else if (k === 'warehouse') location.hash = '#/warehouse'; else if (k === 'mail') v.querySelector('#mail').click(); else openPlace(k); },
     onDrop: (f) => addDrops(f), onWeather: (w) => { v.querySelector('#vwx').textContent = `${w.temp != null ? Math.round(w.temp) + '° ' : ''}${w.label}`; } });
   v.querySelector('#zin').onclick = () => W.zoom(0.75); v.querySelector('#zout').onclick = () => W.zoom(1.33); v.querySelector('#zre').onclick = () => W.reset();
