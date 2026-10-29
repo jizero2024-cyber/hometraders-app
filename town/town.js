@@ -470,7 +470,7 @@ function warehouse() {
     // 오늘 천안창고에서 실은 차만 — 원익·한림·우림 등 매입처 상차는 뺌 · 번호판·차종은 출고 건 차량 칸(이음 배차안내)에서
     const plateOf = (t) => ((t || '').match(/([가-힣]{2})?\s?\d{2,3}\s?[가-힣]\s?\d{4}/) || [''])[0].replace(/\s/g, '');
     const typeOf = (t) => (/다마스|라보/.test(t) ? 'damas' : /5\s*톤\s*축|5톤축|축차/.test(t) ? 'ax5' : /윙|11\s*톤|25\s*톤|츄레라/.test(t) ? 'wing' : /2\.5\s*톤|3\.5\s*톤|5\s*톤/.test(t) ? 'mid' : /1\.4\s*톤/.test(t) ? 'l14' : 'lt');
-    const drivers = L.shipped.filter((x) => !/원익|한림|우림|매입창고|경동|직송/.test(`${x.from || ''} ${x.veh || ''}`)).map((x) => { const t = `${x.veh || ''} ${x.memo || ''}`; return { key: x.case || x.no, row: x, plate: plateOf(t), type: typeOf(t), label: `${x.partner || ''} ${x.site || ''}`.trim().slice(0, 14) }; });
+    const drivers = L.shipped.filter((x) => /천안|신갈|직산/.test(`${x.veh || ''} ${x.memo || ''}`) || !/원익|한림|우림|매입창고|경동|직송/.test(`${x.from || ''} ${x.veh || ''}`)).map((x) => { const t = `${x.veh || ''} ${x.memo || ''}`; return { key: x.case || x.no, row: x, plate: plateOf(t), type: typeOf(t), label: `${(t.match(/(츄레라|다마스|라보)?\s*([가-힣]{2,3})\s*(소장|기사)/) || [''])[0] || x.partner || ''} → ${x.site || ''}`.trim().slice(0, 20) }; });
     const unpaid = (L.unpaid || []).map((u) => ({ id: u.id, driver: u.driver, amount: u.amount, job: u.job }));
     const WH = O3D.warehouse(host3d('#E6E2DA'), { alive: () => v.isConnected, items, hw, drivers, unpaid, onPick: (k) => {
       if (k.startsWith('item:h')) { const h = hw.find((y) => y.key === k.slice(5)); if (!h) return; P.show(h.it.name, `${h.it.warehouse || ''} · 사이트 재고 장부 (실사 없음)`, prow('장부 재고', `${Math.floor(h.qty)}${h.unit}`) + prow('출고 예정 · 배차 완료', `${Math.floor(S.reservedQty(h.it))}${h.unit}`) + prow('규격', esc(h.it.spec || '—'))); return; }
