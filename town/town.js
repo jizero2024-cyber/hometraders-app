@@ -1,6 +1,7 @@
 // 홈트 마을 /town (10/29 대표 "게임처럼 · 디자인만 먼저") — 마을 · 단지 · 사무실 · 창고 네 화면, 아직 예시 자료
 // 주소 뒤 #/campus · #/office · #/warehouse 로 화면 바뀜. 직원 계정만 (공간 계정 막음)
 import * as S from '/js/store-supabase.js?v=9';
+import * as JIM from './jim.js?v=1';
 
 const stage = document.getElementById('stage');
 const IMG = './img/';
@@ -99,6 +100,7 @@ function village() {
       <button id="dispBtn" class="btn" type="button" style="height:48px"><img src="${IMG}cat.webp" alt="">배차 사무실 <b id="njobs"></b></button>
       <a class="btn or" href="#/campus" style="height:48px">우리 단지</a>
       <button type="button" class="btn boardBtn" style="height:48px;background:#FFE680;color:#5A4A00">할 일 칠판</button>
+      <a class="btn" href="#/jim" style="height:48px">짐짜기</a>
     </div>
     <div id="disp" class="card pnl" style="position:absolute;left:20px;top:96px;width:260px;overflow:hidden;z-index:8;display:none"></div>
     <div style="position:absolute;left:22px;bottom:22px;display:flex;align-items:flex-end;gap:4px;z-index:8;pointer-events:none">
@@ -383,7 +385,7 @@ function warehouse() {
     </div>
     <div style="position:absolute;left:60px;bottom:22px;display:flex;gap:8px;z-index:8">${backBtn('#/campus', '단지')}<a class="btn" href="#/office" style="color:#E8732C">사무실 가기</a></div>
     <div style="position:absolute;left:760px;right:24px;top:20px;bottom:20px;display:flex;flex-direction:column;gap:12px">
-      <div class="card" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px"><div><div style="font-size:12px;color:#8A7E77">천안 서북구 직산읍 신갈리 206-6</div><div style="font-size:22px;font-weight:800">홈트 창고</div></div><button id="ck" type="button" class="btn" style="background:#3F7FE0;color:#fff">기사님 체크인</button></div>
+      <div class="card" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px"><div><div style="font-size:12px;color:#8A7E77">천안 서북구 직산읍 신갈리 206-6</div><div style="font-size:22px;font-weight:800">홈트 창고</div></div><div style="display:flex;gap:8px"><a class="btn" href="#/jim">짐짜기</a><button id="ck" type="button" class="btn" style="background:#3F7FE0;color:#fff">기사님 체크인</button></div></div>
       <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px">${stock.map(([n, q, s, c]) => `<div class="card" style="border-radius:18px;padding:12px 14px"><div style="font-size:12px;font-weight:800;color:${c}">${n}</div><div style="font-size:24px;font-weight:800">${q}</div><div style="font-size:11px;color:#8A7E77">${s}</div></div>`).join('')}</div>
       <div class="card" style="flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden"><div style="display:flex;justify-content:space-between;padding:14px 18px 8px"><span style="font-size:16px;font-weight:800">키오스크 · 오늘 상하차</span><span id="nrow" style="font-size:12px;font-weight:800;color:#3F7FE0"></span></div><div id="rows" class="scroll" style="flex:1;padding:0 10px 10px"></div></div>
     </div></div>`);
@@ -470,7 +472,8 @@ function openBoard() {
 }
 
 // ── 화면 바꾸기 · 직원 계정만 ───────────────────────────
-const VIEWS = { '': village, campus, office, warehouse };
+function jim() { const v = el('<div class="v"></div>'); stage.appendChild(v); JIM.mount(v, { back: backBtn('#/warehouse', '창고') }); }
+const VIEWS = { '': village, campus, office, warehouse, jim };
 function show() {
   clearAll(); stage.innerHTML = '';
   setTimeout(() => stage.querySelectorAll('.boardBtn').forEach((b) => { b.onclick = openBoard; }), 0);
