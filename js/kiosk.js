@@ -3,7 +3,7 @@
 import * as S from './store-supabase.js?v=10';
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const K = { data: null, err: '', timer: 0, clock: 0, lock: null, sel: '', ask: '', busy: false, toast: '', me: '', over: {} };   // over = 방금 누른 건 (맥 도우미가 새 판을 올릴 때까지 화면에 유지)
+const K = { chk: {}, data: null, err: '', timer: 0, clock: 0, lock: null, sel: '', ask: '', busy: false, toast: '', me: '', over: {} };   // over = 방금 누른 건 (맥 도우미가 새 판을 올릴 때까지 화면에 유지)
 const p2 = (n) => String(n).padStart(2, '0');
 const mdOf = (d) => `${p2(d.getMonth() + 1)}/${p2(d.getDate())}`;
 const today = () => (K.data && K.data.today) || mdOf(new Date());
@@ -28,16 +28,18 @@ function groups() {
     car: sortRows(rows.filter((r) => has(r, '배차 완료') && !done(r) && near(r))),
     order: sortRows(rows.filter((r) => has(r, '발주') && !has(r, '배차 요청', '배차 완료') && !done(r))),
     out: sortRows(rows.filter((r) => done(r) && num(dayOf(r)) === t)),
+    quote: sortRows(rows.filter((r) => has(r, '견적') && !has(r, '발주', '배차 요청', '배차 완료') && !done(r))),   // 견적 줘야 하는데 못 준 것 (10/30 대표)
   };
 }
 
 const when = (r) => { const d = dayOf(r); return d === today() ? '오늘' : d === tmr() ? '내일' : /^\d\d\/\d\d$/.test(d) ? d : '미정'; };
 const tm = (r) => String(r.time || '').replace(/\s*착$/, '').trim() || (when(r) === '미정' ? '미정' : when(r));
 const who = (r) => String(r.partner || '').replace(/^\(주\)|^주식회사\s*/, '').replace(/제작소$|홈$/, '');
+const itemsOf = (r) => String(r.items || r.item || '').replace(/^[^:·]{1,20}:\s*/, '').split(/\s*·\s*|\s*,\s+|\n+/).map((t) => t.trim()).filter(Boolean);   // 품목 한 줄에 하나 (10/30 대표)
 function row(r, red) {
   const lt = red && late(r), w = when(r), sub = tm(r) === w ? '' : w;
   return `<div class="ki-r ${lt ? 'late' : ''}" data-ki="row" data-no="${esc(r.no)}"><div class="ki-w"><b>${esc(tm(r))}</b>${sub || lt ? `<span>${esc(lt ? '지남' : sub)}</span>` : ''}</div>
-    <div class="ki-m"><div class="ki-p">${r.site ? esc(r.site) : '현장 확인'}</div><div class="ki-i">${esc(who(r))} · ${esc(r.item || '')}</div>${r.car && !/^배차 (필요|완료)$|^—$|^확인$/.test(r.car) ? `<div class="ki-c">${esc(r.car)}</div>` : ''}</div><i class="ki-ch" aria-hidden="true">›</i></div>`;
+    <div class="ki-m"><div class="ki-p">${esc(r.site || r.partner || '현장 확인')}</div><div class="ki-i">${esc(r.site ? who(r) : '')}</div>${(() => { const it = itemsOf(r); return it.length ? `<div class="ki-its">${it.slice(0, 3).map((x) => `<div class="ki-it">${esc(x)}</div>`).join('')}${it.length > 3 ? `<div class="ki-it more">+${it.length - 3}</div>` : ''}</div>` : ''; })()}${r.car && !/^배차 (필요|완료)$|^—$|^확인$/.test(r.car) ? `<div class="ki-c">${esc(r.car)}</div>` : ''}</div><i class="ki-ch" aria-hidden="true">›</i></div>`;
 }
 function sec(cls, name, rs, max, red) {
   const more = rs.length - max;
@@ -51,9 +53,10 @@ const IC = {
   'k-car': sv('<path d="M2.5 7h11v9h-11zM13.5 10h4l3 3v3h-7"/><circle cx="6.5" cy="17.5" r="1.8"/><circle cx="16.5" cy="17.5" r="1.8"/>'),
   'k-order': sv('<rect x="5" y="4" width="14" height="17" rx="3"/><path d="M9 4h6v3H9zM9 12h6M9 16h4"/>'),
   'k-out': sv('<path d="M20 6 9 17l-5-5"/>'),
+  'k-quote': sv('<rect x="5" y="3" width="14" height="18" rx="3"/><path d="M8 7h8M8.5 11h1M11.5 11h1M14.5 11h1M8.5 14h1M11.5 14h1M14.5 14h1M8.5 17h1M11.5 17h4"/>'),
 };
 const byNo = (no) => ((K.data && K.data.rows) || []).find((r) => r.no === no);
-const stage = (r) => (done(r) ? '출고 완료' : has(r, '배차 완료') ? '차 잡힘' : has(r, '배차 요청') ? '배차 해야 함' : has(r, '발주') ? '발주 요청' : '');
+const stage = (r) => (done(r) ? '출고 완료' : has(r, '배차 완료') ? '차 잡힘' : has(r, '배차 요청') ? '배차 해야 함' : has(r, '발주') ? '발주 요청' : has(r, '견적') ? '견적 보내야 함' : '');
 function missHtml(r) {
   const by = Object.fromEntries(((K.data && K.data.rows) || []).map((x) => [x.no, x]));
   const gone = (t) => { const x = by[t.no]; return !!x && (has(x, '배차 완료') || done(x)); };
@@ -65,7 +68,10 @@ function sheet() {
   const st = stage(r), memo = String(r.memo || '').split(/\s+·\s+/).map((t) => t.trim()).filter(Boolean).slice(0, 6);
   const kv = (k, v) => (v ? `<div class="ks-kv"><span>${k}</span><b>${esc(v)}</b></div>` : '');
   const btn = (k, label) => `<button type="button" class="ks-b ${K.ask === k ? 'ask' : ''}" data-ki="${k}" ${K.busy ? 'disabled' : ''}>${K.ask === k ? `${label} 확인` : label}</button>`;
-  const btns = [st === '배차 해야 함' || st === '발주 요청' ? btn('disp', '배차 완료') : '', st !== '출고 완료' ? btn('ship', '출고 완료') : ''].join('');
+  const btns = st === '견적 보내야 함' ? '' : [st === '배차 해야 함' || st === '발주 요청' ? btn('disp', '배차 완료') : '', st !== '출고 완료' ? btn('ship', '출고 완료') : ''].join('');
+  const it = itemsOf(r);
+  const chk = memo.map((t, j) => { const k = r.no + '|' + j, on = !!K.chk[k];
+    return `<button type="button" class="ks-ck ${on ? 'on' : ''}" data-ki="chk" data-k="${esc(k)}"><span class="ks-bx" aria-hidden="true">${on ? '✓' : ''}</span><span class="ks-ct">${esc(t)}</span></button>`; }).join('');
   return `<div class="ks-ov" data-ki="close"><div class="ks" role="dialog" aria-label="출고 건">
     <div class="ks-grab"></div>
     <div class="ks-hd"><div><div class="ks-st">${esc(st)}</div><div class="ks-t">${r.site ? esc(r.site) : '현장 확인'}</div><div class="ks-s">${esc(r.partner || '')}${r.boss ? ' · ' + esc(r.boss) : ''}</div></div>
@@ -73,8 +79,8 @@ function sheet() {
     <div class="ks-g">
       ${kv('도착', [dayOf(r), r.time].filter(Boolean).join(' '))}${kv('주소', r.site_full)}${kv('상차', r.from)}${kv('차량', r.veh || (r.car && !/^—$|^배차 필요$|^확인$/.test(r.car) ? r.car : ''))}${kv('규격', r.size)}${missHtml(r)}
     </div>
-    <div class="ks-k">품목</div><div class="ks-box">${esc(r.items || r.item || '')}</div>
-    ${memo.length ? `<div class="ks-k">할 일</div><div class="ks-box">${memo.map((t) => `<div>${esc(t)}</div>`).join('')}</div>` : ''}
+    ${memo.length ? `<div class="ks-k">할 일</div><div class="ks-cl">${chk}</div>` : ''}
+    ${it.length ? `<div class="ks-k">품목 ${it.length}</div><div class="ks-box ks-its">${it.map((x) => `<div>${esc(x)}</div>`).join('')}</div>` : ''}
     ${btns ? `<div class="ks-bs">${btns}</div>` : ''}
   </div></div>`;
 }
@@ -85,9 +91,10 @@ export function screen() {
   const g = groups(), at = K.data.at ? String(K.data.at).slice(11, 16) : '';
   return `<div class="ki-box"><div class="ki">
     <header class="ki-h"><div class="ki-clk" data-ki="reload"><span>${n.getMonth() + 1}월 ${n.getDate()}일 ${wd}요일</span><b>${p2(n.getHours())}:${p2(n.getMinutes())}</b></div><img class="ki-logo" src="/icons/logo-full.png" alt="HOME TRADERS"></header>
-    <div class="ki-t">${[['k-need', g.need, '배차 해야 함'], ['k-car', g.car, '차 잡힘'], ['k-order', g.order, '발주 요청'], ['k-out', g.out, '출고 완료']]
+    <div class="ki-t">${[['k-need', g.need, '배차 해야 함'], ['k-quote', g.quote, '견적 대기'], ['k-car', g.car, '차 잡힘'], ['k-order', g.order, '발주 요청'], ['k-out', g.out, '출고 완료']]
       .map(([k, rs, l]) => `<div class="${k}" data-ki="jump" data-k="${k}"><i>${IC[k]}</i><b>${rs.length}</b><span>${l}</span></div>`).join('')}</div>
     ${sec('k-need', '배차 해야 함', g.need, 9, true)}
+    ${sec('k-quote', '견적 보내야 함', g.quote, 6, false)}
     ${sec('k-car', '차 잡힘 · 도착 확인', g.car, 5, false)}
     ${sec('k-order', '발주 요청', g.order, 5, false)}
     ${sec('k-out', '오늘 출고 완료', g.out, 8, false)}
@@ -124,6 +131,7 @@ function onTap(e, draw) {
   else if (a === 'disp' || a === 'ship') { if (K.ask === a) save(a, draw); else { K.ask = a; draw(); } }
   else if (a === 'jump') { const el = document.getElementById('ki-' + t.dataset.k); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
   else if (a === 'reload') pull(draw);
+  else if (a === 'chk') { const k = t.dataset.k; K.chk[k] = !K.chk[k]; draw(); }
 }
 export function start(draw, me) {
   K.me = me || K.me;   // 1분마다 새 자료, 시계는 20초마다 · 화면 꺼짐 막기
