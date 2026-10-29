@@ -36,15 +36,22 @@ const tm = (r) => String(r.time || '').replace(/\s*착$/, '').trim() || (when(r)
 const who = (r) => String(r.partner || '').replace(/^\(주\)|^주식회사\s*/, '').replace(/제작소$|홈$/, '');
 function row(r, red) {
   const lt = red && late(r), w = when(r), sub = tm(r) === w ? '' : w;
-  return `<div class="ki-r ${lt ? 'late' : ''}" data-ki="row" data-no="${esc(r.no)}"><div class="ki-w"><b>${esc(tm(r))}</b><span>${esc(lt ? (sub ? sub + ' · 지남' : '지남') : sub)}</span></div>
-    <div class="ki-m"><div class="ki-p">${r.site ? esc(r.site) : '현장 확인'}</div><div class="ki-i">${esc(who(r))} · ${esc(r.item || '')}</div>${r.car && !/^배차 (필요|완료)$|^—$|^확인$/.test(r.car) ? `<div class="ki-c">${esc(r.car)}</div>` : ''}</div></div>`;
+  return `<div class="ki-r ${lt ? 'late' : ''}" data-ki="row" data-no="${esc(r.no)}"><div class="ki-w"><b>${esc(tm(r))}</b>${sub || lt ? `<span>${esc(lt ? '지남' : sub)}</span>` : ''}</div>
+    <div class="ki-m"><div class="ki-p">${r.site ? esc(r.site) : '현장 확인'}</div><div class="ki-i">${esc(who(r))} · ${esc(r.item || '')}</div>${r.car && !/^배차 (필요|완료)$|^—$|^확인$/.test(r.car) ? `<div class="ki-c">${esc(r.car)}</div>` : ''}</div><i class="ki-ch" aria-hidden="true">›</i></div>`;
 }
 function sec(cls, name, rs, max, red) {
   const more = rs.length - max;
-  return `<section class="ki-s ${cls}" id="ki-${cls}"><h2><span>${name}</span><span>${rs.length}</span></h2><div class="ki-card">
+  return `<section class="ki-s ${cls}" id="ki-${cls}"><h2><span class="ki-hi">${IC[cls]}</span><span>${name}</span><em>${rs.length}</em></h2><div class="ki-card">
     ${rs.length ? rs.slice(0, max).map((r) => row(r, red)).join('') : '<div class="ki-z">없음</div>'}${more > 0 ? `<div class="ki-more">+${more}</div>` : ''}</div></section>`;
 }
 
+const sv = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const IC = {
+  'k-need': sv('<path d="M4 10v4l3 1 9 4V5L7 9z"/><path d="M19 9.5a3 3 0 0 1 0 5"/>'),
+  'k-car': sv('<path d="M2.5 7h11v9h-11zM13.5 10h4l3 3v3h-7"/><circle cx="6.5" cy="17.5" r="1.8"/><circle cx="16.5" cy="17.5" r="1.8"/>'),
+  'k-order': sv('<rect x="5" y="4" width="14" height="17" rx="3"/><path d="M9 4h6v3H9zM9 12h6M9 16h4"/>'),
+  'k-out': sv('<path d="M20 6 9 17l-5-5"/>'),
+};
 const byNo = (no) => ((K.data && K.data.rows) || []).find((r) => r.no === no);
 const stage = (r) => (done(r) ? '출고 완료' : has(r, '배차 완료') ? '차 잡힘' : has(r, '배차 요청') ? '배차 해야 함' : has(r, '발주') ? '발주 요청' : '');
 function missHtml(r) {
@@ -78,12 +85,12 @@ export function screen() {
   const g = groups(), at = K.data.at ? String(K.data.at).slice(11, 16) : '';
   return `<div class="ki-box"><div class="ki">
     <header class="ki-h"><div class="ki-clk" data-ki="reload"><span>${n.getMonth() + 1}월 ${n.getDate()}일 ${wd}요일</span><b>${p2(n.getHours())}:${p2(n.getMinutes())}</b></div></header>
-    <div class="ki-t"><div class="k-need" data-ki="jump" data-k="k-need"><b>${g.need.length}</b><span>배차 해야 함</span></div><div data-ki="jump" data-k="k-car"><b>${g.car.length}</b><span>차 잡힘</span></div>
-      <div data-ki="jump" data-k="k-order"><b>${g.order.length}</b><span>발주 요청</span></div><div class="k-out"><b>${g.out.length}</b><span>출고 완료</span></div></div>
+    <div class="ki-t">${[['k-need', g.need, '배차 해야 함'], ['k-car', g.car, '차 잡힘'], ['k-order', g.order, '발주 요청'], ['k-out', g.out, '출고 완료']]
+      .map(([k, rs, l]) => `<div class="${k}" ${k === 'k-out' ? '' : `data-ki="jump" data-k="${k}"`}><i>${IC[k]}</i><b>${rs.length}</b><span>${l}</span></div>`).join('')}</div>
     ${sec('k-need', '배차 해야 함', g.need, 9, true)}
     ${sec('k-car', '차 잡힘 · 도착 확인', g.car, 5, false)}
     ${sec('k-order', '발주 요청', g.order, 5, false)}
-    <div class="ki-out"><span>오늘 출고 완료</span><span>${g.out.length}</span></div>
+    <div class="ki-out"><i>${IC['k-out']}</i><span>오늘 출고 완료</span><em>${g.out.length}</em></div>
     ${at ? `<div class="ki-at">${esc(at)}</div>` : ''}
   </div>${sheet()}${K.toast ? `<div class="ki-toast">${esc(K.toast)}</div>` : ''}</div>`;
 }
