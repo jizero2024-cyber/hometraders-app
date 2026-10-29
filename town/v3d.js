@@ -79,7 +79,8 @@ export function mount(host, o) {
     trees.push({ top, ph: Math.random() * 6 }); return g;
   };
   const lampM = new THREE.MeshStandardMaterial({ color: '#FFF2C4', emissive: '#FFD27A', emissiveIntensity: 0 });
-  const glowM = new THREE.MeshBasicMaterial({ color: '#FFD98A', transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }), glowG = new THREE.CircleGeometry(7, 24), lampG = new THREE.SphereGeometry(0.55, 12, 8);
+  const gc = document.createElement('canvas'); gc.width = gc.height = 128; { const g2 = gc.getContext('2d'), rg = g2.createRadialGradient(64, 64, 0, 64, 64, 64); rg.addColorStop(0, 'rgba(255,200,110,1)'); rg.addColorStop(0.45, 'rgba(255,190,100,.45)'); rg.addColorStop(1, 'rgba(255,180,90,0)'); g2.fillStyle = rg; g2.fillRect(0, 0, 128, 128); }
+  const glowM = new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(gc), transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }), glowG = new THREE.PlaneGeometry(11, 11), lampG = new THREE.SphereGeometry(0.55, 12, 8);
   const lamp = (x, z) => { cyl(0.15, 0.2, 5, '#4A5058', x, 0, z, 8); const b = new THREE.Mesh(lampG, lampM); b.position.set(x, 5.3, z); scene.add(b); const g = new THREE.Mesh(glowG, glowM); g.rotation.x = -Math.PI / 2; g.position.set(x, 0.45, z); scene.add(g); };
   // 집
   const gable = (w, h, d, c) => { const sh = new THREE.Shape(); sh.moveTo(-w / 2, 0); sh.lineTo(w / 2, 0); sh.lineTo(0, h); sh.lineTo(-w / 2, 0); const g = new THREE.ExtrudeGeometry(sh, { depth: d, bevelEnabled: false }); g.translate(0, 0, -d / 2); const m = new THREE.Mesh(g, mat(c)); m.castShadow = true; m.receiveShadow = true; return m; };
@@ -232,7 +233,7 @@ export function mount(host, o) {
     sun.color.copy(nightK > 0.5 ? C('#9FB4FF') : mix('#FFB37A', '#FFF3DD', elev * 2)); sun.intensity = nightK > 0.5 ? 0.7 : (0.4 + 2.0 * Math.max(0, elev)) * (1 - gloom * 0.6);
     hemi.color.copy(mix('#8EA2DA', '#EAF6FF', day)); hemi.groundColor.copy(mix('#3C4A5E', '#7AA35A', day)); hemi.intensity = (0.95 + 0.25 * day) * (1 - gloom * 0.2);
     seaM.color.copy(mix('#24406E', '#8FD3F4', day)).lerp(C('#7F98AA'), gloom * 0.5);
-    const lit = Math.max(nightK, gloom * 0.5 * (1 - day * 0.6)); winM.emissiveIntensity = 0.9 * nightK; glassM.emissiveIntensity = 0.6 * nightK; lampM.emissiveIntensity = 1.8 * lit; glowM.opacity = 0.42 * lit; storeLight.intensity = 60 * lit; signM.emissiveIntensity = 0.3 + 1.2 * lit; shopWinM.emissiveIntensity = 0.2 + 1.1 * lit;
+    const lit = Math.max(nightK, gloom * 0.5 * (1 - day * 0.6)); winM.emissiveIntensity = 0.9 * nightK; glassM.emissiveIntensity = 0.6 * nightK; lampM.emissiveIntensity = 1.8 * lit; glowM.opacity = 0.75 * lit; storeLight.intensity = 60 * lit; signM.emissiveIntensity = 0.3 + 1.2 * lit; shopWinM.emissiveIntensity = 0.2 + 1.1 * lit;
     cloudM.color.copy(mix('#FFFFFF', isRain() ? '#7E8894' : '#B9C0C8', gloom)).lerp(C('#3A4258'), nightK * 0.7);
     clouds.forEach((c, i) => { c.visible = i < Math.round(1 + WX.cover / 100 * 9); });
     rain.visible = isRain(); snow.visible = isSnow();
