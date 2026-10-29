@@ -2,7 +2,7 @@
 // 주소 뒤 #/campus · #/office · #/warehouse 로 화면 바뀜. 직원 계정만 (공간 계정 막음)
 import * as S from '/js/store-supabase.js?v=9t1';
 import * as JIM from './jim.js?v=2';
-import * as W3D from './v3d.js?v=13';
+import * as W3D from './v3d.js?v=14';
 import * as O3D from './o3d.js?v=5';
 import { portrait, KINDS } from './kit3d.js?v=3';
 
