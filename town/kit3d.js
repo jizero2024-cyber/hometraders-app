@@ -91,3 +91,21 @@ export function critter(kind) {
     face(dx, dz) { if (dx || dz) g.rotation.y = Math.atan2(dx, dz); },
   };
 }
+
+// 그림 대신 3D 캐릭터를 찍은 얼굴 사진 (10/29 대표 "마을 애들 깨져 보여") — 화면 크기·밤낮과 상관없이 또렷, 마을 캐릭터와 같은 모양
+let PR = null; const PC = {};
+export function portrait(kind, px = 320) {
+  if (PC[kind + px]) return PC[kind + px];
+  if (!PR) {
+    const r = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }); r.outputColorSpace = THREE.SRGBColorSpace; r.toneMapping = THREE.ACESFilmicToneMapping; r.setPixelRatio(1);
+    const s = new THREE.Scene(); s.add(new THREE.HemisphereLight('#FFFFFF', '#B9C7A8', 1.4)); const d = new THREE.DirectionalLight('#FFF6E8', 2.2); d.position.set(-3, 5, 6); s.add(d);
+    const c = new THREE.PerspectiveCamera(26, 1, 0.1, 50); PR = { r, s, c };
+  }
+  const { r, s, c } = PR; r.setSize(px, px, false);
+  const q = critter(kind); q.g.rotation.y = 0.3; s.add(q.g);
+  const b = new THREE.Box3().setFromObject(q.g), mid = b.getCenter(new THREE.Vector3()), h = b.max.y - b.min.y;
+  c.position.set(mid.x, mid.y + h * 0.05, mid.z + h * 2.3); c.lookAt(mid.x, mid.y, mid.z);
+  r.setClearColor(0x000000, 0); r.render(s, c);
+  const url = r.domElement.toDataURL('image/png'); s.remove(q.g); PC[kind + px] = url; return url;
+}
+export const KINDS = ['seal', 'cat', 'dog', 'beaver', 'raccoon', 'squirrel', 'owl', 'turtle', 'otter', 'hedgehog', 'penguin', 'rabbit', 'panda', 'redpanda', 'guppy', 'driver', 'worker', 'boss1', 'boss2'];

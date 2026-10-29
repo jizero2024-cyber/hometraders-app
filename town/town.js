@@ -2,8 +2,9 @@
 // 주소 뒤 #/campus · #/office · #/warehouse 로 화면 바뀜. 직원 계정만 (공간 계정 막음)
 import * as S from '/js/store-supabase.js?v=9t1';
 import * as JIM from './jim.js?v=2';
-import * as W3D from './v3d.js?v=10';
-import * as O3D from './o3d.js?v=4';
+import * as W3D from './v3d.js?v=11';
+import * as O3D from './o3d.js?v=5';
+import { portrait, KINDS } from './kit3d.js?v=3';
 
 const stage = document.getElementById('stage');
 const IMG = './img/';
@@ -171,8 +172,15 @@ function village() {
   }
   // 트럭
   const addTruck = (t) => { const [c, c2] = COLORS[t.c % 5]; return W.addTruck({ from: t.from, to: t.to, c, c2, title: `${esc(short(t.from))} <span style="color:${c2}">→</span> ${esc(short(t.to))}`, sub: t.sub, dur: t.dur, delay: t.delay, loop: t.delay < 0 }); };
-  addTruck({ from: 'hanlim', to: 'gunsan', c: 0, dur: 40, delay: -24, sub: '이동 중 · OSB 11mm 40장 · 15:20 도착' });
-  addTruck({ from: 'home', to: 'seosaeng', c: 1, dur: 60, delay: -18, sub: '이동 중 · 세라믹 판재 3m 5톤 혼적 · 내일 08:00' });
+  // 트럭 = 오늘 실제 배차·출고 건만 (10/29 대표 "안 싣고 다니는 차는 없애") — 거래처 이름으로 마을 자리 찾기
+  const LOT = [[/공간/, 'gonggan'], [/한림/, 'hanlim'], [/원익/, 'wonik'], [/우림/, 'woorim'], [/뉴하우징/, 'gunsan'], [/나인/, 'anmyeon'], [/사람사는/, 'cheongdo']];
+  const FROM = [[/원익/, 'wonik'], [/한림/, 'hanlim'], [/우림/, 'woorim']];
+  live().then((L) => { if (!v.isConnected) return; L.shipped.slice(0, 8).forEach((x, i) => {
+    const to = (LOT.find(([re]) => re.test(x.partner || '')) || [])[1]; if (!to) return;
+    const from = (FROM.find(([re]) => re.test(`${x.from || ''} ${x.memo || ''}`)) || [])[1] || 'home'; if (from === to) return;
+    const done = (x.steps || []).includes('출고 완료');
+    addTruck({ from, to, c: i, dur: 50 + i * 7, delay: -(i * 9 + 5), sub: `${done ? '출고 완료' : '배차 완료'} · ${x.site || ''} · ${x.veh || ''} ${x.time || ''}`.replace(/\s+/g, ' ').trim() });
+  }); });
   // 배차 사무실
   const disp = v.querySelector('#disp');
   const drawDisp = () => {
@@ -536,11 +544,15 @@ function openBoard() {
 // ── 화면 바꾸기 · 직원 계정만 ───────────────────────────
 function jim() { const v = el('<div class="v"></div>'); stage.appendChild(v); JIM.mount(v, { back: backBtn('#/warehouse', '창고') }); }
 const VIEWS = { '': village, campus, office, warehouse, jim };
+function swapAv() {
+  document.querySelectorAll('#stage img, .w3host img').forEach((im) => { const mm = (im.getAttribute('src') || '').match(/img\/(\w+)\.webp$/); if (mm && KINDS.includes(mm[1])) { try { im.src = portrait(mm[1]); } catch (e) { /* WebGL 없으면 그림 그대로 */ } } });
+}
 function show() {
   clearAll(); stage.innerHTML = '';
   setTimeout(() => stage.querySelectorAll('.boardBtn').forEach((b) => { b.onclick = openBoard; }), 0);
   const key = (location.hash.replace(/^#\/?/, '') || '').split('?')[0];
   (VIEWS[key] || village)();
+  swapAv(); setTimeout(swapAv, 400); setTimeout(swapAv, 2500);   // 그림 얼굴 → 3D 캐릭터 얼굴 (또렷하게)
 }
 async function boot() {
   fit();

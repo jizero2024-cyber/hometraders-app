@@ -2,7 +2,7 @@
 // 마우스로 돌리기 · 확대 · 끌기. 거래처 건물 · 사무실 · 창고 · 우체통 눌러서 씀.
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { critter } from './kit3d.js?v=2';
+import { critter } from './kit3d.js?v=3';
 
 const GX = [-120, -60, 0, 60, 120], GZ = [-100, -50, 0, 50, 100];   // 길 격자
 // 거래처 자리 (블록 가운데). 블록 = 60×50
@@ -263,7 +263,7 @@ export function mount(host, o) {
   // 차 — 길 따라 돌기
   const cars = [], CARC = ['#FF6B5E', '#5D9BF2', '#FFC531', '#FFFFFF', '#7ED39B', '#B98AF5', '#FF9E5E'];
   const carMesh = (c) => { const g = new THREE.Group(); box(4.4, 1.3, 2.3, c, 0, 0.5, 0, g); box(2.4, 1.1, 2.1, '#CFE8FF', -0.2, 1.8, 0, g, { roughness: 0.2 }); [[-1.4, -1.1], [1.4, -1.1], [-1.4, 1.1], [1.4, 1.1]].forEach(([a, b]) => { const w = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.4, 12), mat('#2B2522')); w.rotation.x = Math.PI / 2; w.position.set(a, 0.5, b); g.add(w); }); scene.add(g); return g; };
-  for (let i = 0; i < 14; i++) { const horiz = i % 2 === 0, line = horiz ? GZ[i % 5] : GX[i % 5], dir = i % 4 < 2 ? 1 : -1; cars.push({ m: carMesh(CARC[i % CARC.length]), horiz, line, dir, t: Math.random() * 248, v: 9 + (i % 4) * 2 }); }
+  // 그냥 다니는 차는 뺌 (10/29 대표 "안 싣고 다니는 차는 없애") — 트럭은 실제 출고 건만
 
   // 트럭 (배차)
   const trucks = [];
