@@ -3,7 +3,7 @@
 import * as S from '/js/store-supabase.js?v=9t1';
 import * as JIM from './jim.js?v=2';
 import * as W3D from './v3d.js?v=14';
-import * as O3D from './o3d.js?v=5';
+import * as O3D from './o3d.js?v=6';
 import { portrait, KINDS } from './kit3d.js?v=3';
 
 const stage = document.getElementById('stage');
@@ -389,6 +389,8 @@ function office() {
   const draw = () => {
     if (!L) return;
     AI.forEach((a, i) => { const w = L.W[a.k]; O.setTag(a.k, tagHtml(a.who, w.line, w.st, w.n)); O.setIdle(a.k, a.kind === 'task' && !w.n && w.st !== 'bad', i); });
+    AI.forEach((a) => { const w = L.W[a.k]; O.setScreen(a.k, [a.who, w.line], w.st === 'bad' ? '#7A2A2A' : '#1F3A5F'); });   // 책상 모니터에 실제 숫자
+    O.setScreen('wallA', ['배차 요청', `${L.needDisp.length}건 남음`], '#22406A'); O.setScreen('wallB', ['오늘 출고', `${L.shipped.length} / ${L.today.length}`], '#2A4A3A');
     O.setTag('board', objHtml('확인 칠판', L.checks.length + L.inCheck.length, '#FF453A'));
     O.setTag('printer', objHtml('프린터 · 송장', L.sj.filter((x) => String(x.created_at || '').slice(0, 10) === new Date().toISOString().slice(0, 10)).length, '#2F7BF6'));
     O.setTag('pamph', objHtml('팜플렛', `${L.chkOn.filter(Boolean).length}/${PAMPH.length}`, '#2E9A5A'));
