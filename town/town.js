@@ -1,8 +1,9 @@
 // 홈트 마을 /town (10/29 대표 "게임처럼 · 디자인만 먼저") — 마을 · 단지 · 사무실 · 창고 네 화면, 아직 예시 자료
 // 주소 뒤 #/campus · #/office · #/warehouse 로 화면 바뀜. 직원 계정만 (공간 계정 막음)
-import * as S from '/js/store-supabase.js?v=9';
+import * as S from '/js/store-supabase.js?v=9t1';
 import * as JIM from './jim.js?v=2';
 import * as W3D from './v3d.js?v=8';
+import * as O3D from './o3d.js?v=1';
 
 const stage = document.getElementById('stage');
 const IMG = './img/';
@@ -326,219 +327,150 @@ const STAFF = [
   { name: '받아쓰기', animal: '구피', floor: '2층', role: '비토 통화 정리', status: '다음 15:17', x: 422, y: 484, c: '#3F7FE0', bg: '#E6F0FF', av: 'guppy', say: '정소장 통화 요약했어요' },
   { name: '그림이', animal: '레서판다', floor: '1층', role: '디자인 · 박스·팜플렛 · 안내', status: '일하는 중', x: 230, y: 564, c: '#C2551A', bg: '#FFEDE3', av: 'redpanda', say: '실리콘 박스 시안 3개 만들었어요' },
 ];
+// 실제 자료 (10/29 대표 "AI 가 무슨 작업 · 얼마나 · 누가 확인 — 의미 없는 가짜는 빼")
+let ME = '';
+const AI = [   // 실제로 돌아가는 AI 작업만. kind: task = 할 일 0 이면 마당에서 쉼, feed = 계속 받는 일
+  { k: 'seal', who: '김맥순', job: '출고일보', av: 'seal', f: 4, x: 8, kind: 'feed' },
+  { k: 'raccoon', who: '콩알', job: '이카운트 받기 · 입력', av: 'raccoon', f: 3, x: -12, kind: 'task' },
+  { k: 'otter', who: '수달', job: '운임 미송금', av: 'otter', f: 3, x: 0, kind: 'task' },
+  { k: 'hedgehog', who: '고슴', job: '공간 사이트 전표', av: 'hedgehog', f: 3, x: 12, kind: 'task' },
+  { k: 'squirrel', who: '도토리', job: '전표 PDF · 명세서', av: 'squirrel', f: 2, x: 2, kind: 'feed' },
+  { k: 'cat', who: '이음이', job: '배차', av: 'cat', f: 1, x: -12, kind: 'task' },
+  { k: 'guppy', who: '받아쓰기', job: '비토 통화', av: 'guppy', f: 1, x: 0, kind: 'feed' },
+  { k: 'rabbit', who: '토깽', job: '문자 · 텔레그램', av: 'rabbit', f: 1, x: 12, kind: 'feed' },
+  { k: 'redpanda', who: '그림이', job: '디자인 · 카탈로그', av: 'redpanda', f: 0, x: 4, kind: 'task' },
+];
+const PAMPH = ['표지', '제품 소개', '부속자재', '시공 순서', '기능 상세', '뒷표지 주소', '인쇄소 보내기'];
+const mdOf = (d) => `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
+const tOf = (iso) => (iso ? String(iso).slice(11, 16) : '');
+async function live() {
+  const r = await Promise.allSettled([S.getTownAI(), S.getFlowBoard(), S.getFlowMarks(), S.getFareUnpaid(), S.listSongjang(), S.getGongganWaitCount(), S.getTownInbox(), S.getTownChecks()]);
+  const g = (i, d) => (r[i].status === 'fulfilled' && r[i].value != null ? r[i].value : d);
+  const L = { ai: g(0, null), flow: g(1, null), marks: g(2, {}), fare: g(3, []), sj: g(4, []), gwait: g(5, 0), inbox: g(6, []), chk: g(7, []) };
+  const rows = (L.flow && L.flow.rows) || [], today = (L.flow && L.flow.today) || mdOf(new Date()), yst = mdOf(new Date(Date.now() - 864e5)), tmr = mdOf(new Date(Date.now() + 864e5));
+  const has = (x, k) => (x.steps || []).includes(k);
+  L.today = rows.filter((x) => x.day === today && ['배차 요청', '배차 완료', '출고 완료'].some((k) => has(x, k)));
+  L.shipped = L.today.filter((x) => has(x, '출고 완료') || has(x, '배차 완료'));
+  L.needDisp = rows.filter((x) => has(x, '배차 요청') && [today, tmr].includes(x.day));
+  L.miss = rows.filter((x) => has(x, '입력 누락'));
+  L.unpaid = L.fare.filter((x) => !x.sent);
+  L.checks = rows.filter((x) => [yst, today, tmr].includes(x.day) && ['배차 완료', '출고 완료', '기록', '입력 누락', '입력 완료'].some((k) => has(x, k)) && !L.marks[`slipok:${x.case || x.no}`]);
+  L.inCheck = L.inbox.filter((x) => x.status === 'check');
+  L.chkOn = PAMPH.map((_, i) => (L.chk.find((c) => c.id === `pamph:${i}`) || {}).status === 'on');
+  const aiw = (k) => ((L.ai && L.ai.workers) || []).find((w) => w.k === k) || { st: 'ok', note: '' };
+  const W = {
+    seal: { n: L.checks.length, line: `출고 ${L.shipped.length} / ${L.today.length}`, st: aiw('seal').st, note: aiw('seal').note },
+    raccoon: { n: L.miss.length, line: aiw('raccoon').st === 'bad' ? '받기 멈춤' : `입력 누락 ${L.miss.length}`, st: aiw('raccoon').st, note: aiw('raccoon').note },
+    otter: { n: L.unpaid.length, line: `미송금 ${L.unpaid.length}`, st: 'ok', note: '' },
+    hedgehog: { n: L.gwait, line: `올릴 전표 ${L.gwait}`, st: aiw('hedgehog').st, note: aiw('hedgehog').note },
+    squirrel: { n: 0, line: `PDF ${tOf(aiw('squirrel').at) || '—'}`, st: aiw('squirrel').st, note: aiw('squirrel').note },
+    cat: { n: L.needDisp.length, line: `배차 요청 ${L.needDisp.length}`, st: aiw('cat').st, note: aiw('cat').note },
+    guppy: { n: 0, line: aiw('guppy').note || '통화', st: aiw('guppy').st, note: aiw('guppy').note },
+    rabbit: { n: 0, line: (aiw('rabbit').note || '').split(' · ')[0] || '문자', st: aiw('rabbit').st, note: aiw('rabbit').note },
+    redpanda: { n: PAMPH.length - L.chkOn.filter(Boolean).length, line: `카탈로그 ${L.chkOn.filter(Boolean).length} / ${PAMPH.length}`, st: 'ok', note: aiw('redpanda').note },
+  };
+  if (L.ai && L.ai.run) W.seal.st = 'run';
+  L.W = W; return L;
+}
+const tagHtml = (who, line, st, n) => `<div style="display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:#fff;box-shadow:0 3px 12px rgba(30,40,60,.2);font:800 11px Pretendard,sans-serif;color:#4A3F3A;white-space:nowrap"><span style="width:8px;height:8px;border-radius:50%;background:${O3D.DOT[st] || O3D.DOT.ok}"></span>${esc(who)}<span style="font-weight:600;color:#8A7E77">${esc(line)}</span>${n ? `<span style="padding:1px 7px;border-radius:999px;background:#FF453A;color:#fff">${n}</span>` : ''}</div>`;
+const objHtml = (t, n, c = '#E8732C') => `<div style="display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:12px;background:#FFF6D8;box-shadow:0 3px 12px rgba(30,40,60,.18);font:800 11px Pretendard,sans-serif;color:#7A5A00;white-space:nowrap">${esc(t)}${n != null ? `<span style="padding:1px 7px;border-radius:999px;background:${c};color:#fff">${n}</span>` : ''}</div>`;
+const newId = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+function host3d(bg) { document.body.querySelectorAll('.w3host').forEach((n) => n.remove()); const h = el(`<div class="w3host" style="position:fixed;inset:0;z-index:0;background:${bg}"></div>`); document.body.prepend(h); return h; }
+function panelBox(v) {
+  const p = el('<div class="card pnl" style="position:absolute;right:24px;top:84px;bottom:24px;width:400px;border-radius:26px;display:none;flex-direction:column;overflow:hidden;z-index:8"><div style="display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid #F3EEE9"><div style="flex:1"><div class="pt" style="font-size:18px;font-weight:800"></div><div class="ps" style="font-size:12px;color:#8A7E77"></div></div><button type="button" class="px" aria-label="닫기" style="width:38px;height:38px;border:0;border-radius:12px;background:#F4EFEA;font-size:17px;cursor:pointer">✕</button></div><div class="pb scroll" style="flex:1;padding:14px 18px;display:flex;flex-direction:column;gap:8px"></div></div>');
+  v.appendChild(p); p.querySelector('.px').onclick = () => { p.style.display = 'none'; };
+  return { el: p, show: (t, sub, html) => { p.querySelector('.pt').textContent = t; p.querySelector('.ps').textContent = sub || ''; p.querySelector('.pb').innerHTML = html; p.style.display = 'flex'; } };
+}
+const prow = (l, r, rc = '') => `<div style="display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:12px;background:#FBF8F5;font-size:13px"><span style="flex:1;min-width:0">${l}</span>${r != null ? `<span style="font-weight:800;${rc}">${r}</span>` : ''}</div>`;
+const plink = (t, href) => `<a class="btn" href="${href}" target="_blank" rel="noopener" style="height:40px;font-size:13px">${esc(t)} ↗</a>`;
+const ioTxt = (x) => { const seen = {}; (x.lines || []).forEach((l) => { const k = l.k === '반품' ? '판매' : l.k; seen[k] = seen[k] === false || !(l.st === '입력' || l.st === '—') ? false : true; }); return Object.entries(seen).map(([k, ok]) => `${k} ${ok ? '✓' : '✕'}`).join(' · '); };
+
 function office() {
-  const fl = [['6F 대표실', '#E8732C', 52], ['5F 견적·단가', '#9A6A3A', 162], ['4F 회계', '#5D6B7A', 258], ['3F 서류', '#E0662F', 350], ['2F 배차·통신', '#3F7FE0', 446], ['1F 디자인실·안내', '#C2551A', 538], ['마당 · 쉼터 · 와인바', '#2E9A5A', 642]];
-  const v = el(`<div class="v" style="background:#D8E9FA">
-    <div id="bld" style="position:absolute;left:376px;top:20px;width:688px;height:860px;transition:left .45s cubic-bezier(.3,.8,.3,1)">
-      <img src="${IMG}office_e.webp" alt="홈트레이더스 사무실 6층과 앞마당" style="width:688px;height:860px;display:block;border-radius:28px">
-      <img src="/icons/logo-full.png" alt="홈트레이더스 로고" style="position:absolute;left:392px;top:16px;width:64px">
-      ${fl.map(([t, c, y]) => `<span class="pill" style="position:absolute;left:112px;top:${y}px;background:rgba(255,255,255,.92);color:${c};font-size:11px;z-index:2">${t}</span>`).join('')}
-      <span class="paper" style="left:190px;top:372px"></span><span class="paper" style="left:190px;top:372px;animation-delay:1.1s"></span>
-      <span class="steam" style="left:404px;top:84px"></span><span class="steam" style="left:412px;top:86px;animation-delay:1.2s"></span>
-      ${[488, 512, 536, 560, 584].map((x, i) => `<span class="glow" style="left:${x}px;top:${[618, 612, 610, 614, 620][i]}px;animation-delay:${i * 0.4}s"></span>`).join('')}
-      <span class="zz" style="left:120px;top:694px">z</span><span class="zz" style="left:190px;top:690px;animation-delay:.9s">z</span><span class="zz" style="left:336px;top:680px;animation-delay:1.6s">z</span>
-      ${STAFF.map((s, i) => `<span class="pill tag" data-i="${i}" style="position:absolute;left:${s.x}px;top:${s.y + 4}px;transform:translate(-50%,-100%);padding:2px 7px;background:${s.c};color:#fff;font-size:10px;z-index:3">${esc(s.name)}</span>`).join('')}
-      <div id="obub" class="bub"></div>
-    </div>
-    <div style="position:absolute;left:24px;bottom:22px;display:flex;gap:8px;z-index:8">${backBtn('#/campus', '단지')}<a class="btn" href="#/warehouse" style="color:#B07A2A">창고 가기</a><button type="button" class="btn boardBtn" style="background:#FFE680;color:#5A4A00">할 일 칠판</button></div>
-    <button type="button" class="boardBtn hot" aria-label="할 일 칠판 열기" style="position:absolute;left:740px;top:170px;width:90px;height:70px;border:0;background:transparent;cursor:pointer;z-index:4"></button>
-    <button id="meet" type="button" class="btn" style="position:absolute;right:190px;top:24px;z-index:9;height:48px;background:#2E9A5A;color:#fff">회의 소집</button>
-    <button id="book" type="button" class="btn" style="position:absolute;right:28px;top:24px;z-index:9;height:48px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h11a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6z"/><path d="M6 3v18M4 7h4M4 12h4M4 17h4M10 8h6M10 12h6"/></svg>출석부 ${STAFF.length}</button>
-    <div id="pnl" class="pnl" style="position:absolute;left:732px;right:24px;top:84px;bottom:20px;display:none;flex-direction:column;gap:12px;z-index:8">
-      <div class="card" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px"><div><div style="font-size:12px;color:#8A7E77">천안 서북구 직산읍 신갈리</div><div style="font-size:22px;font-weight:800">홈트 사무실 · 직원 ${STAFF.length}명</div></div><div style="display:flex;gap:6px"><span class="pill" style="background:#FFF1E6;color:#C2551A">배차 5</span><span class="pill" style="background:#E6F0FF;color:#2F6BD6">가는 중 2</span><span class="pill" style="background:#E6F7EC;color:#1E8E3E">완료 11</span></div></div>
-      <div id="cards" style="flex:1;min-height:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:minmax(0,1fr);gap:10px"></div>
-    </div></div>`);
+  const v = el(`<div class="v v3">
+    <div style="position:absolute;left:20px;top:20px;display:flex;gap:10px;align-items:center;z-index:8">${backBtn('#/', '마을')}<a class="btn" href="#/warehouse" style="height:46px;color:#B07A2A">창고</a><button type="button" class="btn boardBtn" style="background:#FFE680;color:#5A4A00">할 일 칠판</button><button id="meet" type="button" class="btn" style="background:#2E9A5A;color:#fff">회의</button><span id="oat" class="pill" style="background:rgba(255,255,255,.9);color:#8A7E77"></span></div>
+  </div>`);
   stage.appendChild(v);
-  const bld = v.querySelector('#bld'), pnl = v.querySelector('#pnl'), book = v.querySelector('#book'), ob = v.querySelector('#obub');
-  v.querySelector('#cards').innerHTML = STAFF.map((s, i) => `<button type="button" data-i="${i}" class="card" style="display:flex;align-items:center;gap:10px;padding:8px 12px 8px 8px;border:0;border-radius:18px;text-align:left;cursor:pointer;min-width:0"><span style="width:56px;height:56px;flex:none;border-radius:16px;background:${s.bg};display:flex;align-items:flex-end;justify-content:center;overflow:hidden"><img src="${IMG}${s.av}.webp" alt="" style="width:50px;height:50px;object-fit:contain"></span><span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="display:flex;align-items:center;gap:5px"><span style="font-size:14px;font-weight:800">${esc(s.name)}</span><span style="font-size:10px;font-weight:800;color:${s.c}">${s.floor}</span></span><span style="font-size:12px;font-weight:700;color:${s.c};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(s.role)}</span><span style="font-size:11px;color:#8A7E77">${esc(s.status)}</span></span></button>`).join('');
-  let open = false, cur = 0, held = false;
-  book.onclick = () => { open = !open; pnl.style.display = open ? 'flex' : 'none'; bld.style.left = open ? '24px' : '376px'; book.classList.toggle('or', open); };
-  const show = (i) => {
-    cur = i; const s = STAFF[i];
-    ob.style.left = s.x + 'px'; ob.style.top = (s.y - 14) + 'px';
-    ob.innerHTML = `<div style="display:flex;gap:10px;align-items:center;min-width:220px;max-width:280px;padding:10px 14px 10px 10px;border-radius:18px;background:#fff;box-shadow:0 10px 26px rgba(30,60,110,.22)"><img src="${IMG}${s.av}.webp" alt="" style="width:40px;height:40px;object-fit:contain"><div><div style="display:flex;align-items:center;gap:6px"><span style="font-size:12px;font-weight:800;color:${s.c}">${esc(s.name)} · ${esc(s.animal)}</span><span class="dots"><i class="d1"></i><i class="d2"></i><i class="d3"></i></span></div><div style="font-size:13px;line-height:1.4">${esc(s.say)}</div></div></div><div class="tail" style="background:#fff;width:14px;height:9px"></div>`;
-    ob.style.animation = 'none'; void ob.offsetWidth; ob.style.animation = '';
-    v.querySelectorAll('.tag').forEach((t) => { t.style.opacity = +t.dataset.i === i ? 0 : 0.95; });
-    v.querySelectorAll('#cards [data-i]').forEach((c) => { c.style.boxShadow = +c.dataset.i === i ? `0 0 0 2.5px ${STAFF[i].c}, 0 6px 18px rgba(30,60,110,.12)` : ''; });
+  const P = panelBox(v);
+  let L = null;
+  const O = O3D.office(host3d('#D8E9FA'), { alive: () => v.isConnected, staff: AI, onPick: (k) => open(k) });
+  const draw = () => {
+    if (!L) return;
+    AI.forEach((a, i) => { const w = L.W[a.k]; O.setTag(a.k, tagHtml(a.who, w.line, w.st, w.n)); O.setIdle(a.k, a.kind === 'task' && !w.n && w.st !== 'bad', i); });
+    O.setTag('board', objHtml('확인 칠판', L.checks.length + L.inCheck.length, '#FF453A'));
+    O.setTag('printer', objHtml('프린터 · 송장', L.sj.filter((x) => String(x.created_at || '').slice(0, 10) === new Date().toISOString().slice(0, 10)).length, '#2F7BF6'));
+    O.setTag('pamph', objHtml('팜플렛', `${L.chkOn.filter(Boolean).length}/${PAMPH.length}`, '#2E9A5A'));
+    O.setTag('mail', objHtml('우체통 · 자료 넣기', L.inbox.filter((x) => x.status === 'wait' || x.status === 'got').length || null, '#2F7BF6'));
+    O.setTag('meet', objHtml('회의 테이블'));
+    v.querySelector('#oat').textContent = L.ai ? `AI 상태 ${tOf(L.ai.at)}` : 'AI 상태 없음';
   };
-  v.querySelector('#cards').onclick = (e) => { const c = e.target.closest('[data-i]'); if (c) { held = true; show(+c.dataset.i); } };
-  show(0); every(3600, () => { if (!held) show((cur + 1) % STAFF.length); });
-  // 자리마다 직원 (쉬는 직원은 마당 빈백·해먹)
-  const REST = { '꼬북': [123, 736, 'nap'], '펭송': [194, 736, 'nap'], '눈썰미': [330, 716, 'nap'] };
-  const ACT = {   // 업무마다 움직임 (10/29 대표 "자기 업무에 맞는 움직임")
-    '김맥순': ['sway', 'cup'], '뚝딱': ['lean', 'draw'], '부엉': ['nod', 'tag'], '콩알': ['type', 'keys'], '수달': ['type', 'coin'], '고슴': ['stamp', 'stamp'],
-    '도토리': ['lean', 'print'], '이음이': ['point', 'map'], '토깽': ['phone', 'msg'], '받아쓰기': ['swim', 'bub'], '그림이': ['lean', 'draw'],
-    '꼬북': ['nap', 'zz'], '펭송': ['nap', 'zz'], '눈썰미': ['nap', 'zz'] };
-  const seats = STAFF.map((s) => { const r = REST[s.name], a = ACT[s.name] || ['type', 'keys']; return sprite(bld, { av: s.av, name: s.name, x: r ? r[0] : s.x, y: r ? r[1] : s.y + 44, size: r ? 34 : (s.av === 'guppy' ? 30 : 40), act: a[0], fx: a[1] }); });
-  STAFF.forEach((s, i) => { if (REST[s.name]) { s.status = '쉬는 중 · 마당'; } });
-  const frame = (n, av, k, flip = 1) => { const im = n.querySelector('img'); if (!im) return; if (!im.dataset.base) im.dataset.base = im.src; im.src = k == null || !WALK.has(av) ? im.dataset.base : wf(av, k); im.style.transform = `scaleX(${flip})`; };
-  const sitN = (n, av) => { n.classList.remove('up'); n.classList.add('sit'); frame(n, av, null); };
-  const upN = (n, av, k = 0, flip = 1) => { n.classList.remove('sit'); n.classList.add('up'); frame(n, av, k, flip); };
-  seats.forEach((n, i) => { if (!REST[STAFF[i].name]) n.classList.add('sit'); });
-  const PEEK = [['부엉', '콩알', '판가 맞는지 볼게', true], ['고슴', '수달', '운임 송금했어?', false], ['콩알', '도토리', '명세표 전표랑 같아 ✔', true], ['김맥순', '이음이', '배차 몇 건 남았어?', true],
-    ['눈썰미', '콩알', '명세서 7장 다 넣었어?', false], ['도토리', '뚝딱', '견적 단가 확인 ✔', true], ['토깽', '펭송', '송장 링크 열어봤대?', true], ['수달', '고슴', '공간 전표 올렸어?', true]];
-  const mark = (n, ok) => { const m = el(`<span class="chk ${ok ? 'ok' : 'no'}">${ok ? '✔' : '!'}</span>`); n.appendChild(m); setTimeout(() => m.remove(), 2600); };
-  let pk = 0;
-  every(4300, () => {   // 일어나서 옆 사람 일 확인하고 다시 앉기 (10/29 대표 "서로 감시하고 체크")
-    const [a, b, txt, ok] = PEEK[pk++ % PEEK.length], ia = STAFF.findIndex((s) => s.name === a), ib = STAFF.findIndex((s) => s.name === b);
-    const A = seats[ia], B = seats[ib]; if (!A || !B || A.style.visibility === 'hidden' || B.style.visibility === 'hidden' || meeting) return;
-    const dx = parseFloat(B.style.left) - parseFloat(A.style.left), sameRow = Math.abs(parseFloat(B.style.top) - parseFloat(A.style.top)) < 30;
-    upN(A, STAFF[ia].av, sameRow ? 2 : (parseFloat(B.style.top) < parseFloat(A.style.top) ? 4 : 0), dx < 0 ? -1 : 1);
-    const bb = el(`<div class="bub" style="left:${A.style.left};top:${parseFloat(A.style.top) - 58}px"><div style="padding:6px 10px;border-radius:12px;background:#fff;box-shadow:0 6px 16px rgba(30,60,110,.2);font-size:11px;font-weight:700;white-space:nowrap"><b style="color:${STAFF[ia].c}">${esc(a)}</b> → ${esc(b)} · ${esc(txt)}</div><div class="tail" style="background:#fff"></div></div>`);
-    bld.appendChild(bb);
-    later(1300, () => { upN(B, STAFF[ib].av, 0); mark(B, ok); });
-    later(2800, () => { bb.remove(); if (!meeting) { sitN(A, STAFF[ia].av); sitN(B, STAFF[ib].av); } });
-  });
-  const F = { 6: 142, 5: 238, 4: 330, 3: 426, 2: 522, 1: 634, 0: 737 };
-  const wk = (x0, f0, x1, f1) => `M ${x0} ${F[f0]} L 470 ${F[f0]} L 516 ${F[f1]} L ${x1} ${F[f1]}`;
-  const EV = [
-    { name: '콩알', av: 'raccoon', c: '#5D6B7A', say: '6층에 전표 보고하러 가요', path: wk(220, 4, 360, 6) },
-    { name: '이음이', av: 'cat', c: '#5D6B7A', say: '창고 재고 보러 나가요', path: wk(240, 2, 450, 0) },
-    { name: '도토리', av: 'squirrel', c: '#E0662F', say: '명세표 결재 받으러 가요', path: wk(270, 3, 380, 6) },
-    { name: '뚝딱', av: 'beaver', c: '#9A6A3A', say: '박스 시안 보러 1층 가요', path: wk(244, 5, 300, 1) },
-    { name: '펭송', av: 'penguin', c: '#2E4A7A', say: '송장 들고 창고로 가요', path: wk(413, 3, 470, 0) },
-    { name: '그림이', av: 'redpanda', c: '#C2551A', say: '팜플렛 시안 보고하러 가요', path: wk(230, 1, 360, 6) },
-    { name: '수달', av: 'otter', c: '#8A6A4A', say: '와인바에서 잠깐 쉬어요', path: wk(286, 4, 540, 0) },
-  ];
-  let e = 0;
-  const go = () => {   // 자리에서 일어나 다녀오기 — 그동안 자리는 비어 있음
-    const w = EV[e++ % EV.length], i = STAFF.findIndex((s) => s.name === w.name); const seat = seats[i];
-    if (seat) seat.style.visibility = 'hidden';
-    walker(bld, { ...w, size: 34, dur: 7 });
-    later(9000, () => { const back = 'M ' + w.path.replace(/^M\s*/, '').split(' L ').reverse().join(' L '); walker(bld, { ...w, say: '자리로 돌아가요', path: back, size: 34, dur: 7 }); });
-    later(16200, () => { if (seat) seat.style.visibility = ''; });
-  };
-  const walkT = every(9000, go); go();
-  // 회의 — 마당 의자로 모여서 한 사람씩 보고 → 서로 일 넘기기 → 자리로
-  const REPORT = { '김맥순': '오늘 출고 11건, 배차 5건 남았어요', '뚝딱': '매향리 견적서 2개 냈어요', '부엉': '판가 낮은 거 2건 찾았어요', '콩알': '구매 6건 · 판매 4건 넣었어요', '수달': '운임 미송금 2건 남았어요',
-    '고슴': '공간 전표 3장 올렸어요', '도토리': '명세표 5장 뽑았어요', '꼬북': '오웬스 승인원 묶었어요', '펭송': '송장 3건 보냈어요', '이음이': '매향리 · 서생 배차 잡았어요', '토깽': '내일 아침 공지 준비 끝', '눈썰미': '명세서 7장 읽었어요', '받아쓰기': '통화 12건 요약했어요', '그림이': '실리콘 박스 시안 3개' };
-  const TOSS = [['김맥순', '콩알', '우림 구매 날짜 확인해줘'], ['이음이', '수달', '서생 정소장 운임 보내줘'], ['뚝딱', '도토리', '견적 그대로 명세표로!'], ['눈썰미', '콩알', '원익 명세서 7장 입력 부탁'], ['토깽', '펭송', '청주 송장 링크 다시 보내줘']];
-  const fnum = (f) => +String(f).replace(/\D/g, '') || 1;
-  const MSEAT = [[323, 596, 1], [286, 602, 1], [360, 601, 1], [292, 634, 1], [356, 633, 1], [418, 614, 1], [442, 614, 1], [466, 614, 1],
-    [248, 646, 0], [400, 648, 0], [228, 616, 0], [270, 658, 0], [330, 662, 0], [386, 660, 0]];   // 1층 회의 테이블 의자 5 · 소파 3 · 둘러서기 (x, y, 앉음)
-  const spots = STAFF.map((s, i) => MSEAT[i % MSEAT.length]);
+  const load = () => live().then((x) => { L = x; draw(); });
+  load(); every(60000, load);
+  function open(k) {
+    if (!L) return; const a = AI.find((x) => x.k === k), w = a && L.W[k];
+    if (a) {
+      let body = prow('상태', { ok: '정상', bad: '멈춤 · 실패', run: '지금 작업 중' }[w.st] || '정상', `color:${O3D.DOT[w.st]}`) + (w.note ? prow(esc(w.note)) : '');
+      if (k === 'seal') body += prow('오늘 출고', `${L.shipped.length} / ${L.today.length}`) + prow('확인 대기', L.checks.length) + plink('출고 흐름', '/');
+      if (k === 'raccoon') body += L.miss.slice(0, 12).map((x) => prow(`${esc(x.partner)} · ${esc(x.site || '')} <span style="color:#8A7E77">${esc(x.day || '')}</span>`, '누락', 'color:#FF453A')).join('') || prow('입력 누락 없음');
+      if (k === 'otter') body += L.unpaid.slice(0, 14).map((x) => prow(`${esc(x.driver || '')} <span style="color:#8A7E77">${esc(x.job || '')}</span>`, x.amount ? Number(x.amount).toLocaleString() : '', 'color:#FF453A')).join('') || prow('미송금 없음');
+      if (k === 'hedgehog') body += prow('올릴 전표', L.gwait) + plink('공간 사이트', '/gonggan/');
+      if (k === 'cat') body += L.needDisp.slice(0, 14).map((x) => prow(`${esc(x.partner)} · ${esc(x.site || '')} <span style="color:#8A7E77">${esc(x.day)} ${esc(x.time || '')}</span>`, '배차 요청', 'color:#E8732C')).join('') || prow('배차 요청 없음');
+      if (k === 'redpanda') { open('pamph'); return; }
+      P.show(`${a.who} · ${a.job}`, w.st === 'bad' ? '멈춤' : '', body); return;
+    }
+    if (k === 'board') {
+      const rows = L.checks.slice(0, 20).map((x) => { const io = ioTxt(x), ok = io && !io.includes('✕'); return `<div style="padding:10px 12px;border-radius:12px;background:#FBF8F5;display:flex;gap:8px;align-items:center"><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:800">${esc(x.partner)} · ${esc(x.site || '')} <span style="color:#8A7E77;font-weight:600">${esc(x.day)}</span></div><div style="font-size:12px;color:${ok ? '#1E8E3E' : '#D93025'}">AI 먼저 봄: ${esc(io || '입력 정보 없음')}</div></div><button type="button" class="btn or" data-ok="${esc(x.case || x.no)}" data-nm="${esc(`${x.partner} ${x.site || ''}`)}" style="height:38px;font-size:13px">확인</button></div>`; }).join('');
+      const ins = L.inCheck.slice(0, 8).map((x) => prow(`자료 · ${esc(x.name || '')}<div style="font-size:12px;color:#B07A00">${esc(x.note || '확인 필요')}</div>`)).join('');
+      P.show('확인 칠판', `대신 확인 · ${ME || ''}`, (rows || prow('확인할 전표 없음')) + ins);
+      P.el.querySelectorAll('[data-ok]').forEach((b) => { b.onclick = async () => { b.textContent = '…'; const e = await S.addFlowMark(`slipok:${b.dataset.ok}`, b.dataset.nm, ME); b.textContent = e ? '실패' : '확인함'; if (!e) { b.disabled = true; load(); } }; });
+      return;
+    }
+    if (k === 'printer') {
+      const sj = L.sj.slice(0, 12).map((x) => prow(`${esc(x.partner || '')} · ${esc(x.site || '')} <span style="color:#8A7E77">${esc(x.ymd || '')}</span>`, x.signed_at ? '서명' : x.opened_at ? '열어봄' : '안 열어봄', x.signed_at ? 'color:#1E8E3E' : x.opened_at ? 'color:#2F7BF6' : 'color:#8A7E77')).join('');
+      P.show('프린터 · 송장 · 명세표', '최근 발행', (sj || prow('발행한 송장 없음')) + `<div style="display:flex;gap:8px;margin-top:6px">${plink('전자 송장', '/songjang/')}${plink('거래명세표 만들기', '/convert.html')}</div>`); return;
+    }
+    if (k === 'pamph') {
+      P.show('팜플렛 · 아이큐브 카탈로그', L.W.redpanda.note || '', PAMPH.map((t, i) => `<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:#FBF8F5;font-size:14px;cursor:pointer"><input type="checkbox" data-pc="${i}" ${L.chkOn[i] ? 'checked' : ''} style="width:18px;height:18px">${esc(t)}</label>`).join('') + `<div style="margin-top:6px">${plink('카탈로그 열기', '/catalog/')}</div>`);
+      P.el.querySelectorAll('[data-pc]').forEach((c) => { c.onchange = async () => { const i = +c.dataset.pc; await S.setTownCheck(`pamph:${i}`, PAMPH[i], c.checked, ME); load(); }; });
+      return;
+    }
+    if (k === 'mail') {
+      const st = { wait: ['받음', '#C2551A'], got: ['읽는 중', '#2F7BF6'], done: ['반영', '#1E8E3E'], check: ['확인 필요', '#B07A00'] };
+      P.show('우체통 · 자료 넣기', '카톡 · 사진 · PDF · 엑셀', `<label id="dz" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;height:120px;border:2.5px dashed #EAD9C9;border-radius:18px;background:#FFFBF7;cursor:pointer;font-weight:800;color:#4A3F3A">끌어다 놓기<input id="dfin" type="file" multiple style="display:none"></label><div style="display:flex;gap:8px"><textarea id="dtx" rows="2" placeholder="카톡 붙여 넣기" style="flex:1;resize:none;border:1.5px solid #F0E6DD;border-radius:12px;padding:8px 10px;font:inherit;font-size:13px"></textarea><button type="button" id="dgo" class="btn or">넣기</button></div><div id="dmsg" style="font-size:12px;color:#8A7E77"></div>` + L.inbox.slice(0, 12).map((x) => prow(`${esc(x.name || '')} <span style="color:#8A7E77">${esc(x.created_by || '')} ${tOf(x.created_at)}</span>`, (st[x.status] || [x.status])[0], `color:${(st[x.status] || [0, '#8A7E77'])[1]}`)).join(''));
+      const put = async (its) => { const msg = P.el.querySelector('#dmsg'); msg.textContent = '올리는 중…'; let ok = 0, err = ''; for (const it of its) { const row = { id: newId(), created_by: ME, status: 'wait' }; if (typeof it === 'string') Object.assign(row, { kind: 'text', name: it.trim().split('\n')[0].slice(0, 60), body: it }); else { if (it.size > 8e6) { err = `${it.name}: 8MB 넘음`; continue; } const data = await new Promise((r2) => { const fr = new FileReader(); fr.onload = () => r2(fr.result); fr.readAsDataURL(it); }); Object.assign(row, { kind: 'file', name: it.name, mime: it.type, data }); } const e = await S.addInbox(row); if (e) err = e; else ok += 1; } msg.textContent = err ? `못 넣음 — ${err}` : `${ok}건 넣었어요`; load(); };
+      const dz = P.el.querySelector('#dz'); dz.ondragover = (e) => { e.preventDefault(); dz.style.borderColor = '#E8732C'; }; dz.ondragleave = () => { dz.style.borderColor = '#EAD9C9'; }; dz.ondrop = (e) => { e.preventDefault(); dz.ondragleave(); put([...(e.dataTransfer.files || [])]); };
+      P.el.querySelector('#dfin').onchange = (e) => put([...(e.target.files || [])]);
+      P.el.querySelector('#dgo').onclick = () => { const t = P.el.querySelector('#dtx').value.trim(); if (t) put([t]); };
+      return;
+    }
+    if (k === 'meet') v.querySelector('#meet').click();
+  }
   let meeting = false;
-  const startMeeting = () => {
-    if (meeting) return; meeting = true; clearInterval(walkT); const mb = v.querySelector('#meet'); mb.textContent = '회의 중…';
-    const ppl = STAFF.map((s, i) => {
-      const seat = seats[i], sx = parseFloat(seat.style.left), sy = parseFloat(seat.style.top), [tx, ty] = spots[i];
-      seat.style.visibility = 'hidden'; v.querySelectorAll('.tag').forEach((t) => { t.style.visibility = 'hidden'; });
-      const path = REST[s.name] ? `M ${sx} ${sy} L 330 690 L ${tx} ${ty}` : `M ${sx} ${sy} L 470 ${F[fnum(s.floor)]} L 500 ${F[1]} L ${tx} ${ty}`;
-      walker(bld, { name: s.name, av: s.av, c: s.c, say: '회의 가요', path, size: 32, dur: 6 });
-      return { s, i, tx, ty };
-    });
-    const seated = [];
-    later(6100, () => { ppl.forEach((p) => { const n = sprite(bld, { av: p.s.av, name: p.s.name, x: p.tx, y: p.ty, size: 32, act: 'nod' }); if (spots[p.i][2]) sitN(n, p.s.av); seated.push(n); }); ob.style.display = 'none'; });
-    const stand = (p, k = 0, flip = 1) => { const n = seated[ppl.indexOf(p)]; if (n) upN(n, p.s.av, k, flip); return n; };
-    const sitp = (p) => { const n = seated[ppl.indexOf(p)]; if (!n) return; if (spots[p.i][2]) sitN(n, p.s.av); else { n.classList.remove('up'); frame(n, p.s.av, 0); } };
-    const rb = el('<div class="bub" style="display:none"></div>'); bld.appendChild(rb);
-    const sayAt = (p, txt, c) => { rb.style.display = ''; rb.style.left = p.tx + 'px'; rb.style.top = (p.ty - 36) + 'px'; rb.innerHTML = `<div style="max-width:240px;padding:8px 12px;border-radius:14px;background:#fff;box-shadow:0 8px 20px rgba(30,60,110,.22);font-size:12px;line-height:1.4"><b style="color:${c}">${esc(txt[0])}</b> ${esc(txt[1])}</div><div class="tail" style="background:#fff"></div>`; rb.style.animation = 'none'; void rb.offsetWidth; rb.style.animation = ''; };
-    let t0 = 6800;
-    ppl.forEach((p, j) => { later(t0, () => { if (j) sitp(ppl[j - 1]); stand(p); sayAt(p, [p.s.name, REPORT[p.s.name] || '보고할게요'], p.s.c); }); t0 += 1900; });
-    later(t0, () => sitp(ppl[ppl.length - 1]));
-    TOSS.forEach(([a, b, msg]) => {
-      later(t0, () => {
-        const A = ppl.find((p) => p.s.name === a), Bp = ppl.find((p) => p.s.name === b); sayAt(A, [`${a} → ${b}`, msg], A.s.c);
-        stand(A, 2, Bp.tx < A.tx ? -1 : 1); later(1400, () => { stand(Bp, 0); }); later(2400, () => { sitp(A); sitp(Bp); });
-        const doc = el(`<span style="position:absolute;left:0;top:0;width:16px;height:20px;background:#fff;border-radius:2px;box-shadow:0 2px 6px rgba(0,0,0,.3);border-top:4px solid ${A.s.c};offset-path:path('M ${A.tx} ${A.ty - 30} Q ${(A.tx + Bp.tx) / 2} ${Math.min(A.ty, Bp.ty) - 90} ${Bp.tx} ${Bp.ty - 30}');animation:drive 1.2s ease-in-out both;z-index:9"></span>`);
-        bld.appendChild(doc); setTimeout(() => doc.remove(), 1600);
-      });
-      t0 += 2600;
-    });
-    // 서로 체크 — 넘긴 일 했는지 확인하고 ✔ / !
-    const CHECK = [['부엉', '콩알', '구매 6건 단가 확인', true], ['고슴', '수달', '운임 2건 아직', false], ['콩알', '도토리', '명세표 = 전표', true], ['김맥순', '이음이', '배차 5건 남음', false], ['도토리', '뚝딱', '견적 단가 맞음', true]];
-    CHECK.forEach(([a, b, msg, ok]) => {
-      later(t0, () => {
-        const A = ppl.find((p) => p.s.name === a), Bp = ppl.find((p) => p.s.name === b); if (!A || !Bp) return;
-        stand(A, 2, Bp.tx < A.tx ? -1 : 1); sayAt(A, [`${a} 체크 → ${b}`, `${msg} ${ok ? '✔' : '!'}`], ok ? '#2E9A5A' : '#E0452F');
-        const nb = seated[ppl.indexOf(Bp)]; if (nb) mark(nb, ok);
-        later(1800, () => sitp(A));
-      });
-      t0 += 2100;
-    });
-    later(t0, () => {
-      rb.remove(); seated.forEach((n) => n.remove()); ob.style.display = '';
-      ppl.forEach((p) => { const seat = seats[p.i], sx = parseFloat(seat.style.left), sy = parseFloat(seat.style.top); const path = REST[p.s.name] ? `M ${p.tx} ${p.ty} L 330 690 L ${sx} ${sy}` : `M ${p.tx} ${p.ty} L 500 ${F[1]} L 470 ${F[fnum(p.s.floor)]} L ${sx} ${sy}`; walker(bld, { name: p.s.name, av: p.s.av, c: p.s.c, say: '자리로', path, size: 32, dur: 6 }); });
-      later(6100, () => { seats.forEach((n) => { n.style.visibility = ''; }); v.querySelectorAll('.tag').forEach((t) => { t.style.visibility = ''; }); meeting = false; mb.textContent = '회의 소집'; every(9000, go); });
-    });
+  v.querySelector('#meet').onclick = () => {
+    if (meeting || !L) return; meeting = true; v.querySelector('#meet').textContent = '회의 중…';
+    O.meeting(AI.map((a) => a.k), (k) => { const a = AI.find((x) => x.k === k), w = L.W[k]; O.setTag(k, `<div style="max-width:260px;padding:8px 12px;border-radius:14px;background:#fff;box-shadow:0 6px 18px rgba(30,40,60,.25);font:600 12px Pretendard,sans-serif;color:#2B2522"><b style="color:#E8732C">${esc(a.who)}</b> ${esc(w.line)}${w.note && w.st === 'bad' ? ` · ${esc(w.note)}` : ''}</div>`, [O.OBJ.meet[0], O.OBJ.meet[1] + 2, O.OBJ.meet[2]]); setTimeout(() => { O.setTag(k, tagHtml(a.who, w.line, w.st, w.n), [O.seats[k].home[0], O.seats[k].home[1] + 6.2, O.seats[k].home[2]]); }, 2300); },
+      () => { meeting = false; v.querySelector('#meet').textContent = '회의'; });
   };
-  v.querySelector('#meet').onclick = startMeeting;
-  // 눌러서 쓰는 곳 — 회의 테이블 = 회의, 빈백 · 해먹 · 와인바 · 소파 = 가서 앉기
-  const SPOTS = [
-    { k: '회의 테이블', x: 262, y: 568, w: 124, h: 76, go: startMeeting },
-    { k: '빈백', x: 92, y: 690, w: 64, h: 52, at: [122, 728, 1] }, { k: '빈백', x: 164, y: 690, w: 62, h: 52, at: [192, 728, 1] },
-    { k: '해먹', x: 280, y: 690, w: 100, h: 34, at: [330, 712, 1] }, { k: '소파', x: 392, y: 584, w: 96, h: 40, at: [440, 614, 1] },
-    { k: '와인바', x: 480, y: 640, w: 110, h: 66, at: [520, 694, 1] }, { k: '마당 테이블', x: 428, y: 690, w: 80, h: 46, at: [448, 722, 1] },
-  ];
-  const busy = new Set();
-  SPOTS.forEach((p) => {
-    const b = el(`<button type="button" class="hot use" aria-label="${p.k}" style="left:${p.x}px;top:${p.y}px;width:${p.w}px;height:${p.h}px;border:0;background:transparent;cursor:pointer;z-index:4"><span class="pill" style="position:absolute;left:50%;top:-8px;transform:translate(-50%,-100%);background:#fff;color:#4A3F3A;font-size:11px;box-shadow:0 3px 10px rgba(0,0,0,.12)">${p.k}</span></button>`);
-    bld.appendChild(b);
-    b.onclick = () => {
-      if (p.go) return p.go();
-      if (meeting || busy.has(p.k + p.x)) return;
-      const cand = STAFF.map((s, i) => i).filter((i) => seats[i].style.visibility !== 'hidden' && !REST[STAFF[i].name]); if (!cand.length) return;
-      const i = cand[Math.floor(Math.random() * cand.length)], s = STAFF[i], seat = seats[i], sx = parseFloat(seat.style.left), sy = parseFloat(seat.style.top), [tx, ty] = p.at;
-      busy.add(p.k + p.x); seat.style.visibility = 'hidden';
-      const tag = v.querySelector(`.tag[data-i="${i}"]`); if (tag) tag.style.visibility = 'hidden';
-      const there = `M ${sx} ${sy} L 470 ${F[fnum(s.floor)]} L 500 ${F[1]} L ${p.y > 660 ? '330 690 L ' : ''}${tx} ${ty}`;
-      walker(bld, { name: s.name, av: s.av, c: s.c, say: `${p.k} 가요`, path: there, size: 32, dur: 6 });
-      later(6100, () => {
-        const n = sprite(bld, { av: s.av, name: s.name, x: tx, y: ty, size: 32, act: p.k === '와인바' ? 'sway' : 'nap', fx: p.k === '와인바' ? 'cup' : '' }); sitN(n, s.av);
-        later(8000, () => {
-          upN(n, s.av, 0); later(500, () => { n.remove(); const back = 'M ' + there.replace(/^M\s*/, '').split(' L ').reverse().join(' L ');
-            walker(bld, { name: s.name, av: s.av, c: s.c, say: '자리로', path: back, size: 32, dur: 6 });
-            later(6100, () => { seat.style.visibility = ''; if (tag) tag.style.visibility = ''; busy.delete(p.k + p.x); }); });
-        });
-      });
-    };
-  });
 }
 
 // ── 창고 ───────────────────────────────────────────────
 function warehouse() {
-  const tone = { done: ['#E6F7EC', '#1E8E3E'], go: ['#E6F0FF', '#2F6BD6'], load: ['#FFF1E6', '#C2551A'], wait: ['#F2ECE6', '#8A7E77'] };
-  const rows = [
-    { t: '06:02', who: '박건 기사님 · 3.5톤 광폭윙', where: '여주 → 천안창고 하차 · 서생 판재', st: '하차 완료', k: 'done' },
-    { t: '08:54', who: '김석주 기사님 · 1톤', where: '곤지암 우림 → 창고 · 메가타이', st: '하차 완료', k: 'done' },
-    { t: '09:40', who: '전국24시 · 1.4톤 카고', where: '창고 → 화성 매향리', st: '출발', k: 'go' },
-    { t: '13:15', who: '정소장 · 5톤 혼적', where: '창고 → 울산 서생 · 3m 사이딩', st: '상차 중', k: 'load' },
-    { t: '14:30', who: '대신화물', where: '창고 → 순천 낙안 · 클립 200', st: '대기', k: 'wait' },
-    { t: '15:10', who: '삼양팀버 소장님 · 직접', where: '창고 → 팽성 · 인슐 R37 6롤', st: '대기', k: 'wait' },
-  ];
-  const stock = [['구조재 2*6*12', '120본', '캐나다 SPF', '#B07A2A'], ['구조재 2*6*16', '64본', 'J-GRADE', '#B07A2A'], ['실리콘 박스', '86박스', 'SS9000 · 원익', '#3F7FE0'], ['메가타이 철물', '32상자', 'HD3 · R1 · H-CLIP', '#5D6B7A'], ['단열재 R37', '6롤', '삼양 대기', '#C9A227'], ['세라믹 판재', '20장', '2층 자재칸', '#6A52D8']];
-  const v = el(`<div class="v" style="background:#D8E9FA">
-    <div id="wh" style="position:absolute;left:40px;top:20px;width:688px;height:860px">
-      <img src="${IMG}warehouse_e.webp" alt="홈트 창고 — 구조재 랙, 실리콘 박스, 철물 벽, 키오스크, 상차장" style="width:688px;height:860px;display:block;border-radius:28px">
-      <span style="position:absolute;left:444px;top:486px;width:44px;height:44px;border-radius:50%;background:radial-gradient(circle,rgba(120,200,255,.9),rgba(120,200,255,0) 70%);animation:glow 1.6s ease-in-out infinite;z-index:3"></span>
-      <div id="wbub" class="bub"></div>
-    </div>
-    <div style="position:absolute;left:60px;bottom:22px;display:flex;gap:8px;z-index:8">${backBtn('#/campus', '단지')}<a class="btn" href="#/office" style="color:#E8732C">사무실 가기</a></div>
-    <div style="position:absolute;left:760px;right:24px;top:20px;bottom:20px;display:flex;flex-direction:column;gap:12px">
-      <div class="card" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px"><div><div style="font-size:12px;color:#8A7E77">천안 서북구 직산읍 신갈리 206-6</div><div style="font-size:22px;font-weight:800">홈트 창고</div></div><div style="display:flex;gap:8px"><a class="btn" href="#/jim">짐짜기</a><button id="ck" type="button" class="btn" style="background:#3F7FE0;color:#fff">기사님 체크인</button></div></div>
-      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px">${stock.map(([n, q, s, c]) => `<div class="card" style="border-radius:18px;padding:12px 14px"><div style="font-size:12px;font-weight:800;color:${c}">${n}</div><div style="font-size:24px;font-weight:800">${q}</div><div style="font-size:11px;color:#8A7E77">${s}</div></div>`).join('')}</div>
-      <div class="card" style="flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden"><div style="display:flex;justify-content:space-between;padding:14px 18px 8px"><span style="font-size:16px;font-weight:800">키오스크 · 오늘 상하차</span><span id="nrow" style="font-size:12px;font-weight:800;color:#3F7FE0"></span></div><div id="rows" class="scroll" style="flex:1;padding:0 10px 10px"></div></div>
-    </div></div>`);
+  const v = el(`<div class="v v3">
+    <div style="position:absolute;left:20px;top:20px;display:flex;gap:10px;align-items:center;z-index:8">${backBtn('#/', '마을')}<a class="btn" href="#/office" style="height:46px">사무실</a><a class="btn" href="#/jim" style="height:46px">짐짜기</a><span id="wat" class="pill" style="background:rgba(255,255,255,.9);color:#8A7E77"></span></div>
+  </div>`);
   stage.appendChild(v);
-  const box = v.querySelector('#rows');
-  const row = (r, isNew) => `<div class="${isNew ? 'newrow' : ''}" style="display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px;border-bottom:1px solid #F1EEEA"><span style="font-size:14px;font-weight:800">${r.t}</span><span style="min-width:0"><span style="display:block;font-size:14px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.who)}</span><span style="display:block;font-size:12px;color:#8A7E77;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.where)}</span></span><span class="pill" style="background:${tone[r.k][0]};color:${tone[r.k][1]}">${r.st}</span></div>`;
-  box.innerHTML = rows.map((r) => row(r)).join(''); v.querySelector('#nrow').textContent = rows.length + '건';
-  v.querySelector('#ck').onclick = () => { rows.unshift({ t: hm(), who: '새 기사님 · 키오스크 체크인', where: '배차 확인 중', st: '체크인', k: 'go' }); box.insertAdjacentHTML('afterbegin', row(rows[0], true)); v.querySelector('#nrow').textContent = rows.length + '건'; };
-  const SB = [[466, 494, '키오스크', '#3F7FE0', '박건 기사님 체크인 · 서생 3.5톤'], [541, 504, '기사님', '#E07B1F', '상차증 받았어요, 출발할게요!'], [572, 656, '빨리 · 불독', '#B07A2A', '2*6*12 120본 남았어요'], [219, 680, '노훈님', '#2E4A7A', '5톤에 구조재 싣는 중이에요'], [516, 166, '2층 자재칸', '#6A52D8', '세라믹 판재 재고 확인 중']];
-  const wb = v.querySelector('#wbub'); let i = 0;
-  const show = () => { const [x, y, n, c, t] = SB[i++ % SB.length]; wb.style.left = x + 'px'; wb.style.top = (y - 12) + 'px'; wb.innerHTML = `<div style="min-width:180px;max-width:250px;padding:9px 13px;border-radius:16px;background:#fff;box-shadow:0 10px 26px rgba(30,60,110,.22)"><div style="font-size:12px;font-weight:800;color:${c}">${n}</div><div style="font-size:13px;line-height:1.4">${t}</div></div><div class="tail" style="background:#fff;width:14px;height:9px"></div>`; wb.style.animation = 'none'; void wb.offsetWidth; wb.style.animation = ''; };
-  show(); every(3400, show);
-  const wh = v.querySelector('#wh');
-  sprite(wh, { av: 'driver', name: '기사님', x: 452, y: 572, size: 40, act: 'phone', fx: 'msg' });
-  sprite(wh, { av: 'dog', name: '빨리', x: 574, y: 706, size: 46, act: 'nod', fx: 'count' });
-  sprite(wh, { av: 'driver', name: '노훈님', x: 236, y: 700, size: 38, act: 'sway', flip: -1 });
-  sprite(wh, { av: 'rabbit', name: '토깽', x: 515, y: 196, size: 30, act: 'nod', fx: 'file' });
-  const drv = () => walker(wh, { name: '기사님', av: 'driver', c: '#E07B1F', say: '상차증 받았어요', path: 'M 540 570 L 560 640 L 470 700 L 380 720', size: 38, dur: 6 });
-  drv(); every(12000, drv);
-  const leaves = ['서생행 출발', '매향리행 출발', '순천 택배 출발']; let e = 0;
-  const go = () => { leaver(v.querySelector('#wh'), 'M 470 770 L 560 800 L 720 860', leaves[e % 3], ...COLORS[e % 2]); e++; }; go(); every(9000, go);
+  const P = panelBox(v);
+  Promise.allSettled([S.init(), live()]).then(([, lr]) => {
+    if (!v.isConnected) return;
+    const L = lr.status === 'fulfilled' ? lr.value : { shipped: [], today: [] };
+    const items = S.getItems().map((it) => ({ it, key: it.id, name: it.name, qty: S.currentStock(it), unit: it.unit, cat: it.category || '' })).filter((x) => x.qty > 0).sort((a, b) => b.qty - a.qty);
+    v.querySelector('#wat').textContent = `재고 있는 품목 ${items.length} · 오늘 출고 ${L.shipped.length}`;
+    const drivers = L.shipped.map((x) => ({ key: x.case || x.no, row: x }));
+    O3D.warehouse(host3d('#E6E2DA'), { alive: () => v.isConnected, items, drivers, onPick: (k) => {
+      if (k.startsWith('item:')) { const x = items.find((y) => String(y.key) === k.slice(5)); if (!x) return; P.show(x.name, `${x.it.warehouse || ''} · ${x.cat}`, prow('지금 재고', `${Math.floor(x.qty)}${x.unit || ''}`) + prow('출고 예정 · 배차 완료', `${Math.floor(S.reservedQty(x.it))}${x.unit || ''}`) + prow('규격', esc(x.it.spec || '—'))); return; }
+      if (k === 'kiosk' || k === 'noh' || k.startsWith('drv:')) { const list = (k.startsWith('drv:') ? drivers.filter((d) => String(d.key) === k.slice(4)) : drivers).map((d) => prow(`${esc(d.row.partner)} · ${esc(d.row.site || '')}<div style="font-size:12px;color:#8A7E77">${esc(d.row.veh || '')} ${esc(d.row.time || '')} · ${esc(d.row.item || '')}</div>`, (d.row.steps || []).includes('출고 완료') ? '출고 완료' : '배차 완료', 'color:#1E8E3E')).join(''); P.show(k === 'noh' ? '노훈님 · 오늘 상차' : k === 'kiosk' ? '키오스크 · 오늘 출고' : '기사님', '', list || prow('오늘 출고 없음')); }
+    } });
+  });
 }
-
 
 // ── 할 일 칠판 (10/29 대표 "포스트잇처럼 · 옮기고 · 그림도") — 지금은 이 기기에만 저장
 const NOTE_C = ['#FFE680', '#FFC9D6', '#C8F0C9', '#C9E4FF', '#FFD9B0'];
@@ -616,7 +548,7 @@ async function boot() {
   let ok = false;
   try {
     const sess = await S.getSession();
-    if (sess) { const acc = await S.myAccess(); const id = ((sess.user && sess.user.email) || '').split('@')[0]; ok = acc ? !!acc.staff : !/^space\d+$/.test(id); }
+    if (sess) { const acc = await S.myAccess(); const id = ((sess.user && sess.user.email) || '').split('@')[0]; ME = id; ok = acc ? !!acc.staff : !/^space\d+$/.test(id); }
   } catch (e) { ok = false; }
   if (!ok) { stage.innerHTML = `<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px"><div style="font-size:22px;font-weight:800">직원 로그인 필요</div><a class="btn or" href="/">로그인하러 가기</a></div>`; return; }
   window.addEventListener('hashchange', show); show();
