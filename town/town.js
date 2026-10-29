@@ -92,7 +92,8 @@ function village() {
       <img class="bob" src="${IMG}seal.webp" alt="김맥순" style="width:86px">
       <div class="card" style="margin-bottom:62px;max-width:230px;padding:11px 14px;border-radius:18px 18px 18px 6px"><div style="font-size:11px;font-weight:800;color:#E8732C">김맥순</div><div id="kbub" style="font-size:13px;font-weight:500;line-height:1.45;margin-top:2px"></div></div>
     </div>
-    <div class="card" style="position:absolute;right:24px;top:24px;bottom:24px;width:380px;border-radius:28px;display:flex;flex-direction:column;overflow:hidden;z-index:8">
+    <button id="chatBtn" type="button" class="btn" style="position:absolute;right:24px;top:20px;z-index:9;height:52px"><img src="${IMG}seal.webp" alt="" style="width:38px;height:38px">김맥순과 대화</button>
+    <div id="chatP" class="card pnl" style="position:absolute;right:24px;top:84px;bottom:24px;width:380px;border-radius:28px;display:none;flex-direction:column;overflow:hidden;z-index:8">
       <div style="display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid #F3EEE9"><span style="width:46px;height:46px;border-radius:50%;background:#FFF1E6;display:flex;align-items:center;justify-content:center"><img src="${IMG}seal.webp" alt="" style="width:40px"></span><div style="flex:1"><div style="font-size:16px;font-weight:800">김맥순</div><div style="font-size:12px;color:#8A7E77;display:flex;align-items:center;gap:5px"><span style="width:7px;height:7px;border-radius:50%;background:#34C759"></span>홈트레이더스 · 일하는 중</div></div></div>
       <div id="chat" class="scroll" style="flex:1;padding:16px 18px;display:flex;flex-direction:column;gap:10px;background:#FBF8F5"></div>
       <div style="padding:12px 14px 14px;border-top:1px solid #F3EEE9;display:flex;gap:8px;align-items:flex-end">
@@ -149,7 +150,8 @@ function village() {
     later((LOAD + DRIVE + DROP) * 1000, () => { set('done', `하차 끝 · ${j.item}`); say(`${PLACES[j.to].name} 하차 끝! 구매·판매 입력할게요.`); setTimeout(() => { t.svg.remove(); t.tr.remove(); }, 4000); });
   };
   // 김맥순 대화
-  const chat = v.querySelector('#chat');
+  const chat = v.querySelector('#chat'), chatP = v.querySelector('#chatP'), chatBtn = v.querySelector('#chatBtn');
+  chatBtn.onclick = () => { const o = chatP.style.display !== 'flex'; chatP.style.display = o ? 'flex' : 'none'; chatBtn.classList.toggle('or', o); };
   const bubble = (html, me) => { chat.appendChild(el(`<div style="align-self:${me ? 'flex-end' : 'flex-start'};max-width:${me ? 290 : 320}px;padding:11px 14px;border-radius:${me ? '18px 18px 6px 18px' : '18px 18px 18px 6px'};background:${me ? '#E8732C' : '#fff'};color:${me ? '#fff' : 'inherit'};font-size:14px;line-height:1.5;white-space:${me ? 'pre-line' : 'normal'};box-shadow:0 1px 3px rgba(0,0,0,.05);animation:rowin .35s ease-out both">${html}</div>`)); chat.scrollTop = chat.scrollHeight; };
   const say = (t) => bubble(esc(t));
   say('이음 톡 보니까 매향리 1.4톤 배차 됐어요. 운반비 13만 현불로 구매 입력할게요.');
