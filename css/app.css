@@ -1106,3 +1106,12 @@ body.kiosk #app::before { content: ''; position: fixed; inset: 0; z-index: 0; po
 .ks-g, .ks-box { background: rgba(255,255,255,.6); }
 .ks-b { background: rgba(255,255,255,.75); }
 .ki-toast { background: rgba(28,28,30,.72); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
+/* 키오스크 황톤 빼기 (10/30 대표) — 바탕·칩 모두 차가운 무채색, 주황은 글자·아이콘에만 */
+body.kiosk, body.kiosk #app { background: #EDF0F5; }
+body.kiosk #app::before { background: radial-gradient(60vh 60vh at 10% 6%, rgba(175,195,235,.55), transparent 70%),
+  radial-gradient(70vh 70vh at 95% 32%, rgba(200,205,240,.50), transparent 70%),
+  radial-gradient(70vh 70vh at 15% 88%, rgba(185,215,235,.45), transparent 70%),
+  radial-gradient(60vh 60vh at 88% 96%, rgba(210,215,235,.50), transparent 70%); }
+.ki-t .k-need { background: rgba(255,255,255,.52); }
+.ki-s.k-need .ki-w, .ki-r.late .ki-w { background: rgba(255,255,255,.6); }
+.ki-s.k-need h2 em { background: rgba(255,255,255,.6); }
