@@ -9,7 +9,7 @@ import * as SM from './stmt.js?v=103';
 import * as HD from './hdisp.js?v=10';
 import * as HM from './home.js?v=67';
 import * as FM from './forms.js?v=19';
-import * as KI from './kiosk.js?v=4';   // 세로형 키오스크 /kiosk (10/29)
+import * as KI from './kiosk.js?v=5';   // 세로형 키오스크 /kiosk (10/29)
 
 // 창고 아이콘 세트 (무채색)
 const WH_ICONS = {
@@ -4975,7 +4975,7 @@ function render() {
   if (state.route === 'kiosk') {   // 세로형 키오스크 (10/29 대표) — 누르는 곳 없이 1분마다 새로
     document.body.classList.remove('erp');
     app.innerHTML = KI.screen();
-    KI.start(() => { if (state.route === 'kiosk') app.innerHTML = KI.screen(); });
+    KI.start(() => { if (state.route === 'kiosk') app.innerHTML = KI.screen(); }, myAccount);
     return;
   }
   KI.stop();
