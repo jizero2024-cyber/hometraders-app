@@ -3,7 +3,7 @@
 import * as S from '/js/store-supabase.js?v=9t2';
 import * as JIM from './jim.js?v=2';
 import * as W3D from './v3d.js?v=16';
-import * as O3D from './o3d.js?v=9';
+import * as O3D from './o3d.js?v=10';
 import { portrait, KINDS } from './kit3d.js?v=3';
 
 const stage = document.getElementById('stage');
@@ -454,18 +454,22 @@ function warehouse() {
   </div>`);
   stage.appendChild(v);
   const P = panelBox(v);
-  Promise.allSettled([S.getTownStock(), live()]).then(([sr, lr]) => {   // 재고 = 실사 재고표 (재고.xlsx, 10/30 대표 "실제 최근 재고 체크한 것")
+  Promise.allSettled([S.getTownStock(), live(), S.init()]).then(([sr, lr]) => {   // 재고 = 실사 재고표 (재고.xlsx, 10/30 대표 "실제 최근 재고 체크한 것")
     if (!v.isConnected) return;
     const L = lr.status === 'fulfilled' ? lr.value : { shipped: [], today: [] };
     const ST = (sr.status === 'fulfilled' && sr.value) || { rows: [] };
     const all = (ST.rows || []).map((r, i) => ({ ...r, key: i }));
     const items = all.filter((r) => /천안/.test(r.wh) && Number(r.qty) > 0).map((r) => ({ r, key: r.key, name: r.item, qty: Number(r.qty), unit: '', cat: '구조재' }));
     const others = all.filter((r) => !/천안/.test(r.wh));
-    v.querySelector('#wat').textContent = `실사 ${String(ST.updated || '').slice(5).replace('-', '/')} · 천안 ${items.length}품목 · 오늘 출고 ${L.shipped.length}`;
+    // 철물 = 실사 자료가 없어서 사이트 재고 장부 (천안 창고 · 재고 있는 것만) — 이름표에 '장부'
+    const hw = S.getItems().filter((it) => /천안|신갈/.test(it.warehouse || '천안') && !/구조재|방부목|OSB|합판/.test(`${it.category || ''} ${it.name}`) && S.currentStock(it) > 0)
+      .sort((a, b) => S.currentStock(b) - S.currentStock(a)).map((it) => ({ it, key: 'h' + it.id, name: String(it.name).replace(/^[^_]*_/, '').slice(0, 16), qty: S.currentStock(it), unit: it.unit || '' }));
+    v.querySelector('#wat').textContent = `구조재 실사 ${String(ST.updated || '').slice(5).replace('-', '/')} ${items.length}품목 · 철물 장부 ${hw.length} · 오늘 출고 ${L.shipped.length}`;
     const ob = el('<button type="button" class="btn" style="height:46px">다른 창고</button>'); v.querySelector('#wat').before(ob);
     ob.onclick = () => P.show('다른 창고 실사', `재고표 ${ST.updated || ''}`, others.map((r) => prow(`${esc(r.wh)} · ${esc(r.item)}<div style="font-size:12px;color:#8A7E77">${esc(r.date || '')} ${esc(r.state || '')}</div>`, `${r.qty}${r.plt ? ` · ${r.plt}PLT` : ''}`)).join('') || prow('없음'));
     const drivers = L.shipped.map((x) => ({ key: x.case || x.no, row: x }));
-    O3D.warehouse(host3d('#E6E2DA'), { alive: () => v.isConnected, items, drivers, onPick: (k) => {
+    O3D.warehouse(host3d('#E6E2DA'), { alive: () => v.isConnected, items, hw, drivers, onPick: (k) => {
+      if (k.startsWith('item:h')) { const h = hw.find((y) => y.key === k.slice(5)); if (!h) return; P.show(h.it.name, `${h.it.warehouse || ''} · 사이트 재고 장부 (철물 실사 없음)`, prow('장부 재고', `${Math.floor(h.qty)}${h.unit}`) + prow('출고 예정 · 배차 완료', `${Math.floor(S.reservedQty(h.it))}${h.unit}`) + prow('규격', esc(h.it.spec || '—'))); return; }
       if (k.startsWith('item:')) { const x = items.find((y) => String(y.key) === k.slice(5)); if (!x) return; const r = x.r; P.show(`구조재 ${x.name}`, `${r.wh} · 실사 ${ST.updated || ''}`, prow('수량', `${r.qty}${r.plt ? ` · ${r.plt}PLT` : ''}`) + prow('상태', esc(r.state || '—'), r.state === '확인' ? 'color:#B07A00' : '') + (r.date ? prow('입고일자', esc(r.date)) : '') + (r.note ? prow(`<div style="font-size:12px;line-height:1.5">${esc(r.note)}</div>`) : '')); return; }
       if (k === 'kiosk' || k === 'noh' || k.startsWith('drv:')) { const list = (k.startsWith('drv:') ? drivers.filter((d) => String(d.key) === k.slice(4)) : drivers).map((d) => prow(`${esc(d.row.partner)} · ${esc(d.row.site || '')}<div style="font-size:12px;color:#8A7E77">${esc(d.row.veh || '')} ${esc(d.row.time || '')} · ${esc(d.row.item || '')}</div>`, (d.row.steps || []).includes('출고 완료') ? '출고 완료' : '배차 완료', 'color:#1E8E3E')).join(''); P.show(k === 'noh' ? '노훈님 · 오늘 상차' : k === 'kiosk' ? '키오스크 · 오늘 출고' : '기사님', '', list || prow('오늘 출고 없음')); }
     } });

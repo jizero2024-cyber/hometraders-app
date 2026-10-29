@@ -167,18 +167,27 @@ export function warehouse(host, o) {
   box(420, 1, 300, '#B9B3A6', 0, -1.6, 30); box(WW, 0.6, WD, '#C9C4BA', 0, -0.6, 0); box(WW, WH, 0.6, '#EDEFF2', 0, 0, -WD / 2); box(0.6, WH, WD, '#E4E7EB', -WW / 2, 0, 0); box(0.6, WH, WD, '#E4E7EB', WW / 2, 0, 0);
   box(WW + 1, 0.8, 4, '#3F7FE0', 0, WH, -WD / 2 + 1.4);
   for (let i = -3; i <= 3; i++) box(0.3, 0.02, WD - 4, '#F5C431', i * 9, 0.01, 0);
-  // 선반 — 실제 품목 (o.items: [{key,name,qty,unit,cat}])
-  const items = (o.items || []).slice(0, 24), colC = { 구조재: '#E2B87A', 방부목: '#B9925E', 실리콘: '#F2F2F2', 철물: '#9AA5B1', 세라믹: '#D9D4CA', OSB: '#D7B37A' };
-  const rackX = [-24, -8, 8, 24];
-  rackX.forEach((x) => { [-1, 1].forEach((s) => box(0.4, 14, 0.4, '#E8732C', x + s * 6.5, 0, -13)); [-1, 1].forEach((s) => box(0.4, 14, 0.4, '#E8732C', x + s * 6.5, 0, -7)); [0, 4.6, 9.2].forEach((y) => box(13.4, 0.35, 6.4, '#3F6FB8', x, y + 0.3, -10)); });
+  // 배치 (10/30 대표): 문(앞)에서 양옆 벽을 따라 랙 — 철물류. 구조재는 랙이 아니라 바닥에 번들로.
+  const RX = [-WW / 2 + 3.2, WW / 2 - 3.2], RZ = [12, 4, -4, -12];   // 랙 칸 (벽 따라 문 → 안쪽)
+  RX.forEach((x) => { RZ.forEach((z) => { [-3.4, 3.4].forEach((dz) => [-1.3, 1.3].forEach((dx) => box(0.35, 11, 0.35, '#E8732C', x + dx, 0, z + dz))); [0.3, 3.9, 7.5].forEach((y) => box(3.2, 0.3, 7.2, '#3F6FB8', x, y, z)); }); });
+  const hw = (o.hw || []).slice(0, 24), hwC = ['#9AA5B1', '#C9CDD2', '#F5B400', '#B8BEC6', '#7E8A96'];
+  hw.forEach((it, i) => {
+    const side = i % 2, slot = Math.floor(i / 2), z = RZ[slot % 4], lvl = Math.floor(slot / 4) % 3, x = RX[side], y = [0.6, 4.2, 7.8][lvl];
+    const g = new THREE.Group(); g.position.set(x, y, z); scene.add(g); for (let k = 0; k < 3; k++) box(2.4, 1.1, 1.8, hwC[(i + k) % hwC.length], 0, (k === 2 ? 1.1 : 0), -2 + k * 2.2 - (k === 2 ? 2.2 : 0), g); clickable(g, 'item:' + it.key);
+    tag('item:' + it.key, pill(`${it.name} ${Math.floor(it.qty)}${it.unit || ''}`, 'rgba(255,255,255,.95)', '#4A3F3A'), x + (side ? -1.6 : 1.6), y + 2.6, z);
+  });
+  // 구조재 — 바닥 번들 (o.items: 실사 재고표 줄, plt = 파렛트 수)
+  const items = (o.items || []).slice(0, 12);
   items.forEach((it, i) => {
-    const r = i % 4, lvl = Math.floor(i / 4) % 3, slot = Math.floor(i / 12), x = rackX[r] + (slot ? 3.1 : -3.1), y = lvl * 4.6 + 0.65, z = -10;
-    const c = Object.entries(colC).find(([k]) => (it.cat || it.name).includes(k)); const h = Math.min(3.6, 0.8 + Math.log10(1 + it.qty) * 1.2);
-    const g = new THREE.Group(); g.position.set(x, y, z); scene.add(g); box(5.4, 0.3, 5, '#B88B55', 0, 0, 0, g); box(5, h, 4.6, c ? c[1] : '#E9C98F', 0, 0.3, 0, g); clickable(g, 'item:' + it.key);
-    tag('item:' + it.key, pill(`${it.name} ${Math.floor(it.qty)}${it.unit || ''}`, 'rgba(255,255,255,.95)', '#4A3F3A'), x, y + h + 1.4, z + 2.4);
+    const col = i % 4, row = Math.floor(i / 4), x0 = -15 + col * 10, z0 = -12 + row * 9, n = Math.max(1, Math.min(8, Number(it.plt) || Math.ceil(it.qty / 150)));
+    const len = /16/.test(it.name.split('*')[2] || '') ? 7.2 : /13|3900/.test(it.name) ? 5.6 : 5.2;
+    const g = new THREE.Group(); g.position.set(x0, 0, z0); scene.add(g);
+    for (let k = 0; k < n; k++) { const sx = (k % 2) * 3.2 - 1.6, sy = Math.floor(k / 2) * 1.5; box(2.9, 0.25, len, '#B88B55', sx, sy, 0, g); box(2.7, 1.2, len - 0.2, k % 3 === 2 ? '#D7B37A' : '#E2B87A', sx, sy + 0.25, 0, g); box(2.72, 0.06, 0.1, '#FFFFFF', sx, sy + 0.9, len / 3, g); box(2.72, 0.06, 0.1, '#FFFFFF', sx, sy + 0.9, -len / 3, g); }
+    clickable(g, 'item:' + it.key);
+    tag('item:' + it.key, pill(`${it.name} ${Math.floor(it.qty)}${it.plt ? ` · ${it.plt}PLT` : ''}`, 'rgba(255,255,255,.95)', '#7A5A00'), x0, Math.ceil(n / 2) * 1.5 + 1.6, z0);
   });
   // 키오스크 · 지게차 · 불독 · 노훈님
-  { const g = new THREE.Group(); g.position.set(-28, 0, 12); scene.add(g); box(2.4, 5.4, 1.6, '#FFFFFF', 0, 0, 0, g); box(2, 2.6, 0.1, '#2B2F36', 0, 2.4, 0.82, g); box(1.8, 2.3, 0.05, '#9FD0FF', 0, 2.55, 0.88, g, { emissive: '#9FD0FF', emissiveIntensity: 0.5 }); clickable(g, 'kiosk'); }
+  { const g = new THREE.Group(); g.position.set(-20, 0, 17); scene.add(g); box(2.4, 5.4, 1.6, '#FFFFFF', 0, 0, 0, g); box(2, 2.6, 0.1, '#2B2F36', 0, 2.4, 0.82, g); box(1.8, 2.3, 0.05, '#9FD0FF', 0, 2.55, 0.88, g, { emissive: '#9FD0FF', emissiveIntensity: 0.5 }); clickable(g, 'kiosk'); }
   const fk = new THREE.Group(); scene.add(fk); box(3, 2.2, 4.2, '#F5B400', 0, 0.6, 0, fk); box(0.3, 6, 0.3, '#333', -1, 0, 2.3, fk); box(0.3, 6, 0.3, '#333', 1, 0, 2.3, fk); const fork = box(2.6, 0.25, 2.6, '#333', 0, 0.4, 3.4, fk); box(2.8, 0.2, 2.8, '#B88B55', 0, 0.65, 3.4, fork.parent);
   const dog = critter('dog'); dog.g.scale.setScalar(1.6); scene.add(dog.g); const noh = critter('worker'); noh.g.scale.setScalar(1.7); scene.add(noh.g); clickable(noh.g, 'noh');
   const nohT = tag('noh', pill('노훈님 · 창고', '#fff', '#4A3F3A', DOT.ok), 0, 0, 0);
@@ -186,10 +195,10 @@ export function warehouse(host, o) {
   const drivers = (o.drivers || []).slice(0, 6).map((d, i) => { const c = critter('driver'); c.g.scale.setScalar(1.6); scene.add(c.g); clickable(c.g, 'drv:' + d.key); return { c, d, ph: i * 2.3 }; });
   box(12, 6, 6, '#7FB2FF', 22, 0.6, 26); box(4.6, 4.6, 5.6, '#3F7FE0', 30, 0.6, 26);   // 문 앞 트럭
   ticks.push((dt, t) => {
-    const a = t * 0.25; fk.position.set(Math.sin(a) * 18, 0, 4 + Math.cos(a) * 3); fk.rotation.y = Math.cos(a) > 0 ? Math.PI / 2 : -Math.PI / 2; fork.position.y = 0.4 + Math.max(0, Math.sin(t * 0.8)) * 3;
-    dog.g.position.set(-14 + Math.sin(t * 0.4) * 10, 0, 2); dog.face(Math.cos(t * 0.4), 0); dog.walk(dt, 0.8);
-    const nz = Math.sin(t * 0.3); noh.g.position.set(8 + nz * 12, 0, -3); noh.face(Math.cos(t * 0.3), 0); noh.walk(dt, 0.7);
-    nohT.p.set(8 + nz * 12, 6.2, -3);
+    const a = t * 0.25; fk.position.set(Math.sin(a) * 20, 0, 14 + Math.cos(a) * 2); fk.rotation.y = Math.cos(a) > 0 ? Math.PI / 2 : -Math.PI / 2; fork.position.y = 0.4 + Math.max(0, Math.sin(t * 0.8)) * 3;
+    dog.g.position.set(Math.sin(t * 0.4) * 14, 0, 9); dog.face(Math.cos(t * 0.4), 0); dog.walk(dt, 0.8);
+    const nz = Math.sin(t * 0.3); noh.g.position.set(nz * 16, 0, -16.5); noh.face(Math.cos(t * 0.3), 0); noh.walk(dt, 0.7);
+    nohT.p.set(nz * 16, 6.2, -16.5);
     drivers.forEach((d, i) => { const p = ((t * 0.08 + d.ph) % 2); const f = p < 1 ? p : 2 - p; const x = -28 + f * 50, z = 16 + i * 1.6; d.c.g.position.set(x, 0, z); d.c.face(p < 1 ? 1 : -1, 0); d.c.walk(dt); });
   });
   return { noh, drivers };
