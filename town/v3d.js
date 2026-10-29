@@ -197,8 +197,9 @@ export function mount(host, o) {
   // 빈 블록 — 동네 집 · 공원 · 밭
   [[90, -25], [-30, 25], [30, 25]].forEach(([bx, bz], bi) => {
     const W2 = ['#F4F0E8', '#F2E9DC', '#EEF0EC', '#F6EFE4', '#EFE8E0'], R2 = ['#3F5A7A', '#B8573E', '#4E6E5A', '#4A4E5A', '#7A5A44'];
-    for (let i = 0; i < 4; i++) if (!(bi === 2 && i === 3)) house(bx - 15 + (i % 2) * 30 * 0.66 + (i > 1 ? 4 : 0), bz - 10 + Math.floor(i / 2) * 18, (i % 2 ? Math.PI : 0) + (bi - 1) * 0.1, W2[(i + bi) % 5], R2[(i + bi * 2) % 5], 0.9);
+    for (let i = 0; i < 4; i++) if (i === bi % 2 && !(bi === 2 && i === 3)) house(bx - 15 + (i % 2) * 30 * 0.66 + (i > 1 ? 4 : 0), bz - 10 + Math.floor(i / 2) * 18, (i % 2 ? Math.PI : 0) + (bi - 1) * 0.1, W2[(i + bi) % 5], R2[(i + bi * 2) % 5], 0.9);
     tree(bx + 18, bz - 12, 1.1); tree(bx + 20, bz + 10, 0.9); tree(bx - 22, bz + 2, 1);
+    for (let k = 0; k < 6; k++) { const tx = bx + (k % 3 - 1) * 12 + (bi === 2 ? -14 : 8), tz = bz + (k < 3 ? -8 : 10); if (bi === 2 && tx > bx - 4) continue; tree(tx, tz, 0.8 + (k % 3) * 0.15, ['#5DBB5A', '#4FAE6E', '#7FCB5A'][k % 3]); }
   });
 
   // 편의점 — 세븐일레븐 · 세븐반장창고(무인 철물점, 10/29 대표). 가게집 모양 · 밤에 불 켜짐

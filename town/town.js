@@ -2,8 +2,8 @@
 // 주소 뒤 #/campus · #/office · #/warehouse 로 화면 바뀜. 직원 계정만 (공간 계정 막음)
 import * as S from '/js/store-supabase.js?v=9t1';
 import * as JIM from './jim.js?v=2';
-import * as W3D from './v3d.js?v=14';
-import * as O3D from './o3d.js?v=7';
+import * as W3D from './v3d.js?v=15';
+import * as O3D from './o3d.js?v=8';
 import { portrait, KINDS } from './kit3d.js?v=3';
 
 const stage = document.getElementById('stage');
@@ -355,7 +355,7 @@ async function live() {
   if (L.ai && L.ai.run) W.seal.st = 'run';
   L.W = W; return L;
 }
-const tagHtml = (who, line, st, n) => `<div style="display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:#fff;box-shadow:0 3px 12px rgba(30,40,60,.2);font:800 11px Pretendard,sans-serif;color:#4A3F3A;white-space:nowrap"><span style="width:8px;height:8px;border-radius:50%;background:${O3D.DOT[st] || O3D.DOT.ok}"></span>${esc(who)}<span style="font-weight:600;color:#8A7E77">${esc(line)}</span>${n ? `<span style="padding:1px 7px;border-radius:999px;background:#FF453A;color:#fff">${n}</span>` : ''}</div>`;
+const tagHtml = (who, line, st, n) => `<div title="${esc(line)}" style="display:flex;align-items:center;gap:5px;padding:4px 9px;border-radius:999px;background:#fff;box-shadow:0 3px 12px rgba(30,40,60,.2);font:800 11px Pretendard,sans-serif;color:#4A3F3A;white-space:nowrap"><span style="width:8px;height:8px;border-radius:50%;background:${O3D.DOT[st] || O3D.DOT.ok}"></span>${esc(who)}${n ? `<span style="padding:1px 7px;border-radius:999px;background:#FF453A;color:#fff">${n}</span>` : ''}</div>`;
 const objHtml = (t, n, c = '#E8732C') => `<div style="display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:12px;background:#FFF6D8;box-shadow:0 3px 12px rgba(30,40,60,.18);font:800 11px Pretendard,sans-serif;color:#7A5A00;white-space:nowrap">${esc(t)}${n != null ? `<span style="padding:1px 7px;border-radius:999px;background:${c};color:#fff">${n}</span>` : ''}</div>`;
 const newId = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 async function putInbox(its) {   // 자료 넣기 실제 올리기 — 첫 화면 자료 넣기와 같은 꼴 (site_inbox wait)
@@ -442,7 +442,7 @@ function office() {
   let meeting = false;
   v.querySelector('#meet').onclick = () => {
     if (meeting || !L) return; meeting = true; v.querySelector('#meet').textContent = '회의 중…';
-    O.meeting(AI.map((a) => a.k), (k) => { const a = AI.find((x) => x.k === k), w = L.W[k]; O.setTag(k, `<div style="max-width:260px;padding:8px 12px;border-radius:14px;background:#fff;box-shadow:0 6px 18px rgba(30,40,60,.25);font:600 12px Pretendard,sans-serif;color:#2B2522"><b style="color:#E8732C">${esc(a.who)}</b> ${esc(w.line)}${w.note && w.st === 'bad' ? ` · ${esc(w.note)}` : ''}</div>`, [O.OBJ.meet[0], O.OBJ.meet[1] + 2, O.OBJ.meet[2]]); setTimeout(() => { O.setTag(k, tagHtml(a.who, w.line, w.st, w.n), [O.seats[k].home[0], O.seats[k].home[1] + 6.2, O.seats[k].home[2]]); }, 2300); },
+    O.meeting(AI.map((a) => a.k), (k) => { const a = AI.find((x) => x.k === k), w = L.W[k]; O.setTag(k, `<div style="max-width:260px;padding:8px 12px;border-radius:14px;background:#fff;box-shadow:0 6px 18px rgba(30,40,60,.25);font:600 12px Pretendard,sans-serif;color:#2B2522"><b style="color:#E8732C">${esc(a.who)}</b> ${esc(w.line)}${w.note && w.st === 'bad' ? ` · ${esc(w.note)}` : ''}</div>`, [O.OBJ.meet[0], O.OBJ.meet[1] + 2, O.OBJ.meet[2]]); setTimeout(() => { O.setTag(k, tagHtml(a.who, w.line, w.st, w.n), [O.seats[k].home[0], O.seats[k].home[1] + 7.2, O.seats[k].home[2]]); }, 2300); },
       () => { meeting = false; v.querySelector('#meet').textContent = '회의'; });
   };
 }

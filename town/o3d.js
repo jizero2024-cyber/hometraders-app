@@ -14,7 +14,7 @@ function base(host, o) {
   const over = document.createElement('div'); over.style.cssText = 'position:absolute;inset:0;pointer-events:none;overflow:hidden'; host.appendChild(over);
   const scene = new THREE.Scene(); scene.background = new THREE.Color(o.bg || '#D8E9FA');
   const cam = new THREE.PerspectiveCamera(34, W / H, 1, 800); cam.position.set(...o.cam);
-  const ctl = new OrbitControls(cam, renderer.domElement); ctl.target.set(...o.target); ctl.enableDamping = true; ctl.minDistance = 25; ctl.maxDistance = 220; ctl.maxPolarAngle = 1.45; ctl.minAzimuthAngle = -1.1; ctl.maxAzimuthAngle = 1.1; ctl.update();
+  const ctl = new OrbitControls(cam, renderer.domElement); ctl.target.set(...o.target); ctl.enableDamping = true; ctl.minDistance = 25; ctl.maxDistance = 300; ctl.maxPolarAngle = 1.45; ctl.minAzimuthAngle = -1.1; ctl.maxAzimuthAngle = 1.1; ctl.update();
   const hr = new Date().getHours(), night = hr >= 18 || hr < 6;
   scene.add(new THREE.HemisphereLight(night ? '#C9D4F2' : '#F4FAFF', '#8A8070', night ? 1.0 : 1.2));
   const sun = new THREE.DirectionalLight(night ? '#FFE2B8' : '#FFF6E6', night ? 1.2 : 2.0); sun.position.set(-60, 120, 90); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
@@ -46,9 +46,9 @@ export const DOT = { ok: '#34C759', bad: '#FF453A', run: '#2F7BF6', idle: '#B4B2
 
 // ── 사무실: 5층 + 앞마당 ──
 export function office(host, o) {
-  const K = base(host, { ...o, cam: [16, 22, 96], target: [0, 17, 4], bg: '#D8E9FA' });
+  const K = base(host, { ...o, cam: [18, 32, 128], target: [0, 24, 4], bg: '#D8E9FA' });
   const { scene, box, cyl, mat, clickable, tag, ticks } = K;
-  const FW = 46, FD = 20, FH = 7.2, NF = 5;
+  const FW = 46, FD = 20, FH = 10, NF = 5;   // 층고 높게 (10/30 대표 "층고 낮아 캐릭터 가려져")
   box(420, 1, 300, '#9ED27F', 0, -1.2, 20); box(90, 1, 60, '#D9D3C6', 0, -1, 8); box(420, 0.2, 10, '#6B7280', 0, -0.2, 46);   // 땅 · 앞 길 (양옆까지)
   for (let i = 0; i < 40; i++) { const sx = i % 2 ? 1 : -1, x = sx * (52 + (i * 17) % 120), z = -30 + (i * 23) % 70; const t = new THREE.Mesh(new THREE.IcosahedronGeometry(2.8, 0), mat('#5DAA58', { flatShading: true })); t.position.set(x, 4, z); t.castShadow = true; scene.add(t); box(0.6, 2, 0.6, '#8A5A35', x, -0.5, z); }
   box(64, 0.3, 22, '#8CCB6A', 0, 0, 22);   // 마당 잔디
@@ -68,13 +68,13 @@ export function office(host, o) {
   const scr = (w2, h2) => { const c = document.createElement('canvas'); c.width = 256; c.height = 160; const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; const m2 = new THREE.MeshStandardMaterial({ map: t, emissive: '#FFFFFF', emissiveMap: t, emissiveIntensity: 0.55 }); const me = new THREE.Mesh(new THREE.PlaneGeometry(w2, h2), m2); return { c, t, me }; };
   const drawScr = (S2, lines2, bg = '#1F3A5F') => { const g2 = S2.c.getContext('2d'); g2.fillStyle = bg; g2.fillRect(0, 0, 256, 160); g2.fillStyle = 'rgba(255,255,255,.12)'; for (let i = 0; i < 5; i++) g2.fillRect(14, 70 + i * 16, 120 + (i * 37) % 100, 7); g2.fillStyle = '#FFFFFF'; g2.font = '800 30px Pretendard, sans-serif'; g2.fillText(lines2[0] || '', 14, 38); g2.fillStyle = '#9FD0FF'; g2.font = '700 22px Pretendard, sans-serif'; g2.fillText(lines2[1] || '', 14, 66); S2.t.needsUpdate = true; };
   const desk = (x, f, z = -1, c = '#D9B88C', k) => { const y = f * FH + 0.5; box(6, 0.3, 3, c, x, y + 1.6, z); [-2.7, 2.7].forEach((a) => box(0.3, 1.6, 2.6, '#BFA27A', x + a, y, z));
-    box(0.25, 0.9, 0.25, '#3A3F47', x + 1.2, y + 1.9, z - 0.6); box(2.8, 1.75, 0.15, '#2B2F36', x + 1.2, y + 2.7, z - 0.6); const S2 = scr(2.6, 1.55); S2.me.position.set(x + 1.2, y + 3.58, z - 0.52); scene.add(S2.me); drawScr(S2, ['', '']); if (k) screens[k] = S2;
-    box(1.6, 0.06, 0.6, '#E6E8EB', x + 1.2, y + 1.92, z + 0.5); const mug = cyl(0.18, 0.35, '#FFFFFF', x - 1.8, y + 1.92, z + 0.4, scene, 10); mug.castShadow = false; };
+    box(0.25, 0.9, 0.25, '#3A3F47', x + 1.9, y + 1.9, z - 0.6); box(2.8, 1.75, 0.15, '#2B2F36', x + 1.9, y + 2.7, z - 0.6); const S2 = scr(2.6, 1.55); S2.me.position.set(x + 1.9, y + 3.58, z - 0.52); scene.add(S2.me); drawScr(S2, ['', '']); if (k) screens[k] = S2;
+    box(1.6, 0.06, 0.6, '#E6E8EB', x + 1.9, y + 1.92, z + 0.5); const mug = cyl(0.18, 0.35, '#FFFFFF', x - 1.8, y + 1.92, z + 0.4, scene, 10); mug.castShadow = false; };
   // 직원 자리 (AI 작업) — o.staff: [{k,who,f,x}]
   const seats = {};
   (o.staff || []).forEach((s) => {
-    desk(s.x, s.f, -1, s.k === 'seal' ? '#F4F2EE' : '#D9B88C', s.k); const c = critter(s.av); c.g.scale.setScalar(2.1); c.g.position.set(s.x - 0.6, s.f * FH + 0.5, -4.2); c.g.rotation.y = 0; scene.add(c.g); clickable(c.g, s.k);
-    seats[s.k] = { c, home: [s.x - 0.6, s.f * FH + 0.5, -4.2], at: 'desk', s };
+    desk(s.x, s.f, -1, s.k === 'seal' ? '#F4F2EE' : '#D9B88C', s.k); const c = critter(s.av); c.g.scale.setScalar(2.3); c.g.position.set(s.x - 1.2, s.f * FH + 0.5, -3.6); c.g.rotation.y = 0; scene.add(c.g); clickable(c.g, s.k);
+    seats[s.k] = { c, home: [s.x - 1.2, s.f * FH + 0.5, -3.6], at: 'desk', s };
   });
   // 물건
   const OBJ = {};
@@ -89,7 +89,7 @@ export function office(host, o) {
   const win = (x, y, z, w2, h2) => { box(w2 + 0.3, h2 + 0.3, 0.2, '#FFFFFF', x, y, z); const pane = box(w2, h2, 0.1, '#BFE3F7', x, y + 0.15, z + 0.08, scene, { roughness: 0.1, emissive: '#BFE3F7', emissiveIntensity: 0.25 }); pane.castShadow = false; box(0.12, h2, 0.15, '#FFFFFF', x, y + 0.15, z + 0.12); box(w2, 0.12, 0.15, '#FFFFFF', x, y + 0.15 + h2 / 2, z + 0.12); };
   const BIND = ['#5D7FBF', '#FFFFFF', '#9AB6E0', '#E8E2D6', '#3F5F9A'];
   // 5F 대표실 — 통창 · 테라리움 어항 · 맥북 · 라운지 의자 · 커피 바
-  { const y = 4 * FH + 0.5; win(-10, y + 1.2, -FD / 2 + 0.35, 18, 4.6); win(9, y + 1.2, -FD / 2 + 0.35, 10, 4.6);
+  { const y = 4 * FH + 0.5; win(-10, y + 1.6, -FD / 2 + 0.35, 18, 6.6); win(9, y + 1.6, -FD / 2 + 0.35, 10, 6.6);
     const tg = new THREE.Group(); tg.position.set(-16, y, -3); scene.add(tg); box(3, 1.4, 2, '#C9A26B', 0, 0, 0, tg); const bowl = new THREE.Mesh(new THREE.SphereGeometry(1.4, 24, 18), new THREE.MeshStandardMaterial({ color: '#DDF3FF', transparent: true, opacity: 0.28, roughness: 0.05 })); bowl.position.set(0, 2.8, 0); tg.add(bowl);
     const water = new THREE.Mesh(new THREE.SphereGeometry(1.25, 20, 14, 0, Math.PI * 2, Math.PI * 0.35, Math.PI * 0.65), new THREE.MeshStandardMaterial({ color: '#7FC8F0', transparent: true, opacity: 0.45 })); water.position.set(0, 2.8, 0); tg.add(water);
     box(1.8, 0.25, 1.8, '#E8D6A8', 0, 1.65, 0, tg); const fishes = [0, 1].map((i) => { const f2 = new THREE.Mesh(new THREE.SphereGeometry(0.22, 10, 8), mat(i ? '#FF8A3C' : '#F7C82F')); f2.scale.set(1.4, 0.8, 0.6); tg.add(f2); return f2; });
@@ -143,12 +143,12 @@ export function office(host, o) {
   return {
     seats, OBJ, FH,
     setScreen(k, lines2, bg) { const S2 = screens[k]; if (S2) drawScr(S2, lines2, bg); },
-    setTag(key, html, pos) { if (tagsBy[key]) { tagsBy[key].d.innerHTML = html; if (pos) tagsBy[key].p.set(...pos); return; } const p = pos || (seats[key] ? [seats[key].home[0], seats[key].home[1] + 6.2, seats[key].home[2]] : OBJ[key]); if (p) tagsBy[key] = tag(key, html, ...p); },
+    setTag(key, html, pos) { if (tagsBy[key]) { tagsBy[key].d.innerHTML = html; if (pos) tagsBy[key].p.set(...pos); return; } const p = pos || (seats[key] ? [seats[key].home[0], seats[key].home[1] + 7.2, seats[key].home[2]] : OBJ[key]); if (p) tagsBy[key] = tag(key, html, ...p); },
     setIdle(k, idle, ri) {   // 할 일 0 → 마당 빈백, 생기면 자리로
       const st = seats[k]; if (!st) return; const want = idle ? 'rest' : 'desk'; if (st.at === want || st.at === 'walk') return;
       st.at = 'walk'; const [hx, hy, hz] = st.home, [rx, rz] = REST[ri % REST.length];
       if (idle) goTo(k, new THREE.Vector3(rx, 0.3, rz), () => { st.at = 'rest'; st.c.g.rotation.y = 0; if (tagsBy[k]) tagsBy[k].p.set(rx, 5.2, rz); });
-      else goTo(k, new THREE.Vector3(hx, hy, hz), () => { st.at = 'desk'; st.c.g.rotation.y = 0; if (tagsBy[k]) tagsBy[k].p.set(hx, hy + 6.2, hz); });
+      else goTo(k, new THREE.Vector3(hx, hy, hz), () => { st.at = 'desk'; st.c.g.rotation.y = 0; if (tagsBy[k]) tagsBy[k].p.set(hx, hy + 7.2, hz); });
     },
     meeting(order, say, done) {   // 회의 — 대표실 테이블로 모여 한 명씩 실제 숫자 보고
       const [mx, my, mz] = OBJ.meet, ks = order.filter((k) => seats[k]);
