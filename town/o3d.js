@@ -162,7 +162,7 @@ export function office(host, o) {
 // ── 창고: 높은 창고 안 (실제 재고만) ──
 export function warehouse(host, o) {
   const K = base(host, { ...o, cam: [14, 52, 118], target: [0, 6, 10], bg: '#E6E2DA' });
-  const { scene, box, cyl, clickable, tag, ticks } = K;
+  const { scene, box, cyl, mat, clickable, tag, ticks } = K;
   const WW = 70, WD = 40, WH = 22;
   box(420, 1, 300, '#B9B3A6', 0, -1.6, 30); box(WW, 0.6, WD, '#C9C4BA', 0, -0.6, 0); box(WW, WH, 0.6, '#EDEFF2', 0, 0, -WD / 2); box(0.6, WH, WD, '#E4E7EB', -WW / 2, 0, 0); box(0.6, WH, WD, '#E4E7EB', WW / 2, 0, 0);
   box(WW + 1, 0.8, 4, '#3F7FE0', 0, WH, -WD / 2 + 1.4);
