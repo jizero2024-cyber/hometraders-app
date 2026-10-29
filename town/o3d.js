@@ -191,15 +191,42 @@ export function warehouse(host, o) {
   const fk = new THREE.Group(); scene.add(fk); box(3, 2.2, 4.2, '#F5B400', 0, 0.6, 0, fk); box(0.3, 6, 0.3, '#333', -1, 0, 2.3, fk); box(0.3, 6, 0.3, '#333', 1, 0, 2.3, fk); const fork = box(2.6, 0.25, 2.6, '#333', 0, 0.4, 3.4, fk); box(2.8, 0.2, 2.8, '#B88B55', 0, 0.65, 3.4, fork.parent);
   const dog = critter('dog'); dog.g.scale.setScalar(1.6); scene.add(dog.g); const noh = critter('worker'); noh.g.scale.setScalar(1.7); scene.add(noh.g); clickable(noh.g, 'noh');
   const nohT = tag('noh', pill('노훈님 · 창고', '#fff', '#4A3F3A', DOT.ok), 0, 0, 0);
-  // 기사님 — 오늘 출고 건만 (o.drivers: [{key,label}])
-  const drivers = (o.drivers || []).slice(0, 6).map((d, i) => { const c = critter('driver'); c.g.scale.setScalar(1.6); scene.add(c.g); clickable(c.g, 'drv:' + d.key); return { c, d, ph: i * 2.3 }; });
-  box(12, 6, 6, '#7FB2FF', 22, 0.6, 26); box(4.6, 4.6, 5.6, '#3F7FE0', 30, 0.6, 26);   // 문 앞 트럭
+  // 차 — 오늘 천안창고에서 실은 차만 (o.drivers: [{key, type, plate, label}]) · 차종 모양 · 번호판 (10/30 대표)
+  const plateTex = (txt) => { const c = document.createElement('canvas'); c.width = 256; c.height = 64; const g2 = c.getContext('2d'); g2.fillStyle = '#FFFFFF'; g2.fillRect(0, 0, 256, 64); g2.strokeStyle = '#1E1E1E'; g2.lineWidth = 4; g2.strokeRect(3, 3, 250, 58); g2.fillStyle = '#1E1E1E'; g2.font = '900 34px Pretendard, sans-serif'; g2.textAlign = 'center'; g2.textBaseline = 'middle'; g2.fillText(txt || '번호 없음', 128, 34); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return new THREE.MeshBasicMaterial({ map: t }); };
+  const wheel = (p, x, z, r = 0.55) => { const w = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 0.42, 16), mat('#1E1E1E')); w.rotation.z = Math.PI / 2; w.position.set(x, r, z); w.castShadow = true; p.add(w); };
+  const vehicle = (type, plate) => {   // 길이 방향 = z (+z 가 앞)
+    const g = new THREE.Group(), pm = plateTex(plate);
+    const S = { damas: [1.5, 3.4], lt: [1.75, 4.8], l14: [1.9, 5.4], mid: [2.1, 6.6], ax5: [2.4, 9.6], wing: [2.4, 10.4] }[type] || [1.75, 4.8], [Wd, Ln] = S;
+    if (type === 'damas') { box(Wd, 1.8, Ln, '#F4F4F2', 0, 0.35, 0, g); box(Wd + 0.02, 0.7, 0.9, '#2B3440', 0, 1.25, Ln / 2 - 0.5, g, { roughness: 0.2 }); [[-0.6, 1.1], [0.6, 1.1], [-0.6, -1.1], [0.6, -1.1]].forEach(([x, z]) => wheel(g, x, z, 0.38)); }
+    else {
+      const cabL = type === 'lt' || type === 'l14' ? 1.6 : 2.2, cabH = type === 'lt' || type === 'l14' ? 1.9 : 2.6, cabC = type === 'lt' ? '#3F6FB8' : type === 'l14' ? '#F4F4F2' : '#E8E8E6';
+      box(Wd, cabH, cabL, cabC, 0, 0.55, Ln / 2 - cabL / 2, g); box(Wd + 0.02, cabH * 0.38, 0.1, '#2B3440', 0, 0.55 + cabH * 0.5, Ln / 2 + 0.01, g, { roughness: 0.2 });
+      const bedL = Ln - cabL - 0.2, bz = -cabL / 2 - 0.1;
+      if (type === 'lt' || type === 'l14') { box(Wd, 0.2, bedL, '#9AA0A6', 0, 0.75, bz, g); [-1, 1].forEach((sg) => box(0.08, 0.5, bedL, '#C9CDD2', sg * (Wd / 2 - 0.04), 0.95, bz, g)); box(Wd, 0.5, 0.08, '#C9CDD2', 0, 0.95, bz - bedL / 2, g); }
+      else if (type === 'wing') { box(Wd, 2.8, bedL, '#C9CDD2', 0, 1.0, bz, g); box(Wd + 0.05, 0.15, bedL, '#3F7FE0', 0, 3.8, bz, g); }
+      else { box(Wd, type === 'mid' ? 2.4 : 0.25, bedL, type === 'mid' ? '#F2F2F0' : '#8E959C', 0, 0.85, bz, g); if (type === 'ax5') [-1, 1].forEach((sg) => box(0.1, 0.7, bedL, '#8E959C', sg * (Wd / 2 - 0.05), 1.1, bz, g)); }
+      const axR = type === 'lt' ? [Ln / 2 - 0.9, -Ln / 2 + 1.0] : type === 'ax5' ? [Ln / 2 - 1.1, -Ln / 2 + 2.6, -Ln / 2 + 1.2] : type === 'wing' ? [Ln / 2 - 1.1, -Ln / 2 + 2.6, -Ln / 2 + 1.2] : [Ln / 2 - 1.0, -Ln / 2 + 1.3];
+      axR.forEach((z) => [-1, 1].forEach((sg) => wheel(g, sg * (Wd / 2 - 0.15), z, type === 'lt' || type === 'l14' ? 0.45 : 0.6)));
+    }
+    const pf = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 0.28), pm); pf.position.set(0, 0.6, Ln / 2 + 0.03); g.add(pf);
+    const pr = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 0.28), pm); pr.position.set(0, 0.6, -Ln / 2 - 0.03); pr.rotation.y = Math.PI; g.add(pr);
+    scene.add(g); return { g, Ln };
+  };
+  const drivers = (o.drivers || []).slice(0, 6).map((d, i) => {
+    const v = vehicle(d.type, d.plate); const x = -6 + i * 7; v.g.position.set(x, 0, 30); v.g.rotation.y = Math.PI; clickable(v.g, 'drv:' + d.key);
+    tag('drv:' + d.key, pill(`${d.plate || '번호 미상'} · ${d.label}`, '#FFFFFF', '#1E1E1E'), x, 5.6, 30);
+    const c = critter('driver'); c.g.scale.setScalar(1.6); scene.add(c.g); clickable(c.g, 'drv:' + d.key); return { c, d, x, ph: i * 2.3 };
+  });
+  // 미입금 기사님 — 창고 밖에서 기다림 (입금 완료 누르면 사라짐) (o.unpaid: [{id, driver}])
+  const waiters = (o.unpaid || []).slice(0, 14).map((u, i) => { const c = critter('driver'); c.g.scale.setScalar(1.5); c.g.position.set(-WW / 2 - 6 - (i % 4) * 2.6, 0, 24 - Math.floor(i / 4) * 3); c.g.rotation.y = Math.PI / 2; scene.add(c.g); clickable(c.g, 'unpaid'); return { c, u }; });
+  if ((o.unpaid || []).length) tag('unpaid', pill(`미입금 기사님 ${(o.unpaid || []).length}명`, '#FF453A', '#FFFFFF'), -WW / 2 - 10, 6.5, 20);
   ticks.push((dt, t) => {
     const a = t * 0.25; fk.position.set(Math.sin(a) * 20, 0, 14 + Math.cos(a) * 2); fk.rotation.y = Math.cos(a) > 0 ? Math.PI / 2 : -Math.PI / 2; fork.position.y = 0.4 + Math.max(0, Math.sin(t * 0.8)) * 3;
     dog.g.position.set(Math.sin(t * 0.4) * 14, 0, 9); dog.face(Math.cos(t * 0.4), 0); dog.walk(dt, 0.8);
     const nz = Math.sin(t * 0.3); noh.g.position.set(nz * 16, 0, -16.5); noh.face(Math.cos(t * 0.3), 0); noh.walk(dt, 0.7);
     nohT.p.set(nz * 16, 6.2, -16.5);
-    drivers.forEach((d, i) => { const p = ((t * 0.08 + d.ph) % 2); const f = p < 1 ? p : 2 - p; const x = -28 + f * 50, z = 16 + i * 1.6; d.c.g.position.set(x, 0, z); d.c.face(p < 1 ? 1 : -1, 0); d.c.walk(dt); });
+    drivers.forEach((d) => { const p = ((t * 0.06 + d.ph) % 2); const f = p < 1 ? p : 2 - p; const z = 26 - f * 9; d.c.g.position.set(d.x + 2.4, 0, z); d.c.face(0, p < 1 ? -1 : 1); d.c.walk(dt); });   // 차 ↔ 창고 문 (상차)
+    waiters.forEach((w2, i) => w2.c.idle(dt));
   });
-  return { noh, drivers };
+  return { noh, drivers, removeWaiter: (id) => { const w2 = waiters.find((x) => x.u.id === id); if (w2) { scene.remove(w2.c.g); waiters.splice(waiters.indexOf(w2), 1); } } };
 }
