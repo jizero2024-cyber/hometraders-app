@@ -1080,3 +1080,5 @@ body.kiosk #app { max-width: none; background: #F2F2F7; }
 .ki-out i { background: #F2F2F7; color: #3A3A3C; }
 .ki-out em { color: #1C1C1E; }
 .ks-kv b.no { color: #E8732C; } .ks-kv b.ok { color: #1C1C1E; }
+.ki-h { display: flex; justify-content: space-between; align-items: flex-start; }
+.ki-logo { width: 24cqw; height: auto; margin-top: 1.4cqw; }
