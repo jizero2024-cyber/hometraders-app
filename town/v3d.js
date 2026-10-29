@@ -191,15 +191,15 @@ export function mount(host, o) {
     else if (kind === 'ware') { g = shed(x, z - 3, 0, 30, 18, 9, '#F3F1EC', key === 'wonik' ? '#5D9BF2' : '#FFC531'); pallets(g, -14, 12, 6, key === 'wonik' ? '#F2F2F2' : '#C7CDD4'); }
     else if (kind === 'yard') { g = shed(x, z - 6, 0, 26, 14, 8, '#F3EEE6', '#4FAE6E'); for (let i = 0; i < 5; i++) for (let j = 0; j < 2; j++) { box(5.5, 1.6 + (i % 3) * 0.6, 2.6, '#E7C48A', -12 + i * 6, 0, 11 + j * 3.4, g); } }
     else if (kind === 'office') { g = group(x, z - 2); box(22, 0.4, 18, '#E9E4DA', 0, 0, 0, g); box(16, 8, 12, '#FFFFFF', 0, 0.4, -1, g); box(16.4, 0.6, 12.4, '#2B2522', 0, 8.4, -1, g); const gl = new THREE.Mesh(new THREE.BoxGeometry(12, 5, 0.2), winM); gl.position.set(0, 3.6, 5.1); g.add(gl); box(3, 0.2, 3, '#7CC56A', -8, 0.4, 7, g); }
-    else if (kind === 'wood') { g = group(x, z - 2); house(-6, -2, 0, '#C99A6B', '#5B4636', 1.3); house(10, 3, -0.4, '#E7D2B5', '#7A5A44', 1); }
+    else if (kind === 'wood') { g = house(x - 6, z - 4, 0, '#C99A6B', '#5B4636', 1.15); clickable(house(x + 11, z + 2, -0.4, '#E7D2B5', '#7A5A44', 0.95), key); }   // 청도 집 (10/30 — 마을 한가운데 몰려 있던 것 제자리로)
     if (kind !== 'home' && g) clickable(g, key);
   });
   // 빈 블록 — 동네 집 · 공원 · 밭
   [[90, -25], [-30, 25], [30, 25]].forEach(([bx, bz], bi) => {
     const W2 = ['#F4F0E8', '#F2E9DC', '#EEF0EC', '#F6EFE4', '#EFE8E0'], R2 = ['#3F5A7A', '#B8573E', '#4E6E5A', '#4A4E5A', '#7A5A44'];
     for (let i = 0; i < 4; i++) if (i === bi % 2 && !(bi === 2 && i === 3)) house(bx - 15 + (i % 2) * 30 * 0.66 + (i > 1 ? 4 : 0), bz - 10 + Math.floor(i / 2) * 18, (i % 2 ? Math.PI : 0) + (bi - 1) * 0.1, W2[(i + bi) % 5], R2[(i + bi * 2) % 5], 0.9);
-    tree(bx + 18, bz - 12, 1.1); tree(bx + 20, bz + 10, 0.9); tree(bx - 22, bz + 2, 1);
-    for (let k = 0; k < 6; k++) { const tx = bx + (k % 3 - 1) * 12 + (bi === 2 ? -14 : 8), tz = bz + (k < 3 ? -8 : 10); if (bi === 2 && tx > bx - 4) continue; tree(tx, tz, 0.8 + (k % 3) * 0.15, ['#5DBB5A', '#4FAE6E', '#7FCB5A'][k % 3]); }
+    tree(bx + 18, bz - 12, 1.1);
+    for (let k = 0; k < 6; k += 2) { const tx = bx + (k % 3 - 1) * 12 + (bi === 2 ? -14 : 8), tz = bz + (k < 3 ? -8 : 10); if (bi === 2 && tx > bx - 4) continue; tree(tx, tz, 0.8 + (k % 3) * 0.15, ['#5DBB5A', '#4FAE6E', '#7FCB5A'][k % 3]); }
   });
 
   // 편의점 — 세븐일레븐 · 세븐반장창고(무인 철물점, 10/29 대표). 가게집 모양 · 밤에 불 켜짐
@@ -237,22 +237,22 @@ export function mount(host, o) {
   makeStore(37, 27, 0, '세븐일레븐', ['#F58220', '#008061', '#EE2737'], '#008061', ['#F7C82F', '#E86A5A', '#5D9BF2', '#7ED39B'], { w: 18, park: true, truck: true });
   // 공원 + 연못 + 우체통 (자료 넣기)
   { const g = group(-30, -25); box(54, 0.3, 44, '#9FD67E', 0, 0, 0, g); const pond = new THREE.Mesh(new THREE.CylinderGeometry(9, 9, 0.4, 32), mat('#7EC8F0', { roughness: 0.2 })); pond.position.set(-6, 0.45, 4); pond.scale.z = 0.7; g.add(pond);
-    for (let i = 0; i < 8; i++) tree(-30 - 22 + (i % 4) * 14 + (i > 3 ? 7 : 0), -25 - 16 + (i > 3 ? 30 : 0), 0.9 + (i % 3) * 0.15, ['#5DBB5A', '#4FAE6E', '#7FCB5A'][i % 3]);
+    for (let i = 0; i < 8; i += 2) tree(-30 - 22 + (i % 4) * 14 + (i > 3 ? 7 : 0), -25 - 16 + (i > 3 ? 30 : 0), 0.9 + (i % 3) * 0.15, ['#5DBB5A', '#4FAE6E', '#7FCB5A'][i % 3]);
     const mb = new THREE.Group(); mb.position.set(14, 0, 8); g.add(mb); cyl(0.25, 0.25, 2.6, '#555', 0, 0, 0, 8, mb); box(2.6, 2.2, 1.8, '#E8732C', 0, 2.6, 0, mb); const lid = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.9, 2.6, 16, 1, false, 0, Math.PI), mat('#E8732C')); lid.rotation.z = Math.PI / 2; lid.position.y = 4.8; mb.add(lid); box(1.4, 0.2, 0.1, '#2B2522', 0, 3.9, 0.92, mb);
     mb.scale.setScalar(1.5); clickable(mb, 'mail'); o.mailPos = [-30 + 14, 8, -25 + 8]; }
   // 밭
-  { const g = group(-90, -75); for (let i = 0; i < 6; i++) box(46, 0.6, 4.5, i % 2 ? '#7FB24A' : '#9A6F48', 0, 0, -16 + i * 6.4, g); house(18, -2, 0, '#FFF6E8', '#B85C46', 0.8); }
+  { const g = group(-90, -75); for (let i = 0; i < 6; i++) box(46, 0.6, 4.5, i % 2 ? '#7FB24A' : '#9A6F48', 0, 0, -16 + i * 6.4, g); house(-90 + 18, -75 - 2, 0, '#FFF6E8', '#B85C46', 0.8); }
   // 길가 나무 · 가로등
   GZ.forEach((gz) => { for (let x = -114; x <= 114; x += 19) { if (GX.some((g) => Math.abs(g - x) < 8)) continue; lamp(x, gz + ((x / 19) % 2 ? 5 : -5)); } });   // 길 따라 가로등 (10/29 대표 "밤에 너무 어둡다")
   GX.forEach((gx) => { for (let z = -92; z <= 92; z += 19) { if (GZ.some((g) => Math.abs(g - z) < 8)) continue; lamp(gx + ((z / 19) % 2 ? 5 : -5), z); } });
-  for (let i = 0; i < 46; i++) { const x = -145 + Math.random() * 290, z = -120 + Math.random() * 240; if (GX.some((g) => Math.abs(g - x) < 9) || GZ.some((g) => Math.abs(g - z) < 9)) continue; const inLot = Object.values(LOTS).some(([lx, lz]) => Math.abs(lx - x) < 20 && Math.abs(lz - z) < 16); if (inLot) continue; tree(x, z, 0.8 + Math.random() * 0.5, ['#5DBB5A', '#4FAE6E', '#7FCB5A', '#3E9E57'][i % 4]); }
-  [-90, -30, 30, 90].forEach((bx) => [-75, -25, 25, 75].forEach((bz) => { if (bx === 30 && bz === -25) return; [[-23, -18], [23, -18], [-23, 18], [23, 18], [0, -19]].forEach(([a, b], i) => tree(bx + a, bz + b, 0.7 + (i % 3) * 0.12, ['#5DBB5A', '#4FAE6E', '#7FCB5A'][i % 3])); }));
-  [-148, 148].forEach((x) => { for (let z = -115; z <= 115; z += 14) tree(x, z, 0.9 + (Math.abs(z) % 3) * 0.1); });
+  for (let i = 0; i < 18; i++) { const x = -145 + Math.random() * 290, z = -120 + Math.random() * 240; if (GX.some((g) => Math.abs(g - x) < 9) || GZ.some((g) => Math.abs(g - z) < 9)) continue; const inLot = Object.values(LOTS).some(([lx, lz]) => Math.abs(lx - x) < 20 && Math.abs(lz - z) < 16); if (inLot) continue; tree(x, z, 0.8 + Math.random() * 0.5, ['#5DBB5A', '#4FAE6E', '#7FCB5A', '#3E9E57'][i % 4]); }
+  [-90, -30, 30, 90].forEach((bx) => [-75, -25, 25, 75].forEach((bz) => { if (bx === 30 && bz === -25) return; [[-23, -18], [23, 18]].forEach(([a, b], i) => tree(bx + a, bz + b, 0.7 + (i % 3) * 0.12, ['#5DBB5A', '#4FAE6E', '#7FCB5A'][i % 3])); }));
+  [-148, 148].forEach((x) => { for (let z = -115; z <= 115; z += 30) tree(x, z, 0.9 + (Math.abs(z) % 3) * 0.1); });
   // 마을 바깥 — 논밭 · 숲 · 산 (10/29 대표 "양옆 빈 공간") — 나무는 InstancedMesh 로 가볍게
   { const fieldC = ['#A8C96A', '#C9B36A', '#8FBF5A', '#B9D17A'];
     for (let i = 0; i < 26; i++) { const sx = i % 2 ? 1 : -1, x = sx * (175 + (i * 37) % 170), z = -230 + (i * 71) % 460; box(40 + (i % 3) * 12, 0.3, 26 + (i % 4) * 6, fieldC[i % 4], x, 0, z); }
     for (let i = 0; i < 14; i++) { const x = -330 + (i * 53) % 660, z = (i % 2 ? 1 : -1) * (150 + (i * 29) % 100); box(36, 0.3, 22, fieldC[(i + 1) % 4], x, 0, z); }
-    const tg = new THREE.IcosahedronGeometry(2.6, 0), tm = new THREE.MeshStandardMaterial({ color: '#4E9E52', flatShading: true, roughness: 0.9 }), N = 900, im = new THREE.InstancedMesh(tg, tm, N), d = new THREE.Object3D(); let n = 0;
+    const tg = new THREE.IcosahedronGeometry(2.6, 0), tm = new THREE.MeshStandardMaterial({ color: '#4E9E52', flatShading: true, roughness: 0.9 }), N = 380, im = new THREE.InstancedMesh(tg, tm, N), d = new THREE.Object3D(); let n = 0;
     for (let i = 0; i < N * 3 && n < N; i++) { const x = -370 + Math.random() * 740, z = -270 + Math.random() * 540; if (Math.abs(x) < 155 && Math.abs(z) < 125) continue; if (Math.random() < 0.35) continue; const k = 0.8 + Math.random() * 1.1; d.position.set(x, 2.2 * k, z); d.scale.set(k, k * 1.3, k); d.rotation.y = Math.random() * 6; d.updateMatrix(); im.setMatrixAt(n++, d.matrix); }
     im.count = n; im.castShadow = true; scene.add(im);
     const hm = new THREE.MeshStandardMaterial({ color: '#6FA85E', flatShading: true, roughness: 1 });
