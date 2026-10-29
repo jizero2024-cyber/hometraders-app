@@ -86,11 +86,11 @@ export function screen() {
   return `<div class="ki-box"><div class="ki">
     <header class="ki-h"><div class="ki-clk" data-ki="reload"><span>${n.getMonth() + 1}월 ${n.getDate()}일 ${wd}요일</span><b>${p2(n.getHours())}:${p2(n.getMinutes())}</b></div><img class="ki-logo" src="/icons/logo-full.png" alt="HOME TRADERS"></header>
     <div class="ki-t">${[['k-need', g.need, '배차 해야 함'], ['k-car', g.car, '차 잡힘'], ['k-order', g.order, '발주 요청'], ['k-out', g.out, '출고 완료']]
-      .map(([k, rs, l]) => `<div class="${k}" ${k === 'k-out' ? '' : `data-ki="jump" data-k="${k}"`}><i>${IC[k]}</i><b>${rs.length}</b><span>${l}</span></div>`).join('')}</div>
+      .map(([k, rs, l]) => `<div class="${k}" data-ki="jump" data-k="${k}"><i>${IC[k]}</i><b>${rs.length}</b><span>${l}</span></div>`).join('')}</div>
     ${sec('k-need', '배차 해야 함', g.need, 9, true)}
     ${sec('k-car', '차 잡힘 · 도착 확인', g.car, 5, false)}
     ${sec('k-order', '발주 요청', g.order, 5, false)}
-    <div class="ki-out"><i>${IC['k-out']}</i><span>오늘 출고 완료</span><em>${g.out.length}</em></div>
+    ${sec('k-out', '오늘 출고 완료', g.out, 8, false)}
     ${at ? `<div class="ki-at">${esc(at)}</div>` : ''}
   </div>${sheet()}${K.toast ? `<div class="ki-toast">${esc(K.toast)}</div>` : ''}</div>`;
 }

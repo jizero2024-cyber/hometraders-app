@@ -1115,3 +1115,5 @@ body.kiosk #app::before { background: radial-gradient(60vh 60vh at 10% 6%, rgba(
 .ki-t .k-need { background: rgba(255,255,255,.52); }
 .ki-s.k-need .ki-w, .ki-r.late .ki-w { background: rgba(255,255,255,.6); }
 .ki-s.k-need h2 em { background: rgba(255,255,255,.6); }
+.ki-s.k-out .ki-w b { color: #8E8E93; }
+.ki-s.k-out .ki-p { color: #3A3A3C; }
