@@ -1055,3 +1055,28 @@ body.kiosk #app { max-width: none; background: #F2F2F7; }
 .ks-b.ask { background: #1C1C1E !important; color: #fff !important; }
 .ks-b:disabled { opacity: .5; }
 .ki-toast { position: fixed; left: 50%; bottom: 6vh; transform: translateX(-50%); background: rgba(28,28,30,.92); color: #fff; border-radius: 999px; padding: 14px 26px; font-family: Pretendard, sans-serif; font-size: 18px; font-weight: 700; z-index: 60; white-space: nowrap; }
+/* 키오스크 색 줄이기 — 애플 위젯처럼 회색 + 주황 하나 (10/30 대표 "색깔이 너무 다양해") */
+.ki .k-car, .ki .k-order, .ki .k-out { --c: #1C1C1E; --bg: #F2F2F7; }
+.ki .k-need { --c: #E8732C; --bg: #FFF4EC; }
+.ki-t > div { box-shadow: 0 1px 2px rgba(0,0,0,.03); }
+.ki-t i { background: #F2F2F7; color: #3A3A3C; }
+.ki-t .k-need i { background: #E8732C; color: #FFFFFF; }
+.ki-t b { color: #1C1C1E; }
+.ki-t .k-need b { color: #E8732C; }
+.ki-hi { background: #F2F2F7; color: #3A3A3C; }
+.ki-s.k-need .ki-hi { background: #E8732C; color: #FFFFFF; }
+.ki-s h2 em { background: #FFFFFF; color: #8E8E93; }
+.ki-s.k-need h2 em { background: #FFF4EC; color: #E8732C; }
+.ki-card, .ki-out { box-shadow: 0 1px 2px rgba(0,0,0,.03); }
+.ki-w { background: #F2F2F7; }
+.ki-w b, .k-order .ki-w b { color: #1C1C1E; }
+.ki-w span { color: #8E8E93; opacity: 1; }
+.ki-s.k-need .ki-w { background: #FFF4EC; }
+.ki-s.k-need .ki-w b { color: #E8732C; }
+.ki-r.late .ki-w { background: #FFF4EC; } .ki-r.late .ki-w b, .ki-r.late .ki-w span { color: #E8732C; }
+.ki-r.late .ki-w span { font-weight: 800; }
+.ki-c { color: #8E8E93; }
+.ki-more { color: #8E8E93; }
+.ki-out i { background: #F2F2F7; color: #3A3A3C; }
+.ki-out em { color: #1C1C1E; }
+.ks-kv b.no { color: #E8732C; } .ks-kv b.ok { color: #1C1C1E; }
