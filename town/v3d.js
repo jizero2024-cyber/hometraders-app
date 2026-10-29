@@ -197,22 +197,32 @@ export function mount(host, o) {
   // 빈 블록 — 동네 집 · 공원 · 밭
   [[90, -25], [-30, 25], [30, 25]].forEach(([bx, bz], bi) => {
     const W2 = ['#F4F0E8', '#F2E9DC', '#EEF0EC', '#F6EFE4', '#EFE8E0'], R2 = ['#3F5A7A', '#B8573E', '#4E6E5A', '#4A4E5A', '#7A5A44'];
-    for (let i = 0; i < 4; i++) house(bx - 15 + (i % 2) * 30 * 0.66 + (i > 1 ? 4 : 0), bz - 10 + Math.floor(i / 2) * 18, (i % 2 ? Math.PI : 0) + (bi - 1) * 0.1, W2[(i + bi) % 5], R2[(i + bi * 2) % 5], 0.9);
+    for (let i = 0; i < 4; i++) if (!(bi === 2 && i === 3)) house(bx - 15 + (i % 2) * 30 * 0.66 + (i > 1 ? 4 : 0), bz - 10 + Math.floor(i / 2) * 18, (i % 2 ? Math.PI : 0) + (bi - 1) * 0.1, W2[(i + bi) % 5], R2[(i + bi * 2) % 5], 0.9);
     tree(bx + 18, bz - 12, 1.1); tree(bx + 20, bz + 10, 0.9); tree(bx - 22, bz + 2, 1);
   });
 
-  // 세븐반장창고 — 무인 철물점 (10/29 대표, 편의점 모양 · 이름만 바꿈). 밤에 불 켜짐
-  const signC2 = document.createElement('canvas'); signC2.width = 1024; signC2.height = 160; { const g2 = signC2.getContext('2d'); g2.fillStyle = '#FFFFFF'; g2.fillRect(0, 0, 1024, 160); g2.fillStyle = '#E8732C'; g2.fillRect(0, 0, 1024, 26); g2.fillStyle = '#2E9A5A'; g2.fillRect(0, 26, 1024, 18); g2.fillStyle = '#D93A2B'; g2.fillRect(0, 44, 1024, 12); g2.fillStyle = '#1F5E3A'; g2.font = '900 82px Pretendard, sans-serif'; g2.textAlign = 'center'; g2.textBaseline = 'middle'; g2.fillText('세븐반장창고', 512, 108); }
-  const sTex2 = new THREE.CanvasTexture(signC2); sTex2.colorSpace = THREE.SRGBColorSpace;
-  const signM = new THREE.MeshStandardMaterial({ map: sTex2, emissive: '#FFFFFF', emissiveMap: sTex2, emissiveIntensity: 0.3 });
-  const shopWinM = new THREE.MeshStandardMaterial({ color: '#E9F6FF', roughness: 0.15, emissive: '#FFF4D6', emissiveIntensity: 0.2 });
-  const shop = group(-11, 22, Math.PI / 2);
-  box(14, 0.4, 11, '#D9D4CA', 0, 0, 0, shop); box(12, 5.2, 8, '#FFFFFF', 0, 0.4, -0.5, shop); box(12.6, 0.5, 8.6, '#E8E4DC', 0, 5.6, -0.5, shop);
-  const sg = new THREE.Mesh(new THREE.PlaneGeometry(12, 1.9), signM); sg.position.set(0, 4.6, 3.56); shop.add(sg);
-  const sw = new THREE.Mesh(new THREE.PlaneGeometry(10.4, 2.9), shopWinM); sw.position.set(0, 2.1, 3.56); shop.add(sw);
-  box(2, 2.7, 0.15, '#BFD3E0', 3.6, 0.4, 3.6, shop, { roughness: 0.2 });
-  for (let i = 0; i < 3; i++) box(2.4, 1.4, 0.8, ['#F5B400', '#9AA5B1', '#C9A26B'][i], -3.8 + i * 1.3, 0.4, -3.2, shop);
-  const storeLight = new THREE.PointLight('#FFE7B0', 0, 32, 1.6); storeLight.position.set(-11 + 8, 3.5, 22); scene.add(storeLight);
+  // 편의점 — 세븐일레븐 · 세븐반장창고(무인 철물점, 10/29 대표). 가게집 모양 · 밤에 불 켜짐
+  const shopWinM = new THREE.MeshStandardMaterial({ color: '#F4FAFF', roughness: 0.15, emissive: '#FFF4D6', emissiveIntensity: 0.2 });
+  const signMs = [], storeLights = [];
+  const makeStore = (x, z, ry, name, stripe, txt, goods) => {
+    const sc = document.createElement('canvas'); sc.width = 1024; sc.height = 200; { const g2 = sc.getContext('2d'); g2.fillStyle = '#FFFFFF'; g2.fillRect(0, 0, 1024, 200); g2.fillStyle = stripe[0]; g2.fillRect(0, 0, 1024, 30); g2.fillStyle = stripe[1]; g2.fillRect(0, 30, 1024, 22); g2.fillStyle = stripe[2]; g2.fillRect(0, 52, 1024, 14); g2.fillStyle = txt; g2.font = '900 92px Pretendard, sans-serif'; g2.textAlign = 'center'; g2.textBaseline = 'middle'; g2.fillText(name, 512, 136); }
+    const tx = new THREE.CanvasTexture(sc); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4;
+    const sm = new THREE.MeshStandardMaterial({ map: tx, emissive: '#FFFFFF', emissiveMap: tx, emissiveIntensity: 0.3 }); signMs.push(sm);
+    const g = group(x, z, ry);
+    box(15, 0.25, 13, '#D9B99A', 0, 0, 0.8, g);   // 보도 타일
+    box(13, 5.4, 9, '#FAFAF7', 0, 0.25, -0.6, g); box(13.6, 0.55, 9.6, stripe[1], 0, 5.65, -0.6, g);   // 몸 · 지붕 띠
+    const sg = new THREE.Mesh(new THREE.PlaneGeometry(13, 2.1), sm); sg.position.set(0, 4.55, 3.92); g.add(sg);
+    const sw = new THREE.Mesh(new THREE.PlaneGeometry(9.4, 2.9), shopWinM); sw.position.set(-1.4, 2.0, 3.92); g.add(sw);
+    for (let k = 0; k <= 4; k++) box(0.12, 3.0, 0.12, '#3A3A3A', -6.1 + k * 2.35, 0.45, 3.95, g);   // 창틀
+    box(2.2, 3.1, 0.12, '#CFE3EE', 4.8, 0.25, 3.95, g, { roughness: 0.15 }); box(0.1, 3.1, 0.14, '#3A3A3A', 4.8, 0.25, 4.0, g);   // 자동문
+    for (let r = 0; r < 2; r++) for (let i = 0; i < 4; i++) box(1.8, 0.7, 0.6, goods[(i + r) % goods.length], -4.6 + i * 2.2, 0.6 + r * 1.0, 2.6, g);   // 진열대
+    box(1.2, 2.4, 1.0, '#E9EEF2', -7.2, 0.25, 2.8, g); box(0.9, 0.7, 0.05, '#2F7BF6', -7.2, 1.6, 3.32, g, { emissive: '#2F7BF6', emissiveIntensity: 0.4 });   // ATM · 자판기
+    box(4, 0.25, 1.2, '#B88B55', 2.4, 0.95, 5.8, g); [-1.6, 1.6].forEach((a) => box(0.2, 0.7, 1, '#7A5A3A', 2.4 + a, 0.25, 5.8, g));   // 앞 벤치
+    const ab = new THREE.Group(); ab.position.set(-4.8, 0.25, 6.4); g.add(ab); [-1, 1].forEach((s2) => { const p2 = box(1.4, 1.9, 0.08, '#2B2F36', 0, 0, s2 * 0.35, ab); p2.rotation.x = s2 * 0.2; });   // 입간판
+    const L = new THREE.PointLight('#FFE7B0', 0, 34, 1.6); L.position.set(x + Math.sin(ry) * 6, 3.4, z + Math.cos(ry) * 6); scene.add(L); storeLights.push(L);
+  };
+  makeStore(-11, 22, Math.PI / 2, '세븐반장창고', ['#E8732C', '#2E9A5A', '#D93A2B'], '#1F5E3A', ['#F5B400', '#9AA5B1', '#C9A26B', '#E8732C']);
+  makeStore(38, 34, 0, '세븐일레븐', ['#F58220', '#008061', '#EE2737'], '#008061', ['#F7C82F', '#E86A5A', '#5D9BF2', '#7ED39B']);
   // 공원 + 연못 + 우체통 (자료 넣기)
   { const g = group(-30, -25); box(54, 0.3, 44, '#9FD67E', 0, 0, 0, g); const pond = new THREE.Mesh(new THREE.CylinderGeometry(9, 9, 0.4, 32), mat('#7EC8F0', { roughness: 0.2 })); pond.position.set(-6, 0.45, 4); pond.scale.z = 0.7; g.add(pond);
     for (let i = 0; i < 8; i++) tree(-30 - 22 + (i % 4) * 14 + (i > 3 ? 7 : 0), -25 - 16 + (i > 3 ? 30 : 0), 0.9 + (i % 3) * 0.15, ['#5DBB5A', '#4FAE6E', '#7FCB5A'][i % 3]);
@@ -268,7 +278,7 @@ export function mount(host, o) {
     sun.color.copy(nightK > 0.5 ? C('#9FB4FF') : mix('#FFB37A', '#FFF3DD', elev * 2)); sun.intensity = nightK > 0.5 ? 0.7 : (0.4 + 2.0 * Math.max(0, elev)) * (1 - gloom * 0.6);
     hemi.color.copy(mix('#8EA2DA', '#EAF6FF', day)); hemi.groundColor.copy(mix('#3C4A5E', '#7AA35A', day)); hemi.intensity = (0.95 + 0.25 * day) * (1 - gloom * 0.2);
     seaM.color.copy(mix('#24406E', '#8FD3F4', day)).lerp(C('#7F98AA'), gloom * 0.5);
-    const lit = Math.max(nightK, gloom * 0.5 * (1 - day * 0.6)); winM.emissiveIntensity = 0.25 + 0.95 * nightK; glassM.emissiveIntensity = 0.6 * nightK; lampM.emissiveIntensity = 1.8 * lit; glowM.opacity = 0.75 * lit; storeLight.intensity = 60 * lit; signM.emissiveIntensity = 0.3 + 1.2 * lit; shopWinM.emissiveIntensity = 0.2 + 1.1 * lit;
+    const lit = Math.max(nightK, gloom * 0.5 * (1 - day * 0.6)); winM.emissiveIntensity = 0.25 + 0.95 * nightK; glassM.emissiveIntensity = 0.6 * nightK; lampM.emissiveIntensity = 1.8 * lit; glowM.opacity = 0.75 * lit; storeLights.forEach((L2) => { L2.intensity = 60 * lit; }); signMs.forEach((m2) => { m2.emissiveIntensity = 0.3 + 1.2 * lit; }); shopWinM.emissiveIntensity = 0.35 + 1.0 * lit;
     cloudM.color.copy(mix('#FFFFFF', isRain() ? '#7E8894' : '#B9C0C8', gloom)).lerp(C('#3A4258'), nightK * 0.7);
     clouds.forEach((c, i) => { c.visible = i < Math.round(1 + WX.cover / 100 * 9); });
     rain.visible = isRain(); snow.visible = isSnow();
