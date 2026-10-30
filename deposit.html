@@ -176,9 +176,9 @@
         </tr>
         <tr>
           <td class="date"><span id="o-m"></span>월</td>
-          <td rowspan="2"></td>
-          <td rowspan="2"></td><td rowspan="2"></td><td rowspan="2"></td><td rowspan="2"></td><td rowspan="2"></td><td rowspan="2"></td><td rowspan="2"></td><td rowspan="2"></td>
-          <td rowspan="2"></td><td rowspan="2"></td><td rowspan="2"></td><td rowspan="2"></td><td rowspan="2"></td><td rowspan="2"></td><td rowspan="2"></td><td rowspan="2"></td>
+          <td rowspan="2" class="dig o-g"></td>
+          <td rowspan="2" class="dig o-a"></td><td rowspan="2" class="dig o-a"></td><td rowspan="2" class="dig o-a"></td><td rowspan="2" class="dig o-a"></td><td rowspan="2" class="dig o-a"></td><td rowspan="2" class="dig o-a"></td><td rowspan="2" class="dig o-a"></td><td rowspan="2" class="dig o-a"></td>
+          <td rowspan="2" class="dig o-t"></td><td rowspan="2" class="dig o-t"></td><td rowspan="2" class="dig o-t"></td><td rowspan="2" class="dig o-t"></td><td rowspan="2" class="dig o-t"></td><td rowspan="2" class="dig o-t"></td><td rowspan="2" class="dig o-t"></td><td rowspan="2" class="dig o-t"></td>
         </tr>
         <tr>
           <td class="date"><span id="o-d"></span>일</td>
@@ -244,6 +244,7 @@
       h.textContent = '합계 칸은 9,999만 9,999원까지만 들어갑니다';
       h.className = 'hangul warn';
       for (const c of cells) c.textContent = '';
+      document.querySelectorAll('.o-a, .o-g').forEach(c => c.textContent = '');
     } else {
       h.textContent = toHangul(n);
       h.className = 'hangul';
@@ -252,6 +253,9 @@
         const j = s.length - 8 + i;
         cells[i].textContent = j >= 0 ? s[j] : '';
       }
+      const a = document.querySelectorAll('.o-a');
+      for (let i = 0; i < 8; i++) { const j = s.length - 8 + i; a[i].textContent = j >= 0 ? s[j] : ''; }
+      document.querySelector('.o-g').textContent = s ? 8 - s.length : '';
     }
 
     const dv = $('date').value; // yyyy-mm-dd
