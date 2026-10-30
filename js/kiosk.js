@@ -40,7 +40,7 @@ function row(r, red) {
   const wd = ok ? '일월화수목금토'[new Date(new Date().getFullYear(), +d.slice(0, 2) - 1, +d.slice(3)).getDay()] : '';
   const t = String(r.time || '').replace(/\s*착$/, '').trim(), big = ok ? d.replace(/^0/, '') : '미정';
   const sub = [lt ? '지남' : w === '오늘' || w === '내일' ? w : wd, t].filter(Boolean).join(' · ');
-  return `<div class="ki-r ${lt ? 'late' : ''} ${w === '오늘' ? 'today' : ''}" data-ki="row" data-no="${esc(r.no)}"><div class="ki-w"><b>${esc(big)}</b>${sub ? `<span>${esc(sub)}</span>` : ''}</div>
+  return `<div class="ki-r ${lt ? 'late' : ''} ${w === '오늘' ? 'today' : ''} ${K.flash === r.no ? 'flash' : ''}" data-ki="row" data-no="${esc(r.no)}"><div class="ki-w"><b>${esc(big)}</b>${sub ? `<span>${esc(sub)}</span>` : ''}</div>
     <div class="ki-m"><div class="ki-p">${esc(who(r) || r.site || '거래처 확인')}</div><div class="ki-a">${esc(r.site && who(r) ? r.site : '')}</div><div class="ki-i">${esc(itemsOf(r).join(' · '))}</div>${r.car && !/^배차 (필요|완료)$|^—$|^확인$/.test(r.car) ? `<div class="ki-c">${esc(r.car)}</div>` : ''}</div><i class="ki-ch" aria-hidden="true">›</i></div>`;
 }
 function sec(cls, name, rs, max, red) {
@@ -166,7 +166,12 @@ function save(kind, draw) {
       : r.steps.filter((k) => !['발주', '배차 요청', '배차 완료'].includes(k)).concat(['출고 완료', '기록'].filter((k) => !r.steps.includes(k)));
     if (ok) r.car = `배차 완료 ${hm}`;
     K.over[r.no] = { steps: r.steps, car: r.car, t: Date.now() };
-    K.sel = ''; K.ask = ''; K.toast = `${r.site || r.partner} ${ok ? '배차 완료' : '출고 완료'}`; draw();
+    K.sel = ''; K.ask = ''; K.toast = `${r.site || r.partner} ${ok ? '배차 완료 → 차 잡힘' : '출고 완료 → 오늘 출고 완료'}`; K.flash = r.no; draw();
+    setTimeout(() => {   // 옮겨 간 칸으로 따라가서 깜빡 (10/30 대표 "배차완료 눌렀는데 아예 사라졌어")
+      const el = [...document.querySelectorAll('.ki-r')].find((x) => x.dataset.no === r.no);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 60);
+    setTimeout(() => { K.flash = ''; }, 4000);
     setTimeout(() => { K.toast = ''; draw(); }, 2500);
   }).catch((e) => { K.busy = false; K.toast = '저장 못 했어요 — ' + (e.message || e); draw(); });
 }

@@ -1262,3 +1262,5 @@ body.kiosk #app::before { background: radial-gradient(60vh 60vh at 10% 6%, rgba(
 .kt-p span { display: block; font-size: 2.9cqw; color: #3A3A3C; line-height: 1.45; margin-top: 0.4cqw; }
 .kt-o small { grid-column: 1 / -1; font-size: 2.4cqw; color: #AEAEB2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 0.2cqw; }
 .kt-lh b + span { margin-right: auto; }
+.ki-r.flash { animation: ki-flash 1.2s ease-in-out 3; border-radius: 3cqw; }
+@keyframes ki-flash { 50% { background: #E5E5EA; } }
