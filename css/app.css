@@ -1348,7 +1348,7 @@ body.hm-wall .fl-acts .fl-gh, body.hm-wall .fl-acts .fl-in.ok { background: #fff
 body.ki-wide .ki-mbb, body.ki-wide .ki-mbx span { filter: grayscale(1); }
 
 /* 가로 키오스크 — 상세보기 넓게 (10/30 대표 "너무 좁게 올라와"). 글 크기는 그대로: cqw 를 시트 폭 대신 키오스크 폭에 맞춤 */
-body.ki-wide .ks { container-type: normal !important; width: min(1100px, 94vw) !important; max-height: 92vh; padding: 0 28px 28px !important; }
+body.ki-wide .ks { container-type: normal !important; width: min(1720px, 96vw) !important; max-height: 92vh; padding: 0 28px 28px !important; }
 /* 가로 키오스크 도착 칸 — 배차 요청은 시간, 배차 완료 · 출고 완료는 날짜를 크게 · 줄 가운데 맞춤 (10/30 대표) */
 body.hm-wall .fl-row { align-items: center !important; }
 body.hm-wall .fl-row > .fl-c, body.hm-wall .fl-row > .fl-acts { align-self: center !important; }
@@ -1360,3 +1360,6 @@ body.hm-wall .fl-acts .fl-stm { display: flex; flex-wrap: nowrap; gap: 6px; alig
 body.hm-wall .fl-acts button.arm { background: #FF3B30 !important; color: #fff !important; border-color: #FF3B30 !important; }   /* 한 번 더 누르면 실행 */
 body.hm-wall .fl-io .ok, body.hm-wall .fl-io button { background: #111 !important; color: #fff !important; }   /* 입력된 라벨은 검정 (10/30 대표) */
 body.hm-wall .fl-io .no { background: #fff !important; color: #111 !important; box-shadow: inset 0 0 0 1px #BDBDBD; }
+body.ki-wide .ks-ov, body.ki-wide .ks-ov.in, body.ki-wide .ks-ov.out { background: transparent !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; animation: none !important; }   /* 상세보기 뒤 흐림 없이 (10/30 대표) */
+body.ki-wide .ks { box-shadow: 0 -10px 40px rgba(0,0,0,.18); border: 1px solid #E5E5EA; border-bottom: 0; }
+body.ki-wide .ks.in { animation: ks-rise .42s cubic-bezier(.16,1,.3,1) !important; }
