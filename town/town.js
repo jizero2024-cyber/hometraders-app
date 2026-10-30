@@ -315,7 +315,7 @@ const AI = [   // 실제로 돌아가는 AI 작업만. kind: task = 할 일 0 �
   { k: 'guppy', who: '통화정리', job: '비토 통화', av: 'guppy', f: 1, x: -17, kind: 'feed' },
   { k: 'redpanda', who: '디자인', job: '디자인 · 카탈로그', av: 'redpanda', f: 2, x: 14, kind: 'task' },
   { k: 'owl', who: '검수', job: '기능 점검', av: 'owl', f: 1, x: -9, kind: 'feed' },   // 10/30 대표 "검수하는 애도 있어야" — town_status.qa_checks
-  { k: 'penguin', who: '마감이', job: '월마감 · 구매·판매·계산서', av: 'penguin', f: 2, x: -26, kind: 'task' },   // 10/30 대표 "마감이도 추가" — site_inbox 'town:close'
+  { k: 'turtle', who: '마감이', job: '월마감 · 구매·판매·계산서', av: 'turtle', f: 2, x: -26, kind: 'task' },   // 10/30 대표 "마감이도 추가" — site_inbox 'town:close'
 ];
 const PAMPH = ['표지', '제품 소개', '부속자재', '시공 순서', '기능 상세', '뒷표지 주소', '인쇄소 보내기'];
 const mdOf = (d) => `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
@@ -352,7 +352,7 @@ async function live() {
     guppy: { n: 0, line: aiw('guppy').note || '통화', st: aiw('guppy').st, note: aiw('guppy').note },
     rabbit: { n: 0, line: (aiw('rabbit').note || '').split(' · ')[0] || '문자', st: aiw('rabbit').st, note: aiw('rabbit').note },
     owl: (() => { const q = (L.ai && L.ai.qa) || [], bad = q.filter((x) => !x.ok); return { n: bad.length, line: q.length ? (bad.length ? `고장 ${bad.length}` : `정상 ${q.length}`) : '점검 전', st: bad.length ? 'bad' : 'ok', note: bad.map((x) => x.name).join(' · ') }; })(),
-    penguin: (() => { const c = L.close || {}; return { n: c.left || 0, line: c.line || '10월 마감', st: c.st || 'ok', note: c.note || '' }; })(),
+    turtle: (() => { const c = L.close || {}; return { n: c.left || 0, line: c.line || '10월 마감', st: c.st || 'ok', note: c.note || '' }; })(),
     redpanda: { n: PAMPH.length - L.chkOn.filter(Boolean).length, line: `카탈로그 ${L.chkOn.filter(Boolean).length} / ${PAMPH.length}`, st: 'ok', note: aiw('redpanda').note },
   };
   if (L.ai && L.ai.run) W.seal.st = 'run';

@@ -362,6 +362,11 @@ export async function getTownAI() {   // 홈트 마을 AI 직원 상태 (10/29) 
   if (error) throw new Error(error.message);
   try { return data ? JSON.parse(data.body || '{}') : null; } catch (_) { return null; }
 }
+export async function getTownClose() {   // 마을 '마감이' (10/30) — 월마감 세션이 올리는 마감 진행 (site_inbox 'town:close')
+  const { data, error } = await sb.from('site_inbox').select('body,updated_at').eq('id', 'town:close').maybeSingle();
+  if (error) throw new Error(error.message);
+  try { return data ? JSON.parse(data.body || '{}') : null; } catch (_) { return null; }
+}
 export async function getTownBoard() {   // 마을 할 일 칠판 (10/30 대표 "사이트 칠판에 넣어줘") — 모든 기기가 같은 칠판 · 맥도 올림
   const { data, error } = await sb.from('site_inbox').select('body,updated_at').eq('id', 'town:board').maybeSingle();
   if (error) throw new Error(error.message);
