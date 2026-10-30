@@ -140,7 +140,10 @@ function mbHtml() {   // 물범이 — 읽은 것 · 되묻기 · 넣기 (10/30 
 }
 // 물범이 명세서 (10/30 대표 "오른쪽 아래 물범이 · 명세서 전달해줘 엉! · 변환 명세표 / 이카운트 명세표 둘 다")
 const saleSlips = (r) => [...new Set((r.lines || []).filter((l) => l.k === '판매' && l.st === '입력').flatMap((l) => l.slips || []))];
-const toWho = (r) => `[${String(r.partner || '').replace(/\s/g, '')}${String(r.boss || '').replace(/\s/g, '')}${r.boss && !/님$/.test(r.boss) ? '님' : ''}]`;   // 받는 사람 [사람사는집전종건소장님] (10/30 대표)
+const toWho = (r) => {   // 받는 사람 [사람사는집전종건소장님] (10/30 대표) — 소장 칸이 비면 메모에서 '이름 소장' 찾기
+  const bm = r.boss || ((String(r.memo || '').match(/([가-힣]{2,4})\s?(소장|팀장|과장|대리|사장|부장|이사|실장)님?/) || []).slice(1, 3).join('')) || '';
+  const who = bm.replace(/\s/g, ''); return `[${String(r.partner || '').replace(/\s|추정/g, '')}${who}${who && !/님$/.test(who) ? '님' : ''}]`;
+};   // 받는 사람 [사람사는집전종건소장님] (10/30 대표)
 function stmtTodo() {
   const d = K.data || {}, md = (x) => `${p2(x.getMonth() + 1)}/${p2(x.getDate())}`, days = [d.today || md(new Date()), md(new Date(Date.now() - 864e5))];
   return (d.rows || []).filter((r) => days.includes(r.day) && (r.steps || []).some((k) => ['배차 완료', '출고 완료', '기록', '입력 완료'].includes(k)) && saleSlips(r).length && !K.marks[`sent:${r.no}`]);
@@ -187,7 +190,7 @@ export function screen() {
   const g = groups(), at = K.data.at ? String(K.data.at).slice(11, 16) : '';
   return `<div class="ki-box"><div class="ki">
     <header class="ki-h"><div class="ki-clk" data-ki="reload"><span>${n.getMonth() + 1}월 ${n.getDate()}일 ${wd}요일</span><b>${p2(n.getHours())}:${p2(n.getMinutes())}</b></div><img class="ki-logo" src="/icons/logo-full.png" alt="HOME TRADERS"></header>
-    <div class="ki-act"><button type="button" data-ki="tool" data-k="talk">${IC.talk}<span>카톡 넣기</span></button><button type="button" data-ki="tool" data-k="box">${IC.box}<span>자료 넣기</span></button><button type="button" data-ki="tool" data-k="mb">${IC.mb}<span>물범이</span></button></div>
+    <div class="ki-act one"><button type="button" data-ki="tool" data-k="mb">${IC.mb}<span>물범이</span></button></div>
     <div class="ki-t">${[['k-need', g.need, '배차 해야 함'], ['k-quote', g.quote, '견적 대기'], ['k-car', g.car, '차 잡힘'], ['k-order', g.order, '발주 요청'], ['k-out', g.out, '출고 완료']]
       .map(([k, rs, l]) => `<div class="${k}" data-ki="jump" data-k="${k}"><i>${IC[k]}</i><b>${rs.length}</b><span>${l}</span></div>`).join('')}</div>
     ${sec('k-need', '배차 해야 함', g.need, 14, true)}
