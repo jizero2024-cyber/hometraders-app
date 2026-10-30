@@ -1310,7 +1310,8 @@ body.ki-wide .ks-ov, body.ki-wide .ki-toast { z-index: 60; }
 body.hm-wall .hm-top, body.hm-wall .hm-side, body.hm-wall .hm-quick, body.hm-wall .fl-tg { display: none !important; }
 body.hm-wall .hm-body { display: block !important; }
 body.hm-wall .hm-main { max-width: none !important; margin: 0 !important; padding: 18px 22px 120px !important; }
-@media (min-width: 2200px) { body.hm-wall .hm-main { zoom: 1.4; } }
+@media (min-width: 1300px) { body.hm-wall .hm-main { zoom: 1.25; } }
+@media (min-width: 2200px) { body.hm-wall .hm-main { zoom: 1.5; } }
 body.hm-wall .fl-lh, body.hm-wall .fl-row { grid-template-columns: 96px minmax(0, 1.6fr) minmax(0, 1.4fr) minmax(0, 1.1fr) 80px var(--acts, 200px) !important; }
 body.hm-wall .fl-row *, body.hm-wall .fl-lh * { white-space: normal !important; text-overflow: clip !important; overflow: visible !important; }
 body.hm-wall .fl-row { font-size: 15px; }
