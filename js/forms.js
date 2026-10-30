@@ -6,7 +6,7 @@
 //   deposit   입금표     : deposit.html (같은 머리 아래)
 //   esong     전자 송장  : 출고 번호·전표·판매 엑셀 → 품목 고치기 → 링크 (받는 분이 휴대폰으로 체크·서명, /songjang/ · js/songjang.js, 10/26)
 //   화면 모양은 모두 같음 — 머리(‹ · 로고 · 이름) · 제목 · 불러오기 칸 · 결과 칸, 파일은 끌어다 놓기도 됨
-import * as SM from './stmt.js?v=103';
+import * as SM from './stmt.js?v=104';
 import * as DL from './delivery.js';
 import * as S from './store-supabase.js?v=10';
 

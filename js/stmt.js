@@ -508,6 +508,12 @@ function aceHtml(doc) {
   </section>`;
 }
 
+// 이카운트 거래처 이름이 '상호_소장님 (현장)' 꼴이면 (사람사는집종합건설_전종건소장님 (청도현장), 사람사는집_안일도소장님 (양주광사현장)) 貴下는 상호만, 현장명 줄에 현장 · 소장님 (10/30 대표)
+const PSPLIT = /^(.+?)_([^()]+?)\s*\(([^)]+)\)\s*$/;
+const toLine = (doc) => { const m = PSPLIT.exec(nfc(doc.partner)); if (!m) return { name: doc.partner, site: doc.site || '' };
+  const boss = m[2].trim().replace(/(소장|과장|대리|부장|실장|팀장|사장|대표)님?$/, ' $1님').replace(/\s+/g, ' ');
+  return { name: m[1].trim(), site: [doc.site || m[3].trim(), boss].filter(Boolean).join(' · ') }; };
+
 function sheetHtml(doc) {
   const d = doc.items[0].date;
   const sd = new Date(+doc.ymd.slice(0, 4), +doc.ymd.slice(4, 6) - 1, +doc.ymd.slice(6, 8));
@@ -522,7 +528,7 @@ function sheetHtml(doc) {
   return `<section class="sheet">
     <div class="ttl">거 래 명 세 서</div>
     <div class="head">
-      <div class="to"><b>${esc2(doc.partner)} 貴下</b><span class="${doc.site ? 'site' : ''}">${esc2(doc.site ? '현장명 : ' + doc.site : place)}</span>
+      <div class="to"><b>${esc2(toLine(doc).name)} 貴下</b><span class="${toLine(doc).site ? 'site' : ''}">${esc2(toLine(doc).site ? '현장명 : ' + toLine(doc).site : place)}</span>
         <div class="no">발행번호 : ${doc.ymd}${String(doc.seq).padStart(4, '0')}<br>발행일자 : ${sd.getFullYear()}년 ${sd.getMonth() + 1}월 ${sd.getDate()}일</div>
         <div class="ask">아래와 같이 대금 지급을 요청드립니다.</div></div>
       <div class="from"><b class="cname">${SUPPLIER.name}</b><img class="stamp" src="${STAMP}" alt="">
@@ -562,7 +568,7 @@ function buyHtml(doc) {
   return `<section class="sheet">
     <div class="ttl">구 매 명 세 서</div>
     <div class="head">
-      <div class="to"><b>${esc2(doc.partner)} 貴中</b><span class="${doc.site ? 'site' : ''}">${esc2(doc.site ? '현장명 : ' + doc.site : '')}</span>
+      <div class="to"><b>${esc2(toLine(doc).name)} 貴中</b><span class="${toLine(doc).site ? 'site' : ''}">${esc2(toLine(doc).site ? '현장명 : ' + toLine(doc).site : '')}</span>
         <div class="no">발행번호 : ${doc.ymd}${String(doc.seq).padStart(4, '0')}<br>발행일자 : ${sd.getFullYear()}년 ${sd.getMonth() + 1}월 ${sd.getDate()}일</div>
         <div class="ask">아래와 같이 구매(입고) 내역을 확인합니다.</div></div>
       <div class="from"><b class="cname">${SUPPLIER.name}</b><img class="stamp" src="${STAMP}" alt="">
