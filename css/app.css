@@ -1330,3 +1330,15 @@ body.ki-wide .ks { width: min(640px, 92vw) !important; max-height: 86vh; border-
 body.ki-wide .ki-wclk { display: flex; align-items: baseline; gap: 14px; position: fixed; left: 28px; top: 14px; z-index: 40; pointer-events: none; font-family: Pretendard, sans-serif; color: #1C1C1E; }
 body.ki-wide .ki-wclk span { font-size: 18px; font-weight: 700; color: #6B6B70; } body.ki-wide .ki-wclk b { font-size: 44px; font-weight: 800; letter-spacing: -.02em; } body.ki-wide .ki-wclk img { height: 30px; margin-left: 10px; align-self: center; }
 body.hm-wall .hm-main { padding-top: 84px !important; }
+
+/* 가로 키오스크 흑백 (10/30 대표 "뒤에 배경 하얗게 · 블랙앤 화이트로, 버튼도") — 키오스크 배경 무늬가 리스트 위에 덮여 흐려 보이던 것도 */
+body.ki-wide, body.ki-wide #app, #ki-land { background: #fff !important; }
+body.ki-wide #app::before, body.ki-wide #app::after { display: none !important; }
+html:has(body.hm-wall), body.hm-wall, body.hm-wall #app, body.hm-wall .hm, body.hm-wall .hm-body .fl { background: #fff !important; }
+body.hm-wall #app::before, body.hm-wall #app::after, body.hm-wall::before { display: none !important; }
+body.hm-wall .hm-body .fl { box-shadow: none !important; padding-left: 0 !important; padding-right: 0 !important; }
+body.hm-wall .hm-main { filter: grayscale(1); }
+body.hm-wall .fl-row { color: #000; }
+body.hm-wall .fl-acts .fl-go { background: #111 !important; color: #fff !important; border: 1px solid #111 !important; opacity: 1 !important; }
+body.hm-wall .fl-acts .fl-gh, body.hm-wall .fl-acts .fl-in.ok { background: #fff !important; color: #111 !important; border: 1px solid #111 !important; opacity: 1 !important; }
+body.ki-wide .ki-mbb, body.ki-wide .ki-mbx span { filter: grayscale(1); }
