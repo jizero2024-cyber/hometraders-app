@@ -377,6 +377,11 @@ export async function getTownMail() {   // 마을 우체통 — 맥 town_status.
   if (error) throw new Error(error.message);
   try { return data ? JSON.parse(data.body || '{}') : null; } catch (_) { return null; }
 }
+export async function getInboxData(id) {   // 우체통 한 건 — 그림·파일·글 (누를 때만 받음)
+  const { data, error } = await sb.from('site_inbox').select('name,mime,data,body').eq('id', id).maybeSingle();
+  if (error) throw new Error(error.message);
+  return data;
+}
 export async function getTownChecks() {   // 마을 체크리스트 (팜플렛 등) — site_inbox kind 'townchk'
   const { data, error } = await sb.from('site_inbox').select('id,name,status,created_by,updated_at').eq('kind', 'townchk');
   if (error) throw new Error(error.message);

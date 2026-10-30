@@ -1,6 +1,6 @@
 // 홈트 마을 /town (10/29 대표 "게임처럼 · 디자인만 먼저") — 마을 · 단지 · 사무실 · 창고 네 화면, 아직 예시 자료
 // 주소 뒤 #/campus · #/office · #/warehouse 로 화면 바뀜. 직원 계정만 (공간 계정 막음)
-import * as S from '/js/store-supabase.js?v=9t3';
+import * as S from '/js/store-supabase.js?v=9t4';
 import * as JIM from './jim.js?v=2';
 import * as W3D from './v3d.js?v=17';
 import * as O3D from './o3d.js?v=19';
@@ -381,21 +381,53 @@ const MSRC = ['사이트 · 키오스크', '드라이브', '내 맥', '문자'];
 function mailItems(L) {   // 우체통 — 사이트·키오스크 자료 넣기 + 맥이 올린 드라이브 · 맥 · 문자 (10/30 대표 "다 보였으면 · 폴더링 · 문자도")
   const mac = (L.mailMac && L.mailMac.items) || [], names = [...new Set(mac.map((x) => x.vendor).filter(Boolean))].sort((a, b) => b.length - a.length);
   const loc = (iso) => { const d = new Date(iso); return isNaN(d) ? '' : new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 16); };
-  const site = L.inbox.map((x) => ({ src: MSRC[0], kind: x.kind === 'file' ? '파일' : '글', name: x.name || '', t: loc(x.created_at), vendor: names.find((n) => (x.name || '').replace(/\s/g, '').includes(n.replace(/\s/g, ''))) || '', who: x.created_by || '', st: x.status }));
+  const site = L.inbox.map((x) => ({ id: x.id, src: MSRC[0], kind: x.kind === 'file' ? '파일' : '글', name: x.name || '', t: loc(x.created_at), vendor: names.find((n) => (x.name || '').replace(/\s/g, '').includes(n.replace(/\s/g, ''))) || '', who: x.created_by || '', st: x.status }));
   return [...site, ...mac].sort((a, b) => (a.t < b.t ? 1 : -1));
 }
-function mailBox(L, by = 'src') {   // 출처 · 날짜 · 거래처 폴더
-  const its = L.mail || [], key = { src: (x) => x.src, day: (x) => x.t.slice(0, 10), vendor: (x) => x.vendor || '거래처 모름' }[by];
-  const g = new Map(); its.forEach((x) => { const k = key(x); if (!g.has(k)) g.set(k, []); g.get(k).push(x); });
+function mailFolders(L) {   // 출처 · 날짜 · 거래처 폴더 (검색어로 거름)
+  const by = L.mby || 'src', q = (L.mq || '').trim().toLowerCase().replace(/\s/g, '');
+  const its = (L.mail || []).map((x, i) => [x, i]).filter(([x]) => !q || [x.name, x.vendor, x.who, x.text, x.src, x.where, x.kind, x.t].join(' ').toLowerCase().replace(/\s/g, '').includes(q));
+  const key = { src: (x) => x.src, day: (x) => x.t.slice(0, 10), vendor: (x) => x.vendor || '거래처 모름' }[by];
+  const g = new Map(); its.forEach((e) => { const k = key(e[0]); if (!g.has(k)) g.set(k, []); g.get(k).push(e); });
   let ks = [...g.keys()];
   if (by === 'src') ks = MSRC.filter((k) => g.has(k)); else if (by === 'day') ks.sort().reverse(); else ks.sort((a, b) => (a === '거래처 모름') - (b === '거래처 모름') || g.get(b).length - g.get(a).length);
   const td = mdOf(new Date()), yd = mdOf(new Date(Date.now() - 864e5));
   const lab = (k) => { if (by !== 'day') return k; const md = k.slice(5).replace('-', '/'); return md === td ? `오늘 ${md}` : md === yd ? `어제 ${md}` : `${md} ${'일월화수목금토'[new Date(k).getDay()]}`; };
-  const row = (x) => `<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;background:#fff;font-size:13px"><span style="flex:1;min-width:0"><span style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700">${esc(x.name)}</span><span style="font-size:11px;color:#8A7E77">${esc([by !== 'src' ? x.src : '', x.kind, by !== 'vendor' ? x.vendor : '', x.who, x.where].filter(Boolean).join(' · '))} ${esc(x.t.slice(5, 16).replace('T', ' ').replace('-', '/'))}</span></span>${x.st ? `<span style="font-weight:800;font-size:12px;color:${(MST[x.st] || [0, '#8A7E77'])[1]}">${(MST[x.st] || [x.st])[0]}</span>` : ''}</div>`;
-  const tabs = [['src', '출처'], ['day', '날짜'], ['vendor', '거래처']].map(([k, t]) => `<button type="button" data-mby="${k}" class="btn${k === by ? ' or' : ''}" style="height:34px;font-size:13px;padding:0 14px">${t}</button>`).join('');
-  return `<div class="mbox" style="display:flex;flex-direction:column;gap:6px"><div style="display:flex;gap:6px;align-items:center">${tabs}<span style="flex:1"></span><span style="font-size:11px;color:#8A7E77">${L.mailMac ? `맥 ${tOf(L.mailMac.at)}` : '맥 자료 없음'}</span></div>${ks.map((k, i) => `<details${i === 0 ? ' open' : ''} style="border-radius:12px;background:#FBF8F5;padding:2px 6px"><summary style="cursor:pointer;padding:8px 6px;font-size:14px;font-weight:800;color:#4A3F3A">${esc(lab(k))} <span style="padding:1px 8px;border-radius:999px;background:#EFE6DD;font-size:12px">${g.get(k).length}</span></summary><div style="display:flex;flex-direction:column;gap:4px;padding:0 0 6px">${g.get(k).slice(0, 40).map(row).join('')}</div></details>`).join('') || prow('자료 없음')}</div>`;
+  const row = ([x, i]) => `<div data-mi="${i}" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;background:#fff;font-size:13px;cursor:pointer">${x.img || x.id ? '<span style="font-size:15px">🖼</span>' : ''}<span style="flex:1;min-width:0"><span style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700">${esc(x.name)}</span><span style="font-size:11px;color:#8A7E77">${esc([by !== 'src' ? x.src : '', x.kind, by !== 'vendor' ? x.vendor : '', x.who, x.where].filter(Boolean).join(' · '))} ${esc(x.t.slice(5, 16).replace('T', ' ').replace('-', '/'))}</span></span>${x.st ? `<span style="font-weight:800;font-size:12px;color:${(MST[x.st] || [0, '#8A7E77'])[1]}">${(MST[x.st] || [x.st])[0]}</span>` : ''}</div>`;
+  return ks.map((k, n) => `<details${n === 0 || q ? ' open' : ''} style="border-radius:12px;background:#FBF8F5;padding:2px 6px"><summary style="cursor:pointer;padding:8px 6px;font-size:14px;font-weight:800;color:#4A3F3A">${esc(lab(k))} <span style="padding:1px 8px;border-radius:999px;background:#EFE6DD;font-size:12px">${g.get(k).length}</span></summary><div style="display:flex;flex-direction:column;gap:4px;padding:0 0 6px">${g.get(k).slice(0, q ? 200 : 40).map(row).join('')}</div></details>`).join('') || prow(q ? '찾는 자료 없음' : '자료 없음');
 }
-function wireMail(root, L) { root.querySelectorAll('.mbox').forEach((b) => { b.onclick = (e) => { const t = e.target.closest('[data-mby]'); if (!t) return; const n = el(mailBox(L, t.dataset.mby)); b.replaceWith(n); wireMail(n.parentNode, L); }; }); }
+function mailBox(L) {
+  const by = L.mby || 'src', tabs = [['src', '출처'], ['day', '날짜'], ['vendor', '거래처']].map(([k, t]) => `<button type="button" data-mby="${k}" class="btn${k === by ? ' or' : ''}" style="height:34px;font-size:13px;padding:0 14px">${t}</button>`).join('');
+  return `<div class="mbox" style="display:flex;flex-direction:column;gap:6px"><input class="mq" type="search" placeholder="검색 — 거래처 · 파일 이름 · 문자 내용" value="${esc(L.mq || '')}" style="height:38px;border:1.5px solid #F0E6DD;border-radius:12px;padding:0 12px;font:inherit;font-size:13px;outline:none"><div style="display:flex;gap:6px;align-items:center">${tabs}<span style="flex:1"></span><span style="font-size:11px;color:#8A7E77">${L.mailMac ? `맥 ${tOf(L.mailMac.at)}` : '맥 자료 없음'}</span></div><div class="mfold" style="display:flex;flex-direction:column;gap:6px">${mailFolders(L)}</div></div>`;
+}
+async function mailView(x) {   // 누르면 그림 · 글 크게 (10/30 대표 "누르면 그 이미지도 보이게")
+  const m = el(`<div class="modal" style="z-index:60"><div class="card" style="width:min(920px,94vw);max-height:92vh;border-radius:24px;padding:18px 20px;display:flex;flex-direction:column;gap:10px"><div style="display:flex;align-items:center;gap:10px"><div style="flex:1;min-width:0"><div style="font-size:17px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(x.name)}</div><div style="font-size:12px;color:#8A7E77">${esc([x.src, x.kind, x.vendor, x.who, x.where].filter(Boolean).join(' · '))} ${esc(x.t.replace('T', ' '))}</div></div><button type="button" class="mx" aria-label="닫기" style="width:40px;height:40px;border:0;border-radius:12px;background:#F4EFEA;font-size:18px;cursor:pointer">✕</button></div><div class="mvb scroll" style="display:flex;flex-direction:column;gap:10px;align-items:center;overflow:auto;font-size:13px;color:#8A7E77">불러오는 중…</div></div></div>`);
+  document.body.appendChild(m);
+  m.onclick = (e) => { if (e.target === m || e.target.closest('.mx')) m.remove(); };
+  const b = m.querySelector('.mvb'), txt = (t) => `<div style="align-self:stretch;white-space:pre-wrap;padding:12px 14px;border-radius:12px;background:#FBF8F5;color:#2B2522;font-size:14px;line-height:1.55">${esc(t)}</div>`;
+  const img = (src) => `<img src="${src}" alt="${esc(x.name)}" style="max-width:100%;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,.08)">`;
+  let html = x.text ? txt(x.text) : '';
+  try {
+    if (x.id) {
+      const d = await S.getInboxData(x.id);
+      if (d && d.data) { const mime = d.mime || (String(d.data).match(/^data:([^;]+)/) || [])[1] || ''; if (/^image\//.test(mime)) html += img(d.data); else if (/pdf/.test(mime)) { const bl = await (await fetch(d.data)).blob(); html += `<iframe src="${URL.createObjectURL(bl)}" title="${esc(x.name)}" style="width:100%;height:72vh;border:0;border-radius:10px"></iframe>`; } else html += `<a class="btn" href="${d.data}" download="${esc(x.name)}">내려받기</a>`; }
+      if (d && d.body) html += txt(d.body);
+    }
+    for (const h of x.img || []) { const d = await S.getInboxData(`town:img:${h}`); if (d && d.data) html += img(d.data); }
+  } catch (e) { html += txt(`못 불러왔어요 — ${e.message}`); }
+  b.innerHTML = html || '미리보기 없음';
+}
+function wireMail(root, L) {
+  root.querySelectorAll('.mbox').forEach((b) => {
+    const fold = b.querySelector('.mfold');
+    b.querySelector('.mq').oninput = (e) => { L.mq = e.target.value; fold.innerHTML = mailFolders(L); };
+    b.onclick = (e) => {
+      const t = e.target.closest('[data-mby]'), r = e.target.closest('[data-mi]');
+      if (t) { L.mby = t.dataset.mby; b.querySelectorAll('[data-mby]').forEach((x) => x.classList.toggle('or', x === t)); fold.innerHTML = mailFolders(L); }
+      else if (r) mailView(L.mail[+r.dataset.mi]);
+    };
+  });
+}
 const prow = (l, r, rc = '') => `<div style="display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:12px;background:#FBF8F5;font-size:13px"><span style="flex:1;min-width:0">${l}</span>${r != null ? `<span style="font-weight:800;${rc}">${r}</span>` : ''}</div>`;
 const plink = (t, href) => `<a class="btn" href="${href}" target="_blank" rel="noopener" style="height:40px;font-size:13px">${esc(t)} ↗</a>`;
 const ioTxt = (x) => { const seen = {}; (x.lines || []).forEach((l) => { const k = l.k === '반품' ? '판매' : l.k; seen[k] = seen[k] === false || !(l.st === '입력' || l.st === '—') ? false : true; }); return Object.entries(seen).map(([k, ok]) => `${k} ${ok ? '✓' : '✕'}`).join(' · '); };
