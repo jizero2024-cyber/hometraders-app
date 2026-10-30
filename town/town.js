@@ -493,7 +493,8 @@ function office() {
     const rows = (L.flow && L.flow.rows) || [], today = (L.flow && L.flow.today) || mdOf(new Date()), yst = mdOf(new Date(Date.now() - 864e5)), tmr = mdOf(new Date(Date.now() + 864e5));
     const has = (x, kk) => (x.steps || []).includes(kk), ie = (L.ai && L.ai.ieum) || [];
     const sec = (t) => `<div style="margin-top:8px;font-size:12px;font-weight:800;color:#8A7E77">${t}</div>`;
-    const fareOf = (x) => { const t = `${x.veh || ''} ${x.memo || ''}`; return L.fare.find((f) => f.driver && t.includes(String(f.driver).replace(/\s|님/g, '').slice(0, 3))); };
+    const nameOf = (d) => String(d || '').replace(/\(.*?\)|님|기사|소장|사장|\s/g, '');
+    const fareOf = (x) => { const t = `${x.veh || ''} ${x.memo || ''}`.replace(/\s/g, ''); return L.fare.find((f) => { const nm = nameOf(f.driver); return nm.length >= 2 && !/이음|택배|화물|콜센터|경동|대신/.test(nm) && t.includes(nm); }); };   // 기사님 이름 전체가 그 건에 있을 때만
     const ieOf = (x) => ie.find((n) => (n.no && n.no === (x.case || x.no)) || (n.driver && `${x.veh || ''} ${x.memo || ''}`.includes(n.driver)));
     const lastMemo = (x) => (String(x.memo || '').match(/\[[^\]]+\][^[]*/g) || []).pop() || '';
     const chip = (t, bg, fg) => `<span style="padding:1px 7px;border-radius:999px;background:${bg};color:${fg};font-size:11px;font-weight:800;white-space:nowrap">${esc(t)}</span>`;
@@ -529,7 +530,7 @@ function office() {
     if (a) {
       let body = prow('상태', { ok: '정상', bad: '멈춤 · 실패', run: '지금 작업 중' }[w.st] || '정상', `color:${O3D.DOT[w.st]}`) + (w.note ? prow(esc(w.note)) : '');
       if (k === 'seal') body += prow('오늘 출고', `${L.shipped.length} / ${L.today.length}`) + prow('확인 대기', L.checks.length) + plink('출고 흐름', '/');
-      if (k === 'raccoon') body += `<div style="margin-top:6px;font-size:12px;font-weight:800;color:#8A7E77">이카운트에 넣은 전표</div>` + ((L.ai && L.ai.erp) || []).map((x) => prow(`${esc(x.label)}<div style="font-size:11px;color:#8A7E77">${esc(x.slips.join(', '))} · ${esc(x.file || '')}</div>`, esc(String(x.at).slice(5, 16).replace('T', ' ')), 'color:#8A7E77;font-weight:600;font-size:12px')).join('') + `<div style="margin-top:6px;font-size:12px;font-weight:800;color:#8A7E77">입력 누락</div>`;
+      if (k === 'raccoon') body += `<div style="margin-top:6px;font-size:12px;font-weight:800;color:#8A7E77">이카운트에 넣은 전표</div>` + ((L.ai && L.ai.erp) || []).map((x) => prow(`${esc(x.label)}<div style="font-size:11px;color:#8A7E77">${esc(x.slips.join(', '))} · ${esc(x.file || '')}</div><div class="pdfs" data-kind="${/^판매/.test(x.label) ? '판매' : '구매'}" data-slips="${esc(x.slips.join(','))}" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px"></div>`, esc(String(x.at).slice(5, 16).replace('T', ' ')), 'color:#8A7E77;font-weight:600;font-size:12px')).join('') + `<div style="margin-top:6px;font-size:12px;font-weight:800;color:#8A7E77">입력 누락</div>`;
       if (k === 'squirrel') { const D = (L.ai && L.ai.docs) || {}; body += `<div style="margin-top:6px;font-size:12px;font-weight:800;color:#8A7E77">출고 건 ↔ 전표 연결</div>` + (D.links || []).map((x) => prow(`${esc(x.no)} <span style="color:#8A7E77">${esc(x.io)} ${esc(x.party)}</span>`, esc(x.slip), 'font-size:12px')).join('') + `<div style="margin-top:6px;font-size:12px;font-weight:800;color:#8A7E77">반영한 명세서 → 거래처 폴더</div>` + (D.filed || []).map((x) => prow(`${esc(x.party)} · ${esc(x.name)}<div style="font-size:11px;color:#8A7E77">${esc(x.kind)} ${esc(x.slip)}</div>`, esc(String(x.at).slice(5, 16)), 'color:#8A7E77;font-weight:600;font-size:12px')).join(''); }
       if (k === 'raccoon') body += L.miss.slice(0, 12).map((x) => prow(`${esc(x.partner)} · ${esc(x.site || '')} <span style="color:#8A7E77">${esc(x.day || '')}</span>`, '누락', 'color:#FF453A')).join('') || prow('입력 누락 없음');
       if (k === 'otter') { otterPanel(); return; }
@@ -538,7 +539,12 @@ function office() {
       if (k === 'redpanda') { open('pamph'); return; }
       if (k === 'guppy') { P.show('자료 수집 · 받아쓰기', `AI 상태 ${tOf(L.ai && L.ai.at)}`, collectHtml(L)); return; }
 
-      P.show(`${a.who} · ${a.job}`, w.st === 'bad' ? '멈춤' : '', body); return;
+      P.show(`${a.who} · ${a.job}`, w.st === 'bad' ? '멈춤' : '', body);
+      if (k === 'raccoon') {   // 콩알 — 넣은 전표의 이카운트 PDF 바로 보기 (10/30 대표)
+        const boxes = [...P.el.querySelectorAll('.pdfs')], all = [...new Set(boxes.flatMap((b2) => b2.dataset.slips.split(',').filter(Boolean)))];
+        S.getSlipLinks(all).then((m) => boxes.forEach((b2) => { b2.innerHTML = b2.dataset.slips.split(',').filter(Boolean).flatMap((sl) => (m[sl] || []).filter((r2) => !r2.kind || r2.kind === b2.dataset.kind).slice(0, 1).map((r2) => `<a class="btn" href="https://drive.google.com/file/d/${encodeURIComponent(r2.drive_id)}/view" target="_blank" rel="noopener" style="height:28px;padding:0 10px;font-size:11px;color:#D93025">PDF ${esc(sl)}</a>`)).join('') || '<span style="font-size:11px;color:#B4B2A9">PDF 아직 없음</span>'; })).catch(() => {});
+      }
+      return;
     }
     if (k === 'board') {
       const rows = L.checks.slice(0, 20).map((x) => { const io = ioTxt(x), ok = io && !io.includes('✕'); return `<div style="padding:10px 12px;border-radius:12px;background:#FBF8F5;display:flex;gap:8px;align-items:center"><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:800">${esc(x.partner)} · ${esc(x.site || '')} <span style="color:#8A7E77;font-weight:600">${esc(x.day)}</span></div><div style="font-size:12px;color:${ok ? '#1E8E3E' : '#D93025'}">AI 먼저 봄: ${esc(io || '입력 정보 없음')}</div></div><button type="button" class="btn or" data-ok="${esc(x.case || x.no)}" data-nm="${esc(`${x.partner} ${x.site || ''}`)}" style="height:38px;font-size:13px">확인</button></div>`; }).join('');
