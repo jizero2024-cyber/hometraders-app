@@ -55,10 +55,10 @@ export function office(host, o) {
   ROOMS.forEach(([f, x0, x1, fc, wc, name]) => {
     const y = f * FH, w = x1 - x0, cx = (x0 + x1) / 2; box(w, 0.5, FD, fc, cx, y, 0).castShadow = false; box(w, FH, 0.4, wc, cx, y + 0.5, -FD / 2);
     const lp = new THREE.PointLight('#FFF1DA', 34, 34, 1.4); lp.position.set(cx, y + FH - 1.2, 2); scene.add(lp);
-    tag(null, pill(name, 'rgba(255,255,255,.92)', '#6B5E55'), x0 + 5, y + FH - 0.8, -FD / 2 + 1).d.style.pointerEvents = 'none';   // 방 이름은 뒷벽 위쪽 (이름표와 안 겹치게)
+    tag(null, pill(name, 'rgba(255,255,255,.92)', '#6B5E55'), x0 + 5, y + 1.2, FD / 2 - 1).d.style.pointerEvents = 'none';   // 방 이름은 바닥 앞쪽 (뒷벽 위는 윗층 이름표와 겹쳤음 10/30)
   });
   box(FW, 0.5, FD, '#E9DCC4', 0, 2 * FH, 0).castShadow = false;   // 다락 바닥
-  { const lp = new THREE.PointLight('#FFE9C8', 40, 40, 1.4); lp.position.set(0, 2 * FH + 8, 2); scene.add(lp); tag(null, pill('다락 · 대표실 · 서류 · 디자인', 'rgba(255,255,255,.92)', '#E8732C'), 24, 2 * FH + 1.2, FD / 2 - 1).d.style.pointerEvents = 'none'; }
+  { const lp = new THREE.PointLight('#FFE9C8', 40, 40, 1.4); lp.position.set(0, 2 * FH + 8, 2); scene.add(lp); tag(null, pill('다락 · 대표실 · 서류 · 디자인', 'rgba(255,255,255,.92)', '#E8732C'), -24, 2 * FH + 1.2, FD / 2 - 1).d.style.pointerEvents = 'none'; }
   box(0.4, 2 * FH, FD, '#F4F0E8', -FW / 2, 0.5, 0); box(0.4, 2 * FH, FD, '#F4F0E8', FW / 2, 0.5, 0);   // 옆벽
   [1].forEach((f) => { const y = f * FH + 0.5; box(0.4, FH, FD * 0.55, '#EDE4D4', 0, y, -FD / 2 + FD * 0.275); box(0.4, 2.6, FD * 0.45, '#EDE4D4', 0, y + FH - 2.6, FD / 2 - FD * 0.225); box(0.15, FH - 2.6, 0.2, WOOD2, 0, y, FD / 2 - FD * 0.45 + 0.1); });   // 가운데 칸막이 (문)
   // 목조 기둥 · 보
