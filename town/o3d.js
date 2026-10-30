@@ -220,12 +220,20 @@ export function warehouse(host, o) {
   // 미입금 기사님 — 창고 밖에서 기다림 (입금 완료 누르면 사라짐) (o.unpaid: [{id, driver}])
   const waiters = (o.unpaid || []).slice(0, 14).map((u, i) => { const c = critter('driver'); c.g.scale.setScalar(1.5); c.g.position.set(-WW / 2 - 6 - (i % 4) * 2.6, 0, 24 - Math.floor(i / 4) * 3); c.g.rotation.y = Math.PI / 2; scene.add(c.g); clickable(c.g, 'unpaid'); return { c, u }; });
   if ((o.unpaid || []).length) tag('unpaid', pill(`미입금 기사님 ${(o.unpaid || []).length}명`, '#FF453A', '#FFFFFF'), -WW / 2 - 10, 6.5, 20);
+  const patrol = (c, pts, sp, pause = 1.2) => {   // 점 따라 왕복 — 끝에서 잠깐 섬, 걷는 속도에 맞춰 다리
+    let i = 1, dir = 1, wait = 0; c.g.position.set(pts[0][0], 0, pts[0][1]);
+    return (dt) => {
+      if (wait > 0) { wait -= dt; c.idle(dt); return; }
+      const p = c.g.position, [tx, tz] = pts[i], dx = tx - p.x, dz = tz - p.z, L = Math.hypot(dx, dz);
+      if (L < 0.08) { if (i + dir >= pts.length || i + dir < 0) dir = -dir; i += dir; wait = pause; return; }
+      const st = Math.min(L, sp * dt); p.x += dx / L * st; p.z += dz / L * st; c.face(dx, dz); c.walk(dt, sp / 3.2);
+    };
+  };
+  const dogP = patrol(dog, [[-12, 9], [0, 11], [12, 9]], 3.6, 2.0), nohP = patrol(noh, [[-14, -16.5], [0, -16.5], [14, -16.5], [14, -7]], 2.8, 2.5);
+  drivers.forEach((d, i) => { d.walk = patrol(d.c, [[d.x + 2.4, 27], [d.x + 2.4, 20], [d.x + 2.4 - 4 + i, 14]], 3.0, 2.2 + i * 0.4); });
   ticks.push((dt, t) => {
     const a = t * 0.25; fk.position.set(Math.sin(a) * 20, 0, 14 + Math.cos(a) * 2); fk.rotation.y = Math.cos(a) > 0 ? Math.PI / 2 : -Math.PI / 2; fork.position.y = 0.4 + Math.max(0, Math.sin(t * 0.8)) * 3;
-    dog.g.position.set(Math.sin(t * 0.4) * 14, 0, 9); dog.face(Math.cos(t * 0.4), 0); dog.walk(dt, 0.8);
-    const nz = Math.sin(t * 0.3); noh.g.position.set(nz * 16, 0, -16.5); noh.face(Math.cos(t * 0.3), 0); noh.walk(dt, 0.7);
-    nohT.p.set(nz * 16, 6.2, -16.5);
-    drivers.forEach((d) => { const p = ((t * 0.06 + d.ph) % 2); const f = p < 1 ? p : 2 - p; const z = 26 - f * 9; d.c.g.position.set(d.x + 2.4, 0, z); d.c.face(0, p < 1 ? -1 : 1); d.c.walk(dt); });   // 차 ↔ 창고 문 (상차)
+    dogP(dt); nohP(dt); nohT.p.set(noh.g.position.x, 6.2, noh.g.position.z); drivers.forEach((d) => d.walk(dt));   // 실제로 움직이는 만큼만 발걸음 (10/30 대표 "제자리걸음")
     waiters.forEach((w2, i) => w2.c.idle(dt));
   });
   return { noh, drivers, removeWaiter: (id) => { const w2 = waiters.find((x) => x.u.id === id); if (w2) { scene.remove(w2.c.g); waiters.splice(waiters.indexOf(w2), 1); } } };
