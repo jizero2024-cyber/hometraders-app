@@ -295,7 +295,7 @@ export async function addFlowMark(id, name, by) {
 }
 export async function getSlipLinks(slips) {   // 전표 번호(20261027-3) → 이카운트 전표 PDF 드라이브 링크
   if (!slips.length) return {};
-  const { data, error } = await sb.from('slip_rows').select('drive_id,slip,kind').in('slip', slips);
+  const { data, error } = await sb.from('slip_rows').select('drive_id,slip,kind,updated_at').in('slip', slips).order('updated_at', { ascending: false });   // 같은 전표를 다시 받은 PDF 가 있으면 최근 것 먼저 (10/30)
   if (error) throw new Error(error.message);
   return (data || []).reduce((a, r) => { (a[r.slip] = a[r.slip] || []).push(r); return a; }, {});
 }
