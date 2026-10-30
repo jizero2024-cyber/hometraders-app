@@ -3,7 +3,7 @@
 import * as S from './store-supabase.js?v=10';
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const K = { chk: {}, data: null, err: '', timer: 0, clock: 0, lock: null, sel: '', ask: '', busy: false, toast: '', me: '', over: {} };   // over = 방금 누른 건 (맥 도우미가 새 판을 올릴 때까지 화면에 유지)
+const K = { chk: {}, data: null, err: '', timer: 0, clock: 0, lock: null, sel: '', ask: '', busy: false, toast: '', me: '', over: {}, anim: false };   // over = 방금 누른 건 (맥 도우미가 새 판을 올릴 때까지 화면에 유지)
 const p2 = (n) => String(n).padStart(2, '0');
 const mdOf = (d) => `${p2(d.getMonth() + 1)}/${p2(d.getDate())}`;
 const today = () => (K.data && K.data.today) || mdOf(new Date());
@@ -72,7 +72,8 @@ function sheet() {
   const it = itemsOf(r);
   const chk = memo.map((t, j) => { const k = r.no + '|' + j, on = !!K.chk[k];
     return `<button type="button" class="ks-ck ${on ? 'on' : ''}" data-ki="chk" data-k="${esc(k)}"><span class="ks-bx" aria-hidden="true">${on ? '✓' : ''}</span><span class="ks-ct">${esc(t)}</span></button>`; }).join('');
-  return `<div class="ks-ov" data-ki="close"><div class="ks" role="dialog" aria-label="출고 건">
+  const a = K.anim ? ' in' : ''; K.anim = false;   // 처음 열 때만 아래에서 올라옴
+  return `<div class="ks-ov${a}" data-ki="close"><div class="ks${a}" role="dialog" aria-label="출고 건">
     <div class="ks-grab"></div>
     <div class="ks-hd"><div><div class="ks-st">${esc(st)}</div><div class="ks-t">${r.site ? esc(r.site) : '현장 확인'}</div><div class="ks-s">${esc(r.partner || '')}${r.boss ? ' · ' + esc(r.boss) : ''}</div></div>
       <button type="button" class="ks-x" data-ki="close" aria-label="닫기">✕</button></div>
@@ -93,11 +94,11 @@ export function screen() {
     <header class="ki-h"><div class="ki-clk" data-ki="reload"><span>${n.getMonth() + 1}월 ${n.getDate()}일 ${wd}요일</span><b>${p2(n.getHours())}:${p2(n.getMinutes())}</b></div><img class="ki-logo" src="/icons/logo-full.png" alt="HOME TRADERS"></header>
     <div class="ki-t">${[['k-need', g.need, '배차 해야 함'], ['k-quote', g.quote, '견적 대기'], ['k-car', g.car, '차 잡힘'], ['k-order', g.order, '발주 요청'], ['k-out', g.out, '출고 완료']]
       .map(([k, rs, l]) => `<div class="${k}" data-ki="jump" data-k="${k}"><i>${IC[k]}</i><b>${rs.length}</b><span>${l}</span></div>`).join('')}</div>
-    ${sec('k-need', '배차 해야 함', g.need, 9, true)}
-    ${sec('k-quote', '견적 보내야 함', g.quote, 6, false)}
-    ${sec('k-car', '차 잡힘 · 도착 확인', g.car, 5, false)}
-    ${sec('k-order', '발주 요청', g.order, 5, false)}
-    ${sec('k-out', '오늘 출고 완료', g.out, 8, false)}
+    ${sec('k-need', '배차 해야 함', g.need, 14, true)}
+    ${sec('k-quote', '견적 보내야 함', g.quote, 10, false)}
+    ${sec('k-car', '차 잡힘 · 도착 확인', g.car, 8, false)}
+    ${sec('k-order', '발주 요청', g.order, 8, false)}
+    ${sec('k-out', '오늘 출고 완료', g.out, 12, false)}
     ${at ? `<div class="ki-at">${esc(at)}</div>` : ''}
   </div>${sheet()}${K.toast ? `<div class="ki-toast">${esc(K.toast)}</div>` : ''}</div>`;
 }
@@ -122,12 +123,30 @@ function save(kind, draw) {
     setTimeout(() => { K.toast = ''; draw(); }, 2500);
   }).catch((e) => { K.busy = false; K.toast = '저장 못 했어요 — ' + (e.message || e); draw(); });
 }
+function shut(draw) {   // 핸드폰처럼 아래로 내려가며 닫힘
+  const ov = document.querySelector('.ks-ov'), ks = ov && ov.querySelector('.ks');
+  if (!ks || ov.classList.contains('out')) { K.sel = ''; K.ask = ''; draw(); return; }
+  ov.classList.add('out'); ks.style.transform = '';
+  setTimeout(() => { K.sel = ''; K.ask = ''; draw(); }, 240);
+}
+function drag(draw) {   // 시트 위쪽을 잡아 아래로 끌면 닫힘
+  let y0 = 0, dy = 0, ks = null;
+  document.addEventListener('pointerdown', (e) => {
+    const k = e.target.closest('.ks'); if (!k || k.scrollTop > 0 || e.target.closest('button')) return;
+    ks = k; y0 = e.clientY; dy = 0; ks.style.transition = 'none';
+  });
+  document.addEventListener('pointermove', (e) => { if (!ks) return; dy = Math.max(0, e.clientY - y0); ks.style.transform = dy ? `translateY(${dy}px)` : ''; });
+  const up = () => { if (!ks) return; const k = ks; ks = null; k.style.transition = '';
+    if (dy > 90) { K.drag = true; setTimeout(() => { K.drag = false; }, 400); shut(draw); } else k.style.transform = ''; };
+  document.addEventListener('pointerup', up); document.addEventListener('pointercancel', up);
+}
 function onTap(e, draw) {
+  if (K.drag) { K.drag = false; return; }
   if (!document.body.classList.contains('kiosk')) return;
   const t = e.target.closest('[data-ki]'); if (!t) return;
   const a = t.dataset.ki;
-  if (a === 'close' && (e.target === t || t.classList.contains('ks-x'))) { K.sel = ''; K.ask = ''; draw(); }
-  else if (a === 'row') { K.sel = t.dataset.no; K.ask = ''; draw(); }
+  if (a === 'close' && (e.target === t || t.classList.contains('ks-x'))) shut(draw);
+  else if (a === 'row') { K.sel = t.dataset.no; K.ask = ''; K.anim = true; draw(); }
   else if (a === 'disp' || a === 'ship') { if (K.ask === a) save(a, draw); else { K.ask = a; draw(); } }
   else if (a === 'jump') { const el = document.getElementById('ki-' + t.dataset.k); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
   else if (a === 'reload') pull(draw);
@@ -142,6 +161,7 @@ export function start(draw, me) {
   const wake = () => { try { if (navigator.wakeLock && document.visibilityState === 'visible') navigator.wakeLock.request('screen').then((l) => { K.lock = l; }).catch(() => {}); } catch (_) { /* 무시 */ } };
   wake(); document.addEventListener('visibilitychange', wake);
   document.addEventListener('click', (e) => onTap(e, draw));
+  drag(draw);
   document.addEventListener('click', () => {   // 화면 한 번 누르면 전체 화면 — 브라우저 주소창 숨김 (10/29 대표)
     if (!document.body.classList.contains('kiosk') || document.fullscreenElement) return;
     try { const p = document.documentElement.requestFullscreen && document.documentElement.requestFullscreen({ navigationUI: 'hide' }); if (p) p.catch(() => {}); } catch (_) { /* 무시 */ }
