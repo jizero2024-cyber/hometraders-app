@@ -1305,3 +1305,9 @@ body.ki-wide .ki-mbf, body.ki-wide .ki-mbx, body.ki-wide .ks-ov, body.ki-wide .k
 body.ki-wide .ki-mbf { position: fixed; right: 24px; bottom: 24px; } body.ki-wide .ki-mbf img { width: 110px; } body.ki-wide .ki-mbb { margin-bottom: 64px; font-size: 16px; padding: 10px 14px; border-radius: 16px 16px 4px 16px; } body.ki-wide .ki-mbb b { font-size: 13px; min-width: 22px; padding: 1px 7px; }
 body.ki-wide .ki-mbx { position: fixed; right: 160px; bottom: 24px; } body.ki-wide .ki-mbx svg { width: 64px; } body.ki-wide .ki-mbx span { font-size: 13px; padding: 4px 10px; }
 body.ki-wide .ks-ov, body.ki-wide .ki-toast { z-index: 60; }
+
+/* 가로 키오스크 /main?wall=1 — 오늘 흐름만 크게, 사이드바 · 위쪽 · 퀵메뉴 빼기 (10/30 대표) */
+body.hm-wall .hm-top, body.hm-wall .hm-side, body.hm-wall .hm-quick, body.hm-wall .fl-tg { display: none !important; }
+body.hm-wall .hm-body { display: block !important; }
+body.hm-wall .hm-main { max-width: none !important; margin: 0 !important; padding: 18px 22px 120px !important; zoom: 1.3; }
+body.hm-wall .hm-main > :not(.fl) { display: none !important; }

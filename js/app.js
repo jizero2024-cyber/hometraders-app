@@ -9,7 +9,7 @@ import * as SM from './stmt.js?v=104';
 import * as HD from './hdisp.js?v=11';
 import * as HM from './home.js?v=69';
 import * as FM from './forms.js?v=20';
-import * as KI from './kiosk.js?v=23';   // 세로형 키오스크 /kiosk (10/29)
+import * as KI from './kiosk.js?v=24';   // 세로형 키오스크 /kiosk (10/29)
 
 // 창고 아이콘 세트 (무채색)
 const WH_ICONS = {
@@ -4980,6 +4980,7 @@ function render() {
     return;
   }
   KI.stop();
+  if (/[?&]wall=1/.test(location.search)) document.body.classList.add('hm-wall');   // 가로 키오스크 — 오늘 흐름만 크게 (10/30)
   if (state.route === 'main' || state.route === 'stmt') {   // 홈트 새 첫 화면 (10/23) — 미송금 · 배차 요청 · 자료 넣기 · 거래명세표 …
     document.body.classList.remove('erp');
     app.innerHTML = HM.screen(state.route);

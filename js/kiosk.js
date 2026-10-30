@@ -148,7 +148,7 @@ function bodyFrame(title, url) {   // 화면 위에 따로 띄우는 창 — 키
 // 가로로 두면 /main 출고 흐름 리스트 그대로 (10/30 대표 "가로형 쓰고 싶은 사람 · /main 리스트처럼") — 물범이 · 우체통은 위에 그대로
 function landscape() {
   const on = window.innerWidth > window.innerHeight * 1.15, ex = document.getElementById('ki-land');
-  if (on && !ex) { const f = document.createElement('iframe'); f.id = 'ki-land'; f.src = '/main'; f.title = '출고 흐름'; document.body.appendChild(f); }
+  if (on && !ex) { const f = document.createElement('iframe'); f.id = 'ki-land'; f.src = '/main?wall=1'; f.title = '출고 흐름'; document.body.appendChild(f); }
   if (!on && ex) ex.remove();
   document.body.classList.toggle('ki-wide', on);
 }
