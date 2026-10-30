@@ -274,11 +274,11 @@ function campus() {
    ['squirrel', 240, 372, 'type', 22], ['turtle', 304, 372, 'type', 22], ['penguin', 364, 374, 'type', 22], ['cat', 214, 470, 'point', 22], ['rabbit', 276, 454, 'phone', 20], ['panda', 330, 464, 'type', 22], ['redpanda', 196, 540, 'type', 22]]
     .forEach(([av, x, y, act, size]) => sprite(cp, { av, x, y, act, size }));
   const EV = [
-    { name: '이음이', av: 'cat', c: '#5D6B7A', say: '창고 재고 보러 가요', path: 'M 300 560 L 470 600 L 700 620 L 900 570 L 1120 450' },
+    { name: '이음배차', av: 'cat', c: '#5D6B7A', say: '창고 재고 보러 가요', path: 'M 300 560 L 470 600 L 700 620 L 900 570 L 1120 450' },
     { name: '빨리', av: 'dog', c: '#B07A2A', say: '재고 보고하러 사무실 가요', path: 'M 1120 450 L 900 570 L 700 620 L 470 600 L 300 560' },
-    { name: '펭송', av: 'penguin', c: '#2E4A7A', say: '송장 들고 창고로 가요', path: 'M 320 565 L 520 640 L 760 650 L 960 580 L 1130 455' },
-    { name: '수달', av: 'otter', c: '#8A6A4A', say: '와인바에서 잠깐 쉬어요', path: 'M 300 560 L 470 600 L 640 610 L 760 560' },
-    { name: '그림이', av: 'redpanda', c: '#C2551A', say: '박스 시안 들고 창고로', path: 'M 280 560 L 500 650 L 800 650 L 1000 560 L 1140 450' },
+    { name: '송장', av: 'penguin', c: '#2E4A7A', say: '송장 들고 창고로 가요', path: 'M 320 565 L 520 640 L 760 650 L 960 580 L 1130 455' },
+    { name: '배차운임', av: 'otter', c: '#8A6A4A', say: '와인바에서 잠깐 쉬어요', path: 'M 300 560 L 470 600 L 640 610 L 760 560' },
+    { name: '디자인', av: 'redpanda', c: '#C2551A', say: '박스 시안 들고 창고로', path: 'M 280 560 L 500 650 L 800 650 L 1000 560 L 1140 450' },
   ];
   const leaves = ['서생행 출발', '매향리행 출발', '순천 택배 출발'];
   let e = 0; const go = () => { walker(cp, EV[e % EV.length]); later(3500, () => leaver(cp, 'M 1090 520 L 1190 600 L 1330 650', leaves[e % 3], ...COLORS[e % 2])); e++; };
@@ -289,31 +289,31 @@ function campus() {
 // ── 사무실 ─────────────────────────────────────────────
 const STAFF = [
   { name: '김맥순', animal: '물범', floor: '6층', role: '대표 · 전체 지휘 · 출고일보', status: '일하는 중', x: 336, y: 77, c: '#E8732C', bg: '#FFF1E6', av: 'seal', say: '오늘 출고 11건, 다들 잘하고 있어요' },
-  { name: '뚝딱', animal: '비버', floor: '5층', role: '견적서 만들기', status: '일하는 중', x: 244, y: 190, c: '#9A6A3A', bg: '#F6ECE0', av: 'beaver', say: '공간 매향리 견적서 만들었어요' },
-  { name: '부엉', animal: '부엉이', floor: '5층', role: '단가 · 종전가 · 마진', status: '일하는 중', x: 305, y: 196, c: '#8A7E6A', bg: '#F3EFE8', av: 'owl', say: '판가가 매입가보다 낮아요, 확인!' },
-  { name: '콩알', animal: '너구리', floor: '4층', role: '이카운트 구매·판매 입력', status: '일하는 중', x: 219, y: 284, c: '#5D6B7A', bg: '#EEF1F4', av: 'raccoon', say: '우림 구매 10/28-20 넣었어요' },
-  { name: '수달', animal: '수달', floor: '4층', role: '운임 송금 · 입금 확인', status: '일하는 중', x: 286, y: 288, c: '#8A6A4A', bg: '#F4ECE3', av: 'otter', say: '기사 운임 미송금 2건 있어요' },
-  { name: '고슴', animal: '고슴도치', floor: '4층', role: '공간 명세표 · 전표', status: '일하는 중', x: 359, y: 286, c: '#6A52D8', bg: '#EFEBFF', av: 'hedgehog', say: '공간 전표 PDF 올렸어요' },
-  { name: '도토리', animal: '다람쥐', floor: '3층', role: '거래명세표', status: '일하는 중', x: 269, y: 372, c: '#E0662F', bg: '#FFEDE3', av: 'squirrel', say: '공간 10월 명세표 뽑는 중이에요' },
-  { name: '꼬북', animal: '거북이', floor: '3층', role: '자재승인원 서류', status: '기다리는 중', x: 344, y: 372, c: '#2E9A5A', bg: '#E6F7EC', av: 'turtle', say: '오웬스 승인원 묶음 준비됐어요' },
-  { name: '펭송', animal: '펭귄', floor: '3층', role: '전자 송장 · 납품확인서', status: '기다리는 중', x: 413, y: 375, c: '#2E4A7A', bg: '#E6EEF9', av: 'penguin', say: '청주 송장 링크 보냈어요' },
-  { name: '이음이', animal: '회색 고양이', floor: '2층', role: '배차 · 이음 운임', status: '일하는 중', x: 240, y: 484, c: '#5D6B7A', bg: '#EEF1F4', av: 'cat', say: '서생 5톤 혼적 가는 중이에요' },
-  { name: '토깽', animal: '토끼', floor: '2층', role: '텔레그램 질문 · 공지', status: '다음 14:30', x: 306, y: 461, c: '#C9457E', bg: '#FDEAF2', av: 'rabbit', say: '내일 아침 배차 공지 보낼게요' },
-  { name: '눈썰미', animal: '판다', floor: '2층', role: '사진·명세서 읽기', status: '기다리는 중', x: 365, y: 475, c: '#3A3A3A', bg: '#F0F0F0', av: 'panda', say: '원익 명세서 7장 읽었어요' },
-  { name: '받아쓰기', animal: '구피', floor: '2층', role: '비토 통화 정리', status: '다음 15:17', x: 422, y: 484, c: '#3F7FE0', bg: '#E6F0FF', av: 'guppy', say: '정소장 통화 요약했어요' },
-  { name: '그림이', animal: '레서판다', floor: '1층', role: '디자인 · 박스·팜플렛 · 안내', status: '일하는 중', x: 230, y: 564, c: '#C2551A', bg: '#FFEDE3', av: 'redpanda', say: '실리콘 박스 시안 3개 만들었어요' },
+  { name: '견적', animal: '비버', floor: '5층', role: '견적서 만들기', status: '일하는 중', x: 244, y: 190, c: '#9A6A3A', bg: '#F6ECE0', av: 'beaver', say: '공간 매향리 견적서 만들었어요' },
+  { name: '판가', animal: '부엉이', floor: '5층', role: '단가 · 종전가 · 마진', status: '일하는 중', x: 305, y: 196, c: '#8A7E6A', bg: '#F3EFE8', av: 'owl', say: '판가가 매입가보다 낮아요, 확인!' },
+  { name: '전표입력', animal: '너구리', floor: '4층', role: '이카운트 구매·판매 입력', status: '일하는 중', x: 219, y: 284, c: '#5D6B7A', bg: '#EEF1F4', av: 'raccoon', say: '우림 구매 10/28-20 넣었어요' },
+  { name: '배차운임', animal: '수달', floor: '4층', role: '운임 송금 · 입금 확인', status: '일하는 중', x: 286, y: 288, c: '#8A6A4A', bg: '#F4ECE3', av: 'otter', say: '기사 운임 미송금 2건 있어요' },
+  { name: '공간전표', animal: '고슴도치', floor: '4층', role: '공간 명세표 · 전표', status: '일하는 중', x: 359, y: 286, c: '#6A52D8', bg: '#EFEBFF', av: 'hedgehog', say: '공간 전표 PDF 올렸어요' },
+  { name: '서류정리', animal: '다람쥐', floor: '3층', role: '거래명세표', status: '일하는 중', x: 269, y: 372, c: '#E0662F', bg: '#FFEDE3', av: 'squirrel', say: '공간 10월 명세표 뽑는 중이에요' },
+  { name: '승인원', animal: '거북이', floor: '3층', role: '자재승인원 서류', status: '기다리는 중', x: 344, y: 372, c: '#2E9A5A', bg: '#E6F7EC', av: 'turtle', say: '오웬스 승인원 묶음 준비됐어요' },
+  { name: '송장', animal: '펭귄', floor: '3층', role: '전자 송장 · 납품확인서', status: '기다리는 중', x: 413, y: 375, c: '#2E4A7A', bg: '#E6EEF9', av: 'penguin', say: '청주 송장 링크 보냈어요' },
+  { name: '이음배차', animal: '회색 고양이', floor: '2층', role: '배차 · 이음 운임', status: '일하는 중', x: 240, y: 484, c: '#5D6B7A', bg: '#EEF1F4', av: 'cat', say: '서생 5톤 혼적 가는 중이에요' },
+  { name: '문자받기', animal: '토끼', floor: '2층', role: '텔레그램 질문 · 공지', status: '다음 14:30', x: 306, y: 461, c: '#C9457E', bg: '#FDEAF2', av: 'rabbit', say: '내일 아침 배차 공지 보낼게요' },
+  { name: '명세서읽기', animal: '판다', floor: '2층', role: '사진·명세서 읽기', status: '기다리는 중', x: 365, y: 475, c: '#3A3A3A', bg: '#F0F0F0', av: 'panda', say: '원익 명세서 7장 읽었어요' },
+  { name: '통화정리', animal: '구피', floor: '2층', role: '비토 통화 정리', status: '다음 15:17', x: 422, y: 484, c: '#3F7FE0', bg: '#E6F0FF', av: 'guppy', say: '정소장 통화 요약했어요' },
+  { name: '디자인', animal: '레서판다', floor: '1층', role: '디자인 · 박스·팜플렛 · 안내', status: '일하는 중', x: 230, y: 564, c: '#C2551A', bg: '#FFEDE3', av: 'redpanda', say: '실리콘 박스 시안 3개 만들었어요' },
 ];
 // 실제 자료 (10/29 대표 "AI 가 무슨 작업 · 얼마나 · 누가 확인 — 의미 없는 가짜는 빼")
 let ME = '';
 const AI = [   // 실제로 돌아가는 AI 작업만. kind: task = 할 일 0 이면 마당에서 쉼, feed = 계속 받는 일
   { k: 'seal', who: '김맥순', job: '출고일보', av: 'seal', f: 2, x: 0, kind: 'feed' },
-  { k: 'raccoon', who: '콩알', job: '이카운트 받기 · 입력', av: 'raccoon', f: 1, x: 6, kind: 'task' },
-  { k: 'otter', who: '수달', job: '운임 미송금', av: 'otter', f: 1, x: 14, kind: 'task' },
-  { k: 'hedgehog', who: '고슴', job: '공간 사이트 전표', av: 'hedgehog', f: 1, x: 22, kind: 'task' },
-  { k: 'squirrel', who: '도토리', job: '전표 PDF · 명세서', av: 'squirrel', f: 2, x: -14, kind: 'feed' },
-  { k: 'cat', who: '이음이', job: '배차', av: 'cat', f: 1, x: -26, kind: 'task' },
-  { k: 'guppy', who: '받아쓰기', job: '비토 통화', av: 'guppy', f: 1, x: -17, kind: 'feed' },
-  { k: 'redpanda', who: '그림이', job: '디자인 · 카탈로그', av: 'redpanda', f: 2, x: 14, kind: 'task' },
+  { k: 'raccoon', who: '전표입력', job: '이카운트 받기 · 입력', av: 'raccoon', f: 1, x: 6, kind: 'task' },
+  { k: 'otter', who: '배차운임', job: '운임 미송금', av: 'otter', f: 1, x: 14, kind: 'task' },
+  { k: 'hedgehog', who: '공간전표', job: '공간 사이트 전표', av: 'hedgehog', f: 1, x: 22, kind: 'task' },
+  { k: 'squirrel', who: '서류정리', job: '전표 PDF · 명세서', av: 'squirrel', f: 2, x: -14, kind: 'feed' },
+  { k: 'cat', who: '이음배차', job: '배차', av: 'cat', f: 1, x: -26, kind: 'task' },
+  { k: 'guppy', who: '통화정리', job: '비토 통화', av: 'guppy', f: 1, x: -17, kind: 'feed' },
+  { k: 'redpanda', who: '디자인', job: '디자인 · 카탈로그', av: 'redpanda', f: 2, x: 14, kind: 'task' },
 ];
 const PAMPH = ['표지', '제품 소개', '부속자재', '시공 순서', '기능 상세', '뒷표지 주소', '인쇄소 보내기'];
 const mdOf = (d) => `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
@@ -482,7 +482,7 @@ function office() {
               + prow('사이트 출고 흐름', hm2(fa), late ? 'color:#B07A00' : 'color:#1E8E3E') + prow('키오스크 (출고 흐름과 같은 자료)', hm2(fa), late ? 'color:#B07A00' : 'color:#1E8E3E');
           })()
           + sec('받기') + prow('문자 백업', hm2(C2.sms_at)) + prow('텔레그램 받기', hm2(C2.tg_at))
-          + (short ? sec('이카운트 입력 (콩알)') + ((L.ai && L.ai.erp) || []).slice(0, 3).map((x) => prow(esc(x.label), hm2(x.at), 'color:#8A7E77;font-weight:600')).join('') : '') + sec('통화 (업무 · 문의)') + (short ? (C2.calls || []).slice(0, 4) : (C2.calls || [])).map((x) => prow(`<b>${esc(x.who)}</b> <span style="color:#8A7E77">${esc(x.dur)}</span><div style="font-size:12px;color:#6B5E55">${esc(x.title)}</div>`, hm2(x.t), 'color:#8A7E77;font-weight:600;font-size:12px')).join('')
+          + (short ? sec('이카운트 입력') + ((L.ai && L.ai.erp) || []).slice(0, 3).map((x) => prow(esc(x.label), hm2(x.at), 'color:#8A7E77;font-weight:600')).join('') : '') + sec('통화 (업무 · 문의)') + (short ? (C2.calls || []).slice(0, 4) : (C2.calls || [])).map((x) => prow(`<b>${esc(x.who)}</b> <span style="color:#8A7E77">${esc(x.dur)}</span><div style="font-size:12px;color:#6B5E55">${esc(x.title)}</div>`, hm2(x.t), 'color:#8A7E77;font-weight:600;font-size:12px')).join('')
           + (short ? '' : sec('텔레그램') + (C2.tg || []).map((x) => prow(`<b>${esc(x.who || '')}</b> ${esc(x.text)}`, hm2(x.t), 'color:#8A7E77;font-weight:600;font-size:12px')).join('')
           + sec('카톡 방') + (C2.chat || []).map((x) => prow(esc(x.room), hm2(x.t), 'color:#8A7E77;font-weight:600;font-size:12px')).join('')
           + sec('자료 넣기 파일') + (C2.files || []).map((x) => prow(esc(x.name), hm2(x.t), 'color:#8A7E77;font-weight:600;font-size:12px')).join(''));
@@ -519,7 +519,7 @@ function office() {
       + sec('이음 배차안내 (오늘 · 어제)') + (ie.map((n) => prow(`<b>${esc(n.from)} → ${esc(n.to)}</b> ${esc(n.car || n.size || '')} ${esc(n.plate || '')}<div style="font-size:11px;color:#8A7E77">${esc(n.driver || '')} · ${n.fare ? Number(n.fare).toLocaleString() : ''} ${esc(n.pay || '')}${n.no ? ` · ${esc(n.no)}` : ''}</div>`, esc(String(n.at || '').slice(11, 16)), 'color:#8A7E77;font-weight:600;font-size:12px')).join('') || prow('이음 배차안내 없음 (이음 카톡을 자료 넣기에 넣어 주세요)'))
       + sec('배차 통화') + (calls.slice(0, 6).map((c) => prow(`<b>${esc(c.who)}</b> <span style="font-size:12px;color:#6B5E55">${esc(c.title)}</span>`, esc(String(c.t).slice(11, 16)), 'color:#8A7E77;font-weight:600;font-size:12px')).join('') || prow('배차 통화 없음'))
       + sec(`운임 미송금 ${unpaid.length}`) + unpaid.slice(0, 20).map((u) => `<div style="display:flex;gap:8px;align-items:center;padding:8px 11px;border-radius:12px;background:#FBF8F5"><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:800">${esc(u.driver || '')}</div><div style="font-size:11px;color:#8A7E77;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(u.job || '')}</div></div><b style="color:#FF453A;font-size:13px">${u.amount ? Number(u.amount).toLocaleString() : ''}</b><button type="button" class="btn" data-paid="${esc(u.id)}" style="height:32px;font-size:12px">입금 완료</button></div>`).join('');
-    P.show('수달 · 배차 · 운임', `배차 요청 ${L.needDisp.length} · 미송금 ${unpaid.length}`, body);
+    P.show('배차운임', `배차 요청 ${L.needDisp.length} · 미송금 ${unpaid.length}`, body);
     const fr = (url) => { const m = el(`<div class="modal"><div class="card" style="width:min(760px,92%);height:86%;border-radius:22px;overflow:hidden;display:flex;flex-direction:column"><div style="display:flex;align-items:center;padding:10px 14px;border-bottom:1px solid #F3EEE9"><b style="flex:1">배차 요청</b><button type="button" class="mx" style="width:34px;height:34px;border:0;border-radius:10px;background:#F4EFEA;cursor:pointer">✕</button></div><iframe src="${url}" style="flex:1;border:0;width:100%"></iframe></div></div>`); v.appendChild(m); m.onclick = (e) => { if (e.target === m || e.target.closest('.mx')) m.remove(); }; };
     P.el.querySelectorAll('[data-dreq]').forEach((b2) => { b2.onclick = () => { const x = rows.find((r2) => r2.no === b2.dataset.dreq); if (!x) return; const f = { no: x.no, from: x.from || '', to: x.site_full || '', toName: x.site_ok ? `${x.partner} ${x.site}` : '', car: x.size || '', goods: x.item || '', sched: [x.day !== '미정' ? x.day : '', x.time].filter(Boolean).join(' '), say: x.ace ? '에이스' : '' }; fr(`/homt?embed=1&f=${encodeURIComponent(JSON.stringify(f))}`); }; });
     P.el.querySelectorAll('[data-dok]').forEach((b2) => { b2.onclick = async () => { const x = rows.find((r2) => r2.no === b2.dataset.dok); if (!x || !confirm(`${x.partner} · ${x.site} 배차 완료?`)) return; const hm2 = new Date().toTimeString().slice(0, 5); const e = await S.setShipCase(x.no, { disp: `배차 완료 ${hm2}` }, ME, true); if (e) { alert(`저장 못 했어요 — ${e}`); return; } b2.textContent = '배차 완료 ✓'; b2.disabled = true; load(); }; });
@@ -537,7 +537,7 @@ function office() {
       if (k === 'hedgehog') body += prow('올릴 전표', L.gwait) + plink('공간 사이트', '/gonggan/');
       if (k === 'cat') body += L.needDisp.slice(0, 14).map((x) => prow(`${esc(x.partner)} · ${esc(x.site || '')} <span style="color:#8A7E77">${esc(x.day)} ${esc(x.time || '')}</span>`, '배차 요청', 'color:#E8732C')).join('') || prow('배차 요청 없음');
       if (k === 'redpanda') { open('pamph'); return; }
-      if (k === 'guppy') { P.show('자료 수집 · 받아쓰기', `AI 상태 ${tOf(L.ai && L.ai.at)}`, collectHtml(L)); return; }
+      if (k === 'guppy') { P.show('통화정리 · 자료 수집', `AI 상태 ${tOf(L.ai && L.ai.at)}`, collectHtml(L)); return; }
 
       P.show(`${a.who} · ${a.job}`, w.st === 'bad' ? '멈춤' : '', body);
       if (k === 'raccoon') {   // 콩알 — 넣은 전표의 이카운트 PDF 바로 보기 (10/30 대표)
