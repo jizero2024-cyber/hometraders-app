@@ -72,7 +72,7 @@ function missHtml(r) {
 }
 function sheet() {
   const r = K.sel && byNo(K.sel); if (!r) return '';
-  const st = stage(r), memo = String(r.memo || '').split(/\s*·\s*(?=\[)/).map((t) => t.trim()).filter(Boolean).map((t) => { const m = t.match(/^\[([^\]]+)\]\s*(.*)$/s); return m ? { h: m[1], t: m[2] } : { h: '', t }; }).reverse();   // 참고 메모 — [날짜 누가] 단위로 한 덩어리, 최근 것 위 (10/30 대표 "할 일 아니라 참고 메모")
+  const st = stage(r), memo = String(r.memo || '').split(/\s*·\s*(?=\[)/).map((t) => t.trim()).filter(Boolean).map((t) => { const m = t.match(/^\[([^\]]+)\]\s*(.*)$/s); return m ? { h: m[1], t: m[2] } : { h: '', t }; });   // 참고 메모 — [날짜 누가] 단위로 한 덩어리, 최근 것 위 (10/30 대표 "할 일 아니라 참고 메모")
   const kv = (k, v) => (v ? `<div class="ks-kv"><span>${k}</span><b>${esc(v)}</b></div>` : '');
   const btn = (k, label) => `<button type="button" class="ks-b ${K.ask === k ? 'ask' : ''}" data-ki="${k}" ${K.busy ? 'disabled' : ''}>${K.ask === k ? `${label} 확인` : label}</button>`;
   const btns = st === '견적 보내야 함' ? '' : [st === '배차 해야 함' || st === '발주 요청' ? btn('disp', '배차 완료') : '', st !== '출고 완료' ? btn('ship', '출고 완료') : ''].join('');
