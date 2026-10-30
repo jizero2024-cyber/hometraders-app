@@ -9,7 +9,7 @@ import * as SM from './stmt.js?v=104';
 import * as HD from './hdisp.js?v=11';
 import * as HM from './home.js?v=71';
 import * as FM from './forms.js?v=20';
-import * as KI from './kiosk.js?v=26';   // 세로형 키오스크 /kiosk (10/29)
+import * as KI from './kiosk.js?v=27';   // 세로형 키오스크 /kiosk (10/29)
 
 // 창고 아이콘 세트 (무채색)
 const WH_ICONS = {

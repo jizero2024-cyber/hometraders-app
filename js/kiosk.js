@@ -72,13 +72,12 @@ function missHtml(r) {
 }
 function sheet() {
   const r = K.sel && byNo(K.sel); if (!r) return '';
-  const st = stage(r), memo = String(r.memo || '').split(/\s+·\s+/).map((t) => t.trim()).filter(Boolean).slice(0, 6);
+  const st = stage(r), memo = String(r.memo || '').split(/\s*·\s*(?=\[)/).map((t) => t.trim()).filter(Boolean).map((t) => { const m = t.match(/^\[([^\]]+)\]\s*(.*)$/s); return m ? { h: m[1], t: m[2] } : { h: '', t }; }).reverse();   // 참고 메모 — [날짜 누가] 단위로 한 덩어리, 최근 것 위 (10/30 대표 "할 일 아니라 참고 메모")
   const kv = (k, v) => (v ? `<div class="ks-kv"><span>${k}</span><b>${esc(v)}</b></div>` : '');
   const btn = (k, label) => `<button type="button" class="ks-b ${K.ask === k ? 'ask' : ''}" data-ki="${k}" ${K.busy ? 'disabled' : ''}>${K.ask === k ? `${label} 확인` : label}</button>`;
   const btns = st === '견적 보내야 함' ? '' : [st === '배차 해야 함' || st === '발주 요청' ? btn('disp', '배차 완료') : '', st !== '출고 완료' ? btn('ship', '출고 완료') : ''].join('');
   const it = itemsOf(r);
-  const chk = memo.map((t, j) => { const k = r.no + '|' + j, on = !!K.chk[k];
-    return `<button type="button" class="ks-ck ${on ? 'on' : ''}" data-ki="chk" data-k="${esc(k)}"><span class="ks-bx" aria-hidden="true">${on ? '✓' : ''}</span><span class="ks-ct">${esc(t)}</span></button>`; }).join('');
+  const chk = memo.map((m) => `<div class="ks-mm">${m.h ? `<div class="ks-mh">${esc(m.h)}</div>` : ''}<div class="ks-mt">${esc(m.t).replace(/\s·\s/g, '<br>')}</div></div>`).join('');
   const a = K.anim ? ' in' : ''; K.anim = false;   // 처음 열 때만 아래에서 올라옴
   return `<div class="ks-ov${a}" data-ki="close"><div class="ks${a}" role="dialog" aria-label="출고 건">
     <div class="ks-grab"></div>
@@ -87,7 +86,7 @@ function sheet() {
     <div class="ks-g">
       ${kv('도착', [dayOf(r), r.time].filter(Boolean).join(' '))}${kv('주소', r.site_full)}${kv('상차', r.from)}${kv('차량', r.veh || (r.car && !/^—$|^배차 필요$|^확인$/.test(r.car) ? r.car : ''))}${kv('규격', r.size)}${missHtml(r)}
     </div>
-    ${memo.length ? `<div class="ks-k">할 일</div><div class="ks-cl">${chk}</div>` : ''}
+    ${memo.length ? `<div class="ks-k">메모 ${memo.length}</div><div class="ks-cl ks-memo">${chk}</div>` : ''}
     ${it.length ? `<div class="ks-k">품목 ${it.length}</div><div class="ks-box ks-its">${it.map((x) => `<div>${esc(x)}</div>`).join('')}</div>` : ''}
     ${btns ? `<div class="ks-bs">${btns}</div>` : ''}
   </div></div>`;
