@@ -88,6 +88,7 @@ async function loadStmt(route) {
         if (j && j.slip && j.slip.rows && j.slip.rows.length) { vouchers.push(...SM.parseSales([[j.head, ...j.slip.rows]])); continue; }
         const r = await ctx.helper('/api/doc/read', { name: x.name, data });   // 그 밖의 명세표·사진은 AI 로
         const v = SM.voucherFromDoc(r.doc);
+        if (!r.usage) { v.items.forEach((it) => { it.date = new Date(+v.ymd.slice(0, 4), +v.ymd.slice(4, 6) - 1, +v.ymd.slice(6)); it.tag = ''; }); }   // AI 못 쓰고 무료 인식이면 줄 날짜·현장 꼬리표가 엉터리 → 한 장으로 (10/30 대표 "사진 넣으면 각각 나와")
         if (/홈트레이더스|에이스/.test(v.partner)) v.partner = (r.doc && (r.doc.owner || r.doc.site)) || '';   // 우리가 낸 명세표면 공급자 말고 받는 곳
         vouchers.push(...(route === 'stmt-gong' ? [v] : SM.splitByDate(v)));   // 그 외: 줄 일자별 → 아래에서 날짜 + 현장별
       } catch (e) { errs.push(`${x.name}: ${e.message || e}`); }
