@@ -101,11 +101,12 @@ function sugHtml(g) {   // 카톡 넣기 결과 — 한 곳 추천 · 품목별 
   const vs = (g.vendors || []).slice(0, 5).map((v) => `<div class="kt-v ${v.cover === v.of ? 'all' : ''}"><b>${esc(vshort(v.vendor))}</b><span>${v.cover}/${v.of}</span><em>${won(v.total)}</em>
     ${v.missing.length ? `<i>없음 ${esc(v.missing.join(' · '))}</i>` : '<i>다 있음</i>'}</div>`).join('');
   const ls = (g.lines || []).map((l) => { const c0 = l.cands[0];
-    const offers = l.cands.flatMap((cd) => cd.vendors.filter((v) => !v.odd).map((v) => ({ ...v, item: cd.item }))).sort((a, b) => a.price - b.price).slice(0, 4);
+    const seen = new Set(), offers = l.cands.flatMap((cd) => cd.vendors.filter((v) => !v.odd).map((v) => ({ ...v, item: cd.item }))).sort((a, b) => a.price - b.price)
+      .filter((v) => !seen.has(v.vendor) && seen.add(v.vendor)).slice(0, 4);   // 매입처마다 가장 싼 값 한 줄
     const sold = c0 && c0.sold ? `<span class="kt-sold">판매 ${won(c0.sold.price)} ${esc(c0.sold.day || '')}</span>` : '';
     return `<div class="kt-l"><div class="kt-lh"><b>${esc(l.name)}</b><span>${l.qty}${esc(l.unit)}</span>${sold}</div>
-      ${c0 ? `<div class="kt-it">${esc(c0.item)}</div>` : '<div class="kt-it no">매입 기록 없음</div>'}
-      ${offers.map((v, i) => `<div class="kt-o ${i === 0 ? 'low' : ''}"><b>${esc(vshort(v.vendor))}</b><em>${won(v.price)}</em><span>${esc(v.day)} ${esc(v.src === '이카운트 구매' ? '구매' : v.src)}</span></div>`).join('')}</div>`; }).join('');
+      ${offers.length ? '' : '<div class="kt-it no">매입 기록 없음</div>'}
+      ${offers.map((v, i) => `<div class="kt-o ${i === 0 ? 'low' : ''}"><b>${esc(vshort(v.vendor))}</b><em>${won(v.price)}</em><span>${esc(v.day)} ${esc(v.src === '이카운트 구매' ? '구매' : v.src)}</span><small>${esc(v.item)}</small></div>`).join('')}</div>`; }).join('');
   const fs = (g.fares || []).filter((f) => !f.err).map((f) => `<div class="kt-o"><b>${esc(f.day)} ${esc(f.car || '')}</b><em>${won(f.won)}</em><span>${esc(vshort(f.from) || '')}</span></div>`).join('');
   const ps = (g.past || []).map((x) => `<div class="kt-p"><b>${esc(x.day)}${x.from ? ' · ' + esc(vshort(x.from)) : ''}</b><span>${esc(x.items)}</span></div>`).join('');
   return `${g.site || g.when ? `<div class="ks-g">${g.site ? `<div class="ks-kv"><span>현장</span><b>${esc(g.site)}</b></div>` : ''}${g.when ? `<div class="ks-kv"><span>도착</span><b>${esc(g.when)}</b></div>` : ''}</div>` : ''}
