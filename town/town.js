@@ -3,7 +3,7 @@
 import * as S from '/js/store-supabase.js?v=9t2';
 import * as JIM from './jim.js?v=2';
 import * as W3D from './v3d.js?v=17';
-import * as O3D from './o3d.js?v=17';
+import * as O3D from './o3d.js?v=18';
 import { portrait, KINDS } from './kit3d.js?v=3';
 
 const stage = document.getElementById('stage');
@@ -308,14 +308,14 @@ const STAFF = [
 let ME = '';
 const AI = [   // 실제로 돌아가는 AI 작업만. kind: task = 할 일 0 이면 마당에서 쉼, feed = 계속 받는 일
   { k: 'seal', who: '김맥순', job: '출고일보', av: 'seal', f: 2, x: 0, kind: 'feed' },
-  { k: 'raccoon', who: '콩알', job: '이카운트 받기 · 입력', av: 'raccoon', f: 1, x: -24, kind: 'task' },
-  { k: 'otter', who: '수달', job: '운임 미송금', av: 'otter', f: 1, x: -16, kind: 'task' },
-  { k: 'hedgehog', who: '고슴', job: '공간 사이트 전표', av: 'hedgehog', f: 1, x: -8, kind: 'task' },
-  { k: 'squirrel', who: '도토리', job: '전표 PDF · 명세서', av: 'squirrel', f: 1, x: 4, kind: 'feed' },
-  { k: 'cat', who: '이음이', job: '배차', av: 'cat', f: 0, x: -26, kind: 'task' },
-  { k: 'guppy', who: '받아쓰기', job: '비토 통화', av: 'guppy', f: 0, x: -17, kind: 'feed' },
-  { k: 'rabbit', who: '토깽', job: '문자 · 텔레그램', av: 'rabbit', f: 0, x: -9, kind: 'feed' },
-  { k: 'redpanda', who: '그림이', job: '디자인 · 카탈로그', av: 'redpanda', f: 0, x: 24, kind: 'task' },
+  { k: 'raccoon', who: '콩알', job: '이카운트 받기 · 입력', av: 'raccoon', f: 1, x: 6, kind: 'task' },
+  { k: 'otter', who: '수달', job: '운임 미송금', av: 'otter', f: 1, x: 14, kind: 'task' },
+  { k: 'hedgehog', who: '고슴', job: '공간 사이트 전표', av: 'hedgehog', f: 1, x: 22, kind: 'task' },
+  { k: 'squirrel', who: '도토리', job: '전표 PDF · 명세서', av: 'squirrel', f: 2, x: -14, kind: 'feed' },
+  { k: 'cat', who: '이음이', job: '배차', av: 'cat', f: 1, x: -26, kind: 'task' },
+  { k: 'guppy', who: '받아쓰기', job: '비토 통화', av: 'guppy', f: 1, x: -17, kind: 'feed' },
+  { k: 'rabbit', who: '토깽', job: '문자 · 텔레그램', av: 'rabbit', f: 1, x: -9, kind: 'feed' },
+  { k: 'redpanda', who: '그림이', job: '디자인 · 카탈로그', av: 'redpanda', f: 2, x: 14, kind: 'task' },
 ];
 const PAMPH = ['표지', '제품 소개', '부속자재', '시공 순서', '기능 상세', '뒷표지 주소', '인쇄소 보내기'];
 const mdOf = (d) => `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;

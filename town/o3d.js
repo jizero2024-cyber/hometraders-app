@@ -51,16 +51,16 @@ export function office(host, o) {
   const FW = 60, FD = 22, FH = 10, WOOD = '#C9955E', WOOD2 = '#A8774A';
   box(420, 1, 300, '#9ED27F', 0, -1.2, 20); box(86, 1, 66, '#D9D3C6', 0, -1, 8); box(420, 0.2, 10, '#6B7280', 0, -0.2, 50);   // 땅 · 앞 길
   // 방 — [층, x0, x1, 바닥, 벽, 이름]
-  const ROOMS = [[0, -FW / 2, 0, '#EFE6D6', '#E6EFF6', '1F 배차 · 통신'], [0, 0, FW / 2, '#F3E9DA', '#FBF3E6', '1F 디자인 · 회의'], [1, -FW / 2, 0, '#ECE4D6', '#F3EFE6', '2F 회계'], [1, 0, FW / 2, '#F2E8D8', '#FFF5E8', '2F 서류 · 확인']];
+  const ROOMS = [[0, -FW / 2, FW / 2, '#F3EBDD', '#FBF6EE', '1F 안내 · 라운지'], [1, -FW / 2, 0, '#EFE6D6', '#E6EFF6', '2F 배차 · 통신'], [1, 0, FW / 2, '#ECE4D6', '#F3EFE6', '2F 회계']];   // 1층은 한 층 전부 공용 (10/30 대표)
   ROOMS.forEach(([f, x0, x1, fc, wc, name]) => {
     const y = f * FH, w = x1 - x0, cx = (x0 + x1) / 2; box(w, 0.5, FD, fc, cx, y, 0).castShadow = false; box(w, FH, 0.4, wc, cx, y + 0.5, -FD / 2);
     const lp = new THREE.PointLight('#FFF1DA', 34, 34, 1.4); lp.position.set(cx, y + FH - 1.2, 2); scene.add(lp);
     tag(null, pill(name, 'rgba(255,255,255,.92)', '#6B5E55'), x0 + 5, y + FH - 0.8, -FD / 2 + 1).d.style.pointerEvents = 'none';   // 방 이름은 뒷벽 위쪽 (이름표와 안 겹치게)
   });
   box(FW, 0.5, FD, '#E9DCC4', 0, 2 * FH, 0).castShadow = false;   // 다락 바닥
-  { const lp = new THREE.PointLight('#FFE9C8', 40, 40, 1.4); lp.position.set(0, 2 * FH + 8, 2); scene.add(lp); tag(null, pill('다락 · 대표실', 'rgba(255,255,255,.92)', '#E8732C'), -22, 2 * FH + 5, -FD / 2 + 1).d.style.pointerEvents = 'none'; }
+  { const lp = new THREE.PointLight('#FFE9C8', 40, 40, 1.4); lp.position.set(0, 2 * FH + 8, 2); scene.add(lp); tag(null, pill('다락 · 대표실 · 서류 · 디자인', 'rgba(255,255,255,.92)', '#E8732C'), -22, 2 * FH + 5, -FD / 2 + 1).d.style.pointerEvents = 'none'; }
   box(0.4, 2 * FH, FD, '#F4F0E8', -FW / 2, 0.5, 0); box(0.4, 2 * FH, FD, '#F4F0E8', FW / 2, 0.5, 0);   // 옆벽
-  [0, 1].forEach((f) => { const y = f * FH + 0.5; box(0.4, FH, FD * 0.55, '#EDE4D4', 0, y, -FD / 2 + FD * 0.275); box(0.4, 2.6, FD * 0.45, '#EDE4D4', 0, y + FH - 2.6, FD / 2 - FD * 0.225); box(0.15, FH - 2.6, 0.2, WOOD2, 0, y, FD / 2 - FD * 0.45 + 0.1); });   // 가운데 칸막이 (문)
+  [1].forEach((f) => { const y = f * FH + 0.5; box(0.4, FH, FD * 0.55, '#EDE4D4', 0, y, -FD / 2 + FD * 0.275); box(0.4, 2.6, FD * 0.45, '#EDE4D4', 0, y + FH - 2.6, FD / 2 - FD * 0.225); box(0.15, FH - 2.6, 0.2, WOOD2, 0, y, FD / 2 - FD * 0.45 + 0.1); });   // 가운데 칸막이 (문)
   // 목조 기둥 · 보
   [-FW / 2, 0, FW / 2].forEach((x) => [-FD / 2, FD / 2].forEach((z) => box(0.9, 2 * FH + 0.6, 0.9, WOOD, x, 0, z)));
   [FH, 2 * FH].forEach((y) => { box(FW + 1, 0.8, 0.9, WOOD, 0, y - 0.3, FD / 2); box(FW + 1, 0.8, 0.9, WOOD, 0, y - 0.3, -FD / 2); });
@@ -93,33 +93,35 @@ export function office(host, o) {
   const frame = (x, y, c) => { box(1.8, 2.2, 0.08, '#FFFFFF', x, y, -FD / 2 + 0.32); box(1.5, 1.9, 0.05, c, x, y + 0.15, -FD / 2 + 0.38); };
   const BIND = ['#5D7FBF', '#FFFFFF', '#9AB6E0', '#E8E2D6', '#3F5F9A'];
   const OBJ = {};
-  // 1F 왼쪽 — 배차 · 통신: 큰 모니터 벽
-  { const y = 0.5; const big = [scr(9, 4.4), scr(7, 4.4)]; [[-21, big[0], 9], [-8.5, big[1], 7]].forEach(([x, S2, w2]) => { box(w2 + 0.5, 4.9, 0.3, '#2B2F36', x, y + 1.8, -FD / 2 + 0.45); S2.me.position.set(x, y + 4.25, -FD / 2 + 0.65); scene.add(S2.me); });
-    screens.wallA = big[0]; screens.wallB = big[1]; drawScr(big[0], ['배차 요청', ''], '#22406A'); drawScr(big[1], ['오늘 출고', ''], '#2A4A3A'); win(-27.5, y + 4, -FD / 2 + 0.35, 3, 3); plant(-28.5, y, 6, 1); }
-  // 1F 오른쪽 — 디자인 · 회의: 동그란 회의 테이블 · 큰 화면 · 팜플렛 진열대 · 소파
-  { const y = 0.5, g = new THREE.Group(); g.position.set(13, y, 3); scene.add(g); cyl(3.6, 0.3, '#E2C9A0', 0, 2.1, 0, g, 32); cyl(0.5, 2.1, '#F2F0EA', 0, 0, 0, g); for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2, ch = new THREE.Group(); ch.position.set(Math.cos(a) * 4.8, 0, Math.sin(a) * 4.8); ch.rotation.y = -a + Math.PI / 2; g.add(ch); box(1.4, 0.35, 1.4, '#FFFFFF', 0, 1.2, 0, ch); box(1.4, 1.5, 0.3, '#FFFFFF', 0, 1.5, -0.6, ch); [-0.55, 0.55].forEach((lx) => [-0.55, 0.55].forEach((lz) => box(0.12, 1.2, 0.12, '#C9A26B', lx, 0, lz, ch))); } clickable(g, 'meet'); OBJ.meet = [13, y + 5, 3];
-    const rg = new THREE.Mesh(new THREE.CylinderGeometry(6.2, 6.2, 0.05, 32), mat('#E9DCC8')); rg.position.set(13, y + 0.02, 3); scene.add(rg);
+  // 1F — 안내 · 라운지 (공용): 둥근 안내 데스크 · 동그란 회의 테이블 · 큰 화면 · 소파 · 팜플렛 진열대 · 커피 바
+  { const y = 0.5;
+    const rc = new THREE.Mesh(new THREE.CylinderGeometry(3.6, 3.6, 2.2, 32, 1, true, -0.3, Math.PI * 1.15), new THREE.MeshStandardMaterial({ color: '#FFFFFF', side: THREE.DoubleSide, roughness: 0.5 })); rc.position.set(-12, y + 1.1, 2); rc.castShadow = true; scene.add(rc);
+    box(4.2, 0.12, 1.2, '#E9DCC4', -12, y + 2.2, 4.8); box(1.6, 0.08, 1.1, '#C9CDD2', -12.5, y + 2.25, 3.3, scene, { metalness: 0.5 }); box(6, 2.6, 0.2, '#E9DCC4', -12, y + 4.6, -FD / 2 + 0.4);
+    { const lt = new THREE.Mesh(new THREE.PlaneGeometry(5.4, 1.6), new THREE.MeshBasicMaterial({ map: logoT, transparent: true })); lt.position.set(-12, y + 5.9, -FD / 2 + 0.55); scene.add(lt); }
+    const g = new THREE.Group(); g.position.set(12, y, 3); scene.add(g); cyl(3.6, 0.3, '#E2C9A0', 0, 2.1, 0, g, 32); cyl(0.5, 2.1, '#F2F0EA', 0, 0, 0, g); for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2, ch = new THREE.Group(); ch.position.set(Math.cos(a) * 4.8, 0, Math.sin(a) * 4.8); ch.rotation.y = -a + Math.PI / 2; g.add(ch); box(1.4, 0.35, 1.4, '#FFFFFF', 0, 1.2, 0, ch); box(1.4, 1.5, 0.3, '#FFFFFF', 0, 1.5, -0.6, ch); [-0.55, 0.55].forEach((lx) => [-0.55, 0.55].forEach((lz) => box(0.12, 1.2, 0.12, '#C9A26B', lx, 0, lz, ch))); } clickable(g, 'meet'); OBJ.meet = [12, y + 5, 3];
+    [[12, 3, 6.2, '#E9DCC8'], [0, -5, 4, '#D9CFC0']].forEach(([x, z, r, c]) => { const rg = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 0.05, 32), mat(c)); rg.position.set(x, y + 0.02, z); scene.add(rg); });
     const tv = scr(8, 4); box(8.4, 4.4, 0.3, '#2B2F36', 12, y + 2.6, -FD / 2 + 0.45); tv.me.position.set(12, y + 4.8, -FD / 2 + 0.65); scene.add(tv.me); screens.tv = tv; drawScr(tv, ['홈트레이더스', '아이큐브 카탈로그'], '#E9F1F8');
+    box(6, 1.2, 2.4, '#F6F3EE', 0, y, -7.6); box(6, 1.6, 0.6, '#F6F3EE', 0, y + 1.2, -8.6); [-1, 1].forEach((a) => box(0.6, 1.1, 2.4, '#F6F3EE', a * 3.1, y + 1.2, -7.6)); box(3, 0.8, 1.6, '#C9A26B', 0, y, -4.4);
     const pg = new THREE.Group(); pg.position.set(26.5, y, -8); scene.add(pg); box(5, 5, 1.6, '#C9A26B', 0, 0, 0, pg); [0, 1, 2].forEach((r) => { box(4.6, 0.2, 1.4, '#B08A55', 0, 1 + r * 1.5, 0.1, pg); [0, 1, 2].forEach((i) => box(1, 1.2, 0.15, ['#E8732C', '#3F7FE0', '#2E9A5A', '#F5B400'][(i + r) % 4], -1.4 + i * 1.4, 1.2 + r * 1.5, 0.6, pg)); }); clickable(pg, 'pamph'); OBJ.pamph = [26.5, y + 6.6, -8];
-    box(5.5, 1.2, 2.2, '#F6F3EE', 4.5, y, -8); box(5.5, 1.6, 0.6, '#F6F3EE', 4.5, y + 1.2, -8.9); frame(20, y + 5, '#F7C8A0'); plant(28.5, y, 6, 1.1); }
-  // 2F 왼쪽 — 회계: 금고 · 파일 선반
-  { const y = FH + 0.5; const sf = new THREE.Group(); sf.position.set(-28, y, -6.5); scene.add(sf); box(2.6, 3.2, 2.4, '#8E959C', 0, 0, 0, sf, { metalness: 0.4, roughness: 0.45 }); cyl(0.55, 0.15, '#C9CDD2', 0, 1.7, 1.2, sf, 16).rotation.x = Math.PI / 2;
-    shelf(-20, y, -FD / 2 + 1.2, 6, 3, BIND); shelf(-8, y, -FD / 2 + 1.2, 6, 3, BIND); frame(-14, y + 5.2, '#B9D9F0'); plant(-2.5, y, 6, 0.9); }
-  // 2F 오른쪽 — 서류 · 확인: 복합기 · 확인 칠판 · 상자
-  { const y = FH + 0.5, g = new THREE.Group(); g.position.set(24, y, -6); scene.add(g); box(4, 3, 3, '#EEF0F2', 0, 0, 0, g); box(3.6, 0.5, 2.6, '#D3D7DC', 0, 3, 0, g); box(3, 0.15, 2.2, '#FFFFFF', 0, 3.5, 0, g); box(2.8, 0.1, 2, '#FFFFFF', 0, 1.6, 1.6, g); box(1, 0.6, 0.1, '#2F7BF6', 1.2, 3.1, 1.3, g, { emissive: '#2F7BF6', emissiveIntensity: 0.5 }); clickable(g, 'printer'); OBJ.printer = [24, y + 5, -6];
-    const bg2 = new THREE.Group(); bg2.position.set(13, y, -FD / 2 + 0.4); scene.add(bg2); box(9, 4.4, 0.3, '#FFFFFF', 0, 1.6, 0, bg2); box(9.4, 0.3, 0.6, '#9AA5B1', 0, 1.4, 0.2, bg2); [['#FFE680', -3], ['#FFB5C8', -0.5], ['#B5E3FF', 2], ['#C8F0B0', 3.3]].forEach(([c, x], i) => box(1.5, 1.3, 0.05, c, x, 2.5 + (i % 2) * 1.5, 0.2, bg2)); clickable(bg2, 'board'); OBJ.board = [13, y + 7, -FD / 2 + 0.6];
-    for (let i = 0; i < 5; i++) box(1.4, 1.1, 1.2, '#D9B88C', 27 - (i % 3) * 1.5, y + Math.floor(i / 3) * 1.1, 4 + (i % 2) * 1.2); plant(2.5, y, 6, 0.9); }
-  // 다락 — 대표실: 맥북 · 테라리움 어항 · 라운지 의자 · 커피 바 · 상자
+    box(7, 3, 2.2, '#A8774A', -24, y, -7.6); box(7.2, 0.25, 2.4, '#E9E2D6', -24, y + 3, -7.6); box(1.4, 1.5, 1.2, '#B8BEC6', -25.5, y + 3.25, -7.8, scene, { metalness: 0.6, roughness: 0.3 }); for (let i = 0; i < 3; i++) cyl(0.25, 0.4, '#FFFFFF', -23 + i * 0.8, y + 3.25, -7.2, scene, 10);
+    frame(4, y + 5.2, '#F7C8A0'); frame(-2, y + 5.4, '#B9D9F0'); plant(-28.5, y, 6, 1.2); plant(28.5, y, 6, 1.1); plant(-5, y, 7, 0.9); }
+  // 2F 왼쪽 — 배차 · 통신: 큰 모니터 벽
+  { const y = FH + 0.5; const big = [scr(9, 4.4), scr(7, 4.4)]; [[-21, big[0], 9], [-8.5, big[1], 7]].forEach(([x, S2, w2]) => { box(w2 + 0.5, 4.9, 0.3, '#2B2F36', x, y + 1.8, -FD / 2 + 0.45); S2.me.position.set(x, y + 4.25, -FD / 2 + 0.65); scene.add(S2.me); });
+    screens.wallA = big[0]; screens.wallB = big[1]; drawScr(big[0], ['배차 요청', ''], '#22406A'); drawScr(big[1], ['오늘 출고', ''], '#2A4A3A'); plant(-28.5, y, 6, 1); }
+  // 2F 오른쪽 — 회계: 금고 · 파일 선반
+  { const y = FH + 0.5; const sf = new THREE.Group(); sf.position.set(28, y, -6.5); scene.add(sf); box(2.6, 3.2, 2.4, '#8E959C', 0, 0, 0, sf, { metalness: 0.4, roughness: 0.45 }); cyl(0.55, 0.15, '#C9CDD2', 0, 1.7, 1.2, sf, 16).rotation.x = Math.PI / 2;
+    shelf(8, y, -FD / 2 + 1.2, 6, 3, BIND); shelf(19, y, -FD / 2 + 1.2, 6, 3, BIND); frame(13.5, y + 6.6, '#D9E8C0'); plant(2.5, y, 6, 0.9); }
+  // 다락 — 대표실(맥북 · 테라리움 어항) · 서류 · 확인(복합기 · 칠판) · 디자인
   { const y = 2 * FH + 0.5;
-    const tg = new THREE.Group(); tg.position.set(-12, y, -3); scene.add(tg); box(3, 1.4, 2, '#C9A26B', 0, 0, 0, tg); const bowl = new THREE.Mesh(new THREE.SphereGeometry(1.4, 24, 18), new THREE.MeshStandardMaterial({ color: '#DDF3FF', transparent: true, opacity: 0.28, roughness: 0.05 })); bowl.position.set(0, 2.8, 0); tg.add(bowl);
+    const tg = new THREE.Group(); tg.position.set(6, y, -6); scene.add(tg); box(3, 1.4, 2, '#C9A26B', 0, 0, 0, tg); const bowl = new THREE.Mesh(new THREE.SphereGeometry(1.4, 24, 18), new THREE.MeshStandardMaterial({ color: '#DDF3FF', transparent: true, opacity: 0.28, roughness: 0.05 })); bowl.position.set(0, 2.8, 0); tg.add(bowl);
     const water = new THREE.Mesh(new THREE.SphereGeometry(1.25, 20, 14, 0, Math.PI * 2, Math.PI * 0.35, Math.PI * 0.65), new THREE.MeshStandardMaterial({ color: '#7FC8F0', transparent: true, opacity: 0.45 })); water.position.set(0, 2.8, 0); tg.add(water);
     const fishes = [0, 1].map((i) => { const f2 = new THREE.Mesh(new THREE.SphereGeometry(0.22, 10, 8), mat(i ? '#FF8A3C' : '#F7C82F')); f2.scale.set(1.4, 0.8, 0.6); tg.add(f2); return f2; });
     ticks.push((dt, t) => fishes.forEach((f2, i) => { const a = t * (0.8 + i * 0.3) + i * 3; f2.position.set(Math.cos(a) * 0.7, 2.6 + Math.sin(t * 1.3 + i) * 0.2, Math.sin(a) * 0.7); f2.rotation.y = -a; }));
-    const lc = new THREE.Group(); lc.position.set(-19, y, -2); lc.rotation.y = 0.5; scene.add(lc); box(2.2, 0.6, 2.2, '#F6F2EA', 0, 0.9, 0, lc); box(2.2, 2.0, 0.5, '#F6F2EA', 0, 1.4, -1.0, lc); box(1.6, 0.5, 1.4, '#F6F2EA', 0, 0.5, 2.2, lc);
-    box(7, 3, 2.2, '#A8774A', 13, y, -7.6); box(7.2, 0.25, 2.4, '#E9E2D6', 13, y + 3, -7.6); box(1.4, 1.5, 1.2, '#B8BEC6', 11.5, y + 3.25, -7.8, scene, { metalness: 0.6, roughness: 0.3 });
     const mb = new THREE.Group(); mb.position.set(1.9, y + 1.92, -0.6); scene.add(mb); box(1.9, 0.08, 1.3, '#C9CDD2', 0, 0, 0, mb, { metalness: 0.5, roughness: 0.35 }); const lid = new THREE.Group(); lid.position.set(0, 0.06, -0.62); lid.rotation.x = -0.25; mb.add(lid); box(1.9, 1.25, 0.06, '#C9CDD2', 0, 0, 0, lid, { metalness: 0.5 }); const ms = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 1.05), new THREE.MeshStandardMaterial({ color: '#9FD0FF', emissive: '#9FD0FF', emissiveIntensity: 0.6 })); ms.position.set(0, 0.62, 0.04); lid.add(ms);
-    [[24, 4], [26, 2], [24.5, -3], [-26, 3]].forEach(([x, z], i) => box(2.2, 1.6 + (i % 2) * 0.6, 2, '#D9B88C', x, y, z)); plant(-24, y, -6, 1.2); plant(20, y, -5, 1);
-    [[-4, -6], [5, -6]].forEach(([x, z]) => { box(0.04, 2.2, 0.04, '#7A6A5A', x, y + 7, z); for (let k = 0; k < 5; k++) { const lf = new THREE.Mesh(new THREE.IcosahedronGeometry(0.5, 0), mat(['#5DAA58', '#6FBF5E'][k % 2], { flatShading: true })); lf.position.set(x + Math.sin(k * 2) * 0.35, y + 6.8 - k * 0.45, z + Math.cos(k * 2) * 0.35); scene.add(lf); } }); }
+    const g = new THREE.Group(); g.position.set(-22, y, -5); scene.add(g); box(4, 3, 3, '#EEF0F2', 0, 0, 0, g); box(3.6, 0.5, 2.6, '#D3D7DC', 0, 3, 0, g); box(3, 0.15, 2.2, '#FFFFFF', 0, 3.5, 0, g); box(2.8, 0.1, 2, '#FFFFFF', 0, 1.6, 1.6, g); box(1, 0.6, 0.1, '#2F7BF6', 1.2, 3.1, 1.3, g, { emissive: '#2F7BF6', emissiveIntensity: 0.5 }); clickable(g, 'printer'); OBJ.printer = [-22, y + 5, -5];
+    const bg2 = new THREE.Group(); bg2.position.set(-7, y, -8); scene.add(bg2); [-2.6, 2.6].forEach((a) => box(0.2, 5.6, 0.2, '#B08A55', a, 0, 0.4, bg2)); box(5.6, 3.6, 0.2, '#FFFFFF', 0, 1.8, 0, bg2); [['#FFE680', -1.6], ['#FFB5C8', 0], ['#B5E3FF', 1.6]].forEach(([c, x], i) => box(1.2, 1.1, 0.05, c, x, 2.5 + (i % 2) * 1.2, 0.15, bg2)); clickable(bg2, 'board'); OBJ.board = [-7, y + 7, -8];
+    [[26, 3], [27, -2], [-27, 3]].forEach(([x, z], i) => box(2.2, 1.6 + (i % 2) * 0.6, 2, '#D9B88C', x, y, z)); plant(20, y, -5, 1); plant(-17, y, -6, 1);
+    [[-3, -6], [9, 3]].forEach(([x, z]) => { box(0.04, 2.2, 0.04, '#7A6A5A', x, y + 7, z); for (let k = 0; k < 5; k++) { const lf = new THREE.Mesh(new THREE.IcosahedronGeometry(0.5, 0), mat(['#5DAA58', '#6FBF5E'][k % 2], { flatShading: true })); lf.position.set(x + Math.sin(k * 2) * 0.35, y + 6.8 - k * 0.45, z + Math.cos(k * 2) * 0.35); scene.add(lf); } }); }
   // 마당 — 수영장 · 선베드 · 파라솔 · 빈백 · 와인바 · 우체통 · 울타리
   { const pool = new THREE.Group(); pool.position.set(-6, 0, 25); scene.add(pool); box(26, 0.6, 11, '#F2F2EE', 0, -0.2, 0, pool); const wtr = new THREE.Mesh(new THREE.BoxGeometry(24, 0.3, 9), new THREE.MeshStandardMaterial({ color: '#5EC4F0', roughness: 0.1, metalness: 0.1, transparent: true, opacity: 0.9 })); wtr.position.set(0, 0.32, 0); pool.add(wtr);
     const ripple = [0, 1, 2].map((i) => { const r2 = new THREE.Mesh(new THREE.RingGeometry(0.6, 0.75, 24), new THREE.MeshBasicMaterial({ color: '#FFFFFF', transparent: true, opacity: 0.4 })); r2.rotation.x = -Math.PI / 2; r2.position.set(-6 + i * 6, 0.5, (i % 2) * 2 - 1); pool.add(r2); return r2; });
