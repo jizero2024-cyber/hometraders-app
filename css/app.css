@@ -1358,3 +1358,5 @@ body.hm-wall .fl-lh > span, body.hm-wall .fl-row > .fl-c { text-align: left; }
 body.hm-wall .fl-acts { flex-wrap: nowrap !important; align-items: center; }   /* 명세표·변환·거래처 전달도 버튼과 한 줄 (10/30 대표 "왜 이렇게 떠" — 두 줄로 쌓이던 것) */
 body.hm-wall .fl-acts .fl-stm { display: flex; flex-wrap: nowrap; gap: 6px; align-items: center; }
 body.hm-wall .fl-acts button.arm { background: #FF3B30 !important; color: #fff !important; border-color: #FF3B30 !important; }   /* 한 번 더 누르면 실행 */
+body.hm-wall .fl-io .ok, body.hm-wall .fl-io button { background: #111 !important; color: #fff !important; }   /* 입력된 라벨은 검정 (10/30 대표) */
+body.hm-wall .fl-io .no { background: #fff !important; color: #111 !important; box-shadow: inset 0 0 0 1px #BDBDBD; }
