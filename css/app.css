@@ -1332,7 +1332,7 @@ body.ki-wide .ki-wclk span { font-size: 18px; font-weight: 700; color: #6B6B70; 
 body.hm-wall .hm-main { padding-top: 84px !important; }
 
 /* 가로 키오스크 흑백 (10/30 대표 "뒤에 배경 하얗게 · 블랙앤 화이트로, 버튼도") — 키오스크 배경 무늬가 리스트 위에 덮여 흐려 보이던 것도 */
-body.ki-wide, body.ki-wide #app, #ki-land { background: #fff !important; }
+body.ki-wide, #ki-land { background: #fff !important; } body.ki-wide #app { background: transparent !important; }   /* #app 은 iframe 위라 투명
 body.ki-wide #app::before, body.ki-wide #app::after { display: none !important; }
 html:has(body.hm-wall), body.hm-wall, body.hm-wall #app, body.hm-wall .hm, body.hm-wall .hm-body .fl { background: #fff !important; }
 body.hm-wall #app::before, body.hm-wall #app::after, body.hm-wall::before { display: none !important; }
