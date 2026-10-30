@@ -1,6 +1,6 @@
 // 홈트 마을 /town (10/29 대표 "게임처럼 · 디자인만 먼저") — 마을 · 단지 · 사무실 · 창고 네 화면, 아직 예시 자료
 // 주소 뒤 #/campus · #/office · #/warehouse 로 화면 바뀜. 직원 계정만 (공간 계정 막음)
-import * as S from '/js/store-supabase.js?v=9t2';
+import * as S from '/js/store-supabase.js?v=9t3';
 import * as JIM from './jim.js?v=2';
 import * as W3D from './v3d.js?v=17';
 import * as O3D from './o3d.js?v=19';
@@ -220,14 +220,13 @@ function village() {
   const mail = v.querySelector('#mail');
   const addDrops = async (files) => { const r = await putInbox(files); say(r.err ? `못 넣었어요 — ${r.err}` : `자료 ${r.ok}개 넣었어요. 읽고 출고 건에 넣을게요.`); load(); };
   mail.onclick = () => {
-    const st = { wait: ['받음', '#C2551A'], got: ['읽는 중', '#2F7BF6'], done: ['반영', '#1E8E3E'], check: ['확인 필요', '#B07A00'] };
     const m = el(`<div class="modal"><div class="card" style="width:600px;border-radius:28px;padding:22px 24px;display:flex;flex-direction:column;gap:12px">
       <div style="display:flex;align-items:center;gap:12px"><div style="flex:1"><div style="font-size:20px;font-weight:800">자료 넣기</div><div style="font-size:12px;color:#8A7E77">카톡 · 사진 · PDF · 엑셀 · 명세서</div></div><button type="button" class="mx" aria-label="닫기" style="width:40px;height:40px;border:0;border-radius:12px;background:#F4EFEA;font-size:18px;cursor:pointer">✕</button></div>
       <label class="zone" style="display:flex;align-items:center;justify-content:center;height:130px;border:2.5px dashed #EAD9C9;border-radius:22px;background:#FFFBF7;cursor:pointer;font-size:16px;font-weight:800;color:#4A3F3A">여기에 끌어다 놓기<input type="file" multiple style="display:none"></label>
       <div style="display:flex;gap:8px;align-items:flex-end"><textarea rows="2" placeholder="카톡 내용 붙여 넣기" style="flex:1;resize:none;border:1.5px solid #F0E6DD;border-radius:14px;padding:10px 12px;font:inherit;font-size:13px;outline:none"></textarea><button type="button" class="btn or dadd" style="height:48px">넣기</button></div>
       <div class="dmsg" style="font-size:12px;color:#8A7E77"></div>
-      <div class="scroll" style="display:flex;flex-direction:column;gap:6px;max-height:220px">${(LL ? LL.inbox : []).slice(0, 12).map((x) => prow(`${esc(x.name || '')} <span style="color:#8A7E77">${esc(x.created_by || '')} ${tOf(x.created_at)}</span>`, (st[x.status] || [x.status])[0], `color:${(st[x.status] || [0, '#8A7E77'])[1]}`)).join('')}</div></div></div>`);
-    v.appendChild(m);
+      <div class="scroll" style="max-height:380px">${LL ? mailBox(LL) : ''}</div></div></div>`);
+    v.appendChild(m); if (LL) wireMail(m, LL);
     const go = async (its) => { m.querySelector('.dmsg').textContent = '올리는 중…'; const r = await putInbox(its); m.querySelector('.dmsg').textContent = r.err ? `못 넣었어요 — ${r.err}` : `${r.ok}건 넣었어요`; load(); };
     m.onclick = (e) => { if (e.target === m || e.target.closest('.mx')) m.remove(); };
     const z = m.querySelector('.zone'); z.ondragover = (e) => { e.preventDefault(); z.style.borderColor = '#E8732C'; }; z.ondragleave = () => { z.style.borderColor = '#EAD9C9'; }; z.ondrop = (e) => { e.preventDefault(); z.ondragleave(); go([...(e.dataTransfer.files || [])]); };
@@ -327,9 +326,10 @@ function lotOf(x) {   // 출고 건 → 마을 자리 (거래처 + 현장 이름
   return [[/한림/, 'hanlim'], [/원익/, 'wonik'], [/우림/, 'woorim'], [/나인/, 'anmyeon'], [/사람사는/, 'cheongdo']].reduce((a, [re, k]) => a || (re.test(p) ? k : ''), '') || '';
 }
 async function live() {
-  const r = await Promise.allSettled([S.getTownAI(), S.getFlowBoard(), S.getFlowMarks(), S.getFareUnpaid(), S.listSongjang(), S.getGongganWaitCount(), S.getTownInbox(), S.getTownChecks()]);
+  const r = await Promise.allSettled([S.getTownAI(), S.getFlowBoard(), S.getFlowMarks(), S.getFareUnpaid(), S.listSongjang(), S.getGongganWaitCount(), S.getTownInbox(), S.getTownChecks(), S.getTownMail()]);
   const g = (i, d) => (r[i].status === 'fulfilled' && r[i].value != null ? r[i].value : d);
-  const L = { ai: g(0, null), flow: g(1, null), marks: g(2, {}), fare: g(3, []), sj: g(4, []), gwait: g(5, 0), inbox: g(6, []), chk: g(7, []) };
+  const L = { ai: g(0, null), flow: g(1, null), marks: g(2, {}), fare: g(3, []), sj: g(4, []), gwait: g(5, 0), inbox: g(6, []), chk: g(7, []), mailMac: g(8, null) };
+  L.mail = mailItems(L);
   const rows = (L.flow && L.flow.rows) || [], today = (L.flow && L.flow.today) || mdOf(new Date()), yst = mdOf(new Date(Date.now() - 864e5)), tmr = mdOf(new Date(Date.now() + 864e5));
   const has = (x, k) => (x.steps || []).includes(k);
   L.today = rows.filter((x) => x.day === today && ['배차 요청', '배차 완료', '출고 완료'].some((k) => has(x, k)));
@@ -374,6 +374,26 @@ function panelBox(v) {
   v.appendChild(p); p.querySelector('.px').onclick = () => { p.style.display = 'none'; };
   return { el: p, show: (t, sub, html) => { p.querySelector('.pt').textContent = t; p.querySelector('.ps').textContent = sub || ''; p.querySelector('.pb').innerHTML = html; p.style.display = 'flex'; } };
 }
+const MST = { wait: ['받음', '#C2551A'], got: ['읽는 중', '#2F7BF6'], done: ['반영', '#1E8E3E'], check: ['확인 필요', '#B07A00'] };
+const MSRC = ['사이트 · 키오스크', '드라이브', '내 맥', '문자'];
+function mailItems(L) {   // 우체통 — 사이트·키오스크 자료 넣기 + 맥이 올린 드라이브 · 맥 · 문자 (10/30 대표 "다 보였으면 · 폴더링 · 문자도")
+  const mac = (L.mailMac && L.mailMac.items) || [], names = [...new Set(mac.map((x) => x.vendor).filter(Boolean))].sort((a, b) => b.length - a.length);
+  const loc = (iso) => { const d = new Date(iso); return isNaN(d) ? '' : new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 16); };
+  const site = L.inbox.map((x) => ({ src: MSRC[0], kind: x.kind === 'file' ? '파일' : '글', name: x.name || '', t: loc(x.created_at), vendor: names.find((n) => (x.name || '').replace(/\s/g, '').includes(n.replace(/\s/g, ''))) || '', who: x.created_by || '', st: x.status }));
+  return [...site, ...mac].sort((a, b) => (a.t < b.t ? 1 : -1));
+}
+function mailBox(L, by = 'src') {   // 출처 · 날짜 · 거래처 폴더
+  const its = L.mail || [], key = { src: (x) => x.src, day: (x) => x.t.slice(0, 10), vendor: (x) => x.vendor || '거래처 모름' }[by];
+  const g = new Map(); its.forEach((x) => { const k = key(x); if (!g.has(k)) g.set(k, []); g.get(k).push(x); });
+  let ks = [...g.keys()];
+  if (by === 'src') ks = MSRC.filter((k) => g.has(k)); else if (by === 'day') ks.sort().reverse(); else ks.sort((a, b) => (a === '거래처 모름') - (b === '거래처 모름') || g.get(b).length - g.get(a).length);
+  const td = mdOf(new Date()), yd = mdOf(new Date(Date.now() - 864e5));
+  const lab = (k) => { if (by !== 'day') return k; const md = k.slice(5).replace('-', '/'); return md === td ? `오늘 ${md}` : md === yd ? `어제 ${md}` : `${md} ${'일월화수목금토'[new Date(k).getDay()]}`; };
+  const row = (x) => `<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;background:#fff;font-size:13px"><span style="flex:1;min-width:0"><span style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700">${esc(x.name)}</span><span style="font-size:11px;color:#8A7E77">${esc([by !== 'src' ? x.src : '', x.kind, by !== 'vendor' ? x.vendor : '', x.who, x.where].filter(Boolean).join(' · '))} ${esc(x.t.slice(5, 16).replace('T', ' ').replace('-', '/'))}</span></span>${x.st ? `<span style="font-weight:800;font-size:12px;color:${(MST[x.st] || [0, '#8A7E77'])[1]}">${(MST[x.st] || [x.st])[0]}</span>` : ''}</div>`;
+  const tabs = [['src', '출처'], ['day', '날짜'], ['vendor', '거래처']].map(([k, t]) => `<button type="button" data-mby="${k}" class="btn${k === by ? ' or' : ''}" style="height:34px;font-size:13px;padding:0 14px">${t}</button>`).join('');
+  return `<div class="mbox" style="display:flex;flex-direction:column;gap:6px"><div style="display:flex;gap:6px;align-items:center">${tabs}<span style="flex:1"></span><span style="font-size:11px;color:#8A7E77">${L.mailMac ? `맥 ${tOf(L.mailMac.at)}` : '맥 자료 없음'}</span></div>${ks.map((k, i) => `<details${i === 0 ? ' open' : ''} style="border-radius:12px;background:#FBF8F5;padding:2px 6px"><summary style="cursor:pointer;padding:8px 6px;font-size:14px;font-weight:800;color:#4A3F3A">${esc(lab(k))} <span style="padding:1px 8px;border-radius:999px;background:#EFE6DD;font-size:12px">${g.get(k).length}</span></summary><div style="display:flex;flex-direction:column;gap:4px;padding:0 0 6px">${g.get(k).slice(0, 40).map(row).join('')}</div></details>`).join('') || prow('자료 없음')}</div>`;
+}
+function wireMail(root, L) { root.querySelectorAll('.mbox').forEach((b) => { b.onclick = (e) => { const t = e.target.closest('[data-mby]'); if (!t) return; const n = el(mailBox(L, t.dataset.mby)); b.replaceWith(n); wireMail(n.parentNode, L); }; }); }
 const prow = (l, r, rc = '') => `<div style="display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:12px;background:#FBF8F5;font-size:13px"><span style="flex:1;min-width:0">${l}</span>${r != null ? `<span style="font-weight:800;${rc}">${r}</span>` : ''}</div>`;
 const plink = (t, href) => `<a class="btn" href="${href}" target="_blank" rel="noopener" style="height:40px;font-size:13px">${esc(t)} ↗</a>`;
 const ioTxt = (x) => { const seen = {}; (x.lines || []).forEach((l) => { const k = l.k === '반품' ? '판매' : l.k; seen[k] = seen[k] === false || !(l.st === '입력' || l.st === '—') ? false : true; }); return Object.entries(seen).map(([k, ok]) => `${k} ${ok ? '✓' : '✕'}`).join(' · '); };
@@ -445,8 +465,7 @@ function office() {
       return;
     }
     if (k === 'mail') {
-      const st = { wait: ['받음', '#C2551A'], got: ['읽는 중', '#2F7BF6'], done: ['반영', '#1E8E3E'], check: ['확인 필요', '#B07A00'] };
-      P.show('우체통 · 자료 넣기', '카톡 · 사진 · PDF · 엑셀', `<label id="dz" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;height:120px;border:2.5px dashed #EAD9C9;border-radius:18px;background:#FFFBF7;cursor:pointer;font-weight:800;color:#4A3F3A">끌어다 놓기<input id="dfin" type="file" multiple style="display:none"></label><div style="display:flex;gap:8px"><textarea id="dtx" rows="2" placeholder="카톡 붙여 넣기" style="flex:1;resize:none;border:1.5px solid #F0E6DD;border-radius:12px;padding:8px 10px;font:inherit;font-size:13px"></textarea><button type="button" id="dgo" class="btn or">넣기</button></div><div id="dmsg" style="font-size:12px;color:#8A7E77"></div>` + L.inbox.slice(0, 12).map((x) => prow(`${esc(x.name || '')} <span style="color:#8A7E77">${esc(x.created_by || '')} ${tOf(x.created_at)}</span>`, (st[x.status] || [x.status])[0], `color:${(st[x.status] || [0, '#8A7E77'])[1]}`)).join(''));
+      P.show('우체통 · 자료 넣기', '카톡 · 사진 · PDF · 엑셀', `<label id="dz" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;height:120px;border:2.5px dashed #EAD9C9;border-radius:18px;background:#FFFBF7;cursor:pointer;font-weight:800;color:#4A3F3A">끌어다 놓기<input id="dfin" type="file" multiple style="display:none"></label><div style="display:flex;gap:8px"><textarea id="dtx" rows="2" placeholder="카톡 붙여 넣기" style="flex:1;resize:none;border:1.5px solid #F0E6DD;border-radius:12px;padding:8px 10px;font:inherit;font-size:13px"></textarea><button type="button" id="dgo" class="btn or">넣기</button></div><div id="dmsg" style="font-size:12px;color:#8A7E77"></div>` + mailBox(L)); wireMail(P.el, L);
       const put = async (its) => { const msg = P.el.querySelector('#dmsg'); msg.textContent = '올리는 중…'; let ok = 0, err = ''; for (const it of its) { const row = { id: newId(), created_by: ME, status: 'wait' }; if (typeof it === 'string') Object.assign(row, { kind: 'text', name: it.trim().split('\n')[0].slice(0, 60), body: it }); else { if (it.size > 8e6) { err = `${it.name}: 8MB 넘음`; continue; } const data = await new Promise((r2) => { const fr = new FileReader(); fr.onload = () => r2(fr.result); fr.readAsDataURL(it); }); Object.assign(row, { kind: 'file', name: it.name, mime: it.type, data }); } const e = await S.addInbox(row); if (e) err = e; else ok += 1; } msg.textContent = err ? `못 넣음 — ${err}` : `${ok}건 넣었어요`; load(); };
       const dz = P.el.querySelector('#dz'); dz.ondragover = (e) => { e.preventDefault(); dz.style.borderColor = '#E8732C'; }; dz.ondragleave = () => { dz.style.borderColor = '#EAD9C9'; }; dz.ondrop = (e) => { e.preventDefault(); dz.ondragleave(); put([...(e.dataTransfer.files || [])]); };
       P.el.querySelector('#dfin').onchange = (e) => put([...(e.target.files || [])]);

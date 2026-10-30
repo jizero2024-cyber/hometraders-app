@@ -368,9 +368,14 @@ export async function getTownStock() {   // 마을 창고 — 실사 재고표(�
   try { return data ? JSON.parse(data.body || '{}') : null; } catch (_) { return null; }
 }
 export async function getTownInbox() {   // 마을 우체통 — 최근 자료 넣기 (파일 내용은 빼고)
-  const { data, error } = await sb.from('site_inbox').select('id,kind,name,status,note,created_by,created_at').in('kind', ['text', 'file']).order('created_at', { ascending: false }).limit(20);
+  const { data, error } = await sb.from('site_inbox').select('id,kind,name,status,note,created_by,created_at').in('kind', ['text', 'file']).order('created_at', { ascending: false }).limit(60);
   if (error) throw new Error(error.message);
   return data || [];
+}
+export async function getTownMail() {   // 마을 우체통 — 맥 town_status.py 가 드라이브 자료_넣기 · 맥 _자료 넣는 곳 · 문자를 'town:inbox' 로 올림 (10/30)
+  const { data, error } = await sb.from('site_inbox').select('body').eq('id', 'town:inbox').maybeSingle();
+  if (error) throw new Error(error.message);
+  try { return data ? JSON.parse(data.body || '{}') : null; } catch (_) { return null; }
 }
 export async function getTownChecks() {   // 마을 체크리스트 (팜플렛 등) — site_inbox kind 'townchk'
   const { data, error } = await sb.from('site_inbox').select('id,name,status,created_by,updated_at').eq('kind', 'townchk');
