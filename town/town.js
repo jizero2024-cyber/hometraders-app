@@ -2,8 +2,8 @@
 // 주소 뒤 #/campus · #/office · #/warehouse 로 화면 바뀜. 직원 계정만 (공간 계정 막음)
 import * as S from '/js/store-supabase.js?v=9t2';
 import * as JIM from './jim.js?v=2';
-import * as W3D from './v3d.js?v=16';
-import * as O3D from './o3d.js?v=14';
+import * as W3D from './v3d.js?v=17';
+import * as O3D from './o3d.js?v=15';
 import { portrait, KINDS } from './kit3d.js?v=3';
 
 const stage = document.getElementById('stage');
@@ -134,7 +134,7 @@ function village() {
     </div>
     <div id="disp" class="card pnl" style="position:absolute;left:20px;top:96px;width:260px;overflow:hidden;z-index:8;display:none"></div>
     <div style="position:absolute;left:22px;bottom:22px;display:flex;align-items:flex-end;gap:4px;z-index:8;pointer-events:none">
-      <img class="bob" src="${IMG}seal.webp" alt="김맥순" style="width:86px">
+      <img src="${IMG}seal.webp" alt="김맥순" style="width:86px">
       <div class="card" style="margin-bottom:62px;max-width:230px;padding:11px 14px;border-radius:18px 18px 18px 6px"><div style="font-size:11px;font-weight:800;color:#E8732C">김맥순</div><div id="kbub" style="font-size:13px;font-weight:500;line-height:1.45;margin-top:2px"></div></div>
     </div>
     <button id="chatBtn" type="button" class="btn" style="position:absolute;right:24px;top:20px;z-index:9;height:52px"><img src="${IMG}seal.webp" alt="" style="width:38px;height:38px">김맥순과 대화</button>
@@ -410,6 +410,16 @@ function office() {
       if (k === 'hedgehog') body += prow('올릴 전표', L.gwait) + plink('공간 사이트', '/gonggan/');
       if (k === 'cat') body += L.needDisp.slice(0, 14).map((x) => prow(`${esc(x.partner)} · ${esc(x.site || '')} <span style="color:#8A7E77">${esc(x.day)} ${esc(x.time || '')}</span>`, '배차 요청', 'color:#E8732C')).join('') || prow('배차 요청 없음');
       if (k === 'redpanda') { open('pamph'); return; }
+      if (k === 'guppy' || k === 'rabbit') {   // 자료 수집 내역 (10/30 대표 "언제 마지막 업데이트 · 뭐뭐 수집했는지")
+        const C2 = (L.ai && L.ai.collect) || {}, hh = C2.health || {}, sec = (t) => `<div style="margin-top:8px;font-size:12px;font-weight:800;color:#8A7E77">${t}</div>`, hm2 = (x) => String(x || '').slice(5, 16).replace('T', ' ');
+        body = Object.entries(hh).map(([n, x]) => prow(esc(n), esc(x.msg || ''), x.bad ? 'color:#FF453A' : 'color:#1E8E3E')).join('')
+          + prow('출고일보에 반영', hm2(C2.marked)) + prow('문자 백업', hm2(C2.sms_at)) + prow('텔레그램 받기', hm2(C2.tg_at))
+          + sec('통화 (업무 · 문의)') + (C2.calls || []).map((x) => prow(`<b>${esc(x.who)}</b> <span style="color:#8A7E77">${esc(x.dur)}</span><div style="font-size:12px;color:#6B5E55">${esc(x.title)}</div>`, hm2(x.t), 'color:#8A7E77;font-weight:600;font-size:12px')).join('')
+          + sec('텔레그램') + (C2.tg || []).map((x) => prow(`<b>${esc(x.who || '')}</b> ${esc(x.text)}`, hm2(x.t), 'color:#8A7E77;font-weight:600;font-size:12px')).join('')
+          + sec('카톡 방') + (C2.chat || []).map((x) => prow(esc(x.room), hm2(x.t), 'color:#8A7E77;font-weight:600;font-size:12px')).join('')
+          + sec('자료 넣기 파일') + (C2.files || []).map((x) => prow(esc(x.name), hm2(x.t), 'color:#8A7E77;font-weight:600;font-size:12px')).join('');
+        P.show('자료 수집 · 받아쓰기 · 토깽', `AI 상태 ${tOf(L.ai && L.ai.at)}`, body); return;
+      }
       P.show(`${a.who} · ${a.job}`, w.st === 'bad' ? '멈춤' : '', body); return;
     }
     if (k === 'board') {

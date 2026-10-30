@@ -7,7 +7,7 @@ import { critter } from './kit3d.js?v=3';
 function base(host, o) {
   let W = window.innerWidth, H = window.innerHeight;
   const renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1)); renderer.setSize(W, H, false);
+  renderer.setPixelRatio(Math.min(window.innerWidth > 1400 ? 1.25 : 1.6, window.devicePixelRatio || 1)); renderer.setSize(W, H, false);
   renderer.domElement.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;display:block;outline:none';
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.outputColorSpace = THREE.SRGBColorSpace;
   host.appendChild(renderer.domElement);
@@ -35,7 +35,7 @@ function base(host, o) {
   const frame = () => {
     if (!host.isConnected || (o.alive && !o.alive())) { window.removeEventListener('resize', onResize); renderer.dispose(); host.remove(); return; }
     const dt = Math.min(0.05, clock.getDelta()); ctl.update(); ticks.forEach((f) => f(dt, clock.elapsedTime));
-    tags.forEach((t) => { v3.copy(t.p).project(cam); const vis = v3.z < 1 && Math.abs(v3.x) < 1.1 && Math.abs(v3.y) < 1.1; t.d.style.display = vis ? '' : 'none'; if (vis) t.d.style.transform = `translate(${((v3.x + 1) / 2 * W).toFixed(1)}px,${((1 - v3.y) / 2 * H).toFixed(1)}px) translate(-50%,-100%)`; });
+    tags.forEach((t) => { v3.copy(t.p).project(cam); const vis = v3.z < 1 && Math.abs(v3.x) < 1.1 && Math.abs(v3.y) < 1.1, dsp = vis ? '' : 'none'; if (t.d.style.display !== dsp) t.d.style.display = dsp; if (!vis) return; const tx = Math.round((v3.x + 1) / 2 * W), ty = Math.round((1 - v3.y) / 2 * H); if (t.x === tx && t.y === ty) return; t.x = tx; t.y = ty; t.d.style.transform = `translate(${tx}px,${ty}px) translate(-50%,-100%)`; });
     renderer.render(scene, cam); requestAnimationFrame(frame);
   };
   requestAnimationFrame(frame);
@@ -50,7 +50,7 @@ export function office(host, o) {
   const { scene, box, cyl, mat, clickable, tag, ticks } = K;
   const FW = 46, FD = 20, FH = 10, NF = 5;   // 층고 높게 (10/30 대표 "층고 낮아 캐릭터 가려져")
   box(420, 1, 300, '#9ED27F', 0, -1.2, 20); box(90, 1, 60, '#D9D3C6', 0, -1, 8); box(420, 0.2, 10, '#6B7280', 0, -0.2, 46);   // 땅 · 앞 길 (양옆까지)
-  for (let i = 0; i < 40; i++) { const sx = i % 2 ? 1 : -1, x = sx * (52 + (i * 17) % 120), z = -30 + (i * 23) % 70; const t = new THREE.Mesh(new THREE.IcosahedronGeometry(2.8, 0), mat('#5DAA58', { flatShading: true })); t.position.set(x, 4, z); t.castShadow = true; scene.add(t); box(0.6, 2, 0.6, '#8A5A35', x, -0.5, z); }
+  // 주변 나무는 뺌 (10/30 대표)
   box(64, 0.3, 22, '#8CCB6A', 0, 0, 22);   // 마당 잔디
   const FLOORS = [['#F6F1EA', '1F 디자인실'], ['#EEF3FA', '2F 배차 · 통신'], ['#FBF4EC', '3F 서류 · 확인'], ['#F1EFEA', '4F 회계'], ['#FFF3E8', '5F 대표실']];
   FLOORS.forEach(([c, name], f) => {
@@ -64,17 +64,20 @@ export function office(host, o) {
   const logo = new THREE.Mesh(new THREE.PlaneGeometry(12, 6), new THREE.MeshBasicMaterial({ map: logoT, transparent: true })); logo.position.set(0, NF * FH + 4.5, 0); scene.add(logo);
   // 계단 (오른쪽 바깥)
   for (let f = 0; f < NF; f++) for (let i = 0; i < 8; i++) box(5, 0.4, 2, '#E3DED6', FW / 2 + 3.5, f * FH + i * (FH / 8), -FD / 2 + 2 + i * 2.1);
+  const SEAT = 1.55;   // 의자 앉은 높이
   const screens = {};   // 책상 모니터 화면 — 직원 실제 숫자 (setScreen)
   const scr = (w2, h2) => { const c = document.createElement('canvas'); c.width = 256; c.height = 160; const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; const m2 = new THREE.MeshStandardMaterial({ map: t, emissive: '#FFFFFF', emissiveMap: t, emissiveIntensity: 0.55 }); const me = new THREE.Mesh(new THREE.PlaneGeometry(w2, h2), m2); return { c, t, me }; };
-  const drawScr = (S2, lines2, bg = '#1F3A5F') => { const g2 = S2.c.getContext('2d'); g2.fillStyle = bg; g2.fillRect(0, 0, 256, 160); g2.fillStyle = 'rgba(255,255,255,.12)'; for (let i = 0; i < 5; i++) g2.fillRect(14, 70 + i * 16, 120 + (i * 37) % 100, 7); g2.fillStyle = '#FFFFFF'; g2.font = '800 30px Pretendard, sans-serif'; g2.fillText(lines2[0] || '', 14, 38); g2.fillStyle = '#9FD0FF'; g2.font = '700 22px Pretendard, sans-serif'; g2.fillText(lines2[1] || '', 14, 66); S2.t.needsUpdate = true; };
+  const drawScr = (S2, lines2, bg = '#1F3A5F') => { const sig = lines2.join('|') + bg; if (S2.sig === sig) return; S2.sig = sig; const g2 = S2.c.getContext('2d'); g2.fillStyle = bg; g2.fillRect(0, 0, 256, 160); g2.fillStyle = 'rgba(255,255,255,.12)'; for (let i = 0; i < 5; i++) g2.fillRect(14, 70 + i * 16, 120 + (i * 37) % 100, 7); g2.fillStyle = '#FFFFFF'; g2.font = '800 30px Pretendard, sans-serif'; g2.fillText(lines2[0] || '', 14, 38); g2.fillStyle = '#9FD0FF'; g2.font = '700 22px Pretendard, sans-serif'; g2.fillText(lines2[1] || '', 14, 66); S2.t.needsUpdate = true; };
   const desk = (x, f, z = -1, c = '#D9B88C', k) => { const y = f * FH + 0.5; box(6, 0.3, 3, c, x, y + 1.6, z); [-2.7, 2.7].forEach((a) => box(0.3, 1.6, 2.6, '#BFA27A', x + a, y, z));
     box(0.25, 0.9, 0.25, '#3A3F47', x + 1.9, y + 1.9, z - 0.6); box(2.8, 1.75, 0.15, '#2B2F36', x + 1.9, y + 2.7, z - 0.6); const S2 = scr(2.6, 1.55); S2.me.position.set(x + 1.9, y + 3.58, z - 0.52); scene.add(S2.me); drawScr(S2, ['', '']); if (k) screens[k] = S2;
     box(1.6, 0.06, 0.6, '#E6E8EB', x + 1.9, y + 1.92, z + 0.5); const mug = cyl(0.18, 0.35, '#FFFFFF', x - 1.8, y + 1.92, z + 0.4, scene, 10); mug.castShadow = false; };
   // 직원 자리 (AI 작업) — o.staff: [{k,who,f,x}]
   const seats = {};
   (o.staff || []).forEach((s) => {
-    desk(s.x, s.f, -1, s.k === 'seal' ? '#F4F2EE' : '#D9B88C', s.k); const c = critter(s.av); c.g.scale.setScalar(2.3); c.g.position.set(s.x - 1.2, s.f * FH + 0.5, -3.6); c.g.rotation.y = 0; scene.add(c.g); clickable(c.g, s.k);
-    seats[s.k] = { c, home: [s.x - 1.2, s.f * FH + 0.5, -3.6], at: 'desk', s };
+    desk(s.x, s.f, -1, s.k === 'seal' ? '#F4F2EE' : '#D9B88C', s.k);
+    { const fy = s.f * FH + 0.5, cx = s.x - 1.2, cz = -3.7; cyl(1.0, 0.12, '#3A3F47', cx, fy, cz, scene, 5); cyl(0.12, 1.0, '#8E959C', cx, fy, cz, scene, 8); box(1.7, 0.3, 1.6, s.k === 'seal' ? '#F6F2EA' : '#2F3A4A', cx, fy + 1.0, cz); box(1.7, 2.0, 0.28, s.k === 'seal' ? '#F6F2EA' : '#2F3A4A', cx, fy + 1.2, cz - 0.85); }   // 의자 (10/30 대표 "의자에 제대로 못 앉아")
+    const c = critter(s.av); c.g.scale.setScalar(2.2); c.g.position.set(s.x - 1.2, s.f * FH + 0.5 + SEAT, -3.55); c.g.rotation.y = 0; scene.add(c.g); clickable(c.g, s.k);
+    seats[s.k] = { c, home: [s.x - 1.2, s.f * FH + 0.5 + SEAT, -3.55], at: 'desk', s };
   });
   // 물건
   const OBJ = {};
@@ -129,14 +132,23 @@ export function office(host, o) {
     box(1.4, 3, 1.4, '#F2F0EA', -3.8, 0.3, 36); box(1.4, 3, 1.4, '#F2F0EA', 3.8, 0.3, 36); for (let i = 0; i < 9; i++) box(0.2, 2, 0.12, '#C9CDD2', -2.8 + i * 0.7, 0.3, 36);
     [[22, 34, '#5D9BF2'], [25, 34, '#F7C82F']].forEach(([x, z, c]) => { const bk = new THREE.Group(); bk.position.set(x, 0.3, z); bk.rotation.y = 0.3; scene.add(bk); [-1, 1].forEach((s2) => { const w2 = new THREE.Mesh(new THREE.TorusGeometry(0.6, 0.06, 6, 20), mat('#2B2B2B')); w2.position.set(s2 * 0.9, 0.65, 0); bk.add(w2); }); box(1.8, 0.1, 0.1, c, 0, 1.1, 0, bk); box(0.1, 0.6, 0.1, c, -0.4, 0.8, 0, bk); });
     [[-28, 34], [-10, 34], [10, 34], [28, 34]].forEach(([x, z]) => { cyl(0.12, 2.4, '#4A5058', x, 0.3, z, scene, 8); const lb = new THREE.Mesh(new THREE.SphereGeometry(0.35, 10, 8), new THREE.MeshStandardMaterial({ color: '#FFF2C4', emissive: '#FFD27A', emissiveIntensity: 1 })); lb.position.set(x, 3, z); scene.add(lb); }); }
+  // 힉스필드 그림 디테일 — 계단 난간 · 지붕 간판 · 매달린 화분 · 펜던트 등 · 러그 · 액자 · 생울타리 · 꽃 · 디딤돌
+  for (let f = 0; f < NF; f++) { const y0 = f * FH; box(0.12, 1.1, 17, '#C9CDD2', FW / 2 + 6.1, y0 + FH / 2 + 0.6, -FD / 2 + 9.4).rotation.x = -Math.atan2(FH, 16.8); }
+  { const sg = new THREE.Group(); sg.position.set(14, NF * FH + 0.8, 4); scene.add(sg); box(9, 3.4, 0.9, '#F2F2F0', 0, 0, 0, sg); box(8.2, 2.6, 0.2, '#FFFFFF', 0, 0.4, 0.5, sg, { emissive: '#FFFFFF', emissiveIntensity: 0.2 }); box(0.4, 1.2, 0.4, '#C9CDD2', -3, -1.2, 0, sg); box(0.4, 1.2, 0.4, '#C9CDD2', 3, -1.2, 0, sg); }
+  { const y = 4 * FH + 0.5; [[-4, -6], [2, -7], [-14, -8]].forEach(([x, z], i) => { box(0.04, 2.2, 0.04, '#7A6A5A', x, y + FH - 2.6, z); for (let k = 0; k < 5; k++) { const lf = new THREE.Mesh(new THREE.IcosahedronGeometry(0.5, 0), mat(['#5DAA58', '#6FBF5E'][k % 2], { flatShading: true })); lf.position.set(x + Math.sin(k * 2) * 0.35, y + FH - 2.8 - k * 0.45, z + Math.cos(k * 2) * 0.35); scene.add(lf); } }); }
+  for (let f = 0; f < NF; f++) [-12, 0, 12].forEach((x) => { const y = f * FH + 0.5 + FH - 0.6; box(0.05, 0.9, 0.05, '#555', x, y - 0.9, 0); const sh = new THREE.Mesh(new THREE.ConeGeometry(0.7, 0.6, 16, 1, true), new THREE.MeshStandardMaterial({ color: '#F2EEE6', side: THREE.DoubleSide, emissive: '#FFE7B0', emissiveIntensity: 0.35 })); sh.position.set(x, y - 1.1, 0); scene.add(sh); });
+  [[-7, 0.52, 1.5, 6.4, '#E9DCC8'], [-10, 4 * FH + 0.52, -4, 3.2, '#D9CFC0']].forEach(([x, y, z, r, c]) => { const rg = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 0.05, 32), mat(c)); rg.position.set(x, y, z); rg.receiveShadow = true; scene.add(rg); });
+  for (let f = 0; f < NF; f++) [[-19, '#F7C8A0'], [-17, '#B9D9F0'], [6, '#D9E8C0']].forEach(([x, c], i) => { if (f === 2 && x < -10) return; const y = f * FH + 0.5 + 4.6 + (i % 2) * 0.4; box(1.6, 2.0, 0.08, '#FFFFFF', x + f * 0.4, y, -FD / 2 + 0.32); box(1.3, 1.7, 0.05, c, x + f * 0.4, y + 0.15, -FD / 2 + 0.38); });
+  for (let x = -30; x <= 30; x += 2.2) { if (Math.abs(x) < 5) continue; const hg = new THREE.Mesh(new THREE.IcosahedronGeometry(1.1, 0), mat('#4E9E52', { flatShading: true })); hg.position.set(x, 1.1, 34.6); hg.scale.y = 0.75; hg.castShadow = true; scene.add(hg); for (let k = 0; k < 2; k++) { const fl = new THREE.Mesh(new THREE.SphereGeometry(0.16, 6, 4), mat(['#F7A8C8', '#FFFFFF', '#FFE07A'][(Math.abs(x) * 3 + k) % 3])); fl.position.set(x + (k - 0.5) * 0.8, 1.7, 35.2); scene.add(fl); } }
+  for (let i = 0; i < 9; i++) { const st = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.75, 0.1, 12), mat('#E4E0D8')); st.position.set(Math.sin(i * 0.7) * 1.2, 0.36, 34 - i * 2.4); st.receiveShadow = true; scene.add(st); }
   // 마당 — 빈백 (할 일 0 인 직원) · 와인바
   const REST = [[-20, 24], [-15, 25], [-10, 24], [-5, 26], [0, 25], [5, 26], [10, 24], [-24, 28]];
   REST.slice(0, 5).forEach(([x, z], i) => { const b = new THREE.Mesh(new THREE.SphereGeometry(1.7, 20, 14), mat(['#F7A8C8', '#FFE07A', '#A6E3B8', '#B5D4F4', '#F0B48A'][i])); b.scale.y = 0.6; b.position.set(x, 0.9, z + 1.4); b.castShadow = true; scene.add(b); });
   // 걷기 — 자리 ↔ 마당
   const moving = [];
-  const goTo = (k, to, after) => { const st = seats[k]; if (!st) return; const from = st.c.g.position.clone(); const pts = [from, new THREE.Vector3(FW / 2 + 3.5, from.y, from.z + 6), new THREE.Vector3(FW / 2 + 3.5, to.y, to.z - 6), to]; moving.push({ st, pts, i: 0, after }); };
+  const goTo = (k, to, after) => { const st = seats[k]; if (!st) return; if (Math.abs(st.c.g.position.y - st.home[1]) < 0.01) st.c.g.position.y -= SEAT; if (Math.abs(to.y - st.home[1]) < 0.01) { const fin = after; to = to.clone(); to.y -= SEAT; after = () => { st.c.g.position.y += SEAT; if (fin) fin(); }; } const from = st.c.g.position.clone(); const pts = [from, new THREE.Vector3(FW / 2 + 3.5, from.y, from.z + 6), new THREE.Vector3(FW / 2 + 3.5, to.y, to.z - 6), to]; moving.push({ st, pts, i: 0, after }); };
   ticks.push((dt) => {
-    Object.values(seats).forEach((st) => { if (st.at === 'desk') st.c.type(dt); else if (st.at === 'rest') st.c.sit(); });
+    Object.values(seats).forEach((st) => { if (st.at === 'desk') { st.c.sit(); st.c.type(dt); } else if (st.at === 'rest') st.c.sit(); });
     for (let n = moving.length - 1; n >= 0; n--) { const mv = moving[n], p = mv.st.c.g.position, tgt = mv.pts[mv.i + 1]; if (!tgt) { moving.splice(n, 1); if (mv.after) mv.after(); continue; } const d = tgt.clone().sub(p), L = d.length(), step = dt * 9; if (L <= step) { p.copy(tgt); mv.i++; } else { d.normalize(); p.addScaledVector(d, step); mv.st.c.face(d.x, d.z); mv.st.c.walk(dt); } }
   });
   const tagsBy = {};

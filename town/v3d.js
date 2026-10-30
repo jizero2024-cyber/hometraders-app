@@ -23,7 +23,7 @@ export function route(a, b) {
 export function mount(host, o) {
   let W = window.innerWidth, H = window.innerHeight;   // 화면 꽉 (10/29 대표 "양옆도 꽉")
   const renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+  renderer.setPixelRatio(Math.min(window.innerWidth > 1400 ? 1.25 : 1.6, window.devicePixelRatio || 1));
   renderer.setSize(W, H, false); renderer.domElement.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;display:block;outline:none';
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05; renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -42,7 +42,7 @@ export function mount(host, o) {
 
   const hemi = new THREE.HemisphereLight('#EAF6FF', '#7AA35A', 1.15); scene.add(hemi);
   const sun = new THREE.DirectionalLight(night ? '#9FB4FF' : '#FFF3DD', night ? 0.6 : 2.3); sun.position.set(-120, 200, 90); sun.castShadow = true;
-  sun.shadow.mapSize.set(2048, 2048); Object.assign(sun.shadow.camera, { left: -180, right: 180, top: 160, bottom: -160, near: 10, far: 500 }); sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.6;
+  sun.shadow.mapSize.set(1536, 1536); Object.assign(sun.shadow.camera, { left: -180, right: 180, top: 160, bottom: -160, near: 10, far: 500 }); sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.6;
   scene.add(sun);
 
   // 재료
@@ -351,8 +351,8 @@ export function mount(host, o) {
   const tags = [];
   const tag = (html, x, y, z, cls = '') => { const d = document.createElement('div'); d.className = cls; d.style.cssText = 'position:absolute;left:0;top:0;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center;z-index:2;pointer-events:none'; d.innerHTML = html; over.appendChild(d); tags.push({ d, p: new THREE.Vector3(x, y, z) }); return d; };
   const placeTag = {};
-  const placeHtml = (key, p) => { const [bg, fg] = o.tone[p.tone] || o.tone.blue; return `${p.msg ? `<div class="${p.tone === 'red' ? 'bob' : ''}" style="margin-bottom:4px;display:flex;flex-direction:column;align-items:center"><span style="max-width:200px;padding:6px 10px;border-radius:14px;background:${bg};color:${fg};font-size:11px;font-weight:800;line-height:1.3;text-align:center;box-shadow:0 4px 12px rgba(40,60,90,.18)">${o.esc(p.msg)}</span><span class="tail" style="background:${bg}"></span></div>` : ''}
-      ${p.wait ? `<img class="bob" src="${o.portrait ? o.portrait(p.wait) : o.img + p.wait + '.webp'}" alt="기다리는 거래처" style="width:46px;margin-bottom:2px">` : ''}
+  const placeHtml = (key, p) => { const [bg, fg] = o.tone[p.tone] || o.tone.blue; return `${p.msg ? `<div style="margin-bottom:4px;display:flex;flex-direction:column;align-items:center"><span style="max-width:200px;padding:6px 10px;border-radius:14px;background:${bg};color:${fg};font-size:11px;font-weight:800;line-height:1.3;text-align:center;box-shadow:0 4px 12px rgba(40,60,90,.18)">${o.esc(p.msg)}</span><span class="tail" style="background:${bg}"></span></div>` : ''}
+      ${p.wait ? `<img src="${o.portrait ? o.portrait(p.wait) : o.img + p.wait + '.webp'}" alt="기다리는 거래처" style="width:46px;margin-bottom:2px">` : ''}
       <button type="button" class="pill pc" data-pk="${key}" style="border:0;cursor:pointer;pointer-events:auto;background:${key === 'home' ? '#E8732C' : 'rgba(255,255,255,.96)'};color:${key === 'home' ? '#fff' : '#4A3F3A'};font-size:11px;box-shadow:0 2px 6px rgba(0,0,0,.12)">${o.esc(p.name.replace(/[←↓]/g, '').trim())}</button>`; };
   Object.entries(o.places).forEach(([key, p]) => {   // 말풍선은 처음엔 이름만 — town.js 가 실제 출고 건으로 setPlace
     const L0 = LOTS[key]; if (!L0) return; const hgt = key === 'home' ? 30 : L0[2] === 'site' ? 26 : 16;
@@ -372,7 +372,7 @@ export function mount(host, o) {
 
   // 그리기
   const v3 = new THREE.Vector3(), camDir = new THREE.Vector3(), clock = new THREE.Clock(); let alive = true;
-  const proj = (p, el2) => { v3.copy(p).project(cam); const vis = v3.z < 1 && Math.abs(v3.x) < 1.15 && Math.abs(v3.y) < 1.15; el2.style.display = vis ? '' : 'none'; if (vis) el2.style.transform = `translate(${((v3.x + 1) / 2 * W).toFixed(1)}px,${((1 - v3.y) / 2 * H).toFixed(1)}px) translate(-50%,-100%)`; };
+  const proj = (p, el2) => { v3.copy(p).project(cam); const vis = v3.z < 1 && Math.abs(v3.x) < 1.15 && Math.abs(v3.y) < 1.15; const dsp = vis ? '' : 'none'; if (el2.style.display !== dsp) el2.style.display = dsp; if (!vis) return; const tx = Math.round((v3.x + 1) / 2 * W), ty = Math.round((1 - v3.y) / 2 * H); if (el2._x === tx && el2._y === ty) return; el2._x = tx; el2._y = ty; el2.style.transform = `translate(${tx}px,${ty}px) translate(-50%,-100%)`; };   // 정수 px · 바뀔 때만 (떨림·버벅임)
   function frame() {
     if (!alive || !renderer.domElement.isConnected || (o.alive && !o.alive())) { alive = false; clearInterval(wxT); clearInterval(envT); window.removeEventListener('resize', onResize); renderer.dispose(); host.remove(); return; }
     const dt = Math.min(0.05, clock.getDelta()), now = clock.elapsedTime;
