@@ -1337,7 +1337,11 @@ body.ki-wide #app::before, body.ki-wide #app::after { display: none !important; 
 html:has(body.hm-wall), body.hm-wall, body.hm-wall #app, body.hm-wall .hm, body.hm-wall .hm-body .fl { background: #fff !important; }
 body.hm-wall #app::before, body.hm-wall #app::after, body.hm-wall::before { display: none !important; }
 body.hm-wall .hm-body .fl { box-shadow: none !important; padding-left: 0 !important; padding-right: 0 !important; }
-body.hm-wall .hm-main { filter: grayscale(1); }
+body.hm-wall .fl-steps .fl-st:not([data-k="배차 요청"]), body.hm-wall .fl-day, body.hm-wall .fl-row > :not(.fl-tm) { filter: grayscale(1); }   /* 흑백 — 배차 요청만 빨강 (10/30 대표) */
+body.hm-wall .fl-st[data-k="배차 요청"] i { background: #E03E2D !important; color: #fff !important; }
+body.hm-wall .fl-st[data-k="배차 요청"], body.hm-wall .fl-st[data-k="배차 요청"] b { color: #E03E2D !important; }
+body.hm-wall .fl-tm b, body.hm-wall .fl-tm.now b { color: #111 !important; }
+body.hm-wall .fl:has(.fl-st.on[data-k="배차 요청"]) .fl-tm b, body.hm-wall .fl:has(.fl-st.on[data-k="배차 요청"]) .fl-tm span { color: #E03E2D !important; }
 body.hm-wall .fl-row { color: #000; }
 body.hm-wall .fl-acts .fl-go { background: #111 !important; color: #fff !important; border: 1px solid #111 !important; opacity: 1 !important; }
 body.hm-wall .fl-acts .fl-gh, body.hm-wall .fl-acts .fl-in.ok { background: #fff !important; color: #111 !important; border: 1px solid #111 !important; opacity: 1 !important; }
