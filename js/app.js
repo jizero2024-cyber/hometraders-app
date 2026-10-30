@@ -9,7 +9,7 @@ import * as SM from './stmt.js?v=104';
 import * as HD from './hdisp.js?v=11';
 import * as HM from './home.js?v=69';
 import * as FM from './forms.js?v=20';
-import * as KI from './kiosk.js?v=25';   // 세로형 키오스크 /kiosk (10/29)
+import * as KI from './kiosk.js?v=26';   // 세로형 키오스크 /kiosk (10/29)
 
 // 창고 아이콘 세트 (무채색)
 const WH_ICONS = {
@@ -4980,7 +4980,13 @@ function render() {
     return;
   }
   KI.stop();
-  if (/[?&]wall=1/.test(location.search)) document.body.classList.add('hm-wall');   // 가로 키오스크 — 오늘 흐름만 크게 (10/30)
+  if (/[?&]wall=1/.test(location.search) && !document.body.classList.contains('hm-wall')) {   // 가로 키오스크 — 오늘 흐름만 크게 (10/30)
+    document.body.classList.add('hm-wall');
+    document.addEventListener('click', (e) => {   // 줄 누르면 키오스크(세로형) 상세보기로 (10/30 대표 "상세보기는 세로형 디자인이 낫다")
+      const row = e.target.closest('.fl-row'); if (!row || e.target.closest('button, a') || window.parent === window) return;
+      e.preventDefault(); e.stopPropagation(); window.parent.postMessage({ kiRow: row.dataset.no }, location.origin);
+    }, true);
+  }
   if (state.route === 'main' || state.route === 'stmt') {   // 홈트 새 첫 화면 (10/23) — 미송금 · 배차 요청 · 자료 넣기 · 거래명세표 …
     document.body.classList.remove('erp');
     app.innerHTML = HM.screen(state.route);

@@ -359,6 +359,7 @@ export function start(draw, me) {
   document.addEventListener('drop', (e) => { if (K.tool !== 'box') return; e.preventDefault(); const fs = [...((e.dataTransfer && e.dataTransfer.files) || [])]; if (fs.length) putInbox(fs, draw); });
   document.addEventListener('input', (e) => { if (e.target.id === 'mb-text') (K.mb || (K.mb = {})).text = e.target.value; });
   window.addEventListener('resize', landscape);
+  window.addEventListener('message', (e) => { if (e.origin === location.origin && e.data && e.data.kiRow) { K.tool = ''; K.sel = e.data.kiRow; K.ask = ''; K.anim = true; draw(); } });   // 가로: /main 줄 → 세로형 상세보기
   const wake = () => { try { if (navigator.wakeLock && document.visibilityState === 'visible') navigator.wakeLock.request('screen').then((l) => { K.lock = l; }).catch(() => {}); } catch (_) { /* 무시 */ } };
   wake(); document.addEventListener('visibilitychange', wake);
   document.addEventListener('click', (e) => onTap(e, draw));
