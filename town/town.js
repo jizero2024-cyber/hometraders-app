@@ -314,6 +314,7 @@ const AI = [   // 실제로 돌아가는 AI 작업만. kind: task = 할 일 0 �
   { k: 'cat', who: '이음배차', job: '배차', av: 'cat', f: 1, x: -26, kind: 'task' },
   { k: 'guppy', who: '통화정리', job: '비토 통화', av: 'guppy', f: 1, x: -17, kind: 'feed' },
   { k: 'redpanda', who: '디자인', job: '디자인 · 카탈로그', av: 'redpanda', f: 2, x: 14, kind: 'task' },
+  { k: 'owl', who: '검수', job: '기능 점검', av: 'owl', f: 1, x: -9, kind: 'feed' },   // 10/30 대표 "검수하는 애도 있어야" — town_status.qa_checks
 ];
 const PAMPH = ['표지', '제품 소개', '부속자재', '시공 순서', '기능 상세', '뒷표지 주소', '인쇄소 보내기'];
 const mdOf = (d) => `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
@@ -349,6 +350,7 @@ async function live() {
     cat: { n: L.needDisp.length, line: `배차 요청 ${L.needDisp.length}`, st: aiw('cat').st, note: aiw('cat').note },
     guppy: { n: 0, line: aiw('guppy').note || '통화', st: aiw('guppy').st, note: aiw('guppy').note },
     rabbit: { n: 0, line: (aiw('rabbit').note || '').split(' · ')[0] || '문자', st: aiw('rabbit').st, note: aiw('rabbit').note },
+    owl: (() => { const q = (L.ai && L.ai.qa) || [], bad = q.filter((x) => !x.ok); return { n: bad.length, line: q.length ? (bad.length ? `고장 ${bad.length}` : `정상 ${q.length}`) : '점검 전', st: bad.length ? 'bad' : 'ok', note: bad.map((x) => x.name).join(' · ') }; })(),
     redpanda: { n: PAMPH.length - L.chkOn.filter(Boolean).length, line: `카탈로그 ${L.chkOn.filter(Boolean).length} / ${PAMPH.length}`, st: 'ok', note: aiw('redpanda').note },
   };
   if (L.ai && L.ai.run) W.seal.st = 'run';
@@ -474,7 +476,8 @@ function office() {
   function collectHtml(L, short) {   // 관제탑 · 받아쓰기 — 자료 수집 · 반영 내역 (10/30 대표)
     const C2 = (L.ai && L.ai.collect) || {}, hh = C2.health || {}, sec = (t) => `<div style="margin-top:8px;font-size:12px;font-weight:800;color:#8A7E77">${t}</div>`, hm2 = (x) => String(x || '').slice(5, 16).replace('T', ' ');
     const WHO = Object.fromEntries(AI.map((a) => [a.k, a.who]));
-    return (((L.ai && L.ai.claude) || []).length ? sec('지금 Claude 에 시킨 일') + L.ai.claude.map((c) => prow(`<b style="color:#2F7BF6">${esc(WHO[c.k] || '')}</b> ${esc(c.ask)}`, hm2(c.at), 'color:#8A7E77;font-weight:600')).join('') : '') + Object.entries(hh).map(([n, x]) => prow(esc(n), esc(x.msg || ''), x.bad ? 'color:#FF453A' : 'color:#1E8E3E')).join('')
+    const qbad = ((L.ai && L.ai.qa) || []).filter((x) => !x.ok);
+    return (qbad.length ? sec('검수 · 고장') + qbad.map((x) => prow(esc(x.name), esc(x.msg || ''), 'color:#FF453A;font-size:11px')).join('') : '') + (((L.ai && L.ai.claude) || []).length ? sec('지금 Claude 에 시킨 일') + L.ai.claude.map((c) => prow(`<b style="color:#2F7BF6">${esc(WHO[c.k] || '')}</b> ${esc(c.ask)}`, hm2(c.at), 'color:#8A7E77;font-weight:600')).join('') : '') + Object.entries(hh).map(([n, x]) => prow(esc(n), esc(x.msg || ''), x.bad ? 'color:#FF453A' : 'color:#1E8E3E')).join('')
           + sec('반영') + (() => {   // 받은 자료가 출고일보 · 사이트 · 키오스크까지 갔는지 (10/30 대표)
             const last = [C2.sms_at, ...(C2.calls || []).map((x) => x.t)].filter(Boolean).sort().pop() || '', fa = String((L.flow && L.flow.at) || '').replace('T', ' ');
             const late = last && fa && fa.slice(0, 16) < last.slice(0, 16), mk = String(C2.marked || '').replace('T', ' ');
@@ -537,6 +540,7 @@ function office() {
       if (k === 'hedgehog') body += prow('올릴 전표', L.gwait) + plink('공간 사이트', '/gonggan/');
       if (k === 'cat') body += L.needDisp.slice(0, 14).map((x) => prow(`${esc(x.partner)} · ${esc(x.site || '')} <span style="color:#8A7E77">${esc(x.day)} ${esc(x.time || '')}</span>`, '배차 요청', 'color:#E8732C')).join('') || prow('배차 요청 없음');
       if (k === 'redpanda') { open('pamph'); return; }
+      if (k === 'owl') body += ((L.ai && L.ai.qa) || []).map((x) => prow(`${x.ok ? '✓' : '✕'} ${esc(x.name)}<div style="font-size:11px;color:#8A7E77">${esc(x.msg || '')}</div>`, x.ok ? '정상' : '고장', x.ok ? 'color:#1E8E3E' : 'color:#FF453A')).join('') || prow('점검 기록 없음');
       if (k === 'guppy') { P.show('통화정리 · 자료 수집', `AI 상태 ${tOf(L.ai && L.ai.at)}`, collectHtml(L)); return; }
 
       P.show(`${a.who} · ${a.job}`, w.st === 'bad' ? '멈춤' : '', body);
