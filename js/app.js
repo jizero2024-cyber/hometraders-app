@@ -9,7 +9,7 @@ import * as SM from './stmt.js?v=104';
 import * as HD from './hdisp.js?v=11';
 import * as HM from './home.js?v=69';
 import * as FM from './forms.js?v=20';
-import * as KI from './kiosk.js?v=18';   // 세로형 키오스크 /kiosk (10/29)
+import * as KI from './kiosk.js?v=19';   // 세로형 키오스크 /kiosk (10/29)
 
 // 창고 아이콘 세트 (무채색)
 const WH_ICONS = {
@@ -4968,6 +4968,7 @@ function render() {
   }
   if (FM.ROUTES.includes(state.route)) {   // 간단 서류 화면 — 거래명세표 3종 · 납품확인서 (10/23)
     document.body.classList.remove('erp');
+    if (/[?&]pre=1/.test(location.search)) { try { const pr = JSON.parse(sessionStorage.getItem('stmtPreset') || 'null'); sessionStorage.removeItem('stmtPreset'); if (pr && pr.route === state.route) { FM.presetStmt(pr.route, pr.text, pr.rows); history.replaceState(null, '', location.pathname); } } catch (_) { /* 무시 */ } }   // 키오스크 물범이 → 변환 명세표 (10/30)
     app.innerHTML = FM.screen(state.route);
     return;
   }

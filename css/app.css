@@ -1281,3 +1281,15 @@ body.kiosk #app::before { background: radial-gradient(60vh 60vh at 10% 6%, rgba(
 .mb-l em { font-style: normal; font-weight: 700; text-align: right; }
 .mb-l.no b { color: #FF3B30; }
 .mb-done { margin: 3cqw 0 1cqw; background: #34C759; color: #FFFFFF; border-radius: 4cqw; padding: 3cqw; text-align: center; font-size: 3.8cqw; font-weight: 800; }
+
+/* 키오스크 물범이 — 명세서 전달 (10/30 대표) */
+.ki-mbf { position: fixed; right: 2.4cqw; bottom: 2.4cqw; z-index: 40; display: flex; align-items: flex-end; gap: 1cqw; border: 0; background: none; cursor: pointer; font-family: Pretendard, sans-serif; }
+.ki-mbf img { width: 15cqw; height: auto; filter: drop-shadow(0 6px 10px rgba(0,0,0,.18)); }
+.ki-mbb { margin-bottom: 9cqw; padding: 1.6cqw 2.4cqw; border-radius: 3cqw 3cqw .8cqw 3cqw; background: #fff; color: #2B2522; font-size: 3cqw; font-weight: 800; box-shadow: 0 6px 18px rgba(30,40,60,.16); white-space: nowrap; }
+.ki-mbb b { display: inline-block; min-width: 3.6cqw; margin-left: .8cqw; padding: .2cqw 1.2cqw; border-radius: 999px; background: #FF453A; color: #fff; font-size: 2.6cqw; text-align: center; }
+.ki-st { display: flex; flex-direction: column; gap: 1.2cqw; padding: 2.2cqw 2.4cqw; border-radius: 2.6cqw; background: #F6F3EF; margin-bottom: 1.6cqw; }
+.ki-stn b { display: block; font-size: 3.2cqw; font-weight: 800; } .ki-stn span { font-size: 2.5cqw; color: #8A7E77; }
+.ki-stb { display: grid; grid-template-columns: 1fr 1fr .8fr; gap: 1.2cqw; }
+.ki-frm { position: fixed; inset: 4cqw; z-index: 70; background: #fff; border-radius: 3cqw; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,.3); }
+.ki-frmh { display: flex; align-items: center; padding: 2cqw 2.6cqw; border-bottom: 1px solid #EEE; font-size: 3cqw; } .ki-frmh b { flex: 1; }
+.ki-frm iframe { flex: 1; border: 0; width: 100%; }

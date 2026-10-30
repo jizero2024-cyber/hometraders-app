@@ -3,7 +3,7 @@
 import * as S from './store-supabase.js?v=10';
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const K = { chk: {}, data: null, err: '', timer: 0, clock: 0, lock: null, sel: '', ask: '', busy: false, toast: '', me: '', over: {}, anim: false, tool: '', talk: '', sug: null, note: '', mb: null };   // mb = 물범이 (읽은 결과·답·넣기)   // tool = 'talk'(카톡 넣기) · 'box'(자료 넣기)   // over = 방금 누른 건 (맥 도우미가 새 판을 올릴 때까지 화면에 유지)
+const K = { chk: {}, data: null, err: '', timer: 0, clock: 0, lock: null, sel: '', ask: '', busy: false, toast: '', me: '', over: {}, anim: false, tool: '', talk: '', sug: null, note: '', mb: null, marks: {}, frame: '' };   // mb = 물범이 (읽은 결과·답·넣기)   // tool = 'talk'(카톡 넣기) · 'box'(자료 넣기)   // over = 방금 누른 건 (맥 도우미가 새 판을 올릴 때까지 화면에 유지)
 const p2 = (n) => String(n).padStart(2, '0');
 const mdOf = (d) => `${p2(d.getMonth() + 1)}/${p2(d.getDate())}`;
 const today = () => (K.data && K.data.today) || mdOf(new Date());
@@ -138,8 +138,29 @@ function mbHtml() {   // 물범이 — 읽은 것 · 되묻기 · 넣기 (10/30 
     : `<div class="ks-bs kt-bs"><button type="button" class="ks-b" data-ki="mbnew">다시</button><button type="button" class="ks-b go ${m.ask ? 'ask' : ''}" data-ki="mbpush" ${r.ready && !m.busy ? '' : 'disabled'}>${m.busy === 'push' ? '넣는 중…' : m.ask ? (m.dup ? '그래도 넣기' : `${r.kind}입력 확인`) : `이카운트 ${r.kind || ''}입력`}</button></div>`;
   return `${head}${asks}${nos}${msg}<div class="ks-k">품목 ${(r.lines || []).length}</div><div class="ks-box mb-ls">${ls}</div>${m.err ? `<div class="kt-err">${esc(m.err)}</div>` : ''}${done}${go}`;
 }
+// 물범이 명세서 (10/30 대표 "오른쪽 아래 물범이 · 명세서 전달해줘 엉! · 변환 명세표 / 이카운트 명세표 둘 다")
+const saleSlips = (r) => [...new Set((r.lines || []).filter((l) => l.k === '판매' && l.st === '입력').flatMap((l) => l.slips || []))];
+function stmtTodo() {
+  const d = K.data || {}, md = (x) => `${p2(x.getMonth() + 1)}/${p2(x.getDate())}`, days = [d.today || md(new Date()), md(new Date(Date.now() - 864e5))];
+  return (d.rows || []).filter((r) => days.includes(r.day) && (r.steps || []).some((k) => ['배차 완료', '출고 완료', '기록', '입력 완료'].includes(k)) && saleSlips(r).length && !K.marks[`sent:${r.no}`]);
+}
+function mbFloat() {
+  if (K.tool) return '';
+  const n = stmtTodo().length;
+  return `<button type="button" class="ki-mbf" data-ki="tool" data-k="stmt" aria-label="명세서 전달"><span class="ki-mbb">${n ? `명세서 전달해줘 엉! <b>${n}</b>` : '명세서 다 전달했어 엉'}</span><img src="/town/img/seal.webp" alt=""></button>`;
+}
+function stmtSheet() {
+  const rs = stmtTodo(), a = K.anim ? ' in' : ''; K.anim = false;
+  const fr = K.frame ? `<div class="ki-frm"><div class="ki-frmh"><b>${esc(K.frame.split('|')[0])}</b><button type="button" class="ks-x" data-ki="frmx" aria-label="닫기">✕</button></div><iframe src="${esc(K.frame.split('|')[1])}"></iframe></div>` : '';
+  return `<div class="ks-ov${a}" data-ki="close"><div class="ks${a}" role="dialog" aria-label="명세서 전달"><div class="ks-grab"></div>
+    <div class="ks-hd"><div><div class="ks-t">명세서 전달 ${rs.length}</div></div><button type="button" class="ks-x" data-ki="close" aria-label="닫기">✕</button></div>
+    ${rs.map((r) => `<div class="ki-st"><div class="ki-stn"><b>${esc(r.partner)} · ${esc(r.site || '')}</b><span>${esc(r.day)} · 판매 ${esc(saleSlips(r).join(', '))}</span></div>
+      <div class="ki-stb"><button type="button" class="ks-b" data-ki="stconv" data-no="${esc(r.no)}">변환 명세표</button><button type="button" class="ks-b" data-ki="stpdf" data-no="${esc(r.no)}">이카운트 명세표</button><button type="button" class="ks-b go" data-ki="stsent" data-no="${esc(r.no)}">전달함</button></div></div>`).join('') || '<div class="ki-z">전달할 명세서 없음</div>'}
+    ${fr}</div></div>`;
+}
 function toolSheet() {
   if (!K.tool) return '';
+  if (K.tool === 'stmt') return stmtSheet();
   if (K.tool === 'mb') { const a0 = K.anim ? ' in' : ''; K.anim = false;
     return `<div class="ks-ov${a0}" data-ki="close"><div class="ks${a0}" role="dialog" aria-label="물범이"><div class="ks-grab"></div>
       <div class="ks-hd"><div><div class="ks-t">물범이</div></div><button type="button" class="ks-x" data-ki="close" aria-label="닫기">✕</button></div>${mbHtml()}</div></div>`; }
@@ -173,10 +194,11 @@ export function screen() {
     ${sec('k-order', '발주 요청', g.order, 8, false)}
     ${sec('k-out', '오늘 출고 완료', g.out, 12, false)}
     ${at ? `<div class="ki-at">${esc(at)}</div>` : ''}
-  </div>${K.tool ? toolSheet() : sheet()}${K.toast ? `<div class="ki-toast">${esc(K.toast)}</div>` : ''}</div>`;
+  </div>${K.tool ? toolSheet() : sheet()}${mbFloat()}${K.toast ? `<div class="ki-toast">${esc(K.toast)}</div>` : ''}</div>`;
 }
 
 function pull(draw) {
+  S.getFlowMarks().then((m) => { K.marks = m || {}; }).catch(() => {});
   S.getFlowBoard().then((d) => { if (d) { const at = Date.parse(d.at) || 0;
     Object.entries(K.over).forEach(([no, o]) => { const r = (d.rows || []).find((x) => x.no === no); if (at > o.t + 60000 || !r) delete K.over[no]; else Object.assign(r, { steps: o.steps, car: o.car }); });
     K.data = d; } K.err = ''; }).catch((e) => { K.err = e.message; }).finally(draw);
@@ -253,7 +275,7 @@ function mbPush(draw) {   // 이카운트에 넣기 — 맥의 erp_push (담당�
 }
 function shut(draw) {   // 핸드폰처럼 아래로 내려가며 닫힘
   const ov = document.querySelector('.ks-ov'), ks = ov && ov.querySelector('.ks');
-  const off = () => { K.sel = ''; K.ask = ''; K.tool = ''; draw(); };
+  const off = () => { K.sel = ''; K.ask = ''; K.tool = ''; K.frame = ''; draw(); };
   if (!ks || ov.classList.contains('out')) { off(); return; }
   ov.classList.add('out'); ks.style.transform = '';
   setTimeout(off, 240);
@@ -280,6 +302,13 @@ function onTap(e, draw) {
   else if (a === 'jump') { const el = document.getElementById('ki-' + t.dataset.k); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
   else if (a === 'reload') pull(draw);
   else if (a === 'chk') { const k = t.dataset.k; K.chk[k] = !K.chk[k]; draw(); }
+  else if (a === 'stconv' || a === 'stpdf' || a === 'stsent') {   // 물범이 명세서 — 변환 명세표 · 이카운트 명세표 · 전달함
+    const r = byNo(t.dataset.no); if (!r) return; const sl = saleSlips(r);
+    if (a === 'stconv') { const route = /공간/.test(r.partner) ? 'stmt-gong' : 'stmt-etc'; try { sessionStorage.setItem('stmtPreset', JSON.stringify({ route, text: sl.join(' '), rows: r.salerows || null })); } catch (_) { /* 무시 */ } K.frame = `변환 명세표 · ${r.partner}|/${route}?pre=1`; draw(); return; }
+    if (a === 'stpdf') { S.getSlipLinks(sl).then((m) => { const hit = sl.flatMap((x) => (m[x] || []).filter((y) => !y.kind || y.kind === '판매'))[0]; if (!hit) { K.toast = 'PDF 아직 없어요'; draw(); setTimeout(() => { K.toast = ''; draw(); }, 2500); return; } K.frame = `이카운트 명세표 · ${r.partner}|https://drive.google.com/file/d/${encodeURIComponent(hit.drive_id)}/preview`; draw(); }).catch(() => {}); return; }
+    if (a === 'stsent') { S.addFlowMark(`sent:${r.no}`, `${r.partner} ${r.site || ''}`, K.me).then((e) => { if (!e) K.marks[`sent:${r.no}`] = { created_at: new Date().toISOString() }; K.toast = e ? `못 했어요 — ${e}` : '전달 체크했어요'; draw(); setTimeout(() => { K.toast = ''; draw(); }, 2000); }); return; }
+  }
+  else if (a === 'frmx') { K.frame = ''; draw(); }
   else if (a === 'tool') { K.tool = t.dataset.k; K.note = ''; if (K.tool === 'box') K.sug = null; K.anim = true; draw(); }
   else if (a === 'paste') { try { navigator.clipboard.readText().then((x) => { if (x) { K.talk = x; draw(); } }).catch(() => {}); } catch (_) { /* 무시 */ } }
   else if (a === 'suggest') suggest(draw);
