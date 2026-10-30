@@ -1342,3 +1342,12 @@ body.hm-wall .fl-row { color: #000; }
 body.hm-wall .fl-acts .fl-go { background: #111 !important; color: #fff !important; border: 1px solid #111 !important; opacity: 1 !important; }
 body.hm-wall .fl-acts .fl-gh, body.hm-wall .fl-acts .fl-in.ok { background: #fff !important; color: #111 !important; border: 1px solid #111 !important; opacity: 1 !important; }
 body.ki-wide .ki-mbb, body.ki-wide .ki-mbx span { filter: grayscale(1); }
+
+/* 가로 키오스크 — 상세보기 넓게 (10/30 대표 "너무 좁게 올라와"). 글 크기는 그대로: cqw 를 시트 폭 대신 키오스크 폭에 맞춤 */
+body.ki-wide .ks { container-type: normal !important; width: min(1100px, 94vw) !important; max-height: 92vh; padding: 0 28px 28px !important; }
+/* 가로 키오스크 도착 칸 — 배차 요청은 시간, 배차 완료 · 출고 완료는 날짜를 크게 · 줄 가운데 맞춤 (10/30 대표) */
+body.hm-wall .fl-row { align-items: center !important; }
+body.hm-wall .fl-row > .fl-c, body.hm-wall .fl-row > .fl-acts { align-self: center !important; }
+body.hm-wall .fl-tm b { font-size: 22px !important; line-height: 1.15; }
+body.hm-wall .fl-tm span { font-size: 13px !important; color: #555 !important; }
+body.hm-wall .fl-lh > span, body.hm-wall .fl-row > .fl-c { text-align: left; }
