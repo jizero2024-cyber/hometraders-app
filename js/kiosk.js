@@ -20,15 +20,17 @@ const late = (r) => { const d = num(dayOf(r)), t = num(today()); if (d < t) retu
   if (d > t) return false; const n = new Date(); return tkey(r.time) < 9999 && tkey(r.time) < n.getHours() * 60 + n.getMinutes(); };
 const sortRows = (rs) => rs.slice().sort((a, b) => num(dayOf(a)) - num(dayOf(b)) || tkey(a.time) - tkey(b.time));
 
-function groups() {
-  const rows = (K.data && K.data.rows) || [], t = num(today()), m = num(tmr());
-  const near = (r) => { const d = num(dayOf(r)); return d >= t - 3 && d <= m; };   // 사흘 전 ~ 내일
+function groups() {   // 첫 화면(/main) 출고 흐름 '오늘' 보기와 같은 기준 (10/30 대표 "실사이트랑 키오스크 내용이 맞아야") — flow.js baseOf
+  const rows = (K.data && K.data.rows) || [], t = today(), m = tmr(), d0 = t.replace(/^0/, '');
+  const st = (k) => rows.filter((r) => (r.steps || []).includes(k));
+  const onDay = (r, out) => [r.day, r.arr].includes(t) || (!out && [r.day, r.arr].includes(m));
+  const due = (r) => r.day === t || new RegExp(`(^|[^\\d/])(${t}|${d0})(?![\\d/])`).test(`${r.time} ${r.item} ${r.memo || ''}`);
   return {
-    need: sortRows(rows.filter((r) => has(r, '배차 요청') && !has(r, '배차 완료') && !done(r) && near(r))),
-    car: sortRows(rows.filter((r) => has(r, '배차 완료') && !done(r) && near(r))),
-    order: sortRows(rows.filter((r) => has(r, '발주') && !has(r, '배차 요청', '배차 완료') && !done(r))),
-    out: sortRows(rows.filter((r) => done(r) && num(dayOf(r)) === t)),
-    quote: sortRows(rows.filter((r) => has(r, '견적') && !has(r, '발주', '배차 요청', '배차 완료') && !done(r))),   // 견적 줘야 하는데 못 준 것 (10/30 대표)
+    need: sortRows(st('배차 요청').filter((r) => onDay(r))),
+    car: sortRows(st('배차 완료').filter((r) => onDay(r))),
+    order: sortRows(st('발주')),
+    out: sortRows(st('출고 완료').filter((r) => onDay(r, true))),
+    quote: sortRows(st('견적').filter(due)),
   };
 }
 
