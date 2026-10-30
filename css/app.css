@@ -1351,3 +1351,5 @@ body.hm-wall .fl-row > .fl-c, body.hm-wall .fl-row > .fl-acts { align-self: cent
 body.hm-wall .fl-tm b { font-size: 22px !important; line-height: 1.15; }
 body.hm-wall .fl-tm span { font-size: 13px !important; color: #555 !important; }
 body.hm-wall .fl-lh > span, body.hm-wall .fl-row > .fl-c { text-align: left; }
+body.hm-wall .fl-acts { flex-wrap: wrap !important; row-gap: 6px; }   /* 명세표·변환·거래처 전달이 차량 칸 위로 넘치던 것 */
+body.hm-wall .fl-acts .fl-stm { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }

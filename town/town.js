@@ -1,6 +1,6 @@
 // 홈트 마을 /town (10/29 대표 "게임처럼 · 디자인만 먼저") — 마을 · 단지 · 사무실 · 창고 네 화면, 아직 예시 자료
 // 주소 뒤 #/campus · #/office · #/warehouse 로 화면 바뀜. 직원 계정만 (공간 계정 막음)
-import * as S from '/js/store-supabase.js?v=9t5';
+import * as S from '/js/store-supabase.js?v=9t6';
 import * as JIM from './jim.js?v=2';
 import * as W3D from './v3d.js?v=17';
 import * as O3D from './o3d.js?v=19';
@@ -315,6 +315,7 @@ const AI = [   // 실제로 돌아가는 AI 작업만. kind: task = 할 일 0 �
   { k: 'guppy', who: '통화정리', job: '비토 통화', av: 'guppy', f: 1, x: -17, kind: 'feed' },
   { k: 'redpanda', who: '디자인', job: '디자인 · 카탈로그', av: 'redpanda', f: 2, x: 14, kind: 'task' },
   { k: 'owl', who: '검수', job: '기능 점검', av: 'owl', f: 1, x: -9, kind: 'feed' },   // 10/30 대표 "검수하는 애도 있어야" — town_status.qa_checks
+  { k: 'penguin', who: '마감이', job: '월마감 · 구매·판매·계산서', av: 'penguin', f: 2, x: -26, kind: 'task' },   // 10/30 대표 "마감이도 추가" — site_inbox 'town:close'
 ];
 const PAMPH = ['표지', '제품 소개', '부속자재', '시공 순서', '기능 상세', '뒷표지 주소', '인쇄소 보내기'];
 const mdOf = (d) => `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
@@ -326,9 +327,9 @@ function lotOf(x) {   // 출고 건 → 마을 자리 (거래처 + 현장 이름
   return [[/한림/, 'hanlim'], [/원익/, 'wonik'], [/우림/, 'woorim'], [/나인/, 'anmyeon'], [/사람사는/, 'cheongdo']].reduce((a, [re, k]) => a || (re.test(p) ? k : ''), '') || '';
 }
 async function live() {
-  const r = await Promise.allSettled([S.getTownAI(), S.getFlowBoard(), S.getFlowMarks(), S.getFareUnpaid(), S.listSongjang(), S.getGongganWaitCount(), S.getTownInbox(), S.getTownChecks(), S.getTownMail()]);
+  const r = await Promise.allSettled([S.getTownAI(), S.getFlowBoard(), S.getFlowMarks(), S.getFareUnpaid(), S.listSongjang(), S.getGongganWaitCount(), S.getTownInbox(), S.getTownChecks(), S.getTownMail(), S.getTownClose()]);
   const g = (i, d) => (r[i].status === 'fulfilled' && r[i].value != null ? r[i].value : d);
-  const L = { ai: g(0, null), flow: g(1, null), marks: g(2, {}), fare: g(3, []), sj: g(4, []), gwait: g(5, 0), inbox: g(6, []), chk: g(7, []), mailMac: g(8, null) };
+  const L = { ai: g(0, null), flow: g(1, null), marks: g(2, {}), fare: g(3, []), sj: g(4, []), gwait: g(5, 0), inbox: g(6, []), chk: g(7, []), mailMac: g(8, null), close: g(9, null) };
   L.mail = mailItems(L);
   const rows = (L.flow && L.flow.rows) || [], today = (L.flow && L.flow.today) || mdOf(new Date()), yst = mdOf(new Date(Date.now() - 864e5)), tmr = mdOf(new Date(Date.now() + 864e5));
   const has = (x, k) => (x.steps || []).includes(k);
@@ -351,6 +352,7 @@ async function live() {
     guppy: { n: 0, line: aiw('guppy').note || '통화', st: aiw('guppy').st, note: aiw('guppy').note },
     rabbit: { n: 0, line: (aiw('rabbit').note || '').split(' · ')[0] || '문자', st: aiw('rabbit').st, note: aiw('rabbit').note },
     owl: (() => { const q = (L.ai && L.ai.qa) || [], bad = q.filter((x) => !x.ok); return { n: bad.length, line: q.length ? (bad.length ? `고장 ${bad.length}` : `정상 ${q.length}`) : '점검 전', st: bad.length ? 'bad' : 'ok', note: bad.map((x) => x.name).join(' · ') }; })(),
+    penguin: (() => { const c = L.close || {}; return { n: c.left || 0, line: c.line || '10월 마감', st: c.st || 'ok', note: c.note || '' }; })(),
     redpanda: { n: PAMPH.length - L.chkOn.filter(Boolean).length, line: `카탈로그 ${L.chkOn.filter(Boolean).length} / ${PAMPH.length}`, st: 'ok', note: aiw('redpanda').note },
   };
   if (L.ai && L.ai.run) W.seal.st = 'run';
@@ -478,6 +480,7 @@ function office() {
     const WHO = Object.fromEntries(AI.map((a) => [a.k, a.who]));
     const qbad = ((L.ai && L.ai.qa) || []).filter((x) => !x.ok);
     return (qbad.length ? sec('검수 · 고장') + qbad.map((x) => `<div style="padding:3px 2px;font-size:11px;line-height:1.4;color:#FF453A"><b>${esc(x.name)}</b> ${esc(x.msg || '')}</div>`).join('') : '') + (((L.ai && L.ai.claude) || []).length ? sec('지금 Claude 에 시킨 일') + L.ai.claude.map((c) => prow(`<b style="color:#2F7BF6">${esc(WHO[c.k] || '')}</b> ${esc(c.ask)}`, hm2(c.at), 'color:#8A7E77;font-weight:600')).join('') : '') + Object.entries(hh).map(([n, x]) => prow(esc(n), esc(x.msg || ''), x.bad ? 'color:#FF453A' : 'color:#1E8E3E')).join('')
+          + sec('바뀐 것') + ((((L.ai && L.ai.changes) || []).slice(0, short ? 12 : 40).map((c) => `<div style="padding:3px 2px;font-size:11px;line-height:1.45;color:#2B3A55"><span style="color:#8A7E77">${esc(hm2(c.at))}</span> <b>${esc(c.nm)}</b> ${esc(c.what)}${c.from ? ` <s style="color:#B4B2A9">${esc(c.from)}</s> →` : ''} <b style="color:#1E8E3E">${esc(c.to || '')}</b></div>`).join('')) || prow('아직 바뀐 것 없음'))   // 반영해서 뭐가 바뀌었는지 (10/30 대표)
           + sec('반영') + (() => {   // 받은 자료가 출고일보 · 사이트 · 키오스크까지 갔는지 (10/30 대표)
             const last = [C2.sms_at, ...(C2.calls || []).map((x) => x.t)].filter(Boolean).sort().pop() || '', fa = String((L.flow && L.flow.at) || '').replace('T', ' ');
             const late = last && fa && fa.slice(0, 16) < last.slice(0, 16), mk = String(C2.marked || '').replace('T', ' ');
