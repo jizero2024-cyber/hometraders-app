@@ -462,7 +462,7 @@ function office() {
   const O = O3D.office(host3d('#D8E9FA'), { alive: () => v.isConnected, staff: AI, onPick: (k) => open(k) });
   const draw = () => {
     if (!L) return;
-    AI.forEach((a, i) => { const w = L.W[a.k]; O.setTag(a.k, tagHtml(a.who, w.line, w.st, w.n)); O.setIdle(a.k, a.kind === 'task' && !w.n && w.st !== 'bad', i); });
+    AI.forEach((a, i) => { const w = L.W[a.k], hm = O.seats[a.k] && O.seats[a.k].home, odd = AI.filter((b) => b.f === a.f).sort((p, q) => p.x - q.x).findIndex((b) => b.k === a.k) % 2; O.setTag(a.k, tagHtml(a.who, w.line, w.st, w.n), hm ? [hm[0], hm[1] + (odd ? 7.4 : 5.6), hm[2]] : undefined); O.setIdle(a.k, a.kind === 'task' && !w.n && w.st !== 'bad', i); });
     AI.forEach((a) => { const w = L.W[a.k]; O.setScreen(a.k, [a.who, w.line], w.st === 'bad' ? '#7A2A2A' : '#1F3A5F'); });   // 책상 모니터에 실제 숫자
     O.setScreen('wallA', ['배차 요청', `${L.needDisp.length}건 남음`], '#22406A'); O.setScreen('wallB', ['오늘 출고', `${L.shipped.length} / ${L.today.length}`], '#2A4A3A');
     O.setTag('board', objHtml('확인 칠판', L.checks.length + L.inCheck.length, '#FF453A'));
@@ -582,7 +582,7 @@ function office() {
   let meeting = false;
   v.querySelector('#meet').onclick = () => {
     if (meeting || !L) return; meeting = true; v.querySelector('#meet').textContent = '회의 중…';
-    O.meeting(AI.map((a) => a.k), (k) => { const a = AI.find((x) => x.k === k), w = L.W[k]; O.setTag(k, `<div style="max-width:260px;padding:8px 12px;border-radius:14px;background:#fff;box-shadow:0 6px 18px rgba(30,40,60,.25);font:600 12px Pretendard,sans-serif;color:#2B2522"><b style="color:#E8732C">${esc(a.who)}</b> ${esc(w.line)}${w.note && w.st === 'bad' ? ` · ${esc(w.note)}` : ''}</div>`, [O.OBJ.meet[0], O.OBJ.meet[1] + 2, O.OBJ.meet[2]]); setTimeout(() => { O.setTag(k, tagHtml(a.who, w.line, w.st, w.n), [O.seats[k].home[0], O.seats[k].home[1] + 7.2, O.seats[k].home[2]]); }, 2300); },
+    O.meeting(AI.map((a) => a.k), (k) => { const a = AI.find((x) => x.k === k), w = L.W[k]; O.setTag(k, `<div style="max-width:260px;padding:8px 12px;border-radius:14px;background:#fff;box-shadow:0 6px 18px rgba(30,40,60,.25);font:600 12px Pretendard,sans-serif;color:#2B2522"><b style="color:#E8732C">${esc(a.who)}</b> ${esc(w.line)}${w.note && w.st === 'bad' ? ` · ${esc(w.note)}` : ''}</div>`, [O.OBJ.meet[0], O.OBJ.meet[1] + 2, O.OBJ.meet[2]]); setTimeout(() => { O.setTag(k, tagHtml(a.who, w.line, w.st, w.n), [O.seats[k].home[0], O.seats[k].home[1] + (AI.filter((b) => b.f === a.f).sort((p, q) => p.x - q.x).findIndex((b) => b.k === k) % 2 ? 7.4 : 5.6), O.seats[k].home[2]]); }, 2300); },
       () => { meeting = false; v.querySelector('#meet').textContent = '회의'; });
   };
 }
