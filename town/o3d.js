@@ -55,10 +55,10 @@ export function office(host, o) {
   ROOMS.forEach(([f, x0, x1, fc, wc, name]) => {
     const y = f * FH, w = x1 - x0, cx = (x0 + x1) / 2; box(w, 0.5, FD, fc, cx, y, 0).castShadow = false; box(w, FH, 0.4, wc, cx, y + 0.5, -FD / 2);
     const lp = new THREE.PointLight('#FFF1DA', 34, 34, 1.4); lp.position.set(cx, y + FH - 1.2, 2); scene.add(lp);
-    tag(null, pill(name, 'rgba(255,255,255,.92)', '#6B5E55'), x1 - 6, y + 1.2, FD / 2 - 0.5).d.style.pointerEvents = 'none';
+    tag(null, pill(name, 'rgba(255,255,255,.92)', '#6B5E55'), x0 + 5, y + FH - 0.8, -FD / 2 + 1).d.style.pointerEvents = 'none';   // 방 이름은 뒷벽 위쪽 (이름표와 안 겹치게)
   });
   box(FW, 0.5, FD, '#E9DCC4', 0, 2 * FH, 0).castShadow = false;   // 다락 바닥
-  { const lp = new THREE.PointLight('#FFE9C8', 40, 40, 1.4); lp.position.set(0, 2 * FH + 8, 2); scene.add(lp); tag(null, pill('다락 · 대표실', 'rgba(255,255,255,.92)', '#E8732C'), 14, 2 * FH + 1.7, FD / 2 - 0.5).d.style.pointerEvents = 'none'; }
+  { const lp = new THREE.PointLight('#FFE9C8', 40, 40, 1.4); lp.position.set(0, 2 * FH + 8, 2); scene.add(lp); tag(null, pill('다락 · 대표실', 'rgba(255,255,255,.92)', '#E8732C'), -22, 2 * FH + 5, -FD / 2 + 1).d.style.pointerEvents = 'none'; }
   box(0.4, 2 * FH, FD, '#F4F0E8', -FW / 2, 0.5, 0); box(0.4, 2 * FH, FD, '#F4F0E8', FW / 2, 0.5, 0);   // 옆벽
   [0, 1].forEach((f) => { const y = f * FH + 0.5; box(0.4, FH, FD * 0.55, '#EDE4D4', 0, y, -FD / 2 + FD * 0.275); box(0.4, 2.6, FD * 0.45, '#EDE4D4', 0, y + FH - 2.6, FD / 2 - FD * 0.225); box(0.15, FH - 2.6, 0.2, WOOD2, 0, y, FD / 2 - FD * 0.45 + 0.1); });   // 가운데 칸막이 (문)
   // 목조 기둥 · 보
@@ -73,7 +73,7 @@ export function office(host, o) {
   [-FD / 2 + 0.5, -FD / 6, FD / 6, FD / 2 - 0.5].forEach((z) => { beam(-RW / 2 + 2, ry0 + 1, 0, ry0 + RH - 0.5, z); beam(RW / 2 - 2, ry0 + 1, 0, ry0 + RH - 0.5, z); beam(0, ry0, 0, ry0 + RH - 0.5, z, 0.6); beam(-RW / 4, ry0 + 0.3, -RW / 4, ry0 + RH / 2, z, 0.5); beam(RW / 4, ry0 + 0.3, RW / 4, ry0 + RH / 2, z, 0.5); beam(-RW / 4, ry0 + 0.3, 0, ry0 + RH * 0.6, z, 0.45); beam(RW / 4, ry0 + 0.3, 0, ry0 + RH * 0.6, z, 0.45); });
   [0.3, 0.6].forEach((t) => [-1, 1].forEach((sg) => { const pu = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, FD), mat(WOOD2)); pu.position.set(sg * (RW / 2) * (1 - t) - sg * 0.6, ry0 + RH * t - 0.4, 0); scene.add(pu); }));
   const logoT = new THREE.TextureLoader().load('/icons/logo-full.png'); logoT.colorSpace = THREE.SRGBColorSpace;
-  { const sg = new THREE.Mesh(new THREE.PlaneGeometry(10, 5), new THREE.MeshBasicMaterial({ map: logoT, transparent: true })); sg.position.set(0, ry0 + 9, FD / 2 - 0.3); scene.add(sg); }
+  { const sg = new THREE.Mesh(new THREE.PlaneGeometry(10, 5), new THREE.MeshBasicMaterial({ map: logoT, transparent: true })); sg.position.set(0, ry0 + 12.5, FD / 2 - 0.3); scene.add(sg); }
   // 바깥 계단 (오른쪽) — 2층 · 다락
   for (let f = 0; f < 2; f++) for (let i = 0; i < 8; i++) box(5, 0.4, 2, '#E3DED6', FW / 2 + 3.5, f * FH + i * (FH / 8), -FD / 2 + 2 + i * 2.1);
   for (let f = 0; f < 2; f++) box(0.12, 1.1, 17, '#C9CDD2', FW / 2 + 6.1, f * FH + FH / 2 + 0.6, -FD / 2 + 9.4).rotation.x = -Math.atan2(FH, 16.8);
