@@ -1319,3 +1319,9 @@ body.hm-wall .hm-main > :not(.fl) { display: none !important; }
 
 /* 가로 키오스크 — 물범이·우체통 창은 가운데 알맞은 폭 (cqw 가 화면 전체로 커지던 것) */
 body.ki-wide .ks { width: min(640px, 92vw) !important; max-height: 86vh; border-radius: 28px 28px 0 0; }
+
+/* 가로 키오스크 시계 (10/30 대표 "시계도 사라졌잖아") */
+.ki-wclk { display: none; }
+body.ki-wide .ki-wclk { display: flex; align-items: baseline; gap: 14px; position: fixed; left: 28px; top: 14px; z-index: 40; pointer-events: none; font-family: Pretendard, sans-serif; color: #1C1C1E; }
+body.ki-wide .ki-wclk span { font-size: 18px; font-weight: 700; color: #6B6B70; } body.ki-wide .ki-wclk b { font-size: 44px; font-weight: 800; letter-spacing: -.02em; } body.ki-wide .ki-wclk img { height: 30px; margin-left: 10px; align-self: center; }
+body.hm-wall .hm-main { padding-top: 84px !important; }

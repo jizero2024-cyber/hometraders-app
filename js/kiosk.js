@@ -165,7 +165,8 @@ const MAILBOX = '<svg viewBox="0 0 64 72" aria-hidden="true"><rect x="29" y="40"
 function mbFloat() {
   if (K.tool) return '';
   const n = stmtTodo().length;
-  return `<button type="button" class="ki-mbx" data-ki="tool" data-k="box" aria-label="자료 넣기"><span>자료 넣기</span>${MAILBOX}</button><button type="button" class="ki-mbf" data-ki="tool" data-k="stmt" aria-label="명세서 전달"><span class="ki-mbb">${n ? `명세서 전달해줘 엉! <b>${n}</b>` : '명세서 다 전달했어 엉'}</span><img src="/town/img/seal.webp" alt=""></button>`;
+  const n2 = new Date();
+  return `<div class="ki-wclk"><span>${n2.getMonth() + 1}월 ${n2.getDate()}일 ${'일월화수목금토'[n2.getDay()]}요일</span><b>${p2(n2.getHours())}:${p2(n2.getMinutes())}</b><img src="/icons/logo-full.png" alt="HOME TRADERS"></div><button type="button" class="ki-mbx" data-ki="tool" data-k="box" aria-label="자료 넣기"><span>자료 넣기</span>${MAILBOX}</button><button type="button" class="ki-mbf" data-ki="tool" data-k="stmt" aria-label="명세서 전달"><span class="ki-mbb">${n ? `명세서 전달해줘 엉! <b>${n}</b>` : '명세서 다 전달했어 엉'}</span><img src="/town/img/seal.webp" alt=""></button>`;
 }
 function stmtSheet() {
   const rs = stmtTodo(), a = K.anim ? ' in' : ''; K.anim = false;
