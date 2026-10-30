@@ -33,12 +33,14 @@ function groups() {
 }
 
 const when = (r) => { const d = dayOf(r); return d === today() ? '오늘' : d === tmr() ? '내일' : /^\d\d\/\d\d$/.test(d) ? d : '미정'; };
-const tm = (r) => String(r.time || '').replace(/\s*착$/, '').trim() || (when(r) === '미정' ? '미정' : when(r));
 const who = (r) => String(r.partner || '').replace(/^\(주\)|^주식회사\s*/, '').replace(/제작소$|홈$/, '');
 const itemsOf = (r) => String(r.items || r.item || '').replace(/^[^:·]{1,20}:\s*/, '').split(/\s*·\s*|\s*,\s+|\n+/).map((t) => t.trim()).filter(Boolean);   // 품목 한 줄에 하나 (10/30 대표)
 function row(r, red) {
-  const lt = red && late(r), w = when(r), sub = tm(r) === w ? '' : w;
-  return `<div class="ki-r ${lt ? 'late' : ''}" data-ki="row" data-no="${esc(r.no)}"><div class="ki-w"><b>${esc(tm(r))}</b>${sub || lt ? `<span>${esc(lt ? '지남' : sub)}</span>` : ''}</div>
+  const lt = red && late(r), d = dayOf(r), ok = /^\d\d\/\d\d$/.test(d), w = when(r);   // 출고 요청일을 크게, 요일·시간은 아래 (10/30 대표)
+  const wd = ok ? '일월화수목금토'[new Date(new Date().getFullYear(), +d.slice(0, 2) - 1, +d.slice(3)).getDay()] : '';
+  const t = String(r.time || '').replace(/\s*착$/, '').trim(), big = ok ? d.replace(/^0/, '') : '미정';
+  const sub = [lt ? '지남' : w === '오늘' || w === '내일' ? w : wd, t].filter(Boolean).join(' · ');
+  return `<div class="ki-r ${lt ? 'late' : ''} ${w === '오늘' ? 'today' : ''}" data-ki="row" data-no="${esc(r.no)}"><div class="ki-w"><b>${esc(big)}</b>${sub ? `<span>${esc(sub)}</span>` : ''}</div>
     <div class="ki-m"><div class="ki-p">${esc(who(r) || r.site || '거래처 확인')}</div><div class="ki-a">${esc(r.site && who(r) ? r.site : '')}</div><div class="ki-i">${esc(itemsOf(r).join(' · '))}</div>${r.car && !/^배차 (필요|완료)$|^—$|^확인$/.test(r.car) ? `<div class="ki-c">${esc(r.car)}</div>` : ''}</div><i class="ki-ch" aria-hidden="true">›</i></div>`;
 }
 function sec(cls, name, rs, max, red) {

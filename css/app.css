@@ -1216,3 +1216,10 @@ body.kiosk #app::before { background: radial-gradient(60vh 60vh at 10% 6%, rgba(
 .ki-w span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ki-p { font-size: 3.5cqw; }
 .ki-r { padding: 1.5cqw 0; }
+/* 키오스크 왼쪽 칸 = 출고 요청일 크게, 요일·시간 작게, 오늘 건은 검정 (10/30 대표) */
+.ki-r { grid-template-columns: 15cqw minmax(0, 1fr) 2cqw; }
+.ki-w { padding: 1.2cqw 0; }
+.ki-w b { font-size: 4cqw; font-weight: 800; letter-spacing: -0.03em; }
+.ki-w span { font-size: 2.1cqw; font-weight: 600; color: #6E6E73; opacity: 1; margin-top: 0.3cqw; }
+.ki-r.today .ki-w { background: #1C1C1E !important; }
+.ki-r.today .ki-w b, .ki-r.today .ki-w span { color: #FFFFFF !important; }
