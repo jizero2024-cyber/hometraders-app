@@ -494,7 +494,7 @@ function office() {
     const has = (x, kk) => (x.steps || []).includes(kk), ie = (L.ai && L.ai.ieum) || [];
     const sec = (t) => `<div style="margin-top:8px;font-size:12px;font-weight:800;color:#8A7E77">${t}</div>`;
     const nameOf = (d) => String(d || '').replace(/\(.*?\)|님|기사|소장|사장|\s/g, '');
-    const fareOf = (x) => { const t = `${x.veh || ''} ${x.memo || ''}`.replace(/\s/g, ''); return L.fare.find((f) => { const nm = nameOf(f.driver); return nm.length >= 2 && !/이음|택배|화물|콜센터|경동|대신/.test(nm) && t.includes(nm); }); };   // 기사님 이름 전체가 그 건에 있을 때만
+    const fareOf = (x) => { const t = `${x.veh || ''} ${x.memo || ''}`.replace(/\s/g, ''); return L.fare.find((f) => { const nm = nameOf(f.driver); if (!(nm.length >= 2 && !/이음|택배|화물|콜센터|경동|대신/.test(nm) && t.includes(nm))) return false; const jb = String(f.job || ''), toks = String(x.site || '').split(/\s+/).filter((w2) => w2.length >= 2); return jb.includes(x.day) || toks.some((w2) => jb.includes(w2)); }); };   // + 그 운임 내용에 날짜나 현장이 맞을 때만   // 기사님 이름 전체가 그 건에 있을 때만
     const ieOf = (x) => ie.find((n) => (n.no && n.no === (x.case || x.no)) || (n.driver && `${x.veh || ''} ${x.memo || ''}`.includes(n.driver)));
     const lastMemo = (x) => (String(x.memo || '').match(/\[[^\]]+\][^[]*/g) || []).pop() || '';
     const chip = (t, bg, fg) => `<span style="padding:1px 7px;border-radius:999px;background:${bg};color:${fg};font-size:11px;font-weight:800;white-space:nowrap">${esc(t)}</span>`;
