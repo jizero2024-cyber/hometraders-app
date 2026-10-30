@@ -352,6 +352,7 @@ async function live() {
     redpanda: { n: PAMPH.length - L.chkOn.filter(Boolean).length, line: `카탈로그 ${L.chkOn.filter(Boolean).length} / ${PAMPH.length}`, st: 'ok', note: aiw('redpanda').note },
   };
   if (L.ai && L.ai.run) W.seal.st = 'run';
+  ((L.ai && L.ai.claude) || []).forEach((c) => { const w2 = W[c.k]; if (w2 && w2.st !== 'bad') { w2.st = 'run'; w2.line = 'Claude 작업 중'; w2.note = c.ask; } });   // 지금 Claude Code 에 시킨 일 (10/30 대표)
   const lastErp = ((L.ai && L.ai.erp) || [])[0];   // 이카운트 입력 (Claude 가 넣어도 여기 남음) — 15분 안이면 작업 중
   if (lastErp && Date.now() - Date.parse(lastErp.at + '+09:00') < 15 * 60e3) { W.raccoon.st = 'run'; W.raccoon.line = '입력 중'; W.raccoon.note = `${String(lastErp.at).slice(11, 16)} ${lastErp.label}`; }
   L.W = W; return L;
@@ -431,7 +432,8 @@ function office() {
   load(); every(60000, load);
   function collectHtml(L, short) {   // 관제탑 · 받아쓰기 — 자료 수집 · 반영 내역 (10/30 대표)
     const C2 = (L.ai && L.ai.collect) || {}, hh = C2.health || {}, sec = (t) => `<div style="margin-top:8px;font-size:12px;font-weight:800;color:#8A7E77">${t}</div>`, hm2 = (x) => String(x || '').slice(5, 16).replace('T', ' ');
-    return Object.entries(hh).map(([n, x]) => prow(esc(n), esc(x.msg || ''), x.bad ? 'color:#FF453A' : 'color:#1E8E3E')).join('')
+    const WHO = Object.fromEntries(AI.map((a) => [a.k, a.who]));
+    return (((L.ai && L.ai.claude) || []).length ? sec('지금 Claude 에 시킨 일') + L.ai.claude.map((c) => prow(`<b style="color:#2F7BF6">${esc(WHO[c.k] || '')}</b> ${esc(c.ask)}`, hm2(c.at), 'color:#8A7E77;font-weight:600')).join('') : '') + Object.entries(hh).map(([n, x]) => prow(esc(n), esc(x.msg || ''), x.bad ? 'color:#FF453A' : 'color:#1E8E3E')).join('')
           + sec('반영') + (() => {   // 받은 자료가 출고일보 · 사이트 · 키오스크까지 갔는지 (10/30 대표)
             const last = [C2.sms_at, ...(C2.calls || []).map((x) => x.t)].filter(Boolean).sort().pop() || '', fa = String((L.flow && L.flow.at) || '').replace('T', ' ');
             const late = last && fa && fa.slice(0, 16) < last.slice(0, 16), mk = String(C2.marked || '').replace('T', ' ');
