@@ -362,6 +362,15 @@ export async function getTownAI() {   // 홈트 마을 AI 직원 상태 (10/29) 
   if (error) throw new Error(error.message);
   try { return data ? JSON.parse(data.body || '{}') : null; } catch (_) { return null; }
 }
+export async function getTownBoard() {   // 마을 할 일 칠판 (10/30 대표 "사이트 칠판에 넣어줘") — 모든 기기가 같은 칠판 · 맥도 올림
+  const { data, error } = await sb.from('site_inbox').select('body,updated_at').eq('id', 'town:board').maybeSingle();
+  if (error) throw new Error(error.message);
+  try { return data ? JSON.parse(data.body || '{}') : null; } catch (_) { return null; }
+}
+export async function saveTownBoard(b) {   // 실패하면 글자, 되면 null
+  const { error } = await sb.from('site_inbox').upsert({ id: 'town:board', kind: 'disp', status: 'disp', name: '할 일 칠판', body: JSON.stringify(b), updated_at: new Date().toISOString() });
+  return error ? error.message : null;
+}
 export async function getTownStock() {   // 마을 창고 — 실사 재고표(재고.xlsx) 를 맥 town_status.py 가 'town:stock' 으로 올림 (10/30)
   const { data, error } = await sb.from('site_inbox').select('body,updated_at').eq('id', 'town:stock').maybeSingle();
   if (error) throw new Error(error.message);

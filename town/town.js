@@ -1,6 +1,6 @@
 // 홈트 마을 /town (10/29 대표 "게임처럼 · 디자인만 먼저") — 마을 · 단지 · 사무실 · 창고 네 화면, 아직 예시 자료
 // 주소 뒤 #/campus · #/office · #/warehouse 로 화면 바뀜. 직원 계정만 (공간 계정 막음)
-import * as S from '/js/store-supabase.js?v=9t4';
+import * as S from '/js/store-supabase.js?v=9t5';
 import * as JIM from './jim.js?v=2';
 import * as W3D from './v3d.js?v=17';
 import * as O3D from './o3d.js?v=19';
@@ -627,7 +627,12 @@ const NOTES0 = [
   ['에디톤 바로 가는지 이충혁 소장께', 3], ['실리콘 판매·택배비 이카운트 입력', 4],
 ].map(([t, c], i) => ({ id: 'n' + i, t, c, x: 60 + (i % 5) * 250, y: 110 + Math.floor(i / 5) * 230, r: ((i * 37) % 9) - 4 }));
 function loadBoard() { try { const b = JSON.parse(localStorage.getItem('town:board') || 'null'); if (b && b.notes) return b; } catch (e) { /* 무시 */ } return { notes: NOTES0, draw: '' }; }
-function saveBoard(b) { try { localStorage.setItem('town:board', JSON.stringify(b)); } catch (e) { /* 무시 */ } }
+let boardT = 0;
+function saveBoard(b) {   // 이 기기 + 서버 'town:board' (10/30 — 모든 기기가 같은 칠판)
+  b.at = Date.now();
+  try { localStorage.setItem('town:board', JSON.stringify(b)); } catch (e) { /* 무시 */ }
+  clearTimeout(boardT); boardT = setTimeout(() => { S.saveTownBoard(b).catch(() => {}); }, 800);
+}
 function openBoard() {
   const B = loadBoard();
   const m = el(`<div class="modal" style="background:rgba(30,40,60,.45)"><div style="position:relative;width:1360px;height:820px;border-radius:28px;background:#F7F4EC;box-shadow:0 20px 60px rgba(0,0,0,.3), inset 0 0 0 14px #C9A26B;overflow:hidden">
@@ -652,6 +657,19 @@ function openBoard() {
     nl.innerHTML = B.notes.map((n) => `<div class="note" data-id="${n.id}" style="position:absolute;left:${n.x}px;top:${n.y}px;width:210px;min-height:170px;padding:30px 16px 14px;background:${NOTE_C[n.c]};border-radius:4px 4px 18px 4px;box-shadow:0 8px 16px rgba(0,0,0,.14);transform:rotate(${n.r}deg);cursor:grab;touch-action:none"><span style="position:absolute;left:50%;top:8px;width:14px;height:14px;margin-left:-7px;border-radius:50%;background:#E5483B;box-shadow:0 2px 3px rgba(0,0,0,.3)"></span><div class="nt" contenteditable="true" spellcheck="false" style="font-size:18px;font-weight:700;line-height:1.45;color:#3A3128;outline:none;cursor:text">${esc(n.t)}</div></div>`).join('');
   };
   draw();
+  S.getTownBoard().then((sv) => {   // 서버 칠판이 더 새것이면 그걸로 (다른 기기·맥이 고친 것)
+    if (!sv || !sv.notes || drag) return;
+    if (!B.at) {   // 이 기기에서 처음 맞출 때 — 이 기기에만 있던 포스트잇은 버리지 않고 합침
+      const ids = new Set(sv.notes.map((n) => n.id));
+      B.notes = sv.notes.concat(B.notes.filter((n) => !ids.has(n.id)));
+      B.draw = B.draw || sv.draw || ''; draw(); saveBoard(B); return;
+    }
+    if ((sv.at || 0) <= B.at) return;
+    B.notes = sv.notes; B.at = sv.at;
+    if (sv.draw !== B.draw) { B.draw = sv.draw || ''; ctx.clearRect(0, 0, 1360, 820); if (B.draw) { const im = new Image(); im.onload = () => ctx.drawImage(im, 0, 0); im.src = B.draw; } }
+    try { localStorage.setItem('town:board', JSON.stringify(B)); } catch (e) { /* 무시 */ }
+    draw();
+  }).catch(() => {});
   let pen = false, color = '#2B2522', drag = null, drawing = false;
   m.querySelector('#bx').onclick = () => { saveBoard(B); m.remove(); };
   m.querySelectorAll('[data-add]').forEach((b) => { b.onclick = () => { B.notes.push({ id: 'n' + Date.now(), t: '할 일 적기', c: +b.dataset.add, x: 560 + Math.random() * 120, y: 300 + Math.random() * 120, r: Math.round(Math.random() * 8 - 4) }); draw(); saveBoard(B); }; });
