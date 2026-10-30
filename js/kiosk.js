@@ -203,7 +203,7 @@ export function screen() {
   if (!K.data) return `<div class="ki-box"><div class="ki"><div class="ki-z">${esc(K.err || '불러오는 중')}</div></div></div>`;
   const g = groups(), at = K.data.at ? String(K.data.at).slice(11, 16) : '';
   return `<div class="ki-box"><div class="ki">
-    <header class="ki-h"><div class="ki-clk" data-ki="reload"><span>${n.getMonth() + 1}월 ${n.getDate()}일 ${wd}요일</span><b>${p2(n.getHours())}:${p2(n.getMinutes())}</b></div><img class="ki-logo" src="/icons/logo-full.png" alt="HOME TRADERS"></header>
+    <header class="ki-h"><div class="ki-clk" data-ki="reload"><span>${n.getMonth() + 1}월 ${n.getDate()}일 ${wd}요일</span><b>${p2(n.getHours())}:${p2(n.getMinutes())}</b></div><button type="button" class="ki-sync ${K.syncing ? 'on' : ''}" data-ki="sync" ${K.syncing ? 'disabled' : ''}>${K.syncing ? '반영 중' : '바로 반영'}</button><img class="ki-logo" src="/icons/logo-full.png" alt="HOME TRADERS"></header>
     <div class="ki-act one"><button type="button" data-ki="tool" data-k="mb">${IC.mb}<span>물범이</span></button></div>
     <div class="ki-t">${[['k-need', g.need, '배차 해야 함'], ['k-quote', g.quote, '견적 대기'], ['k-car', g.car, '차 잡힘'], ['k-order', g.order, '발주 요청'], ['k-out', g.out, '출고 완료']]
       .map(([k, rs, l]) => `<div class="${k}" data-ki="jump" data-k="${k}"><i>${IC[k]}</i><b>${rs.length}</b><span>${l}</span></div>`).join('')}</div>
@@ -320,6 +320,11 @@ function onTap(e, draw) {
   else if (a === 'disp' || a === 'ship') { if (K.ask === a) save(a, draw); else { K.ask = a; draw(); } }
   else if (a === 'jump') { const el = document.getElementById('ki-' + t.dataset.k); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
   else if (a === 'reload') pull(draw);
+  else if (a === 'sync') {   // [바로 반영] 사무실 맥이 이카운트 다시 받고 출고 흐름 다시 그림 (10/30 대표) — 3~5분 뒤 1분마다 받는 판에 보임
+    if (K.syncing) return;
+    K.syncing = true; K.toast = '바로 반영 시작'; draw(); setTimeout(() => { K.toast = ''; draw(); }, 2500);
+    S.relayHelper('/api/refresh', {}, K.me).catch(() => {}).finally(() => { setTimeout(() => { K.syncing = false; pull(draw); }, 240000); });
+  }
   else if (a === 'chk') { const k = t.dataset.k; K.chk[k] = !K.chk[k]; draw(); }
   else if (a === 'stconv' || a === 'stpdf' || a === 'stsent') {   // 물범이 명세서 — 변환 명세표 · 이카운트 명세표 · 전달함
     const r = byNo(t.dataset.no); if (!r) return; const sl = saleSlips(r);

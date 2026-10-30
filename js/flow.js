@@ -261,7 +261,7 @@ export function main(x) {
   if (FL.view === '기록') { FL.cur = '기록'; return `<section class="fl"><h1 class="fl-h1">전체 출고</h1>${listBox('기록', 760)}</section>`; }
   if (FL.view === '누락') { FL.cur = '입력 누락'; return `<section class="fl"><h1 class="fl-h1">입력 누락</h1>${listBox('입력 누락', 290)}</section>`; }   // 입력 완료와 같은 줄 모양 (10/29 대표)
   if (FL.view === '완료') { FL.cur = '입력 완료'; return `<section class="fl"><h1 class="fl-h1">입력 완료</h1>${listBox('입력 완료', 300)}</section>`; }
-  const tg = `<div class="fl-sub fl-tg"><button type="button" class="fl-sb mid ${FL.all ? '' : 'on'}" data-fl="all" data-k="0">오늘</button><button type="button" class="fl-sb mid ${FL.all ? 'on' : ''}" data-fl="all" data-k="1">전체보기</button></div>`;
+  const tg = `<div class="fl-sub fl-tg"><button type="button" class="fl-sb mid ${FL.all ? '' : 'on'}" data-fl="all" data-k="0">오늘</button><button type="button" class="fl-sb mid ${FL.all ? 'on' : ''}" data-fl="all" data-k="1">전체보기</button><button type="button" class="fl-sb mid fl-sync ${FL.syncing ? 'on' : ''}" data-fl="sync" ${FL.syncing ? 'disabled' : ''}>${FL.syncing ? '반영 중' : '바로 반영'}</button></div>`;   // [바로 반영] 이카운트 다시 받기 → 출고 흐름 (10/30 대표)
   return `<section class="fl" id="fl-list" aria-label="오늘 마감">${tg}${stepsHtml()}${listBox(FL.cur, [0, 130, 240, 350, 460][(BTN[FL.cur] || []).length] + (STMT_STEPS.includes(FL.cur) ? 290 : 0))}</section>`;   // 출고 흐름과 같은 모양, 오늘 건만 (10/28 대표)
 }
 export const panel = main;
@@ -362,6 +362,11 @@ export function bind(app, c) {
       }).catch((err) => alert('전표를 못 불러왔어요 — ' + (err.message || err)));
     }
     else if (a === 'all') { FL.all = t.dataset.k === '1'; FL.sel = ''; ctx.rerender(); }
+    else if (a === 'sync') {   // 사무실 맥 /api/refresh — 뒤에서 3~5분, 끝나면 1분마다 새로 받는 판에 그대로 보임
+      if (FL.syncing) return;
+      FL.syncing = true; ctx.rerender();
+      S.relayHelper('/api/refresh', {}, '').catch(() => {}).finally(() => { setTimeout(() => { FL.syncing = false; load(true); ctx.rerender(); }, 240000); });
+    }
     else if (a === 'old') { FL.old = !FL.old; ctx.rerender(); }
     else if (a === 'go') { const k = t.dataset.k; if (k === 'fare' || k === 'box') ctx.home(k); else if (k.startsWith('v-flow-')) { FL.view = 'flow'; FL.cur = k.slice(7); FL.sel = ''; ctx.rerender(); setTimeout(() => { const el = document.getElementById('fl-list'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 0); } else { FL.view = k.slice(2); ctx.rerender(); } }
     else if (a === 'close') { if (t.classList.contains('on')) alert('오늘 마감했어요'); }
