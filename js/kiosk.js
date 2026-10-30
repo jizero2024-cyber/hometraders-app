@@ -140,21 +140,23 @@ function mbHtml() {   // 물범이 — 읽은 것 · 되묻기 · 넣기 (10/30 
 }
 // 물범이 명세서 (10/30 대표 "오른쪽 아래 물범이 · 명세서 전달해줘 엉! · 변환 명세표 / 이카운트 명세표 둘 다")
 const saleSlips = (r) => [...new Set((r.lines || []).filter((l) => l.k === '판매' && l.st === '입력').flatMap((l) => l.slips || []))];
+const toWho = (r) => `[${String(r.partner || '').replace(/\s/g, '')}${String(r.boss || '').replace(/\s/g, '')}${r.boss && !/님$/.test(r.boss) ? '님' : ''}]`;   // 받는 사람 [사람사는집전종건소장님] (10/30 대표)
 function stmtTodo() {
   const d = K.data || {}, md = (x) => `${p2(x.getMonth() + 1)}/${p2(x.getDate())}`, days = [d.today || md(new Date()), md(new Date(Date.now() - 864e5))];
   return (d.rows || []).filter((r) => days.includes(r.day) && (r.steps || []).some((k) => ['배차 완료', '출고 완료', '기록', '입력 완료'].includes(k)) && saleSlips(r).length && !K.marks[`sent:${r.no}`]);
 }
+const MAILBOX = '<svg viewBox="0 0 64 72" aria-hidden="true"><rect x="29" y="40" width="6" height="30" rx="2" fill="#6B7280"/><path d="M10 22a14 14 0 0 1 14-14h16a14 14 0 0 1 14 14v22H10z" fill="#E8732C"/><rect x="10" y="22" width="44" height="22" fill="#D4641F"/><rect x="18" y="26" width="18" height="4" rx="2" fill="#2B2522"/><rect x="50" y="12" width="4" height="18" fill="#C9CDD2"/><rect x="50" y="12" width="10" height="7" rx="1" fill="#FF453A"/></svg>';
 function mbFloat() {
   if (K.tool) return '';
   const n = stmtTodo().length;
-  return `<button type="button" class="ki-mbf" data-ki="tool" data-k="stmt" aria-label="명세서 전달"><span class="ki-mbb">${n ? `명세서 전달해줘 엉! <b>${n}</b>` : '명세서 다 전달했어 엉'}</span><img src="/town/img/seal.webp" alt=""></button>`;
+  return `<button type="button" class="ki-mbx" data-ki="tool" data-k="box" aria-label="자료 넣기"><span>자료 넣기</span>${MAILBOX}</button><button type="button" class="ki-mbf" data-ki="tool" data-k="stmt" aria-label="명세서 전달"><span class="ki-mbb">${n ? `명세서 전달해줘 엉! <b>${n}</b>` : '명세서 다 전달했어 엉'}</span><img src="/town/img/seal.webp" alt=""></button>`;
 }
 function stmtSheet() {
   const rs = stmtTodo(), a = K.anim ? ' in' : ''; K.anim = false;
   const fr = K.frame ? `<div class="ki-frm"><div class="ki-frmh"><b>${esc(K.frame.split('|')[0])}</b><button type="button" class="ks-x" data-ki="frmx" aria-label="닫기">✕</button></div><iframe src="${esc(K.frame.split('|')[1])}"></iframe></div>` : '';
   return `<div class="ks-ov${a}" data-ki="close"><div class="ks${a}" role="dialog" aria-label="명세서 전달"><div class="ks-grab"></div>
     <div class="ks-hd"><div><div class="ks-t">명세서 전달 ${rs.length}</div></div><button type="button" class="ks-x" data-ki="close" aria-label="닫기">✕</button></div>
-    ${rs.map((r) => `<div class="ki-st"><div class="ki-stn"><b>${esc(r.partner)} · ${esc(r.site || '')}</b><span>${esc(r.day)} · 판매 ${esc(saleSlips(r).join(', '))}</span></div>
+    ${rs.map((r) => `<div class="ki-st"><div class="ki-stn"><b>${esc(toWho(r))} 명세서</b><span>${esc(r.site || '')}</span><span>${esc(r.day)} · 판매 ${esc(saleSlips(r).join(', '))}</span></div>
       <div class="ki-stb"><button type="button" class="ks-b" data-ki="stconv" data-no="${esc(r.no)}">변환 명세표</button><button type="button" class="ks-b" data-ki="stpdf" data-no="${esc(r.no)}">이카운트 명세표</button><button type="button" class="ks-b go" data-ki="stsent" data-no="${esc(r.no)}">전달함</button></div></div>`).join('') || '<div class="ki-z">전달할 명세서 없음</div>'}
     ${fr}</div></div>`;
 }
@@ -171,7 +173,7 @@ function toolSheet() {
        <div class="ks-bs kt-bs"><button type="button" class="ks-b" data-ki="paste">붙여넣기</button><button type="button" class="ks-b go" data-ki="suggest" ${K.busy ? 'disabled' : ''}>${K.busy ? '찾는 중…' : '구매처 찾기'}</button></div>
        ${sugHtml(K.sug)}`
     : `<textarea id="kt-text" class="kt-ta" rows="6" placeholder="카톡·문자 글 붙여넣기">${esc(K.talk)}</textarea>
-       <div class="ks-bs kt-bs"><button type="button" class="ks-b" data-ki="pick">사진·파일</button><button type="button" class="ks-b go" data-ki="put" ${K.busy ? 'disabled' : ''}>${K.busy ? '올리는 중…' : '넣기'}</button></div>
+       <div class="ks-bs kt-bs"><button type="button" class="ks-b" data-ki="paste">붙여넣기</button><button type="button" class="ks-b" data-ki="pick">사진·파일</button><button type="button" class="ks-b go" data-ki="put" ${K.busy ? 'disabled' : ''}>${K.busy ? '올리는 중…' : '넣기'}</button></div>
        ${K.note ? `<div class="kt-note">${esc(K.note)}</div>` : ''}<input type="file" id="kt-file" multiple accept="image/*,.heic,.pdf,.xlsx,.xls,.csv,.txt" hidden>`;
   return `<div class="ks-ov${a}" data-ki="close"><div class="ks${a}" role="dialog" aria-label="${talk ? '카톡 넣기' : '자료 넣기'}">
     <div class="ks-grab"></div>
@@ -304,13 +306,18 @@ function onTap(e, draw) {
   else if (a === 'chk') { const k = t.dataset.k; K.chk[k] = !K.chk[k]; draw(); }
   else if (a === 'stconv' || a === 'stpdf' || a === 'stsent') {   // 물범이 명세서 — 변환 명세표 · 이카운트 명세표 · 전달함
     const r = byNo(t.dataset.no); if (!r) return; const sl = saleSlips(r);
-    if (a === 'stconv') { const route = /공간/.test(r.partner) ? 'stmt-gong' : 'stmt-etc'; try { sessionStorage.setItem('stmtPreset', JSON.stringify({ route, text: sl.join(' '), rows: r.salerows || null })); } catch (_) { /* 무시 */ } K.frame = `변환 명세표 · ${r.partner}|/${route}?pre=1`; draw(); return; }
-    if (a === 'stpdf') { S.getSlipLinks(sl).then((m) => { const hit = sl.flatMap((x) => (m[x] || []).filter((y) => !y.kind || y.kind === '판매'))[0]; if (!hit) { K.toast = 'PDF 아직 없어요'; draw(); setTimeout(() => { K.toast = ''; draw(); }, 2500); return; } K.frame = `이카운트 명세표 · ${r.partner}|https://drive.google.com/file/d/${encodeURIComponent(hit.drive_id)}/preview`; draw(); }).catch(() => {}); return; }
+    if (a === 'stconv') { const route = /공간/.test(r.partner) ? 'stmt-gong' : 'stmt-etc'; try { sessionStorage.setItem('stmtPreset', JSON.stringify({ route, text: sl.join(' '), rows: r.salerows || null })); } catch (_) { /* 무시 */ } K.frame = `${toWho(r)} 변환 명세표|/${route}?pre=1`; draw(); return; }
+    if (a === 'stpdf') { S.getSlipLinks(sl).then((m) => { const hit = sl.flatMap((x) => (m[x] || []).filter((y) => !y.kind || y.kind === '판매'))[0]; if (!hit) { K.toast = 'PDF 아직 없어요'; draw(); setTimeout(() => { K.toast = ''; draw(); }, 2500); return; } K.frame = `${toWho(r)} 이카운트 명세표|https://drive.google.com/file/d/${encodeURIComponent(hit.drive_id)}/preview`; draw(); }).catch(() => {}); return; }
     if (a === 'stsent') { S.addFlowMark(`sent:${r.no}`, `${r.partner} ${r.site || ''}`, K.me).then((e) => { if (!e) K.marks[`sent:${r.no}`] = { created_at: new Date().toISOString() }; K.toast = e ? `못 했어요 — ${e}` : '전달 체크했어요'; draw(); setTimeout(() => { K.toast = ''; draw(); }, 2000); }); return; }
   }
   else if (a === 'frmx') { K.frame = ''; draw(); }
   else if (a === 'tool') { K.tool = t.dataset.k; K.note = ''; if (K.tool === 'box') K.sug = null; K.anim = true; draw(); }
-  else if (a === 'paste') { try { navigator.clipboard.readText().then((x) => { if (x) { K.talk = x; draw(); } }).catch(() => {}); } catch (_) { /* 무시 */ } }
+  else if (a === 'paste') {   // 자료 넣기면 복사한 사진·파일도 바로 올림, 글은 칸에 (10/30 대표 "복붙으로도")
+    try {
+      if (K.tool === 'box' && navigator.clipboard.read) navigator.clipboard.read().then(async (its) => { const fs = []; for (const it of its) { const ty = it.types.find((x) => x.startsWith('image/')); if (ty) { const b = await it.getType(ty); fs.push(new File([b], `붙여넣은 사진.${ty.split('/')[1]}`, { type: ty })); } else if (it.types.includes('text/plain')) { const tx = await (await it.getType('text/plain')).text(); K.talk = (K.talk ? K.talk + '\n' : '') + tx; } } if (fs.length) putInbox(fs, draw); else draw(); }).catch(() => navigator.clipboard.readText().then((x) => { if (x) { K.talk = x; draw(); } }).catch(() => {}));
+      else navigator.clipboard.readText().then((x) => { if (x) { K.talk = x; draw(); } }).catch(() => {});
+    } catch (_) { /* 무시 */ }
+  }
   else if (a === 'suggest') suggest(draw);
   else if (a === 'pick') { const f = document.getElementById('kt-file'); if (f) f.click(); }
   else if (a === 'put') { if (K.talk.trim()) putInbox([K.talk], draw); }
@@ -331,6 +338,9 @@ export function start(draw, me) {
   document.addEventListener('input', (e) => { if (e.target.id === 'kt-text') K.talk = e.target.value; });
   document.addEventListener('change', (e) => { if (e.target.id === 'kt-file') { putInbox([...e.target.files], draw); e.target.value = ''; }
     if (e.target.id === 'mb-file' && e.target.files[0]) { const f = e.target.files[0]; e.target.value = ''; shrink(f).then(({ data }) => mbRead({ name: f.name, data }, draw)).catch((x) => { K.mb = { err: x.message || String(x) }; draw(); }); } });
+  document.addEventListener('paste', (e) => { if (K.tool !== 'box') return; const fs = [...((e.clipboardData && e.clipboardData.files) || [])]; if (fs.length) { e.preventDefault(); putInbox(fs, draw); } });   // 자료 넣기 — 복사한 사진·파일 Ctrl+V
+  document.addEventListener('dragover', (e) => { if (K.tool === 'box') e.preventDefault(); });
+  document.addEventListener('drop', (e) => { if (K.tool !== 'box') return; e.preventDefault(); const fs = [...((e.dataTransfer && e.dataTransfer.files) || [])]; if (fs.length) putInbox(fs, draw); });
   document.addEventListener('input', (e) => { if (e.target.id === 'mb-text') (K.mb || (K.mb = {})).text = e.target.value; });
   const wake = () => { try { if (navigator.wakeLock && document.visibilityState === 'visible') navigator.wakeLock.request('screen').then((l) => { K.lock = l; }).catch(() => {}); } catch (_) { /* 무시 */ } };
   wake(); document.addEventListener('visibilitychange', wake);

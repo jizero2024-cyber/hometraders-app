@@ -1293,3 +1293,6 @@ body.kiosk #app::before { background: radial-gradient(60vh 60vh at 10% 6%, rgba(
 .ki-frm { position: fixed; inset: 4cqw; z-index: 70; background: #fff; border-radius: 3cqw; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,.3); }
 .ki-frmh { display: flex; align-items: center; padding: 2cqw 2.6cqw; border-bottom: 1px solid #EEE; font-size: 3cqw; } .ki-frmh b { flex: 1; }
 .ki-frm iframe { flex: 1; border: 0; width: 100%; }
+.ki-mbx { position: fixed; right: 20cqw; bottom: 2.4cqw; z-index: 40; display: flex; flex-direction: column; align-items: center; gap: .6cqw; border: 0; background: none; cursor: pointer; font-family: Pretendard, sans-serif; }
+.ki-mbx svg { width: 9cqw; height: auto; filter: drop-shadow(0 6px 10px rgba(0,0,0,.16)); }
+.ki-mbx span { padding: .8cqw 1.8cqw; border-radius: 999px; background: #E8732C; color: #fff; font-size: 2.4cqw; font-weight: 800; }
