@@ -352,6 +352,8 @@ async function live() {
     redpanda: { n: PAMPH.length - L.chkOn.filter(Boolean).length, line: `카탈로그 ${L.chkOn.filter(Boolean).length} / ${PAMPH.length}`, st: 'ok', note: aiw('redpanda').note },
   };
   if (L.ai && L.ai.run) W.seal.st = 'run';
+  const lastErp = ((L.ai && L.ai.erp) || [])[0];   // 이카운트 입력 (Claude 가 넣어도 여기 남음) — 15분 안이면 작업 중
+  if (lastErp && Date.now() - Date.parse(lastErp.at + '+09:00') < 15 * 60e3) { W.raccoon.st = 'run'; W.raccoon.line = '입력 중'; W.raccoon.note = `${String(lastErp.at).slice(11, 16)} ${lastErp.label}`; }
   L.W = W; return L;
 }
 const tagHtml = (who, line, st, n) => `<div title="${esc(line)}" style="display:flex;align-items:center;gap:5px;padding:4px 9px;border-radius:999px;background:#fff;box-shadow:0 3px 12px rgba(30,40,60,.2);font:800 11px Pretendard,sans-serif;color:#4A3F3A;white-space:nowrap"><span style="width:8px;height:8px;border-radius:50%;background:${O3D.DOT[st] || O3D.DOT.ok}"></span>${esc(who)}${n ? `<span style="padding:1px 7px;border-radius:999px;background:#FF453A;color:#fff">${n}</span>` : ''}</div>`;
@@ -409,7 +411,7 @@ function office() {
   v.appendChild(twr);
   let twrOn = true; try { twrOn = localStorage.getItem('town:tower') !== '0'; } catch (e) { /* 기본 켬 */ }
   const twrSet = (on) => { twrOn = on; twr.style.display = on ? 'flex' : 'none'; v.querySelector('#twr').classList.toggle('or', on); try { localStorage.setItem('town:tower', on ? '1' : '0'); } catch (e) { /* 무시 */ } if (on && L) twrDraw(); };
-  const twrDraw = () => { twr.querySelector('.tb').innerHTML = collectHtml(L); twr.querySelector('.ta').textContent = `AI ${tOf(L.ai && L.ai.at)}`; };
+  const twrDraw = () => { twr.querySelector('.tb').innerHTML = collectHtml(L, true); twr.querySelector('.ta').textContent = `AI ${tOf(L.ai && L.ai.at)}`; };
   twr.querySelector('.tx').onclick = () => twrSet(false); v.querySelector('#twr').onclick = () => twrSet(!twrOn);
   const O = O3D.office(host3d('#D8E9FA'), { alive: () => v.isConnected, staff: AI, onPick: (k) => open(k) });
   const draw = () => {
@@ -427,7 +429,7 @@ function office() {
   const load = () => live().then((x) => { L = x; draw(); if (twrOn) twrDraw(); });
   twrSet(twrOn);
   load(); every(60000, load);
-  function collectHtml(L) {   // 관제탑 · 받아쓰기 — 자료 수집 · 반영 내역 (10/30 대표)
+  function collectHtml(L, short) {   // 관제탑 · 받아쓰기 — 자료 수집 · 반영 내역 (10/30 대표)
     const C2 = (L.ai && L.ai.collect) || {}, hh = C2.health || {}, sec = (t) => `<div style="margin-top:8px;font-size:12px;font-weight:800;color:#8A7E77">${t}</div>`, hm2 = (x) => String(x || '').slice(5, 16).replace('T', ' ');
     return Object.entries(hh).map(([n, x]) => prow(esc(n), esc(x.msg || ''), x.bad ? 'color:#FF453A' : 'color:#1E8E3E')).join('')
           + sec('반영') + (() => {   // 받은 자료가 출고일보 · 사이트 · 키오스크까지 갔는지 (10/30 대표)
@@ -437,16 +439,18 @@ function office() {
               + prow('사이트 출고 흐름', hm2(fa), late ? 'color:#B07A00' : 'color:#1E8E3E') + prow('키오스크 (출고 흐름과 같은 자료)', hm2(fa), late ? 'color:#B07A00' : 'color:#1E8E3E');
           })()
           + sec('받기') + prow('문자 백업', hm2(C2.sms_at)) + prow('텔레그램 받기', hm2(C2.tg_at))
-          + sec('통화 (업무 · 문의)') + (C2.calls || []).map((x) => prow(`<b>${esc(x.who)}</b> <span style="color:#8A7E77">${esc(x.dur)}</span><div style="font-size:12px;color:#6B5E55">${esc(x.title)}</div>`, hm2(x.t), 'color:#8A7E77;font-weight:600;font-size:12px')).join('')
-          + sec('텔레그램') + (C2.tg || []).map((x) => prow(`<b>${esc(x.who || '')}</b> ${esc(x.text)}`, hm2(x.t), 'color:#8A7E77;font-weight:600;font-size:12px')).join('')
+          + (short ? sec('이카운트 입력 (콩알)') + ((L.ai && L.ai.erp) || []).slice(0, 3).map((x) => prow(esc(x.label), hm2(x.at), 'color:#8A7E77;font-weight:600')).join('') : '') + sec('통화 (업무 · 문의)') + (short ? (C2.calls || []).slice(0, 4) : (C2.calls || [])).map((x) => prow(`<b>${esc(x.who)}</b> <span style="color:#8A7E77">${esc(x.dur)}</span><div style="font-size:12px;color:#6B5E55">${esc(x.title)}</div>`, hm2(x.t), 'color:#8A7E77;font-weight:600;font-size:12px')).join('')
+          + (short ? '' : sec('텔레그램') + (C2.tg || []).map((x) => prow(`<b>${esc(x.who || '')}</b> ${esc(x.text)}`, hm2(x.t), 'color:#8A7E77;font-weight:600;font-size:12px')).join('')
           + sec('카톡 방') + (C2.chat || []).map((x) => prow(esc(x.room), hm2(x.t), 'color:#8A7E77;font-weight:600;font-size:12px')).join('')
-          + sec('자료 넣기 파일') + (C2.files || []).map((x) => prow(esc(x.name), hm2(x.t), 'color:#8A7E77;font-weight:600;font-size:12px')).join('');
+          + sec('자료 넣기 파일') + (C2.files || []).map((x) => prow(esc(x.name), hm2(x.t), 'color:#8A7E77;font-weight:600;font-size:12px')).join(''));
   }
   function open(k) {
     if (!L) return; const a = AI.find((x) => x.k === k), w = a && L.W[k];
     if (a) {
       let body = prow('상태', { ok: '정상', bad: '멈춤 · 실패', run: '지금 작업 중' }[w.st] || '정상', `color:${O3D.DOT[w.st]}`) + (w.note ? prow(esc(w.note)) : '');
       if (k === 'seal') body += prow('오늘 출고', `${L.shipped.length} / ${L.today.length}`) + prow('확인 대기', L.checks.length) + plink('출고 흐름', '/');
+      if (k === 'raccoon') body += `<div style="margin-top:6px;font-size:12px;font-weight:800;color:#8A7E77">이카운트에 넣은 전표</div>` + ((L.ai && L.ai.erp) || []).map((x) => prow(`${esc(x.label)}<div style="font-size:11px;color:#8A7E77">${esc(x.slips.join(', '))} · ${esc(x.file || '')}</div>`, esc(String(x.at).slice(5, 16).replace('T', ' ')), 'color:#8A7E77;font-weight:600;font-size:12px')).join('') + `<div style="margin-top:6px;font-size:12px;font-weight:800;color:#8A7E77">입력 누락</div>`;
+      if (k === 'squirrel') { const D = (L.ai && L.ai.docs) || {}; body += `<div style="margin-top:6px;font-size:12px;font-weight:800;color:#8A7E77">출고 건 ↔ 전표 연결</div>` + (D.links || []).map((x) => prow(`${esc(x.no)} <span style="color:#8A7E77">${esc(x.io)} ${esc(x.party)}</span>`, esc(x.slip), 'font-size:12px')).join('') + `<div style="margin-top:6px;font-size:12px;font-weight:800;color:#8A7E77">반영한 명세서 → 거래처 폴더</div>` + (D.filed || []).map((x) => prow(`${esc(x.party)} · ${esc(x.name)}<div style="font-size:11px;color:#8A7E77">${esc(x.kind)} ${esc(x.slip)}</div>`, esc(String(x.at).slice(5, 16)), 'color:#8A7E77;font-weight:600;font-size:12px')).join(''); }
       if (k === 'raccoon') body += L.miss.slice(0, 12).map((x) => prow(`${esc(x.partner)} · ${esc(x.site || '')} <span style="color:#8A7E77">${esc(x.day || '')}</span>`, '누락', 'color:#FF453A')).join('') || prow('입력 누락 없음');
       if (k === 'otter') body += L.unpaid.slice(0, 14).map((x) => prow(`${esc(x.driver || '')} <span style="color:#8A7E77">${esc(x.job || '')}</span>`, x.amount ? Number(x.amount).toLocaleString() : '', 'color:#FF453A')).join('') || prow('미송금 없음');
       if (k === 'hedgehog') body += prow('올릴 전표', L.gwait) + plink('공간 사이트', '/gonggan/');
