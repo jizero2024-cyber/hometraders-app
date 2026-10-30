@@ -83,6 +83,13 @@ BTN['기록'] = [...BTN['출고 완료'], ['cmp', '대조']];
 BTN['입력 완료'] = [['cmp', '대조']];
 BTN['전표'] = [['cmp', '대조']];   // 입력 완료 — 한 줄씩 리스트, [대조] (10/28 대표)
 
+const ask = (t, msg) => {   // 키오스크 가로(iframe)는 confirm 창이 안 떠서 — 한 번 더 누르면 실행 (10/30 대표 "배차완료 눌렀는데 안 돼")
+  if (!document.body.classList.contains('hm-wall')) return confirm(msg);
+  if (t.dataset.arm && Date.now() - +t.dataset.arm < 5000) { delete t.dataset.arm; t.classList.remove('arm'); return true; }
+  const o = t.dataset.lab || t.textContent; t.dataset.lab = o; t.dataset.arm = String(Date.now()); t.textContent = `${o} 한 번 더`; t.classList.add('arm');
+  setTimeout(() => { if (t.dataset.arm) { delete t.dataset.arm; t.classList.remove('arm'); t.textContent = o; } }, 5000);
+  return false;
+};
 function stepsHtml() {
   return `<nav class="fl-steps" aria-label="단계">${STEPS.map((k) => `<button type="button" class="fl-st ${FL.cur === k ? 'on' : ''} ${hotOf(k) ? 'hot' : ''}" data-fl="step" data-k="${k}">
     <i>${IC[k]}</i>${LABEL[k] || k}<b>${['명세표', '입금'].includes(k) ? '' : countOf(k)}</b></button>`).join('')}</nav>`;
@@ -318,7 +325,7 @@ export function bind(app, c) {
       document.body.appendChild(ov);
     }
     else if (a === 'slipok' && r) { const key = `slipok:${r.case || r.no}`, me = ctx.me ? ctx.me() : ''; S.addFlowMark(key, `${r.partner} ${r.site}`, me).then((err) => { if (err) alert('저장 못 했어요 — ' + err); else { FL.marks[key] = { created_at: new Date().toISOString() }; caseRows(r).forEach((x) => S.setShipCase(x.no, { checked: true, checked_by: me || null }, me).catch(() => {})); ctx.rerender(); } }); }
-    else if (a === 'sent' && r) { if (!confirm(`${r.partner} · ${r.site} 거래처 전달 체크할까요?`)) return; S.addFlowMark(`sent:${r.no}`, `${r.partner} ${r.site}`, ctx.me ? ctx.me() : '').then((err) => { if (err) alert('저장 못 했어요 — ' + err); else { FL.marks[`sent:${r.no}`] = { created_at: new Date().toISOString() }; ctx.rerender(); } }); }
+    else if (a === 'sent' && r) { if (!ask(t, `${r.partner} · ${r.site} 거래처 전달 체크할까요?`)) return; S.addFlowMark(`sent:${r.no}`, `${r.partner} ${r.site}`, ctx.me ? ctx.me() : '').then((err) => { if (err) alert('저장 못 했어요 — ' + err); else { FL.marks[`sent:${r.no}`] = { created_at: new Date().toISOString() }; ctx.rerender(); } }); }
     else if (a === 'stmtgo' && r) { FM.presetStmt(/공간/.test(r.partner) ? 'stmt-gong' : 'stmt-etc', (t.dataset.s || '').split(',').join(' '), r.salerows); ctx.rerender(); }
     else if (a === 'evx') {   // 카톡·문자 원문 — 같은 방 앞뒤 대화 (배차안내까지)
       closeQ(); const ov = document.createElement('div'); ov.className = 'hm-ov fl-qov';
@@ -354,7 +361,7 @@ export function bind(app, c) {
     else if (a === 'disp' && r) ctx.openFrame('배차 요청', dispSrc(r));
     else if ((a === 'dispok' || a === 'shipok') && r) {   // 배차 완료·출고 완료 → 운영 DB ship_case (10/29 대표)
       const ok = a === 'dispok', hm = new Date().toTimeString().slice(0, 5);
-      if (!confirm(`${r.partner} · ${r.site} ${ok ? '배차 완료' : '출고 완료'}?`)) return;
+      if (!ask(t, `${r.partner} · ${r.site} ${ok ? '배차 완료' : '출고 완료'}?`)) return;
       S.setShipCase(r.no, ok ? { disp: `배차 완료 ${hm}` } : { status: '완료' }, ctx.me ? ctx.me() : '', true).then((err) => {
         if (err) { alert('저장 못 했어요 — ' + err); return; }
         r.steps = ok ? r.steps.filter((k) => !['발주', '배차 요청'].includes(k)).concat(r.steps.includes('배차 완료') ? [] : ['배차 완료'])

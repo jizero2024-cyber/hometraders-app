@@ -1353,3 +1353,4 @@ body.hm-wall .fl-tm span { font-size: 13px !important; color: #555 !important; }
 body.hm-wall .fl-lh > span, body.hm-wall .fl-row > .fl-c { text-align: left; }
 body.hm-wall .fl-acts { flex-wrap: wrap !important; row-gap: 6px; }   /* 명세표·변환·거래처 전달이 차량 칸 위로 넘치던 것 */
 body.hm-wall .fl-acts .fl-stm { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+body.hm-wall .fl-acts button.arm { background: #FF3B30 !important; color: #fff !important; border-color: #FF3B30 !important; }   /* 한 번 더 누르면 실행 */
