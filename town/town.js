@@ -661,7 +661,8 @@ function openBoard() {
     if (!sv || !sv.notes || drag) return;
     if (!B.at) {   // 이 기기에서 처음 맞출 때 — 이 기기에만 있던 포스트잇은 버리지 않고 합침
       const ids = new Set(sv.notes.map((n) => n.id));
-      B.notes = sv.notes.concat(B.notes.filter((n) => !ids.has(n.id)));
+      const dflt = new Set(NOTES0.map((n) => n.id + '|' + n.t));   // 손대지 않은 예시 포스트잇은 빼고
+      B.notes = sv.notes.concat(B.notes.filter((n) => !ids.has(n.id) && !dflt.has(n.id + '|' + n.t)));
       B.draw = B.draw || sv.draw || ''; draw(); saveBoard(B); return;
     }
     if ((sv.at || 0) <= B.at) return;
