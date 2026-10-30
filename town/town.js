@@ -413,7 +413,13 @@ function office() {
       if (k === 'guppy' || k === 'rabbit') {   // 자료 수집 내역 (10/30 대표 "언제 마지막 업데이트 · 뭐뭐 수집했는지")
         const C2 = (L.ai && L.ai.collect) || {}, hh = C2.health || {}, sec = (t) => `<div style="margin-top:8px;font-size:12px;font-weight:800;color:#8A7E77">${t}</div>`, hm2 = (x) => String(x || '').slice(5, 16).replace('T', ' ');
         body = Object.entries(hh).map(([n, x]) => prow(esc(n), esc(x.msg || ''), x.bad ? 'color:#FF453A' : 'color:#1E8E3E')).join('')
-          + prow('출고일보에 반영', hm2(C2.marked)) + prow('문자 백업', hm2(C2.sms_at)) + prow('텔레그램 받기', hm2(C2.tg_at))
+          + sec('반영') + (() => {   // 받은 자료가 출고일보 · 사이트 · 키오스크까지 갔는지 (10/30 대표)
+            const last = [C2.sms_at, ...(C2.calls || []).map((x) => x.t)].filter(Boolean).sort().pop() || '', fa = String((L.flow && L.flow.at) || '').replace('T', ' ');
+            const late = last && fa && fa.slice(0, 16) < last.slice(0, 16), mk = String(C2.marked || '').replace('T', ' ');
+            return prow('마지막으로 받은 자료', hm2(last)) + prow('출고일보 시트', hm2(mk), mk && last && mk.slice(0, 16) < last.slice(0, 16) ? 'color:#B07A00' : 'color:#1E8E3E')
+              + prow('사이트 출고 흐름', hm2(fa), late ? 'color:#B07A00' : 'color:#1E8E3E') + prow('키오스크 (출고 흐름과 같은 자료)', hm2(fa), late ? 'color:#B07A00' : 'color:#1E8E3E');
+          })()
+          + sec('받기') + prow('문자 백업', hm2(C2.sms_at)) + prow('텔레그램 받기', hm2(C2.tg_at))
           + sec('통화 (업무 · 문의)') + (C2.calls || []).map((x) => prow(`<b>${esc(x.who)}</b> <span style="color:#8A7E77">${esc(x.dur)}</span><div style="font-size:12px;color:#6B5E55">${esc(x.title)}</div>`, hm2(x.t), 'color:#8A7E77;font-weight:600;font-size:12px')).join('')
           + sec('텔레그램') + (C2.tg || []).map((x) => prow(`<b>${esc(x.who || '')}</b> ${esc(x.text)}`, hm2(x.t), 'color:#8A7E77;font-weight:600;font-size:12px')).join('')
           + sec('카톡 방') + (C2.chat || []).map((x) => prow(esc(x.room), hm2(x.t), 'color:#8A7E77;font-weight:600;font-size:12px')).join('')
