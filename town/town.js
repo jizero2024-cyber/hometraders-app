@@ -313,7 +313,6 @@ const AI = [   // 실제로 돌아가는 AI 작업만. kind: task = 할 일 0 �
   { k: 'squirrel', who: '도토리', job: '전표 PDF · 명세서', av: 'squirrel', f: 2, x: -14, kind: 'feed' },
   { k: 'cat', who: '이음이', job: '배차', av: 'cat', f: 1, x: -26, kind: 'task' },
   { k: 'guppy', who: '받아쓰기', job: '비토 통화', av: 'guppy', f: 1, x: -17, kind: 'feed' },
-  { k: 'rabbit', who: '토깽', job: '문자 · 텔레그램', av: 'rabbit', f: 1, x: -9, kind: 'feed' },
   { k: 'redpanda', who: '그림이', job: '디자인 · 카탈로그', av: 'redpanda', f: 2, x: 14, kind: 'task' },
 ];
 const PAMPH = ['표지', '제품 소개', '부속자재', '시공 순서', '기능 상세', '뒷표지 주소', '인쇄소 보내기'];
@@ -400,11 +399,18 @@ const ioTxt = (x) => { const seen = {}; (x.lines || []).forEach((l) => { const k
 
 function office() {
   const v = el(`<div class="v v3">
-    <div style="position:absolute;left:20px;top:20px;display:flex;gap:10px;align-items:center;z-index:8">${backBtn('#/', '마을')}<a class="btn" href="#/warehouse" style="height:46px;color:#B07A2A">창고</a><button type="button" class="btn boardBtn" style="background:#FFE680;color:#5A4A00">할 일 칠판</button><button id="meet" type="button" class="btn" style="background:#2E9A5A;color:#fff">회의</button><span id="oat" class="pill" style="background:rgba(255,255,255,.9);color:#8A7E77"></span></div>
+    <div style="position:absolute;left:20px;top:20px;display:flex;gap:10px;align-items:center;z-index:8">${backBtn('#/', '마을')}<a class="btn" href="#/warehouse" style="height:46px;color:#B07A2A">창고</a><button type="button" class="btn boardBtn" style="background:#FFE680;color:#5A4A00">할 일 칠판</button><button id="meet" type="button" class="btn" style="background:#2E9A5A;color:#fff">회의</button><button id="twr" type="button" class="btn" style="background:#2B3A55;color:#fff">관제탑</button><span id="oat" class="pill" style="background:rgba(255,255,255,.9);color:#8A7E77"></span></div>
   </div>`);
   stage.appendChild(v);
   const P = panelBox(v);
   let L = null;
+  // 관제탑 — 사무실 옆에 늘 떠 있는 자료 수집 · 반영 창 (숨기기 가능, 이 기기에 기억)
+  const twr = el('<div class="card pnl" style="position:absolute;left:20px;top:84px;bottom:24px;width:330px;border-radius:24px;display:flex;flex-direction:column;overflow:hidden;z-index:8;background:rgba(255,255,255,.96)"><div style="display:flex;align-items:center;gap:8px;padding:12px 16px;background:#2B3A55;color:#fff"><span style="width:8px;height:8px;border-radius:50%;background:#34C759;box-shadow:0 0 6px #34C759"></span><b style="flex:1;font-size:15px">관제탑</b><span class="ta" style="font-size:11px;opacity:.75"></span><button type="button" class="tx" aria-label="숨기기" style="width:30px;height:30px;border:0;border-radius:10px;background:rgba(255,255,255,.15);color:#fff;cursor:pointer">✕</button></div><div class="tb scroll" style="flex:1;padding:10px 12px;display:flex;flex-direction:column;gap:6px"></div></div>');
+  v.appendChild(twr);
+  let twrOn = true; try { twrOn = localStorage.getItem('town:tower') !== '0'; } catch (e) { /* 기본 켬 */ }
+  const twrSet = (on) => { twrOn = on; twr.style.display = on ? 'flex' : 'none'; v.querySelector('#twr').classList.toggle('or', on); try { localStorage.setItem('town:tower', on ? '1' : '0'); } catch (e) { /* 무시 */ } if (on && L) twrDraw(); };
+  const twrDraw = () => { twr.querySelector('.tb').innerHTML = collectHtml(L); twr.querySelector('.ta').textContent = `AI ${tOf(L.ai && L.ai.at)}`; };
+  twr.querySelector('.tx').onclick = () => twrSet(false); v.querySelector('#twr').onclick = () => twrSet(!twrOn);
   const O = O3D.office(host3d('#D8E9FA'), { alive: () => v.isConnected, staff: AI, onPick: (k) => open(k) });
   const draw = () => {
     if (!L) return;
@@ -418,21 +424,12 @@ function office() {
     O.setTag('meet', objHtml('회의 테이블'));
     v.querySelector('#oat').textContent = L.ai ? `AI 상태 ${tOf(L.ai.at)}` : 'AI 상태 없음';
   };
-  const load = () => live().then((x) => { L = x; draw(); });
+  const load = () => live().then((x) => { L = x; draw(); if (twrOn) twrDraw(); });
+  twrSet(twrOn);
   load(); every(60000, load);
-  function open(k) {
-    if (!L) return; const a = AI.find((x) => x.k === k), w = a && L.W[k];
-    if (a) {
-      let body = prow('상태', { ok: '정상', bad: '멈춤 · 실패', run: '지금 작업 중' }[w.st] || '정상', `color:${O3D.DOT[w.st]}`) + (w.note ? prow(esc(w.note)) : '');
-      if (k === 'seal') body += prow('오늘 출고', `${L.shipped.length} / ${L.today.length}`) + prow('확인 대기', L.checks.length) + plink('출고 흐름', '/');
-      if (k === 'raccoon') body += L.miss.slice(0, 12).map((x) => prow(`${esc(x.partner)} · ${esc(x.site || '')} <span style="color:#8A7E77">${esc(x.day || '')}</span>`, '누락', 'color:#FF453A')).join('') || prow('입력 누락 없음');
-      if (k === 'otter') body += L.unpaid.slice(0, 14).map((x) => prow(`${esc(x.driver || '')} <span style="color:#8A7E77">${esc(x.job || '')}</span>`, x.amount ? Number(x.amount).toLocaleString() : '', 'color:#FF453A')).join('') || prow('미송금 없음');
-      if (k === 'hedgehog') body += prow('올릴 전표', L.gwait) + plink('공간 사이트', '/gonggan/');
-      if (k === 'cat') body += L.needDisp.slice(0, 14).map((x) => prow(`${esc(x.partner)} · ${esc(x.site || '')} <span style="color:#8A7E77">${esc(x.day)} ${esc(x.time || '')}</span>`, '배차 요청', 'color:#E8732C')).join('') || prow('배차 요청 없음');
-      if (k === 'redpanda') { open('pamph'); return; }
-      if (k === 'guppy' || k === 'rabbit') {   // 자료 수집 내역 (10/30 대표 "언제 마지막 업데이트 · 뭐뭐 수집했는지")
-        const C2 = (L.ai && L.ai.collect) || {}, hh = C2.health || {}, sec = (t) => `<div style="margin-top:8px;font-size:12px;font-weight:800;color:#8A7E77">${t}</div>`, hm2 = (x) => String(x || '').slice(5, 16).replace('T', ' ');
-        body = Object.entries(hh).map(([n, x]) => prow(esc(n), esc(x.msg || ''), x.bad ? 'color:#FF453A' : 'color:#1E8E3E')).join('')
+  function collectHtml(L) {   // 관제탑 · 받아쓰기 — 자료 수집 · 반영 내역 (10/30 대표)
+    const C2 = (L.ai && L.ai.collect) || {}, hh = C2.health || {}, sec = (t) => `<div style="margin-top:8px;font-size:12px;font-weight:800;color:#8A7E77">${t}</div>`, hm2 = (x) => String(x || '').slice(5, 16).replace('T', ' ');
+    return Object.entries(hh).map(([n, x]) => prow(esc(n), esc(x.msg || ''), x.bad ? 'color:#FF453A' : 'color:#1E8E3E')).join('')
           + sec('반영') + (() => {   // 받은 자료가 출고일보 · 사이트 · 키오스크까지 갔는지 (10/30 대표)
             const last = [C2.sms_at, ...(C2.calls || []).map((x) => x.t)].filter(Boolean).sort().pop() || '', fa = String((L.flow && L.flow.at) || '').replace('T', ' ');
             const late = last && fa && fa.slice(0, 16) < last.slice(0, 16), mk = String(C2.marked || '').replace('T', ' ');
@@ -444,8 +441,19 @@ function office() {
           + sec('텔레그램') + (C2.tg || []).map((x) => prow(`<b>${esc(x.who || '')}</b> ${esc(x.text)}`, hm2(x.t), 'color:#8A7E77;font-weight:600;font-size:12px')).join('')
           + sec('카톡 방') + (C2.chat || []).map((x) => prow(esc(x.room), hm2(x.t), 'color:#8A7E77;font-weight:600;font-size:12px')).join('')
           + sec('자료 넣기 파일') + (C2.files || []).map((x) => prow(esc(x.name), hm2(x.t), 'color:#8A7E77;font-weight:600;font-size:12px')).join('');
-        P.show('자료 수집 · 받아쓰기 · 토깽', `AI 상태 ${tOf(L.ai && L.ai.at)}`, body); return;
-      }
+  }
+  function open(k) {
+    if (!L) return; const a = AI.find((x) => x.k === k), w = a && L.W[k];
+    if (a) {
+      let body = prow('상태', { ok: '정상', bad: '멈춤 · 실패', run: '지금 작업 중' }[w.st] || '정상', `color:${O3D.DOT[w.st]}`) + (w.note ? prow(esc(w.note)) : '');
+      if (k === 'seal') body += prow('오늘 출고', `${L.shipped.length} / ${L.today.length}`) + prow('확인 대기', L.checks.length) + plink('출고 흐름', '/');
+      if (k === 'raccoon') body += L.miss.slice(0, 12).map((x) => prow(`${esc(x.partner)} · ${esc(x.site || '')} <span style="color:#8A7E77">${esc(x.day || '')}</span>`, '누락', 'color:#FF453A')).join('') || prow('입력 누락 없음');
+      if (k === 'otter') body += L.unpaid.slice(0, 14).map((x) => prow(`${esc(x.driver || '')} <span style="color:#8A7E77">${esc(x.job || '')}</span>`, x.amount ? Number(x.amount).toLocaleString() : '', 'color:#FF453A')).join('') || prow('미송금 없음');
+      if (k === 'hedgehog') body += prow('올릴 전표', L.gwait) + plink('공간 사이트', '/gonggan/');
+      if (k === 'cat') body += L.needDisp.slice(0, 14).map((x) => prow(`${esc(x.partner)} · ${esc(x.site || '')} <span style="color:#8A7E77">${esc(x.day)} ${esc(x.time || '')}</span>`, '배차 요청', 'color:#E8732C')).join('') || prow('배차 요청 없음');
+      if (k === 'redpanda') { open('pamph'); return; }
+      if (k === 'guppy') { P.show('자료 수집 · 받아쓰기', `AI 상태 ${tOf(L.ai && L.ai.at)}`, collectHtml(L)); return; }
+
       P.show(`${a.who} · ${a.job}`, w.st === 'bad' ? '멈춤' : '', body); return;
     }
     if (k === 'board') {
