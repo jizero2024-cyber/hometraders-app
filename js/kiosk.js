@@ -77,7 +77,8 @@ function sheet() {
   const btn = (k, label) => `<button type="button" class="ks-b ${K.ask === k ? 'ask' : ''}" data-ki="${k}" ${K.busy ? 'disabled' : ''}>${K.ask === k ? `${label} 확인` : label}</button>`;
   const btns = st === '견적 보내야 함' ? '' : [st === '배차 해야 함' || st === '발주 요청' ? btn('disp', '배차 완료') : '', st !== '출고 완료' ? btn('ship', '출고 완료') : ''].join('');
   const it = itemsOf(r);
-  const chk = memo.map((m) => `<div class="ks-mm">${m.h ? `<div class="ks-mh">${esc(m.h)}</div>` : ''}<div class="ks-mt">${esc(m.t).replace(/\s·\s/g, '<br>')}</div></div>`).join('');
+  const cur = new Set((r.lines || []).flatMap((l) => l.slips || []).map((x) => `${x.slice(4, 6)}/${x.slice(6, 8)}-${x.split('-')[1]}`));   // 지금 전표에 없는 옛 번호는 줄 긋기
+  const chk = memo.map((m) => `<div class="ks-mm">${m.h ? `<div class="ks-mh">${esc(m.h)}</div>` : ''}<div class="ks-mt">${esc(m.t).replace(/\s·\s/g, '<br>').replace(/(\d\d\/\d\d-\d+)/g, (x) => (cur.size && !cur.has(x) ? `<s>${x}</s>` : x))}</div></div>`).join('');
   const a = K.anim ? ' in' : ''; K.anim = false;   // 처음 열 때만 아래에서 올라옴
   return `<div class="ks-ov${a}" data-ki="close"><div class="ks${a}" role="dialog" aria-label="출고 건">
     <div class="ks-grab"></div>

@@ -90,6 +90,14 @@ const ask = (t, msg) => {   // 키오스크 가로(iframe)는 confirm 창이 안
   setTimeout(() => { if (t.dataset.arm) { delete t.dataset.arm; t.classList.remove('arm'); t.textContent = o; } }, 5000);
   return false;
 };
+const memoHtml = (r) => {   // 참고 메모 — [날짜 누가] 단위로 한 덩어리, 지금 전표에 없는 번호(고쳐서 다시 넣은 옛 번호)는 줄 긋기 (10/30 대표)
+  const cur = new Set((r.lines || []).flatMap((l) => l.slips || []).map((x) => `${x.slice(4, 6)}/${x.slice(6, 8)}-${x.split('-')[1]}`));
+  return String(r.memo || '').split(/\s*·\s*(?=\[)/).map((t) => t.trim()).filter(Boolean).map((t) => {
+    const m = t.match(/^\[([^\]]+)\]\s*([\s\S]*)$/), h = m ? m[1] : '', body = esc(m ? m[2] : t).replace(/\s·\s/g, '<br>')
+      .replace(/(\d\d\/\d\d-\d+)/g, (x) => (cur.size && !cur.has(x) ? `<s title="이카운트에 없는 옛 전표 번호">${x}</s>` : x));
+    return `<div class="fl-mm">${h ? `<div class="fl-mh">${esc(h)}</div>` : ''}<div>${body}</div></div>`;
+  }).join('');
+};
 function stepsHtml() {
   return `<nav class="fl-steps" aria-label="단계">${STEPS.map((k) => `<button type="button" class="fl-st ${FL.cur === k ? 'on' : ''} ${hotOf(k) ? 'hot' : ''}" data-fl="step" data-k="${k}">
     <i>${IC[k]}</i>${LABEL[k] || k}<b>${['명세표', '입금'].includes(k) ? '' : countOf(k)}</b></button>`).join('')}</nav>`;
@@ -140,7 +148,7 @@ function detailHtml(r) {
     ${r.no.startsWith('Q') ? '' : `<div class="fl-k">상차 → 하차</div><div class="fl-it"><b>${esc(r.from || '상차지 확인')}</b> → <b>${esc(r.site_full || r.site || '하차지 확인')}</b></div>`}
     ${buys || `<div class="fl-it">${esc(r.items)}</div>`}
     ${r.veh ? `<div class="fl-k">차량</div><div class="fl-it">${esc(r.veh)}</div>` : ''}
-    ${r.memo ? `<div class="fl-k">할 일</div><div class="fl-it">${esc(r.memo)}</div>` : ''}
+    ${r.memo ? `<div class="fl-k">메모</div><div class="fl-it fl-memo">${memoHtml(r)}</div>` : ''}
     ${caseHtml(r)}
     <div class="fl-k">전표</div><div>${linesHtml(r)}</div>
     ${r.pl ? `<div class="fl-k">순이익</div><div class="fl-pld"><span>판매 ${won(r.pl.sale)}</span><i>−</i><span>구매 ${won(r.pl.buy)}</span><i>−</i><span>운반비 ${won(r.pl.fare)}</span><i>=</i><b class="${r.pl.net < 0 ? 'no' : ''}">${won(r.pl.net)}</b><em>${r.pl.sale ? Math.round((100 * r.pl.net) / r.pl.sale) : 0}% · 공급가</em></div>` : ''}

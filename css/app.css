@@ -1366,3 +1366,6 @@ body.ki-wide .ks.in { animation: ks-rise .42s cubic-bezier(.16,1,.3,1) !importan
 .ks-memo .ks-mm { padding: 2.4cqw 0; border-bottom: 1px solid #E5E5EA; } .ks-memo .ks-mm:last-child { border-bottom: 0; }   /* 참고 메모 (체크 칸 없이) */
 .ks-memo .ks-mh { font-size: 2.6cqw; font-weight: 700; color: #8E8E93; margin-bottom: .6cqw; }
 .ks-memo .ks-mt { font-size: 3.2cqw; line-height: 1.5; color: #1C1C1E; }
+.fl-memo .fl-mm { padding: 6px 0; border-bottom: 1px solid #EFEDE8; line-height: 1.55; } .fl-memo .fl-mm:last-child { border-bottom: 0; }   /* 참고 메모 */
+.fl-memo .fl-mh { font-size: 12px; font-weight: 700; color: #8E8E93; margin-bottom: 2px; }
+.fl-memo s, .ks-memo s { color: #B4B2A9; }
