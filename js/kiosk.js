@@ -3,7 +3,7 @@
 import * as S from './store-supabase.js?v=10';
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const K = { chk: {}, data: null, err: '', timer: 0, clock: 0, lock: null, sel: '', ask: '', busy: false, toast: '', me: '', over: {}, anim: false, tool: '', talk: '', sug: null, note: '' };   // tool = 'talk'(카톡 넣기) · 'box'(자료 넣기)   // over = 방금 누른 건 (맥 도우미가 새 판을 올릴 때까지 화면에 유지)
+const K = { chk: {}, data: null, err: '', timer: 0, clock: 0, lock: null, sel: '', ask: '', busy: false, toast: '', me: '', over: {}, anim: false, tool: '', talk: '', sug: null, note: '', mb: null };   // mb = 물범이 (읽은 결과·답·넣기)   // tool = 'talk'(카톡 넣기) · 'box'(자료 넣기)   // over = 방금 누른 건 (맥 도우미가 새 판을 올릴 때까지 화면에 유지)
 const p2 = (n) => String(n).padStart(2, '0');
 const mdOf = (d) => `${p2(d.getMonth() + 1)}/${p2(d.getDate())}`;
 const today = () => (K.data && K.data.today) || mdOf(new Date());
@@ -53,6 +53,7 @@ const sv = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" st
 const IC = {
   talk: sv('<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/>'),
   box: sv('<path d="M4 7h16v12H4z"/><path d="M4 7l2-3h12l2 3"/><path d="M9 12h6"/>'),
+  mb: sv('<path d="M5 15c0-5 3.5-9 8-9 3.5 0 6 2.5 6 6 0 4-3.5 7-8 7H8l-3 2z"/><circle cx="14.5" cy="11" r="1"/><path d="M9 12c1 .8 2 .8 3 0"/>'),
   'k-need': sv('<path d="M4 10v4l3 1 9 4V5L7 9z"/><path d="M19 9.5a3 3 0 0 1 0 5"/>'),
   'k-car': sv('<path d="M2.5 7h11v9h-11zM13.5 10h4l3 3v3h-7"/><circle cx="6.5" cy="17.5" r="1.8"/><circle cx="16.5" cy="17.5" r="1.8"/>'),
   'k-order': sv('<rect x="5" y="4" width="14" height="17" rx="3"/><path d="M9 4h6v3H9zM9 12h6M9 16h4"/>'),
@@ -115,8 +116,31 @@ function sugHtml(g) {   // 카톡 넣기 결과 — 한 곳 추천 · 품목별 
     ${fs ? `<div class="ks-k">${esc(g.region)} 지난 운임</div><div class="ks-box">${fs}</div>` : ''}
     ${ps ? `<div class="ks-k">같은 현장 지난 출고</div><div class="ks-box">${ps}</div>` : ''}`;
 }
+function mbHtml() {   // 물범이 — 읽은 것 · 되묻기 · 넣기 (10/30 대표)
+  const m = K.mb || {}, r = m.res;
+  const pick = `<div class="ks-bs kt-bs"><button type="button" class="ks-b" data-ki="mbpick" ${m.busy ? 'disabled' : ''}>사진·파일</button><button type="button" class="ks-b go" data-ki="mbread" ${m.busy ? 'disabled' : ''}>${m.busy === 'read' ? '읽는 중…' : '글 읽기'}</button></div>
+    <input type="file" id="mb-file" accept="image/*,.heic,.pdf" hidden>`;
+  const ta = `<textarea id="mb-text" class="kt-ta" rows="3" placeholder="명세서·견적 글 붙여넣기">${esc(m.text || '')}</textarea>`;
+  if (!r) return `${ta}${pick}${m.err ? `<div class="kt-err">${esc(m.err)}</div>` : ''}`;
+  const a = m.ans || {};
+  const asks = (r.asks || []).map((q) => `<div class="mb-q"><div class="mb-qt">${esc(q.q)}</div><div class="mb-os">${(q.opts || []).map((o) => `<button type="button" class="mb-o ${a[q.k] === o ? 'on' : ''}" data-ki="mbans" data-k="${esc(q.k)}" data-v="${esc(o)}">${esc(o)}</button>`).join('')}
+    ${q.free ? `<input class="mb-in" id="mb-in-${esc(q.k)}" value="${esc(a[q.k] || q.hint || '')}" placeholder="${q.k === 'date' ? '2026-10-30' : '이름'}"><button type="button" class="mb-o" data-ki="mbfree" data-k="${esc(q.k)}">확인</button>` : ''}</div></div>`).join('');
+  const cw = r.cust ? r.cust.name.replace(/^\(주\)|^주식회사\s*|\s*주식회사$/g, '') : '';
+  const near = cw ? ((K.data && K.data.rows) || []).filter((x) => cw && String(x.partner || '').includes(cw.slice(0, 4))).slice(0, 5) : [];
+  const nos = near.length ? `<div class="mb-q"><div class="mb-qt">어느 출고 건이에요?</div><div class="mb-os">${near.map((x) => `<button type="button" class="mb-o ${r.no === x.no ? 'on' : ''}" data-ki="mbans" data-k="no" data-v="${esc(x.no)}">${esc((x.day || '') + ' ' + (x.site || x.item || ''))}</button>`).join('')}<button type="button" class="mb-o ${r.no === '' && a.no === '' ? 'on' : ''}" data-ki="mbans" data-k="no" data-v="">없음</button></div></div>` : '';
+  const ls = (r.lines || []).map((l) => `<div class="mb-l ${l.code ? '' : 'no'}"><b>${esc(l.name || l.raw)}</b><span>${(+l.qty).toLocaleString()}</span><em>${won(l.total)}</em></div>`).join('');
+  const head = `<div class="kt-rec"><span>${esc(r.kind || '판매·구매?')} · ${esc(r.date || '날짜?')}${r.vat && r.vat !== '명세서' ? ' · 부가세 ' + esc(r.vat) : ''}</span><b>${esc(cw || r.partner_read || '거래처?')}</b><em>${won(r.total)}</em></div>`;
+  const msg = [...(r.errors || []), ...(r.warnings || [])].map((t) => `<div class="kt-err">${esc(t)}</div>`).join('');
+  const done = m.done ? `<div class="mb-done">이카운트 ${esc(m.done)} 넣었어요</div>` : '';
+  const go = m.done ? `<div class="ks-bs kt-bs"><button type="button" class="ks-b" data-ki="mbnew">새로</button></div>`
+    : `<div class="ks-bs kt-bs"><button type="button" class="ks-b" data-ki="mbnew">다시</button><button type="button" class="ks-b go ${m.ask ? 'ask' : ''}" data-ki="mbpush" ${r.ready && !m.busy ? '' : 'disabled'}>${m.busy === 'push' ? '넣는 중…' : m.ask ? (m.dup ? '그래도 넣기' : `${r.kind}입력 확인`) : `이카운트 ${r.kind || ''}입력`}</button></div>`;
+  return `${head}${asks}${nos}${msg}<div class="ks-k">품목 ${(r.lines || []).length}</div><div class="ks-box mb-ls">${ls}</div>${m.err ? `<div class="kt-err">${esc(m.err)}</div>` : ''}${done}${go}`;
+}
 function toolSheet() {
   if (!K.tool) return '';
+  if (K.tool === 'mb') { const a0 = K.anim ? ' in' : ''; K.anim = false;
+    return `<div class="ks-ov${a0}" data-ki="close"><div class="ks${a0}" role="dialog" aria-label="물범이"><div class="ks-grab"></div>
+      <div class="ks-hd"><div><div class="ks-t">물범이</div></div><button type="button" class="ks-x" data-ki="close" aria-label="닫기">✕</button></div>${mbHtml()}</div></div>`; }
   const a = K.anim ? ' in' : ''; K.anim = false;
   const talk = K.tool === 'talk';
   const body = talk
@@ -138,7 +162,7 @@ export function screen() {
   const g = groups(), at = K.data.at ? String(K.data.at).slice(11, 16) : '';
   return `<div class="ki-box"><div class="ki">
     <header class="ki-h"><div class="ki-clk" data-ki="reload"><span>${n.getMonth() + 1}월 ${n.getDate()}일 ${wd}요일</span><b>${p2(n.getHours())}:${p2(n.getMinutes())}</b></div><img class="ki-logo" src="/icons/logo-full.png" alt="HOME TRADERS"></header>
-    <div class="ki-act"><button type="button" data-ki="tool" data-k="talk">${IC.talk}<span>카톡 넣기</span></button><button type="button" data-ki="tool" data-k="box">${IC.box}<span>자료 넣기</span></button></div>
+    <div class="ki-act"><button type="button" data-ki="tool" data-k="talk">${IC.talk}<span>카톡 넣기</span></button><button type="button" data-ki="tool" data-k="box">${IC.box}<span>자료 넣기</span></button><button type="button" data-ki="tool" data-k="mb">${IC.mb}<span>물범이</span></button></div>
     <div class="ki-t">${[['k-need', g.need, '배차 해야 함'], ['k-quote', g.quote, '견적 대기'], ['k-car', g.car, '차 잡힘'], ['k-order', g.order, '발주 요청'], ['k-out', g.out, '출고 완료']]
       .map(([k, rs, l]) => `<div class="${k}" data-ki="jump" data-k="${k}"><i>${IC[k]}</i><b>${rs.length}</b><span>${l}</span></div>`).join('')}</div>
     ${sec('k-need', '배차 해야 함', g.need, 14, true)}
@@ -210,6 +234,21 @@ async function putInbox(items, draw) {   // 자료 넣기 — site_inbox (첫 �
   K.note = err ? `못 넣었어요 — ${err}` : `${ok}건 넣었어요`;
   draw();
 }
+function mbRead(body, draw) {   // 사무실 맥 /api/mulbum/read — 사진·글 읽고 판매/구매·거래처·품목 맞춤
+  const m = K.mb || (K.mb = {}); m.busy = 'read'; m.err = ''; m.res = null; m.ans = {}; m.done = ''; draw();
+  S.relayHelper('/api/mulbum/read', body, K.me).then((j) => { m.res = j; m.doc = j.doc; }).catch((e) => { m.err = e.message || String(e); }).finally(() => { m.busy = ''; draw(); });
+}
+function mbPlan(draw) {
+  const m = K.mb; m.busy = 'plan'; m.err = ''; draw();
+  S.relayHelper('/api/mulbum/plan', { doc: m.doc, ...(m.ans || {}) }, K.me).then((j) => { m.res = j; }).catch((e) => { m.err = e.message || String(e); }).finally(() => { m.busy = ''; draw(); });
+}
+function mbPush(draw) {   // 이카운트에 넣기 — 맥의 erp_push (담당자 김맥순·겹침 검사·출고 건 연결·전표 PDF)
+  const m = K.mb; m.busy = 'push'; m.err = ''; draw();
+  S.relayHelper('/api/mulbum/push', { doc: m.doc, ...(m.ans || {}), force: !!m.dup }, K.me)
+    .then((j) => { m.done = j.slip; m.ask = false; m.dup = false; K.toast = `${j.kind}입력 ${j.slip} · ${won(j.total)}`; setTimeout(() => { K.toast = ''; draw(); }, 3000); })
+    .catch((e) => { const t = e.message || String(e); m.err = t; m.dup = /겹침/.test(t); m.ask = m.dup; })
+    .finally(() => { m.busy = ''; draw(); });
+}
 function shut(draw) {   // 핸드폰처럼 아래로 내려가며 닫힘
   const ov = document.querySelector('.ks-ov'), ks = ov && ov.querySelector('.ks');
   const off = () => { K.sel = ''; K.ask = ''; K.tool = ''; draw(); };
@@ -244,6 +283,12 @@ function onTap(e, draw) {
   else if (a === 'suggest') suggest(draw);
   else if (a === 'pick') { const f = document.getElementById('kt-file'); if (f) f.click(); }
   else if (a === 'put') { if (K.talk.trim()) putInbox([K.talk], draw); }
+  else if (a === 'mbpick') { const f = document.getElementById('mb-file'); if (f) f.click(); }
+  else if (a === 'mbread') { const m = K.mb || (K.mb = {}); if ((m.text || '').trim()) mbRead({ text: m.text }, draw); }
+  else if (a === 'mbans') { const m = K.mb; if (!m || !m.res) return; m.ans = { ...(m.ans || {}), [t.dataset.k]: t.dataset.v }; m.ask = false; mbPlan(draw); }
+  else if (a === 'mbfree') { const m = K.mb, el = document.getElementById('mb-in-' + t.dataset.k); if (!m || !el || !el.value.trim()) return; m.ans = { ...(m.ans || {}), [t.dataset.k]: el.value.trim() }; m.ask = false; mbPlan(draw); }
+  else if (a === 'mbpush') { const m = K.mb; if (!m || !m.res || !m.res.ready || m.busy) return; if (!m.ask) { m.ask = true; draw(); } else mbPush(draw); }
+  else if (a === 'mbnew') { K.mb = {}; draw(); }
 }
 export function start(draw, me) {
   K.me = me || K.me;   // 1분마다 새 자료, 시계는 20초마다 · 화면 꺼짐 막기
@@ -253,7 +298,9 @@ export function start(draw, me) {
   K.timer = setInterval(() => pull(tick), 60000);
   K.clock = setInterval(tick, 20000);
   document.addEventListener('input', (e) => { if (e.target.id === 'kt-text') K.talk = e.target.value; });
-  document.addEventListener('change', (e) => { if (e.target.id === 'kt-file') { putInbox([...e.target.files], draw); e.target.value = ''; } });
+  document.addEventListener('change', (e) => { if (e.target.id === 'kt-file') { putInbox([...e.target.files], draw); e.target.value = ''; }
+    if (e.target.id === 'mb-file' && e.target.files[0]) { const f = e.target.files[0]; e.target.value = ''; shrink(f).then(({ data }) => mbRead({ name: f.name, data }, draw)).catch((x) => { K.mb = { err: x.message || String(x) }; draw(); }); } });
+  document.addEventListener('input', (e) => { if (e.target.id === 'mb-text') (K.mb || (K.mb = {})).text = e.target.value; });
   const wake = () => { try { if (navigator.wakeLock && document.visibilityState === 'visible') navigator.wakeLock.request('screen').then((l) => { K.lock = l; }).catch(() => {}); } catch (_) { /* 무시 */ } };
   wake(); document.addEventListener('visibilitychange', wake);
   document.addEventListener('click', (e) => onTap(e, draw));
