@@ -343,7 +343,7 @@ async function live() {
   const W = {
     seal: { n: L.checks.length, line: `출고 ${L.shipped.length} / ${L.today.length}`, st: aiw('seal').st, note: aiw('seal').note },
     raccoon: { n: L.miss.length, line: aiw('raccoon').st === 'bad' ? '받기 멈춤' : `입력 누락 ${L.miss.length}`, st: aiw('raccoon').st, note: aiw('raccoon').note },
-    otter: { n: L.unpaid.length, line: `미송금 ${L.unpaid.length}`, st: 'ok', note: '' },
+    otter: { n: L.needDisp.length + L.unpaid.length, line: `배차 요청 ${L.needDisp.length} · 미송금 ${L.unpaid.length}`, st: 'ok', note: '' },
     hedgehog: { n: L.gwait, line: `올릴 전표 ${L.gwait}`, st: aiw('hedgehog').st, note: aiw('hedgehog').note },
     squirrel: { n: 0, line: `PDF ${tOf(aiw('squirrel').at) || '—'}`, st: aiw('squirrel').st, note: aiw('squirrel').note },
     cat: { n: L.needDisp.length, line: `배차 요청 ${L.needDisp.length}`, st: aiw('cat').st, note: aiw('cat').note },
@@ -487,6 +487,43 @@ function office() {
           + sec('카톡 방') + (C2.chat || []).map((x) => prow(esc(x.room), hm2(x.t), 'color:#8A7E77;font-weight:600;font-size:12px')).join('')
           + sec('자료 넣기 파일') + (C2.files || []).map((x) => prow(esc(x.name), hm2(x.t), 'color:#8A7E77;font-weight:600;font-size:12px')).join(''));
   }
+  // 수달 — 배차 장부 (10/30 대표 "배차 요청도 하고 배차된 내역 실시간 · 이음 톡 · 통화 · 문자 · 입금까지")
+  //  출고 흐름(출고일보 = 통화·문자·카톡·이음 톡을 다 읽어 만든 것) + 이음 배차안내(번호판·기사·운임) + 운임 미송금(입금) 을 출고 건마다 한 줄로
+  function otterPanel() {
+    const rows = (L.flow && L.flow.rows) || [], today = (L.flow && L.flow.today) || mdOf(new Date()), yst = mdOf(new Date(Date.now() - 864e5)), tmr = mdOf(new Date(Date.now() + 864e5));
+    const has = (x, kk) => (x.steps || []).includes(kk), ie = (L.ai && L.ai.ieum) || [];
+    const sec = (t) => `<div style="margin-top:8px;font-size:12px;font-weight:800;color:#8A7E77">${t}</div>`;
+    const fareOf = (x) => { const t = `${x.veh || ''} ${x.memo || ''}`; return L.fare.find((f) => f.driver && t.includes(String(f.driver).replace(/\s|님/g, '').slice(0, 3))); };
+    const ieOf = (x) => ie.find((n) => (n.no && n.no === (x.case || x.no)) || (n.driver && `${x.veh || ''} ${x.memo || ''}`.includes(n.driver)));
+    const lastMemo = (x) => (String(x.memo || '').match(/\[[^\]]+\][^[]*/g) || []).pop() || '';
+    const chip = (t, bg, fg) => `<span style="padding:1px 7px;border-radius:999px;background:${bg};color:${fg};font-size:11px;font-weight:800;white-space:nowrap">${esc(t)}</span>`;
+    const ledger = rows.filter((x) => [yst, today, tmr].includes(x.day) && ['배차 요청', '배차 완료', '출고 완료'].some((kk) => has(x, kk)))
+      .sort((a2, b2) => (a2.day + (a2.time || '')).localeCompare(b2.day + (b2.time || '')));
+    const line = (x) => {
+      const st = has(x, '출고 완료') ? chip('출고 완료', '#E6F7EC', '#1E8E3E') : has(x, '배차 완료') ? chip('배차 완료', '#E6F0FF', '#2F7BF6') : chip('배차 요청', '#FFF1E6', '#C2551A');
+      const n = ieOf(x), f = fareOf(x), pay = n && /착불/.test(n.pay || '') ? chip('착불', '#F3EFE8', '#8A7E77') : f ? (f.sent ? chip('송금 완료', '#E6F7EC', '#1E8E3E') : chip(`미송금 ${f.amount ? Number(f.amount).toLocaleString() : ''}`, '#FFE9E6', '#D93025')) : '';
+      const car = n ? `${n.car || n.size || ''} ${n.plate || ''} · ${n.driver || ''}${n.fare ? ` · ${Number(n.fare).toLocaleString()} ${n.pay || ''}` : ''}` : (x.veh || '');
+      const need = has(x, '배차 요청') && !has(x, '배차 완료') && !has(x, '출고 완료');
+      return `<div style="padding:9px 11px;border-radius:12px;background:#FBF8F5;display:flex;flex-direction:column;gap:4px">
+        <div style="display:flex;align-items:center;gap:6px"><b style="font-size:13px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(x.partner)} · ${esc(x.site || '')}</b>${st}${pay}</div>
+        <div style="font-size:12px;color:#6B5E55">${esc(x.day)} ${esc(x.time || '')} · ${esc(x.from || '천안')} → ${esc(x.site || '')} · ${esc(x.item || '')}</div>
+        ${car ? `<div style="font-size:12px;color:#2F4A7A">${esc(car)}</div>` : ''}
+        ${lastMemo(x) ? `<div style="font-size:11px;color:#8A7E77">${esc(lastMemo(x).slice(0, 90))}</div>` : ''}
+        ${need ? `<div style="display:flex;gap:6px"><button type="button" class="btn or" data-dreq="${esc(x.no)}" style="height:32px;font-size:12px">배차 요청</button><button type="button" class="btn" data-dok="${esc(x.no)}" style="height:32px;font-size:12px">배차 완료</button></div>` : ''}
+      </div>`;
+    };
+    const calls = (((L.ai && L.ai.collect) || {}).calls || []).filter((c) => /배차|기사|차량|운송|상차|하차|화물|카고|윙/.test(c.title || ''));
+    const unpaid = L.fare.filter((f) => !f.sent);
+    const body = sec(`배차 장부 · ${yst}~${tmr}`) + (ledger.map(line).join('') || prow('배차할 출고 건 없음'))
+      + sec('이음 배차안내 (오늘 · 어제)') + (ie.map((n) => prow(`<b>${esc(n.from)} → ${esc(n.to)}</b> ${esc(n.car || n.size || '')} ${esc(n.plate || '')}<div style="font-size:11px;color:#8A7E77">${esc(n.driver || '')} · ${n.fare ? Number(n.fare).toLocaleString() : ''} ${esc(n.pay || '')}${n.no ? ` · ${esc(n.no)}` : ''}</div>`, esc(String(n.at || '').slice(11, 16)), 'color:#8A7E77;font-weight:600;font-size:12px')).join('') || prow('이음 배차안내 없음 (이음 카톡을 자료 넣기에 넣어 주세요)'))
+      + sec('배차 통화') + (calls.slice(0, 6).map((c) => prow(`<b>${esc(c.who)}</b> <span style="font-size:12px;color:#6B5E55">${esc(c.title)}</span>`, esc(String(c.t).slice(11, 16)), 'color:#8A7E77;font-weight:600;font-size:12px')).join('') || prow('배차 통화 없음'))
+      + sec(`운임 미송금 ${unpaid.length}`) + unpaid.slice(0, 20).map((u) => `<div style="display:flex;gap:8px;align-items:center;padding:8px 11px;border-radius:12px;background:#FBF8F5"><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:800">${esc(u.driver || '')}</div><div style="font-size:11px;color:#8A7E77;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(u.job || '')}</div></div><b style="color:#FF453A;font-size:13px">${u.amount ? Number(u.amount).toLocaleString() : ''}</b><button type="button" class="btn" data-paid="${esc(u.id)}" style="height:32px;font-size:12px">입금 완료</button></div>`).join('');
+    P.show('수달 · 배차 · 운임', `배차 요청 ${L.needDisp.length} · 미송금 ${unpaid.length}`, body);
+    const fr = (url) => { const m = el(`<div class="modal"><div class="card" style="width:min(760px,92%);height:86%;border-radius:22px;overflow:hidden;display:flex;flex-direction:column"><div style="display:flex;align-items:center;padding:10px 14px;border-bottom:1px solid #F3EEE9"><b style="flex:1">배차 요청</b><button type="button" class="mx" style="width:34px;height:34px;border:0;border-radius:10px;background:#F4EFEA;cursor:pointer">✕</button></div><iframe src="${url}" style="flex:1;border:0;width:100%"></iframe></div></div>`); v.appendChild(m); m.onclick = (e) => { if (e.target === m || e.target.closest('.mx')) m.remove(); }; };
+    P.el.querySelectorAll('[data-dreq]').forEach((b2) => { b2.onclick = () => { const x = rows.find((r2) => r2.no === b2.dataset.dreq); if (!x) return; const f = { no: x.no, from: x.from || '', to: x.site_full || '', toName: x.site_ok ? `${x.partner} ${x.site}` : '', car: x.size || '', goods: x.item || '', sched: [x.day !== '미정' ? x.day : '', x.time].filter(Boolean).join(' '), say: x.ace ? '에이스' : '' }; fr(`/homt?embed=1&f=${encodeURIComponent(JSON.stringify(f))}`); }; });
+    P.el.querySelectorAll('[data-dok]').forEach((b2) => { b2.onclick = async () => { const x = rows.find((r2) => r2.no === b2.dataset.dok); if (!x || !confirm(`${x.partner} · ${x.site} 배차 완료?`)) return; const hm2 = new Date().toTimeString().slice(0, 5); const e = await S.setShipCase(x.no, { disp: `배차 완료 ${hm2}` }, ME, true); if (e) { alert(`저장 못 했어요 — ${e}`); return; } b2.textContent = '배차 완료 ✓'; b2.disabled = true; load(); }; });
+    P.el.querySelectorAll('[data-paid]').forEach((b2) => { b2.onclick = async () => { b2.textContent = '…'; const e = await S.markFareSent(b2.dataset.paid, ME); if (e) { b2.textContent = '실패'; return; } b2.closest('div').remove(); load(); }; });
+  }
   function open(k) {
     if (!L) return; const a = AI.find((x) => x.k === k), w = a && L.W[k];
     if (a) {
@@ -495,7 +532,7 @@ function office() {
       if (k === 'raccoon') body += `<div style="margin-top:6px;font-size:12px;font-weight:800;color:#8A7E77">이카운트에 넣은 전표</div>` + ((L.ai && L.ai.erp) || []).map((x) => prow(`${esc(x.label)}<div style="font-size:11px;color:#8A7E77">${esc(x.slips.join(', '))} · ${esc(x.file || '')}</div>`, esc(String(x.at).slice(5, 16).replace('T', ' ')), 'color:#8A7E77;font-weight:600;font-size:12px')).join('') + `<div style="margin-top:6px;font-size:12px;font-weight:800;color:#8A7E77">입력 누락</div>`;
       if (k === 'squirrel') { const D = (L.ai && L.ai.docs) || {}; body += `<div style="margin-top:6px;font-size:12px;font-weight:800;color:#8A7E77">출고 건 ↔ 전표 연결</div>` + (D.links || []).map((x) => prow(`${esc(x.no)} <span style="color:#8A7E77">${esc(x.io)} ${esc(x.party)}</span>`, esc(x.slip), 'font-size:12px')).join('') + `<div style="margin-top:6px;font-size:12px;font-weight:800;color:#8A7E77">반영한 명세서 → 거래처 폴더</div>` + (D.filed || []).map((x) => prow(`${esc(x.party)} · ${esc(x.name)}<div style="font-size:11px;color:#8A7E77">${esc(x.kind)} ${esc(x.slip)}</div>`, esc(String(x.at).slice(5, 16)), 'color:#8A7E77;font-weight:600;font-size:12px')).join(''); }
       if (k === 'raccoon') body += L.miss.slice(0, 12).map((x) => prow(`${esc(x.partner)} · ${esc(x.site || '')} <span style="color:#8A7E77">${esc(x.day || '')}</span>`, '누락', 'color:#FF453A')).join('') || prow('입력 누락 없음');
-      if (k === 'otter') body += L.unpaid.slice(0, 14).map((x) => prow(`${esc(x.driver || '')} <span style="color:#8A7E77">${esc(x.job || '')}</span>`, x.amount ? Number(x.amount).toLocaleString() : '', 'color:#FF453A')).join('') || prow('미송금 없음');
+      if (k === 'otter') { otterPanel(); return; }
       if (k === 'hedgehog') body += prow('올릴 전표', L.gwait) + plink('공간 사이트', '/gonggan/');
       if (k === 'cat') body += L.needDisp.slice(0, 14).map((x) => prow(`${esc(x.partner)} · ${esc(x.site || '')} <span style="color:#8A7E77">${esc(x.day)} ${esc(x.time || '')}</span>`, '배차 요청', 'color:#E8732C')).join('') || prow('배차 요청 없음');
       if (k === 'redpanda') { open('pamph'); return; }
