@@ -1212,3 +1212,7 @@ body.kiosk #app::before { background: radial-gradient(60vh 60vh at 10% 6%, rgba(
 .ks-grab { width: 12cqw; height: 1.2cqw; margin: 2.2cqw auto 3cqw; cursor: grab; }
 @keyframes ks-rise { from { transform: translateY(100%); } to { transform: translateY(0); } }
 @keyframes ks-fade { from { background: rgba(0,0,0,0); } }
+.ki-w b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 0.8cqw; }
+.ki-w span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ki-p { font-size: 3.5cqw; }
+.ki-r { padding: 1.5cqw 0; }
