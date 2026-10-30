@@ -126,3 +126,9 @@ button { font: inherit; }
 .v3 .card.np, .v3 [style*="pointer-events:none"] .card { pointer-events: none; }
 .v3 .modal { pointer-events: auto; }
 #stage > div:not(.v) a, #stage > div:not(.v) button { pointer-events: auto; }
+
+/* 관제탑 — 배경 없이 작은 글씨 (10/30) */
+.twr .tb > div { background: transparent !important; padding: 1px 2px !important; border-radius: 0 !important; font-size: 10.5px !important; line-height: 1.35; gap: 6px !important; }
+.twr .tb > div * { font-size: 10.5px !important; }
+.twr .tb { text-shadow: 0 0 3px rgba(255,255,255,.95), 0 0 6px rgba(255,255,255,.8); color: #3A3330; }
+.twr .tb > div[style*="margin-top:8px"] { margin-top: 6px !important; color: #6B7A8C !important; }
