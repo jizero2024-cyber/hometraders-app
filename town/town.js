@@ -382,7 +382,9 @@ function mailItems(L) {   // 우체통 — 사이트·키오스크 자료 넣기
   const mac = (L.mailMac && L.mailMac.items) || [], names = [...new Set(mac.map((x) => x.vendor).filter(Boolean))].sort((a, b) => b.length - a.length);
   const loc = (iso) => { const d = new Date(iso); return isNaN(d) ? '' : new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 16); };
   const site = L.inbox.map((x) => ({ id: x.id, src: MSRC[0], kind: x.kind === 'file' ? '파일' : '글', name: x.name || '', t: loc(x.created_at), vendor: names.find((n) => (x.name || '').replace(/\s/g, '').includes(n.replace(/\s/g, ''))) || '', who: x.created_by || '', st: x.status }));
-  return [...site, ...mac].sort((a, b) => (a.t < b.t ? 1 : -1));
+  const byId = new Map(site.map((x) => [x.id, x]));   // 맥 도우미가 받아 둔 사이트 자료(sid) → 사이트 줄에 미리보기만 붙임
+  const rest = mac.filter((x) => { const o = x.sid && byId.get(x.sid); if (o) { o.img = x.img; return false; } return true; });
+  return [...site, ...rest].sort((a, b) => (a.t < b.t ? 1 : -1));
 }
 function mailFolders(L) {   // 출처 · 날짜 · 거래처 폴더 (검색어로 거름)
   const by = L.mby || 'src', q = (L.mq || '').trim().toLowerCase().replace(/\s/g, '');
@@ -393,7 +395,7 @@ function mailFolders(L) {   // 출처 · 날짜 · 거래처 폴더 (검색어�
   if (by === 'src') ks = MSRC.filter((k) => g.has(k)); else if (by === 'day') ks.sort().reverse(); else ks.sort((a, b) => (a === '거래처 모름') - (b === '거래처 모름') || g.get(b).length - g.get(a).length);
   const td = mdOf(new Date()), yd = mdOf(new Date(Date.now() - 864e5));
   const lab = (k) => { if (by !== 'day') return k; const md = k.slice(5).replace('-', '/'); return md === td ? `오늘 ${md}` : md === yd ? `어제 ${md}` : `${md} ${'일월화수목금토'[new Date(k).getDay()]}`; };
-  const row = ([x, i]) => `<div data-mi="${i}" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;background:#fff;font-size:13px;cursor:pointer">${x.img || x.id ? '<span style="font-size:15px">🖼</span>' : ''}<span style="flex:1;min-width:0"><span style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700">${esc(x.name)}</span><span style="font-size:11px;color:#8A7E77">${esc([by !== 'src' ? x.src : '', x.kind, by !== 'vendor' ? x.vendor : '', x.who, x.where].filter(Boolean).join(' · '))} ${esc(x.t.slice(5, 16).replace('T', ' ').replace('-', '/'))}</span></span>${x.st ? `<span style="font-weight:800;font-size:12px;color:${(MST[x.st] || [0, '#8A7E77'])[1]}">${(MST[x.st] || [x.st])[0]}</span>` : ''}</div>`;
+  const row = ([x, i]) => `<div data-mi="${i}" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;background:#fff;font-size:13px;cursor:pointer">${x.img ? '<span style="font-size:15px">🖼</span>' : ''}<span style="flex:1;min-width:0"><span style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700">${esc(x.name)}</span><span style="font-size:11px;color:#8A7E77">${esc([by !== 'src' ? x.src : '', x.kind, by !== 'vendor' ? x.vendor : '', x.who, x.where].filter(Boolean).join(' · '))} ${esc(x.t.slice(5, 16).replace('T', ' ').replace('-', '/'))}</span></span>${x.st ? `<span style="font-weight:800;font-size:12px;color:${(MST[x.st] || [0, '#8A7E77'])[1]}">${(MST[x.st] || [x.st])[0]}</span>` : ''}</div>`;
   return ks.map((k, n) => `<details${n === 0 || q ? ' open' : ''} style="border-radius:12px;background:#FBF8F5;padding:2px 6px"><summary style="cursor:pointer;padding:8px 6px;font-size:14px;font-weight:800;color:#4A3F3A">${esc(lab(k))} <span style="padding:1px 8px;border-radius:999px;background:#EFE6DD;font-size:12px">${g.get(k).length}</span></summary><div style="display:flex;flex-direction:column;gap:4px;padding:0 0 6px">${g.get(k).slice(0, q ? 200 : 40).map(row).join('')}</div></details>`).join('') || prow(q ? '찾는 자료 없음' : '자료 없음');
 }
 function mailBox(L) {
