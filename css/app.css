@@ -1311,7 +1311,7 @@ body.hm-wall .hm-top, body.hm-wall .hm-side, body.hm-wall .hm-quick, body.hm-wal
 body.hm-wall .hm-body { display: block !important; }
 body.hm-wall .hm-body { max-width: 96vw !important; margin: 0 auto !important; }   /* 큰 화면에서 1280 에 갇혀 버튼이 칸 밖으로 나가던 것 (10/30) */
 body.hm-wall .hm-main { max-width: none !important; margin: 0 !important; padding: 18px 22px 120px !important; }
-body.hm-wall .fl-lh, body.hm-wall .fl-row { grid-template-columns: 96px minmax(150px, 1.5fr) minmax(140px, 1.4fr) minmax(130px, 1.2fr) 64px 264px !important; }   /* 버튼 칸은 버튼만큼, 나머지는 글 칸 (10/30 — 글이 세로로 쪼개지던 것) */
+body.hm-wall .fl-lh, body.hm-wall .fl-row { grid-template-columns: 96px minmax(150px, 1.5fr) minmax(140px, 1.4fr) minmax(130px, 1.2fr) 64px 470px !important; }   /* 버튼 칸은 버튼만큼, 나머지는 글 칸 (10/30 — 글이 세로로 쪼개지던 것) */
 body.hm-wall .fl-row *, body.hm-wall .fl-lh * { white-space: normal !important; text-overflow: clip !important; overflow: visible !important; word-break: keep-all; }
 body.hm-wall .fl-row { font-size: 16px; } body.hm-wall .fl-nmt { font-size: 17px; }
 body.hm-wall .fl-row .fl-ds { color: #3A3A3C !important; font-size: 15px !important; font-weight: 600; }   /* 품목 · 상차→하차 · 차량 글씨 진하게 (10/30 대표 "잘 안 보여") */
@@ -1351,6 +1351,6 @@ body.hm-wall .fl-row > .fl-c, body.hm-wall .fl-row > .fl-acts { align-self: cent
 body.hm-wall .fl-tm b { font-size: 22px !important; line-height: 1.15; }
 body.hm-wall .fl-tm span { font-size: 13px !important; color: #555 !important; }
 body.hm-wall .fl-lh > span, body.hm-wall .fl-row > .fl-c { text-align: left; }
-body.hm-wall .fl-acts { flex-wrap: wrap !important; row-gap: 6px; }   /* 명세표·변환·거래처 전달이 차량 칸 위로 넘치던 것 */
-body.hm-wall .fl-acts .fl-stm { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+body.hm-wall .fl-acts { flex-wrap: nowrap !important; align-items: center; }   /* 명세표·변환·거래처 전달도 버튼과 한 줄 (10/30 대표 "왜 이렇게 떠" — 두 줄로 쌓이던 것) */
+body.hm-wall .fl-acts .fl-stm { display: flex; flex-wrap: nowrap; gap: 6px; align-items: center; }
 body.hm-wall .fl-acts button.arm { background: #FF3B30 !important; color: #fff !important; border-color: #FF3B30 !important; }   /* 한 번 더 누르면 실행 */
