@@ -139,6 +139,19 @@ function mbHtml() {   // 물범이 — 읽은 것 · 되묻기 · 넣기 (10/30 
   return `${head}${asks}${nos}${msg}<div class="ks-k">품목 ${(r.lines || []).length}</div><div class="ks-box mb-ls">${ls}</div>${m.err ? `<div class="kt-err">${esc(m.err)}</div>` : ''}${done}${go}`;
 }
 // 물범이 명세서 (10/30 대표 "오른쪽 아래 물범이 · 명세서 전달해줘 엉! · 변환 명세표 / 이카운트 명세표 둘 다")
+function bodyFrame(title, url) {   // 화면 위에 따로 띄우는 창 — 키오스크가 다시 그려져도 그대로 (10/30)
+  document.getElementById('ki-frm')?.remove();
+  const d = document.createElement('div'); d.id = 'ki-frm'; d.className = 'ki-frm';
+  d.innerHTML = `<div class="ki-frmh"><b>${esc(title)}</b><button type="button" class="ks-x" aria-label="닫기">✕</button></div><iframe src="${esc(url)}"></iframe>`;
+  d.querySelector('button').onclick = () => d.remove(); document.body.appendChild(d);
+}
+// 가로로 두면 /main 출고 흐름 리스트 그대로 (10/30 대표 "가로형 쓰고 싶은 사람 · /main 리스트처럼") — 물범이 · 우체통은 위에 그대로
+function landscape() {
+  const on = window.innerWidth > window.innerHeight * 1.15, ex = document.getElementById('ki-land');
+  if (on && !ex) { const f = document.createElement('iframe'); f.id = 'ki-land'; f.src = '/main'; f.title = '출고 흐름'; document.body.appendChild(f); }
+  if (!on && ex) ex.remove();
+  document.body.classList.toggle('ki-wide', on);
+}
 const saleSlips = (r) => [...new Set((r.lines || []).filter((l) => l.k === '판매' && l.st === '입력').flatMap((l) => l.slips || []))];
 const toWho = (r) => {   // 받는 사람 [사람사는집전종건소장님] (10/30 대표) — 소장 칸이 비면 메모에서 '이름 소장' 찾기
   const bm = r.boss || ((String(r.memo || '').match(/([가-힣]{2,4})\s?(소장|팀장|과장|대리|사장|부장|이사|실장)님?/) || []).slice(1, 3).join('')) || '';
@@ -156,12 +169,11 @@ function mbFloat() {
 }
 function stmtSheet() {
   const rs = stmtTodo(), a = K.anim ? ' in' : ''; K.anim = false;
-  const fr = K.frame ? `<div class="ki-frm"><div class="ki-frmh"><b>${esc(K.frame.split('|')[0])}</b><button type="button" class="ks-x" data-ki="frmx" aria-label="닫기">✕</button></div><iframe src="${esc(K.frame.split('|')[1])}"></iframe></div>` : '';
   return `<div class="ks-ov${a}" data-ki="close"><div class="ks${a}" role="dialog" aria-label="명세서 전달"><div class="ks-grab"></div>
     <div class="ks-hd"><div><div class="ks-t">명세서 전달 ${rs.length}</div></div><button type="button" class="ks-x" data-ki="close" aria-label="닫기">✕</button></div>
     ${rs.map((r) => `<div class="ki-st"><div class="ki-stn"><b>${esc(toWho(r))} 명세서</b><span>${esc(r.site || '')}</span><span>${esc(r.day)} · 판매 ${esc(saleSlips(r).join(', '))}</span></div>
       <div class="ki-stb"><button type="button" class="ks-b" data-ki="stconv" data-no="${esc(r.no)}">변환 명세표</button><button type="button" class="ks-b" data-ki="stpdf" data-no="${esc(r.no)}">이카운트 명세표</button><button type="button" class="ks-b go" data-ki="stsent" data-no="${esc(r.no)}">전달함</button></div></div>`).join('') || '<div class="ki-z">전달할 명세서 없음</div>'}
-    ${fr}</div></div>`;
+    </div></div>`;
 }
 function toolSheet() {
   if (!K.tool) return '';
@@ -185,6 +197,7 @@ function toolSheet() {
 }
 
 export function screen() {
+  setTimeout(landscape, 0);
   const n = new Date(), wd = '일월화수목금토'[n.getDay()];
   if (!K.data) return `<div class="ki-box"><div class="ki"><div class="ki-z">${esc(K.err || '불러오는 중')}</div></div></div>`;
   const g = groups(), at = K.data.at ? String(K.data.at).slice(11, 16) : '';
@@ -309,11 +322,10 @@ function onTap(e, draw) {
   else if (a === 'chk') { const k = t.dataset.k; K.chk[k] = !K.chk[k]; draw(); }
   else if (a === 'stconv' || a === 'stpdf' || a === 'stsent') {   // 물범이 명세서 — 변환 명세표 · 이카운트 명세표 · 전달함
     const r = byNo(t.dataset.no); if (!r) return; const sl = saleSlips(r);
-    if (a === 'stconv') { const route = /공간/.test(r.partner) ? 'stmt-gong' : 'stmt-etc'; try { sessionStorage.setItem('stmtPreset', JSON.stringify({ route, text: sl.join(' '), rows: r.salerows || null })); } catch (_) { /* 무시 */ } K.frame = `${toWho(r)} 변환 명세표|/${route}?pre=1`; draw(); return; }
+    if (a === 'stconv') { const route = /공간/.test(r.partner) ? 'stmt-gong' : 'stmt-etc'; try { sessionStorage.setItem('stmtPreset', JSON.stringify({ route, text: sl.join(' '), rows: r.salerows || null })); } catch (_) { /* 무시 */ } bodyFrame(`${toWho(r)} 변환 명세표`, `/${route}?pre=1`); return; }
     if (a === 'stpdf') { S.getSlipLinks(sl).then((m) => { const hit = sl.flatMap((x) => (m[x] || []).filter((y) => !y.kind || y.kind === '판매'))[0]; if (!hit) { K.toast = 'PDF 아직 없어요'; draw(); setTimeout(() => { K.toast = ''; draw(); }, 2500); return; } window.open(`https://drive.google.com/file/d/${encodeURIComponent(hit.drive_id)}/view`, '_blank'); }).catch(() => {}); return; }
     if (a === 'stsent') { S.addFlowMark(`sent:${r.no}`, `${r.partner} ${r.site || ''}`, K.me).then((e) => { if (!e) K.marks[`sent:${r.no}`] = { created_at: new Date().toISOString() }; K.toast = e ? `못 했어요 — ${e}` : '전달 체크했어요'; draw(); setTimeout(() => { K.toast = ''; draw(); }, 2000); }); return; }
   }
-  else if (a === 'frmx') { K.frame = ''; draw(); }
   else if (a === 'tool') { K.tool = t.dataset.k; K.note = ''; if (K.tool === 'box') K.sug = null; K.anim = true; draw(); }
   else if (a === 'paste') {   // 자료 넣기면 복사한 사진·파일도 바로 올림, 글은 칸에 (10/30 대표 "복붙으로도")
     try {
@@ -345,6 +357,7 @@ export function start(draw, me) {
   document.addEventListener('dragover', (e) => { if (K.tool === 'box') e.preventDefault(); });
   document.addEventListener('drop', (e) => { if (K.tool !== 'box') return; e.preventDefault(); const fs = [...((e.dataTransfer && e.dataTransfer.files) || [])]; if (fs.length) putInbox(fs, draw); });
   document.addEventListener('input', (e) => { if (e.target.id === 'mb-text') (K.mb || (K.mb = {})).text = e.target.value; });
+  window.addEventListener('resize', landscape);
   const wake = () => { try { if (navigator.wakeLock && document.visibilityState === 'visible') navigator.wakeLock.request('screen').then((l) => { K.lock = l; }).catch(() => {}); } catch (_) { /* 무시 */ } };
   wake(); document.addEventListener('visibilitychange', wake);
   document.addEventListener('click', (e) => onTap(e, draw));
