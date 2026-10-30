@@ -175,9 +175,9 @@ function toolSheet() {
     ? `<textarea id="kt-text" class="kt-ta" rows="6" placeholder="카톡 글 붙여넣기">${esc(K.talk)}</textarea>
        <div class="ks-bs kt-bs"><button type="button" class="ks-b" data-ki="paste">붙여넣기</button><button type="button" class="ks-b go" data-ki="suggest" ${K.busy ? 'disabled' : ''}>${K.busy ? '찾는 중…' : '구매처 찾기'}</button></div>
        ${sugHtml(K.sug)}`
-    : `<textarea id="kt-text" class="kt-ta" rows="6" placeholder="카톡·문자 글 붙여넣기">${esc(K.talk)}</textarea>
+    : `<textarea id="kt-text" class="kt-ta" rows="6" placeholder="카톡 · 문자 · 메모 붙여넣기">${esc(K.talk)}</textarea>
        <div class="ks-bs kt-bs"><button type="button" class="ks-b" data-ki="paste">붙여넣기</button><button type="button" class="ks-b" data-ki="pick">사진·파일</button><button type="button" class="ks-b go" data-ki="put" ${K.busy ? 'disabled' : ''}>${K.busy ? '올리는 중…' : '넣기'}</button></div>
-       ${K.note ? `<div class="kt-note">${esc(K.note)}</div>` : ''}<input type="file" id="kt-file" multiple accept="image/*,.heic,.pdf,.xlsx,.xls,.csv,.txt" hidden>`;
+       ${K.note ? `<div class="kt-note">${esc(K.note)}</div>` : ''}<input type="file" id="kt-file" multiple hidden>`;
   return `<div class="ks-ov${a}" data-ki="close"><div class="ks${a}" role="dialog" aria-label="${talk ? '카톡 넣기' : '자료 넣기'}">
     <div class="ks-grab"></div>
     <div class="ks-hd"><div><div class="ks-t">${talk ? '카톡 넣기' : '자료 넣기'}</div></div><button type="button" class="ks-x" data-ki="close" aria-label="닫기">✕</button></div>
@@ -310,7 +310,7 @@ function onTap(e, draw) {
   else if (a === 'stconv' || a === 'stpdf' || a === 'stsent') {   // 물범이 명세서 — 변환 명세표 · 이카운트 명세표 · 전달함
     const r = byNo(t.dataset.no); if (!r) return; const sl = saleSlips(r);
     if (a === 'stconv') { const route = /공간/.test(r.partner) ? 'stmt-gong' : 'stmt-etc'; try { sessionStorage.setItem('stmtPreset', JSON.stringify({ route, text: sl.join(' '), rows: r.salerows || null })); } catch (_) { /* 무시 */ } K.frame = `${toWho(r)} 변환 명세표|/${route}?pre=1`; draw(); return; }
-    if (a === 'stpdf') { S.getSlipLinks(sl).then((m) => { const hit = sl.flatMap((x) => (m[x] || []).filter((y) => !y.kind || y.kind === '판매'))[0]; if (!hit) { K.toast = 'PDF 아직 없어요'; draw(); setTimeout(() => { K.toast = ''; draw(); }, 2500); return; } K.frame = `${toWho(r)} 이카운트 명세표|https://drive.google.com/file/d/${encodeURIComponent(hit.drive_id)}/preview`; draw(); }).catch(() => {}); return; }
+    if (a === 'stpdf') { S.getSlipLinks(sl).then((m) => { const hit = sl.flatMap((x) => (m[x] || []).filter((y) => !y.kind || y.kind === '판매'))[0]; if (!hit) { K.toast = 'PDF 아직 없어요'; draw(); setTimeout(() => { K.toast = ''; draw(); }, 2500); return; } window.open(`https://drive.google.com/file/d/${encodeURIComponent(hit.drive_id)}/view`, '_blank'); }).catch(() => {}); return; }
     if (a === 'stsent') { S.addFlowMark(`sent:${r.no}`, `${r.partner} ${r.site || ''}`, K.me).then((e) => { if (!e) K.marks[`sent:${r.no}`] = { created_at: new Date().toISOString() }; K.toast = e ? `못 했어요 — ${e}` : '전달 체크했어요'; draw(); setTimeout(() => { K.toast = ''; draw(); }, 2000); }); return; }
   }
   else if (a === 'frmx') { K.frame = ''; draw(); }
