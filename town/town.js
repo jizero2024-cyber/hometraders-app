@@ -4,7 +4,7 @@ import * as S from '/js/store-supabase.js?v=13';
 import * as CN from '/js/cheonan.js?v=7';   // 천안 재고 — 실사 − 뺀 것, 나갈 것 (10/31)
 import * as JIM from './jim.js?v=2';
 import * as W3D from './v3d.js?v=21';
-import * as O3D from './o3d.js?v=28';
+import * as O3D from './o3d.js?v=29';
 import { portrait, KINDS } from './kit3d.js?v=6';
 
 const stage = document.getElementById('stage');
@@ -308,16 +308,16 @@ const STAFF = [
 // 실제 자료 (10/29 대표 "AI 가 무슨 작업 · 얼마나 · 누가 확인 — 의미 없는 가짜는 빼")
 let ME = '';
 const AI = [   // 실제로 돌아가는 AI 작업만. kind: task = 할 일 0 이면 마당에서 쉼, feed = 계속 받는 일
-  { k: 'seal', who: '김맥순', job: '출고일보', av: 'seal', f: 2, x: 6, kind: 'feed' },
-  { k: 'raccoon', who: '전표입력', job: '이카운트 받기 · 입력', av: 'raccoon', f: 1, x: 4, kind: 'task' },
-  { k: 'otter', who: '배차운임', job: '운임 미송금', av: 'otter', f: 1, x: 11, kind: 'task' },
-  { k: 'hedgehog', who: '공간전표', job: '공간 사이트 전표', av: 'hedgehog', f: 1, x: 18, kind: 'task' },
-  { k: 'squirrel', who: '서류정리', job: '전표 PDF · 명세서', av: 'squirrel', f: 2, x: -14, kind: 'feed' },
+  { k: 'seal', who: '김맥순', job: '출고일보', av: 'seal', f: 5, x: 6, kind: 'feed' },
+  { k: 'raccoon', who: '전표입력', job: '이카운트 받기 · 입력', av: 'raccoon', f: 2, x: -22, kind: 'task' },
+  { k: 'otter', who: '배차운임', job: '운임 미송금', av: 'otter', f: 1, x: 8, kind: 'task' },
+  { k: 'hedgehog', who: '공간전표', job: '공간 사이트 전표', av: 'hedgehog', f: 2, x: -12, kind: 'task' },
+  { k: 'squirrel', who: '서류정리', job: '전표 PDF · 명세서', av: 'squirrel', f: 3, x: 8, kind: 'feed' },
   { k: 'cat', who: '이음배차', job: '배차', av: 'cat', f: 1, x: -26, kind: 'task' },
-  { k: 'guppy', who: '통화정리', job: '비토 통화', av: 'guppy', f: 1, x: -17, kind: 'feed' },
-  { k: 'redpanda', who: '디자인', job: '디자인 · 카탈로그', av: 'redpanda', f: 2, x: 17, kind: 'task' },
-  { k: 'owl', who: '검수', job: '기능 점검', av: 'owl', f: 1, x: -9, kind: 'feed' },   // 10/30 대표 "검수하는 애도 있어야" — town_status.qa_checks
-  { k: 'turtle', who: '마감이', job: '월마감 · 구매·판매·계산서', av: 'turtle', f: 1, x: 25, kind: 'task' },   // 10/30 대표 "마감이도 추가" — site_inbox 'town:close'
+  { k: 'guppy', who: '통화정리', job: '비토 통화', av: 'guppy', f: 1, x: -16, kind: 'feed' },
+  { k: 'redpanda', who: '디자인', job: '디자인 · 카탈로그', av: 'redpanda', f: 4, x: 6, kind: 'task' },
+  { k: 'owl', who: '검수', job: '기능 점검', av: 'owl', f: 2, x: -2, kind: 'feed' },   // 10/30 대표 "검수하는 애도 있어야" — town_status.qa_checks
+  { k: 'turtle', who: '마감이', job: '월마감 · 구매·판매·계산서', av: 'turtle', f: 2, x: 14, kind: 'task' },   // 10/30 대표 "마감이도 추가" — site_inbox 'town:close'
 ];
 const PAMPH = ['표지', '제품 소개', '부속자재', '시공 순서', '기능 상세', '뒷표지 주소', '인쇄소 보내기'];
 const mdOf = (d) => `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;

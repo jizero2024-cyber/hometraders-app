@@ -46,37 +46,30 @@ export const DOT = { ok: '#34C759', bad: '#FF453A', run: '#2F7BF6', idle: '#B4B2
 
 // ── 사무실: 목조주택 (10/30 대표 그림 — 2층 + 다락, 층마다 방 둘, 서까래 보이는 박공지붕, 마당 수영장) ──
 export function office(host, o) {
-  const K = base(host, { ...o, cam: [8, 30, 118], target: [0, 16, 4], bg: '#D8E9FA' });
+  const K = base(host, { ...o, cam: [14, 46, 170], target: [0, 28, 0], bg: '#D8E9FA' });
   const { scene, box, cyl, mat, clickable, tag, ticks } = K;
-  const FW = 60, FD = 22, FH = 10, WOOD = '#C9955E', WOOD2 = '#A8774A';
+  // 6층 사무실 (10/31 대표 "단지 그림의 사무실이랑 같게") — 앞이 열린 흰 건물 · 층마다 방 · 오른쪽 바깥 흰 계단 · 옥상 간판
+  const FW = 60, FD = 22, FH = 10, NF = 6, WOOD = '#C9955E', WOOD2 = '#A8774A';
   box(420, 1, 300, '#9ED27F', 0, -1.2, 20); box(86, 1, 66, '#D9D3C6', 0, -1, 8); box(420, 0.2, 10, '#6B7280', 0, -0.2, 50);   // 땅 · 앞 길
-  // 방 — [층, x0, x1, 바닥, 벽, 이름]
-  const ROOMS = [[0, -FW / 2, FW / 2, '#F3EBDD', '#FBF6EE', '1F 안내 · 라운지'], [1, -FW / 2, 0, '#EFE6D6', '#E6EFF6', '2F 배차 · 통신'], [1, 0, FW / 2, '#ECE4D6', '#F3EFE6', '2F 회계']];   // 1층은 한 층 전부 공용 (10/30 대표)
-  ROOMS.forEach(([f, x0, x1, fc, wc, name]) => {
-    const y = f * FH, w = x1 - x0, cx = (x0 + x1) / 2; box(w, 0.5, FD, fc, cx, y, 0).castShadow = false; box(w, FH, 0.4, wc, cx, y + 0.5, -FD / 2);
-    const lp = new THREE.PointLight('#FFF1DA', 34, 34, 1.4); lp.position.set(cx, y + FH - 1.2, 2); scene.add(lp);
-    tag(null, pill(name, 'rgba(255,255,255,.92)', '#6B5E55'), x0 + 5, y + 1.2, FD / 2 - 1).d.style.pointerEvents = 'none';   // 방 이름은 바닥 앞쪽 (뒷벽 위는 윗층 이름표와 겹쳤음 10/30)
+  const ROOMS = [['#F3EBDD', '#FBF6EE', '1F 안내 · 라운지'], ['#EFE6D6', '#E6EFF6', '2F 배차 · 통신'], ['#ECE4D6', '#F3EFE6', '3F 전표 · 회계'], ['#EEE8DC', '#F1F4F0', '4F 서류 · 인쇄'], ['#ECE6DE', '#F4EEF6', '5F 디자인'], ['#E9DCC4', '#FBF7EF', '6F 대표실 · 김맥순']];
+  ROOMS.forEach(([fc, wc, name], f) => {
+    const y = f * FH; box(FW, 0.5, FD, fc, 0, y, 0).castShadow = false; box(FW, FH, 0.4, wc, 0, y + 0.5, -FD / 2);
+    for (let k2 = 0; k2 < 3; k2++) { const wx = -18 + k2 * 18; box(10.4, 4.4, 0.2, '#FFFFFF', wx, y + 4.3, -FD / 2 + 0.3); const pn = box(10, 4, 0.1, '#BFE3F7', wx, y + 4.5, -FD / 2 + 0.42, scene, { roughness: 0.1, emissive: '#BFE3F7', emissiveIntensity: 0.25 }); pn.castShadow = false; }   // 뒷벽 창
+    box(FW + 1, 0.7, 0.8, '#FFFFFF', 0, y - 0.1, FD / 2 - 0.3);   // 층 앞 흰 테
+    const lp = new THREE.PointLight('#FFF1DA', 30, 36, 1.4); lp.position.set(0, y + FH - 1.2, 2); scene.add(lp);
+    tag(null, pill(name, 'rgba(255,255,255,.92)', f === NF - 1 ? '#E8732C' : '#6B5E55'), -FW / 2 + 6, y + 1.2, FD / 2 - 1).d.style.pointerEvents = 'none';
   });
-  box(FW, 0.5, FD, '#E9DCC4', 0, 2 * FH, 0).castShadow = false;   // 다락 바닥
-  { const lp = new THREE.PointLight('#FFE9C8', 40, 40, 1.4); lp.position.set(0, 2 * FH + 8, 2); scene.add(lp); tag(null, pill('다락 · 대표실 · 서류 · 디자인', 'rgba(255,255,255,.92)', '#E8732C'), -24, 2 * FH + 1.2, FD / 2 - 1).d.style.pointerEvents = 'none'; }
-  box(0.4, 2 * FH, FD, '#F4F0E8', -FW / 2, 0.5, 0); box(0.4, 2 * FH, FD, '#F4F0E8', FW / 2, 0.5, 0);   // 옆벽
-  [1].forEach((f) => { const y = f * FH + 0.5; box(0.4, FH, FD * 0.55, '#EDE4D4', 0, y, -FD / 2 + FD * 0.275); box(0.4, 2.6, FD * 0.45, '#EDE4D4', 0, y + FH - 2.6, FD / 2 - FD * 0.225); box(0.15, FH - 2.6, 0.2, WOOD2, 0, y, FD / 2 - FD * 0.45 + 0.1); });   // 가운데 칸막이 (문)
-  // 목조 기둥 · 보
-  [-FW / 2, 0, FW / 2].forEach((x) => [-FD / 2, FD / 2].forEach((z) => box(0.9, 2 * FH + 0.6, 0.9, WOOD, x, 0, z)));
-  [FH, 2 * FH].forEach((y) => { box(FW + 1, 0.8, 0.9, WOOD, 0, y - 0.3, FD / 2); box(FW + 1, 0.8, 0.9, WOOD, 0, y - 0.3, -FD / 2); });
-  // 박공지붕 — 용마루가 앞뒤(z), 앞이 열려 서까래·트러스가 보임
-  const RH = 18, RW = FW + 8, ry0 = 2 * FH + 0.5, A = Math.atan2(RH, RW / 2), RL = Math.hypot(RW / 2, RH);
-  [-1, 1].forEach((sg) => { const sl = new THREE.Mesh(new THREE.BoxGeometry(RL + 1, 0.7, FD + 5), mat('#B5503A')); sl.position.set(sg * RW / 4, ry0 + RH / 2 + 0.4, 0); sl.rotation.z = -sg * A; sl.castShadow = true; sl.receiveShadow = true; scene.add(sl);
-    for (let i = 1; i < 7; i++) { const t = i / 7, st = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.25, FD + 5.2), mat('#93402F')); st.position.set(sg * (RW / 2) * (1 - t), ry0 + RH * t + 0.85, 0); scene.add(st); } });
-  const ridge = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, FD + 5.4, 12), mat('#93402F')); ridge.rotation.x = Math.PI / 2; ridge.position.set(0, ry0 + RH + 0.6, 0); scene.add(ridge);
-  const beam = (x1, y1, x2, y2, z, t = 0.7) => { const L = Math.hypot(x2 - x1, y2 - y1), m = new THREE.Mesh(new THREE.BoxGeometry(L, t, t), mat(WOOD)); m.position.set((x1 + x2) / 2, (y1 + y2) / 2, z); m.rotation.z = Math.atan2(y2 - y1, x2 - x1); m.castShadow = true; scene.add(m); };
-  [-FD / 2 + 0.5, -FD / 6, FD / 6, FD / 2 - 0.5].forEach((z) => { beam(-RW / 2 + 2, ry0 + 1, 0, ry0 + RH - 0.5, z); beam(RW / 2 - 2, ry0 + 1, 0, ry0 + RH - 0.5, z); beam(0, ry0, 0, ry0 + RH - 0.5, z, 0.6); beam(-RW / 4, ry0 + 0.3, -RW / 4, ry0 + RH / 2, z, 0.5); beam(RW / 4, ry0 + 0.3, RW / 4, ry0 + RH / 2, z, 0.5); beam(-RW / 4, ry0 + 0.3, 0, ry0 + RH * 0.6, z, 0.45); beam(RW / 4, ry0 + 0.3, 0, ry0 + RH * 0.6, z, 0.45); });
-  [0.3, 0.6].forEach((t) => [-1, 1].forEach((sg) => { const pu = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, FD), mat(WOOD2)); pu.position.set(sg * (RW / 2) * (1 - t) - sg * 0.6, ry0 + RH * t - 0.4, 0); scene.add(pu); }));
+  box(0.6, NF * FH + 0.6, FD, '#F7F5F0', -FW / 2, 0, 0); box(0.6, NF * FH + 0.6, FD, '#F7F5F0', FW / 2, 0, 0);   // 옆벽
+  [-FW / 2, FW / 2].forEach((x) => [-FD / 2, FD / 2].forEach((z) => box(1.1, NF * FH + 0.6, 1.1, '#FFFFFF', x, 0, z)));   // 흰 기둥
+  // 옥상 — 평지붕 · 난간 · 화분 · 간판
+  const RY = NF * FH + 0.5; box(FW + 2, 0.8, FD + 2, '#FFFFFF', 0, RY, 0); [-1, 1].forEach((sg) => box(FW + 2, 1.4, 0.4, '#EDEBE6', 0, RY + 0.8, sg * (FD / 2 + 0.8))); [-1, 1].forEach((sg) => box(0.4, 1.4, FD + 2, '#EDEBE6', sg * (FW / 2 + 0.8), RY + 0.8, 0));
   const logoT = new THREE.TextureLoader().load('/icons/logo-full.png'); logoT.colorSpace = THREE.SRGBColorSpace;
-  { const sg = new THREE.Mesh(new THREE.PlaneGeometry(10, 5), new THREE.MeshBasicMaterial({ map: logoT, transparent: true })); sg.position.set(0, ry0 + 12.5, FD / 2 - 0.3); scene.add(sg); }
-  // 바깥 계단 (오른쪽) — 2층 · 다락
-  for (let f = 0; f < 2; f++) for (let i = 0; i < 8; i++) box(5, 0.4, 2, '#E3DED6', FW / 2 + 3.5, f * FH + i * (FH / 8), -FD / 2 + 2 + i * 2.1);
-  for (let f = 0; f < 2; f++) box(0.12, 1.1, 17, '#C9CDD2', FW / 2 + 6.1, f * FH + FH / 2 + 0.6, -FD / 2 + 9.4).rotation.x = -Math.atan2(FH, 16.8);
+  { box(18, 6, 1, '#FFFFFF', 14, RY + 1, FD / 2 - 1); box(18.6, 0.5, 1.2, '#D9DDE2', 14, RY + 7, FD / 2 - 1); const sg = new THREE.Mesh(new THREE.PlaneGeometry(15, 4.6), new THREE.MeshBasicMaterial({ map: logoT, transparent: true })); sg.position.set(14, RY + 4, FD / 2 - 0.45); scene.add(sg); }
+  [[-24, -6], [-16, -7], [-26, 4]].forEach(([x, z], i) => { const tr = new THREE.Mesh(new THREE.IcosahedronGeometry(2.2 + (i % 2) * 0.6, 0), mat(['#5DAA58', '#4E9E52', '#6FBF5E'][i], { flatShading: true })); tr.position.set(x, RY + 3, z); tr.castShadow = true; scene.add(tr); cyl(1.2, 1.2, '#E8E2D6', x, RY + 0.8, z, scene, 10); });
+  // 바깥 계단 (오른쪽, 흰색) — 모든 층
+  for (let f = 0; f < NF - 1; f++) { for (let i = 0; i < 8; i++) box(5, 0.4, 2, '#F4F2EE', FW / 2 + 3.5, f * FH + i * (FH / 8), -FD / 2 + 2 + i * 2.1); box(0.12, 1.1, 17, '#C9CDD2', FW / 2 + 6.1, f * FH + FH / 2 + 0.6, -FD / 2 + 9.4).rotation.x = -Math.atan2(FH, 16.8); box(6, 0.4, 4, '#F4F2EE', FW / 2 + 3.5, (f + 1) * FH, FD / 2 - 1.5); }
+  // 담쟁이 (건물 오른쪽 위로)
+  for (let k2 = 0; k2 < 14; k2++) { const lf = new THREE.Mesh(new THREE.IcosahedronGeometry(1.6 + (k2 % 3) * 0.4, 0), mat(['#5DAA58', '#4E9E52', '#6FBF5E'][k2 % 3], { flatShading: true })); lf.position.set(FW / 2 + 1.2, 3 + k2 * 4.2, -FD / 2 + 1 + (k2 % 3)); scene.add(lf); }
   // 책상 · 모니터 · 의자 · 직원
   const SEAT = 1.55, screens = {};
   const scr = (w2, h2) => { const c = document.createElement('canvas'); c.width = 256; c.height = 160; const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; const m2 = new THREE.MeshStandardMaterial({ map: t, emissive: '#FFFFFF', emissiveMap: t, emissiveIntensity: 0.55 }); const me = new THREE.Mesh(new THREE.PlaneGeometry(w2, h2), m2); return { c, t, me }; };
@@ -108,19 +101,20 @@ export function office(host, o) {
   // 2F 왼쪽 — 배차 · 통신: 큰 모니터 벽
   { const y = FH + 0.5; const big = [scr(9, 4.4), scr(7, 4.4)]; [[-21, big[0], 9], [-8.5, big[1], 7]].forEach(([x, S2, w2]) => { box(w2 + 0.5, 4.9, 0.3, '#2B2F36', x, y + 1.8, -FD / 2 + 0.45); S2.me.position.set(x, y + 4.25, -FD / 2 + 0.65); scene.add(S2.me); });
     screens.wallA = big[0]; screens.wallB = big[1]; drawScr(big[0], ['배차 요청', ''], '#22406A'); drawScr(big[1], ['오늘 출고', ''], '#2A4A3A'); plant(-28.5, y, 6, 1); }
-  // 2F 오른쪽 — 회계: 금고 · 파일 선반
-  { const y = FH + 0.5; const sf = new THREE.Group(); sf.position.set(28, y, -6.5); scene.add(sf); box(2.6, 3.2, 2.4, '#8E959C', 0, 0, 0, sf, { metalness: 0.4, roughness: 0.45 }); cyl(0.55, 0.15, '#C9CDD2', 0, 1.7, 1.2, sf, 16).rotation.x = Math.PI / 2;
+  // 3F — 회계: 금고 · 파일 선반
+  { const y = 2 * FH + 0.5; const sf = new THREE.Group(); sf.position.set(28, y, -6.5); scene.add(sf); box(2.6, 3.2, 2.4, '#8E959C', 0, 0, 0, sf, { metalness: 0.4, roughness: 0.45 }); cyl(0.55, 0.15, '#C9CDD2', 0, 1.7, 1.2, sf, 16).rotation.x = Math.PI / 2;
     shelf(8, y, -FD / 2 + 1.2, 6, 3, BIND); shelf(19, y, -FD / 2 + 1.2, 6, 3, BIND); frame(13.5, y + 6.6, '#D9E8C0'); plant(2.5, y, 6, 0.9); }
-  // 다락 — 대표실(맥북 · 테라리움 어항) · 서류 · 확인(복합기 · 칠판) · 디자인
-  { const y = 2 * FH + 0.5;
-    const tg = new THREE.Group(); tg.position.set(6, y, -6); scene.add(tg); box(3, 1.4, 2, '#C9A26B', 0, 0, 0, tg); const bowl = new THREE.Mesh(new THREE.SphereGeometry(1.4, 24, 18), new THREE.MeshStandardMaterial({ color: '#DDF3FF', transparent: true, opacity: 0.28, roughness: 0.05 })); bowl.position.set(0, 2.8, 0); tg.add(bowl);
+  // 6F 대표실(맥북 · 테라리움 어항) · 4F 서류(복합기 · 칠판) — 단지 그림처럼 (10/31)
+  { const y = 5 * FH + 0.5, y4 = 3 * FH + 0.5;
+    const tg = new THREE.Group(); tg.position.set(16, y, -6); scene.add(tg); box(3, 1.4, 2, '#C9A26B', 0, 0, 0, tg); const bowl = new THREE.Mesh(new THREE.SphereGeometry(1.4, 24, 18), new THREE.MeshStandardMaterial({ color: '#DDF3FF', transparent: true, opacity: 0.28, roughness: 0.05 })); bowl.position.set(0, 2.8, 0); tg.add(bowl);
     const water = new THREE.Mesh(new THREE.SphereGeometry(1.25, 20, 14, 0, Math.PI * 2, Math.PI * 0.35, Math.PI * 0.65), new THREE.MeshStandardMaterial({ color: '#7FC8F0', transparent: true, opacity: 0.45 })); water.position.set(0, 2.8, 0); tg.add(water);
     const fishes = [0, 1].map((i) => { const f2 = new THREE.Mesh(new THREE.SphereGeometry(0.22, 10, 8), mat(i ? '#FF8A3C' : '#F7C82F')); f2.scale.set(1.4, 0.8, 0.6); tg.add(f2); return f2; });
     ticks.push((dt, t) => fishes.forEach((f2, i) => { const a = t * (0.8 + i * 0.3) + i * 3; f2.position.set(Math.cos(a) * 0.7, 2.6 + Math.sin(t * 1.3 + i) * 0.2, Math.sin(a) * 0.7); f2.rotation.y = -a; }));
-    const mb = new THREE.Group(); mb.position.set(1.9, y + 1.92, -0.6); scene.add(mb); box(1.9, 0.08, 1.3, '#C9CDD2', 0, 0, 0, mb, { metalness: 0.5, roughness: 0.35 }); const lid = new THREE.Group(); lid.position.set(0, 0.06, -0.62); lid.rotation.x = -0.25; mb.add(lid); box(1.9, 1.25, 0.06, '#C9CDD2', 0, 0, 0, lid, { metalness: 0.5 }); const ms = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 1.05), new THREE.MeshStandardMaterial({ color: '#9FD0FF', emissive: '#9FD0FF', emissiveIntensity: 0.6 })); ms.position.set(0, 0.62, 0.04); lid.add(ms);
-    const g = new THREE.Group(); g.position.set(-25, y, -5); scene.add(g); box(4, 3, 3, '#EEF0F2', 0, 0, 0, g); box(3.6, 0.5, 2.6, '#D3D7DC', 0, 3, 0, g); box(3, 0.15, 2.2, '#FFFFFF', 0, 3.5, 0, g); box(2.8, 0.1, 2, '#FFFFFF', 0, 1.6, 1.6, g); box(1, 0.6, 0.1, '#2F7BF6', 1.2, 3.1, 1.3, g, { emissive: '#2F7BF6', emissiveIntensity: 0.5 }); clickable(g, 'printer'); OBJ.printer = [-25, y + 4.2, -5];
-    const bg2 = new THREE.Group(); bg2.position.set(-7, y, -8); scene.add(bg2); [-2.6, 2.6].forEach((a) => box(0.2, 5.6, 0.2, '#B08A55', a, 0, 0.4, bg2)); box(5.6, 3.6, 0.2, '#FFFFFF', 0, 1.8, 0, bg2); [['#FFE680', -1.6], ['#FFB5C8', 0], ['#B5E3FF', 1.6]].forEach(([c, x], i) => box(1.2, 1.1, 0.05, c, x, 2.5 + (i % 2) * 1.2, 0.15, bg2)); clickable(bg2, 'board'); OBJ.board = [-7, y + 4.4, -7.6];
-    [[26, 3], [27, -2], [-27, 3]].forEach(([x, z], i) => box(2.2, 1.6 + (i % 2) * 0.6, 2, '#D9B88C', x, y, z)); plant(20, y, -5, 1); plant(-17, y, -6, 1);
+    const mb = new THREE.Group(); mb.position.set(4.4, y + 1.92, -0.6); scene.add(mb); box(1.9, 0.08, 1.3, '#C9CDD2', 0, 0, 0, mb, { metalness: 0.5, roughness: 0.35 }); const lid = new THREE.Group(); lid.position.set(0, 0.06, -0.62); lid.rotation.x = -0.25; mb.add(lid); box(1.9, 1.25, 0.06, '#C9CDD2', 0, 0, 0, lid, { metalness: 0.5 }); const ms = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 1.05), new THREE.MeshStandardMaterial({ color: '#9FD0FF', emissive: '#9FD0FF', emissiveIntensity: 0.6 })); ms.position.set(0, 0.62, 0.04); lid.add(ms);
+    const g = new THREE.Group(); g.position.set(-25, y4, -5); scene.add(g); box(4, 3, 3, '#EEF0F2', 0, 0, 0, g); box(3.6, 0.5, 2.6, '#D3D7DC', 0, 3, 0, g); box(3, 0.15, 2.2, '#FFFFFF', 0, 3.5, 0, g); box(2.8, 0.1, 2, '#FFFFFF', 0, 1.6, 1.6, g); box(1, 0.6, 0.1, '#2F7BF6', 1.2, 3.1, 1.3, g, { emissive: '#2F7BF6', emissiveIntensity: 0.5 }); clickable(g, 'printer'); OBJ.printer = [-25, y4 + 4.2, -5];
+    const bg2 = new THREE.Group(); bg2.position.set(-7, y4, -8); scene.add(bg2); [-2.6, 2.6].forEach((a) => box(0.2, 5.6, 0.2, '#B08A55', a, 0, 0.4, bg2)); box(5.6, 3.6, 0.2, '#FFFFFF', 0, 1.8, 0, bg2); [['#FFE680', -1.6], ['#FFB5C8', 0], ['#B5E3FF', 1.6]].forEach(([c, x], i) => box(1.2, 1.1, 0.05, c, x, 2.5 + (i % 2) * 1.2, 0.15, bg2)); clickable(bg2, 'board'); OBJ.board = [-7, y4 + 4.4, -7.6];   shelf(20, y4, -FD / 2 + 1.2, 8, 3, BIND); plant(27, y4, -6, 1);
+    { const y5 = 4 * FH + 0.5; [[-20, 7], [-6, 7]].forEach(([x, w2]) => { box(w2 + 0.5, 3.6, 0.3, '#2B2F36', x, y5 + 2.2, -FD / 2 + 0.6); const sc = box(w2, 3.1, 0.05, '#F7E3D2', x, y5 + 2.45, -FD / 2 + 0.78, scene, { emissive: '#F7E3D2', emissiveIntensity: 0.4 }); sc.castShadow = false; }); box(8, 3.2, 1.6, '#C9A26B', 22, y5, -8); [0, 1].forEach((r) => [0, 1, 2, 3].forEach((i2) => box(1.4, 1.2, 0.15, ['#E8732C', '#3F7FE0', '#2E9A5A', '#F5B400'][(i2 + r) % 4], 19.6 + i2 * 1.6, y5 + 0.4 + r * 1.4, -7.1))); plant(-27, y5, 5, 1); }   // 5F 디자인 — 시안 화면 · 카탈로그 진열
+    [[26, 3], [27, -2], [-27, 3]].forEach(([x, z], i) => box(2.2, 1.6 + (i % 2) * 0.6, 2, '#D9B88C', x, y4, z)); plant(20, y, -5, 1); plant(-17, y, -6, 1); box(6, 1.4, 2.6, '#F6F3EE', -18, y, -7.6); box(6, 1.8, 0.6, '#F6F3EE', -18, y + 1.4, -8.6);   // 6F 소파
     [[-3, -6], [9, 3]].forEach(([x, z]) => { box(0.04, 2.2, 0.04, '#7A6A5A', x, y + 7, z); for (let k = 0; k < 5; k++) { const lf = new THREE.Mesh(new THREE.IcosahedronGeometry(0.5, 0), mat(['#5DAA58', '#6FBF5E'][k % 2], { flatShading: true })); lf.position.set(x + Math.sin(k * 2) * 0.35, y + 6.8 - k * 0.45, z + Math.cos(k * 2) * 0.35); scene.add(lf); } }); }
   // 마당 — 수영장 · 선베드 · 파라솔 · 빈백 · 와인바 · 우체통 · 울타리
   { const pool = new THREE.Group(); pool.position.set(-6, 0, 25); scene.add(pool); box(26, 0.6, 11, '#F2F2EE', 0, -0.2, 0, pool); const wtr = new THREE.Mesh(new THREE.BoxGeometry(24, 0.3, 9), new THREE.MeshStandardMaterial({ color: '#5EC4F0', roughness: 0.1, metalness: 0.1, transparent: true, opacity: 0.9 })); wtr.position.set(0, 0.32, 0); pool.add(wtr);
