@@ -679,7 +679,17 @@ function warehouse() {
         : tab === 'cn' ? ((cnToday.map((x) => prow(`<b>${esc(x.partner || '')}</b> <span style="color:#8A7E77">${esc(x.site || '')}</span><div style="font-size:12px;color:#5A4E46;line-height:1.5">${esc(snip(x))}</div>${x.veh ? `<div style="font-size:12px;color:#8A7E77">${esc(String(x.veh).slice(0, 60))}</div>` : ''}`, (x.steps || []).slice(-1)[0] || '', 'color:#2B3A55')).join('') || prow('오늘 천안 관련 없음'))
           + (CS.wait ? prow(`천안 재고 안 뺀 것 <b style="color:#E5483B">${CS.wait}건</b>`, '<a href="/main" style="color:#2F7BF6">빼기 ›</a>') : ''))
         : (drivers.map((d) => prow(`${esc(d.row.partner)} · ${esc(d.row.site || '')}<div style="font-size:12px;color:#8A7E77">${esc(d.row.veh || '')} ${esc(d.row.time || '')} · ${esc(d.row.item || '')}</div>`, (d.row.steps || []).includes('출고 완료') ? '출고 완료' : '배차 완료', 'color:#1E8E3E')).join('') || prow('오늘 출고 없음'));
-      P.show('키오스크', `${today} 천안창고`, tb + body);
+      const esBtn = (x) => `<button type="button" data-es="${esc(x.no || x.case || '')}" style="margin-top:6px;height:30px;padding:0 12px;border:0;border-radius:10px;background:#2B3A55;color:#fff;font:800 12px Pretendard,sans-serif;cursor:pointer">전자 송장 발행</button>`;
+      const top2 = tab === 'es' ? `<button type="button" data-es="" class="btn or" style="height:40px;justify-content:center">＋ 새 전자 송장</button>` : '';
+      P.show('키오스크', `${today} 천안창고`, tb + top2 + body);
+      if (tab === 'cn') [...P.el.querySelectorAll('.pb > div')].slice(1).forEach((d2, i2) => { const x = cnToday[i2]; if (x) d2.querySelector('span').insertAdjacentHTML('beforeend', esBtn(x)); });
+      P.el.querySelectorAll('[data-es]').forEach((b) => { b.onclick = () => {   // 천안 건 → 전자 송장 (품목은 출고일보 천안 줄에서) — 발행은 사이트 전자 송장 화면에서 확인 후
+        const x = cnToday.find((y) => (y.no || y.case || '') === b.dataset.es && b.dataset.es);
+        const txt = x ? (x.buys || []).filter((q) => CNRE.test(q.name)).map((q) => q.item).join(' · ') : '';
+        const items = txt.split(/\s*[·\/,]\s*/).map((q) => q.replace(/\(.*?\)/g, '').trim()).filter(Boolean).map((q) => { const m2 = /^(.+?)\s*(\d+(?:\.\d+)?)\s*(PLT|박스|BOX|롤|장|개|EA|단)?$/i.exec(q); return m2 ? { name: m2[1].trim(), qty: m2[2], unit: m2[3] || '개' } : { name: q, qty: '', unit: '개' }; }).slice(0, 30);
+        try { localStorage.setItem('esPreset', JSON.stringify({ at: Date.now(), partner: x ? x.partner || '' : '', site: x ? x.site || '' : '', items })); } catch (e) { /* 무시 */ }
+        window.open('/esong?pre=1', '_blank');
+      }; });
       P.el.querySelectorAll('[data-kt]').forEach((b) => { b.onclick = () => kioskPanel(b.dataset.kt); });
     };
     const WH = O3D.warehouse(host3d('#E6E2DA'), { alive: () => v.isConnected, items, hw, drivers, unpaid, onPick: (k) => {

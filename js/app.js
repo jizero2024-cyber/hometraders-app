@@ -4971,6 +4971,7 @@ function render() {
   if (FM.ROUTES.includes(state.route)) {   // 간단 서류 화면 — 거래명세표 3종 · 납품확인서 (10/23)
     document.body.classList.remove('erp');
     if (/[?&]pre=1/.test(location.search)) { try { const pr = JSON.parse(sessionStorage.getItem('stmtPreset') || 'null'); sessionStorage.removeItem('stmtPreset'); if (pr && pr.route === state.route) { FM.presetStmt(pr.route, pr.text, pr.rows); history.replaceState(null, '', location.pathname); } } catch (_) { /* 무시 */ } }   // 키오스크 물범이 → 변환 명세표 (10/30)
+    if (state.route === 'esong' && /[?&]pre=1/.test(location.search)) { try { const pr = JSON.parse(localStorage.getItem('esPreset') || 'null'); localStorage.removeItem('esPreset'); if (pr && Date.now() - (pr.at || 0) < 120000) { FM.preset('esong', pr); history.replaceState(null, '', location.pathname); } } catch (_) { /* 무시 */ } }   // 마을 창고 키오스크 → 천안 건으로 전자 송장 (10/31)
     app.innerHTML = FM.screen(state.route);
     return;
   }
