@@ -4,7 +4,7 @@ import * as S from '/js/store-supabase.js?v=13';
 import * as CN from '/js/cheonan.js?v=6';   // 천안 재고 — 실사 − 뺀 것, 나갈 것 (10/31)
 import * as JIM from './jim.js?v=2';
 import * as W3D from './v3d.js?v=21';
-import * as O3D from './o3d.js?v=27';
+import * as O3D from './o3d.js?v=28';
 import { portrait, KINDS } from './kit3d.js?v=6';
 
 const stage = document.getElementById('stage');
@@ -583,10 +583,55 @@ function office() {
     if (k === 'meet') v.querySelector('#meet').click();
   }
   let meeting = false;
-  v.querySelector('#meet').onclick = () => {
+  // 회의 (10/31 대표 "이번에 뭐 했는지 · 서로 감시·검사 · 서로 다르게 알고 있는 것 교차 · 회의록 · 마지막에 김맥순이 체크") — 실제 자료끼리 맞춰 봄
+  const crossCheck = async () => {
+    const rows = (L.flow && L.flow.rows) || [], today = (L.flow && L.flow.today) || mdOf(new Date()), yst = mdOf(new Date(Date.now() - 864e5));
+    const has = (x, k2) => (x.steps || []).includes(k2), nm = (x) => `${x.partner || ''} ${x.site || ''}`.trim(), yd = (d) => `${new Date().getFullYear()}${String(d || '').replace('/', '')}`;
+    const recent = rows.filter((x) => [yst, today].includes(x.day));
+    const out = [];
+    // 1 김맥순 ↔ 전표입력: 출고 완료인데 이카운트 미입력
+    const miss = recent.filter((x) => has(x, '출고 완료') && (x.lines || []).some((l) => l.st === '미입력' && l.k !== '운반비'));
+    out.push({ a: 'seal', b: 'raccoon', t: '출고 완료인데 이카운트 미입력', n: miss.length, list: miss.map((x) => `${x.day} ${nm(x)} · ${(x.lines || []).filter((l) => l.st === '미입력').map((l) => l.k).join('·')}`) });
+    // 2 송장 ↔ 김맥순: 전자 송장은 체크·서명됐는데 출고일보는 출고 완료 아님
+    const sjOk = (L.sj || []).filter((x) => [yd(yst), yd(today)].includes(x.ymd) && (x.signed_at || (x.checks || []).length));
+    const sjOff = sjOk.filter((x) => { const p = String(x.partner || '').replace(/\s|주식회사|\(주\)/g, '').slice(0, 3); const r = rows.find((y) => yd(y.day) === x.ymd && String(y.partner || '').replace(/\s|주식회사|\(주\)/g, '').includes(p)); return r && !has(r, '출고 완료'); });
+    out.push({ a: 'squirrel', b: 'seal', t: '송장은 받았다는데 출고일보는 출고 완료 아님', n: sjOff.length, list: sjOff.map((x) => `${x.ymd.slice(4, 6)}/${x.ymd.slice(6)} ${x.partner} ${x.site || ''} · ${x.signed_at ? '서명' : '체크'}`) });
+    // 3 이음배차 ↔ 김맥순: 날짜 지난 배차 요청
+    const late = rows.filter((x) => has(x, '배차 요청') && !has(x, '배차 완료') && !has(x, '출고 완료') && x.late);
+    out.push({ a: 'cat', b: 'seal', t: '날짜 지났는데 아직 배차 요청', n: late.length, list: late.map((x) => `${x.day} ${nm(x)}`) });
+    // 4 노훈 ↔ 김맥순: 천안에서 나간 줄인데 재고에서 안 뺌
+    let cs = { wait: 0 }; try { cs = await CN.fetchSummary(); } catch (e) { /* 재고 못 읽으면 0 */ }
+    out.push({ a: 'worker', b: 'seal', t: '천안에서 나갔는데 천안 재고에서 안 뺌', n: cs.wait || 0, list: (cs.items || []).filter((x) => x.pend).map((x) => `${x.item} 나갈 ${x.pend}`) });
+    // 5 서류정리 ↔ 전표입력: 입력은 됐는데 이카운트 PDF 없음
+    const slips = [...new Set(recent.flatMap((x) => (x.lines || []).flatMap((l) => l.slips || [])))];
+    let links = {}; try { links = await S.getSlipLinks(slips); } catch (e) { /* 못 읽으면 건너뜀 */ }
+    const noPdf = slips.filter((sl) => !links[sl]);
+    out.push({ a: 'squirrel', b: 'raccoon', t: '전표는 넣었는데 이카운트 PDF 없음', n: noPdf.length, list: noPdf.map((sl) => `${sl.slice(4, 6)}/${sl.slice(6, 8)}-${sl.split('-')[1]}`) });
+    // 6 배차운임 ↔ 이음배차: 운임 미송금
+    out.push({ a: 'otter', b: 'cat', t: '운임 아직 안 보낸 기사님', n: (L.unpaid || []).length, list: (L.unpaid || []).map((u) => `${u.driver || ''} ${u.amount ? Number(u.amount).toLocaleString() + '원' : ''}`) });
+    // 7 검수: 고장 난 기능
+    const qa = ((L.ai && L.ai.qa) || []).filter((x) => !x.ok);
+    out.push({ a: 'owl', b: 'seal', t: '검수에서 고장 난 기능', n: qa.length, list: qa.map((x) => `${x.name} · ${x.msg || ''}`) });
+    return out;
+  };
+  const minutes = (cross) => {
+    const did = AI.map((a) => { const w = L.W[a.k] || {}; return prow(`<b>${esc(a.who)}</b> <span style="color:#8A7E77">${esc(a.job)}</span><div style="font-size:12px;color:#5A4E46">${esc(w.line || '')}${w.note && w.st === 'bad' ? ` · ${esc(w.note)}` : ''}</div>`, { ok: '정상', bad: '멈춤', run: '작업 중' }[w.st] || '', `color:${O3D.DOT[w.st] || '#8A7E77'}`); }).join('');
+    const who = (k2) => (AI.find((a) => a.k === k2) || { who: { worker: '노훈님' }[k2] || k2 }).who;
+    const bad = cross.filter((c) => c.n);
+    const cx = cross.map((c) => `<details style="border-radius:12px;background:${c.n ? '#FFF4EE' : '#F3FAF5'};padding:9px 12px"><summary style="cursor:pointer;font-size:13px;font-weight:800;list-style:none;display:flex;gap:8px"><span style="flex:1">${esc(who(c.a))} ↔ ${esc(who(c.b))} · ${esc(c.t)}</span><span style="color:${c.n ? '#E5483B' : '#1E8E3E'}">${c.n ? c.n + '건' : '맞음'}</span></summary>${c.list.slice(0, 12).map((l) => `<div style="font-size:12px;color:#5A4E46;padding:3px 0 0 4px">· ${esc(l)}</div>`).join('')}</details>`).join('');
+    const fin = bad.length ? `<div style="padding:12px 14px;border-radius:14px;background:#2B3A55;color:#fff;font-size:13px;line-height:1.55"><b style="color:#FFD58A">김맥순 최종 확인</b><br>확인할 것 ${bad.reduce((a2, c) => a2 + c.n, 0)}건 — ${bad.map((c) => `${esc(c.t)} ${c.n}`).join(' · ')}</div>` : '<div style="padding:12px 14px;border-radius:14px;background:#1E8E3E;color:#fff;font-size:13px"><b>김맥순 최종 확인</b><br>서로 맞춰 봤는데 어긋난 것 없어요.</div>';
+    P.show('회의록', `${mdOf(new Date())} ${hm()} · 참석 ${AI.length}명`, `${fin}<div style="margin-top:6px;font-size:12px;font-weight:800;color:#8A7E77">서로 검사</div>${cx}<div style="margin-top:6px;font-size:12px;font-weight:800;color:#8A7E77">각자 한 일</div>${did}`);
+  };
+  v.querySelector('#meet').onclick = async () => {
     if (meeting || !L) return; meeting = true; v.querySelector('#meet').textContent = '회의 중…';
-    O.meeting(AI.map((a) => a.k), (k) => { const a = AI.find((x) => x.k === k), w = L.W[k]; O.setTag(k, `<div style="max-width:260px;padding:8px 12px;border-radius:14px;background:#fff;box-shadow:0 6px 18px rgba(30,40,60,.25);font:600 12px Pretendard,sans-serif;color:#2B2522"><b style="color:#E8732C">${esc(a.who)}</b> ${esc(w.line)}${w.note && w.st === 'bad' ? ` · ${esc(w.note)}` : ''}</div>`, [O.OBJ.meet[0], O.OBJ.meet[1] + 2, O.OBJ.meet[2]]); setTimeout(() => { O.setTag(k, tagHtml(a.who, w.line, w.st, w.n), [O.seats[k].home[0], O.seats[k].home[1] + (AI.filter((b) => b.f === a.f).sort((p, q) => p.x - q.x).findIndex((b) => b.k === k) % 2 ? 7.4 : 5.6), O.seats[k].home[2]]); }, 2300); },
-      () => { meeting = false; v.querySelector('#meet').textContent = '회의'; });
+    const cross = await crossCheck();
+    const bub = (k2, html) => O.setTag(k2, `<div style="max-width:280px;padding:8px 12px;border-radius:14px;background:#fff;box-shadow:0 6px 18px rgba(30,40,60,.25);font:600 12px Pretendard,sans-serif;color:#2B2522">${html}</div>`, [O.OBJ.meet[0], O.OBJ.meet[1] + 2, O.OBJ.meet[2]]);
+    const back = (k2) => { const a = AI.find((x) => x.k === k2), w = a && L.W[k2]; if (!a || !O.seats[k2]) return; O.setTag(k2, tagHtml(a.who, w.line, w.st, w.n), [O.seats[k2].home[0], O.seats[k2].home[1] + (AI.filter((b) => b.f === a.f).sort((p, q) => p.x - q.x).findIndex((b) => b.k === k2) % 2 ? 7.4 : 5.6), O.seats[k2].home[2]]); };
+    const who = (k2) => (AI.find((a) => a.k === k2) || { who: '노훈님' }).who;
+    const extra = cross.filter((c) => c.n).map((c) => () => { const sp = AI.find((a) => a.k === c.a) ? c.a : c.b; bub(sp, `<b style="color:#E5483B">${esc(who(c.a))} → ${esc(who(c.b))}</b> ${esc(c.t)} ${c.n}건 · ${esc(c.list[0] || '')}`); setTimeout(() => back(sp), 2800); });
+    extra.push(() => { const n = cross.filter((c) => c.n).reduce((a2, c) => a2 + c.n, 0); bub('seal', `<b style="color:#E8732C">김맥순 최종</b> ${n ? `확인할 것 ${n}건 — 회의록에 적었어요` : '어긋난 것 없어요 👍'}`); setTimeout(() => back('seal'), 2800); });
+    O.meeting(AI.map((a) => a.k), (k) => { const a = AI.find((x) => x.k === k), w = L.W[k]; bub(k, `<b style="color:#E8732C">${esc(a.who)}</b> ${esc(w.line)}${w.note && w.st === 'bad' ? ` · ${esc(w.note)}` : ''}`); setTimeout(() => back(k), 1700); },
+      () => { meeting = false; v.querySelector('#meet').textContent = '회의'; minutes(cross); }, extra);
   };
 }
 

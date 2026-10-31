@@ -156,10 +156,11 @@ export function office(host, o) {
       if (idle) goTo(k, new THREE.Vector3(rx, 0.3, rz), () => { st.at = 'rest'; st.c.g.rotation.y = 0; if (tagsBy[k]) tagsBy[k].p.set(rx, 5.2, rz); });
       else goTo(k, new THREE.Vector3(hx, hy, hz), () => { st.at = 'desk'; st.c.g.rotation.y = 0; if (tagsBy[k]) tagsBy[k].p.set(hx, hy + 5.6, hz); });
     },
-    meeting(order, say, done) {   // 회의 — 1층 동그란 테이블로 모여 한 명씩 실제 숫자 보고
+    meeting(order, say, done, extra = []) {   // 회의 — 1층 동그란 테이블로 모여 한 명씩 실제 숫자 보고 → extra(서로 검사 · 김맥순 최종 확인) 차례로
       const [mx, my, mz] = OBJ.meet, ks = order.filter((k) => seats[k]);
       ks.forEach((k, i) => { const a = i / ks.length * Math.PI * 2, st = seats[k]; st.at = 'walk'; goTo(k, new THREE.Vector3(mx + Math.cos(a) * 6.2, my - 4.5, mz + Math.sin(a) * 6.2), () => { st.at = 'meet'; st.c.face(-Math.cos(a), -Math.sin(a)); }); });
-      let t = 9000; ks.forEach((k) => { setTimeout(() => say(k), t); t += 2400; });
+      let t = 9000; ks.forEach((k) => { setTimeout(() => say(k), t); t += 1800; });
+      extra.forEach((f) => { setTimeout(f, t); t += 3000; });
       setTimeout(() => { ks.forEach((k) => { const st = seats[k]; st.at = 'walk'; goTo(k, new THREE.Vector3(...st.home), () => { st.at = 'desk'; st.c.g.rotation.y = 0; }); }); if (done) done(); }, t + 600);
     },
   };
