@@ -195,32 +195,48 @@ export function bind(app, c) {
 // ── 톡으로 빼기 (10/31 대표 "톡 형태로 '실리콘 베이지색 비드앤비 나감' 적어도 알아서") — town 맨 아래 채팅창
 //   실리콘 = 사이트 재고 장부(출고 기록) · 구조재 = 천안 실사에서 빼기(cnout). 쓰기 전에 꼭 [빼기] 확인
 const nk = (s) => String(s || '').replace(/주식회사|\(주\)|\s/g, '').replace(/엔/g, '앤');
-export async function talk(text) {
-  const t = String(text || '').trim(); if (!t) return null;
+const NUMW = { 한: 1, 하나: 1, 두: 2, 둘: 2, 세: 3, 셋: 3, 네: 4, 넷: 4, 다섯: 5, 여섯: 6, 일곱: 7, 여덟: 8, 아홉: 9, 열: 10 };
+const UNIT = '박스|box|BOX|개|ea|EA|파렛트|파레트|팔레트|팔렛|PLT|plt|pt';
+export async function talk(text) {   // 규칙으로 읽음 (AI 안 씀) — 여러 줄 · 한글 숫자 · '색' 빼고 · 낱개→박스 · 파렛트
+  let t = String(text || '').trim(); if (!t) return null;
   if (/들어|입고|들어옴|들어왔/.test(t)) return { reply: '입고는 아직 못 받아요 — 나간 것만 적어 주세요' };
+  t = t.replace(new RegExp(`(${Object.keys(NUMW).sort((a, b) => b.length - a.length).join('|')})\\s*(${UNIT})`, 'g'), (_, w, u) => `${NUMW[w]}${u}`);
   await S.init();
   const sils = S.getItems().filter((it) => (it.category === '실리콘' || /실리콘/.test(it.name)) && isCn(it.warehouse || '천안'));
-  const sil = /실리콘|박스/.test(t) || sils.some((it) => t.includes(it.name)) ? sils.filter((it) => t.includes(it.name) || t.includes(String(it.name).replace(/색$/, ''))).sort((a, b) => b.name.length - a.name.length)[0] : null;
-  const qm = /(\d+(?:\.\d+)?)\s*(박스|box|개|ea|PLT|파레트)?/i.exec(t.replace(/\d+\*\d+\*\d+/g, ' '));
-  let rest = t.replace(/\d+\*\d+\*\d+/g, ' ').replace(qm ? qm[0] : /$^/, ' ').replace(/실리콘|구조재|구조목|박스|나감|나갔어?요?|나갔음|출고|보냄|보냈어?요?|빼줘|빼|천안창고|천안|오늘|에서/g, ' ');
-  if (sil) rest = rest.replace(sil.name, ' ').replace(String(sil.name).replace(/색$/, ''), ' ').replace(/색/g, ' ');
-  const pt = S.getPartners().map((p) => p.name).filter(Boolean).filter((n) => nk(n).length >= 2 && nk(rest).includes(nk(n).slice(0, Math.max(2, nk(n).length - 1)))).sort((a, b) => b.length - a.length)[0];   // 품목 말을 뺀 나머지에서 거래처 찾기
-  const client = pt || (rest.split(/[\s,.]+/).filter((w) => w.length >= 2 && /[가-힣A-Za-z]/.test(w))[0] || '');
-  if (sil) {
-    const qty = qm ? +qm[1] : 1, today = S.todayStr();
-    const dup = S.getShipments().find((s) => s.date === today && s.status !== '취소' && nk(s.client).includes(nk(client).slice(0, 3)) && (s.lines && s.lines.length ? s.lines : [s]).some((l) => l.name === sil.name));
-    return { kind: 'sil', item: sil, qty, client, text: t, dup: !!dup, reply: `실리콘 ${sil.name} ${qty}박스${client ? ` · ${client}` : ''} — 천안에서 뺄까요?${dup ? ' (오늘 같은 거래처·색이 이미 있어요)' : ''}` };
+  const keys = (it) => [it.name, String(it.name).replace(/색$/, '')].filter((k) => k.length >= 2);
+  const hits = sils.map((it) => { const k = keys(it).sort((a, b) => b.length - a.length).find((k2) => t.includes(k2)); return k ? { it, k, at: t.indexOf(k) } : null; }).filter(Boolean)
+    .filter((h, _, all) => !all.some((o) => o !== h && o.k.length > h.k.length && o.k.includes(h.k) && o.at <= h.at && h.at < o.at + o.k.length))   // '백색' 이 '돼지백색변성' 안이면 뺌
+    .sort((a, b) => a.at - b.at);
+  const pts = S.getPartners().map((p) => p.name).filter(Boolean);
+  const findPartner = (rest) => {
+    const r = nk(rest); let best = pts.filter((n) => nk(n).length >= 2 && r.includes(nk(n).slice(0, Math.max(2, nk(n).length - 1)))).sort((a, b) => b.length - a.length)[0];
+    if (!best) { const ws = rest.split(/[\s,.]+/).filter((w) => w.length >= 2 && /[가-힣A-Za-z]/.test(w)); for (const w of ws) { const c = pts.filter((n) => nk(n).includes(nk(w))).sort((a, b) => a.length - b.length); if (c.length) { best = c[0]; break; } } }
+    return best || (rest.split(/[\s,.]+/).filter((w) => w.length >= 2 && /[가-힣A-Za-z]/.test(w))[0] || '');
+  };
+  const strip = (x) => x.replace(/\d+\*\d+\*\d+/g, ' ').replace(new RegExp(`\\d+(?:\\.\\d+)?\\s*(${UNIT})?`, 'g'), ' ').replace(/실리콘|구조재|구조목|나감|나갔어?요?|나갔음|출고|보냄|보냈어?요?|빼줘|빼|천안창고|천안|오늘|에서|색/g, ' ');
+  if (hits.length) {
+    const today = S.todayStr();
+    let rest = t; hits.forEach((h) => { rest = rest.replace(h.k, ' '); });
+    const client = findPartner(strip(rest));
+    const lines = hits.map((h, n) => {
+      const seg = t.slice(h.at + h.k.length, n + 1 < hits.length ? hits[n + 1].at : t.length);   // 그 색 뒤 ~ 다음 색 앞
+      const m = new RegExp(`^[^\\d]{0,6}?(\\d+(?:\\.\\d+)?)\\s*(${UNIT})?`).exec(seg) || (hits.length === 1 ? new RegExp(`(\\d+(?:\\.\\d+)?)\\s*(${UNIT})?`).exec(t.slice(0, h.at)) : null);
+      let qty = m ? +m[1] : 1, note = '';
+      if (m && /^(개|ea)$/i.test(m[2] || '') && Number(h.it.perBox) > 0) { note = `${qty}개`; qty = Math.round(qty / Number(h.it.perBox) * 100) / 100; }   // 낱개 → 박스
+      const dup = S.getShipments().some((s2) => s2.date === today && s2.status !== '취소' && nk(s2.client).includes(nk(client).slice(0, 3)) && (s2.lines && s2.lines.length ? s2.lines : [s2]).some((l) => l.name === h.it.name));
+      return { item: h.it, qty, note, dup };
+    });
+    return { kind: 'sil', lines, client, text: t, reply: `실리콘 ${lines.map((l) => `${l.item.name} ${num(l.qty)}박스${l.note ? `(${l.note})` : ''}`).join(' · ')}${client ? ` · ${client}` : ''} — 천안에서 뺄까요?${lines.some((l) => l.dup) ? ' (오늘 같은 거래처·색이 이미 있어요)' : ''}` };
   }
   if (!C.stock) await fetchSummary();
-  const g = guess(t);
-  if (g.length) return { kind: 'cn', lines: g, client, text: t, reply: `${g.map((l) => `${l.item} ${num(l.qty)}`).join(' · ')}${client ? ` · ${client}` : ''} — 천안 실사에서 뺄까요?` };
+  const g = guess(t.replace(/파렛트|파레트|팔레트|팔렛/g, 'PLT'));
+  if (g.length) { const client = findPartner(strip(t)); return { kind: 'cn', lines: g, client, text: t, reply: `${g.map((l) => `${l.item} ${num(l.qty)}`).join(' · ')}${client ? ` · ${client}` : ''} — 천안 실사에서 뺄까요?` }; }
   return { reply: '품목을 못 찾았어요 — 예) 실리콘 베이지 2박스 비드앤비 나감 · 2*6*12 160 공간 나감' };
 }
 export async function apply(a, me) {
   if (a.kind === 'sil') {
-    S.addShipment({ date: S.todayStr(), warehouse: a.item.warehouse || '천안창고', client: a.client, status: '출고완료', note: `톡 ${a.text}`, lines: [{ name: a.item.name, category: '실리콘', unit: '박스', qty: a.qty }] });
-    const it = S.getItems().find((x) => x.id === a.item.id);
-    return `뺐어요 · ${a.item.name} 남음 ${num(it ? S.currentStock(it) : 0)}박스`;
+    S.addShipment({ date: S.todayStr(), warehouse: a.lines[0].item.warehouse || '천안창고', client: a.client, status: '출고완료', note: `톡 ${a.text}`, lines: a.lines.map((l) => ({ name: l.item.name, category: '실리콘', unit: '박스', qty: l.qty })) });
+    return `뺐어요 · ${a.lines.map((l) => { const it = S.getItems().find((x) => x.id === l.item.id); return `${l.item.name} 남음 ${num(it ? S.currentStock(it) : 0)}박스`; }).join(' · ')}`;
   }
   const no = `talk-${Date.now().toString(36)}`, d = new Date();
   const body = { no, md: (d.getMonth() + 1) * 100 + d.getDate(), partner: a.client, lines: a.lines, skip: false, by: me, at: d.toISOString(), talk: a.text };

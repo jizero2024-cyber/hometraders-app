@@ -5,7 +5,7 @@
 import * as S from './store-supabase.js?v=13';
 import * as FM from './forms.js?v=24';
 import * as FL from './flow.js?v=66';   // 맨 위 출고 흐름 (10/28)
-import * as CN from './cheonan.js?v=6';   // 천안 재고 (10/31)
+import * as CN from './cheonan.js?v=7';   // 천안 재고 (10/31)
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const won = (n) => Math.round(Number(n) || 0).toLocaleString();

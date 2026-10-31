@@ -7,7 +7,7 @@ import { makeMatcher, readPastedText, quotePrev } from './textread.js?v=3';
 import * as DL from './delivery.js';
 import * as SM from './stmt.js?v=104';
 import * as HD from './hdisp.js?v=14';
-import * as HM from './home.js?v=83';
+import * as HM from './home.js?v=84';
 import * as FM from './forms.js?v=24';
 import * as KI from './kiosk.js?v=33';   // 세로형 키오스크 /kiosk (10/29)
 
