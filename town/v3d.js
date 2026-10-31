@@ -2,7 +2,7 @@
 // 마우스로 돌리기 · 확대 · 끌기. 거래처 건물 · 사무실 · 창고 · 우체통 눌러서 씀.
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { critter } from './kit3d.js?v=3';
+import { critter } from './kit3d.js?v=4';
 
 const GX = [-120, -60, 0, 60, 120], GZ = [-100, -50, 0, 50, 100];   // 길 격자
 // 거래처 자리 (블록 가운데). 블록 = 60×50

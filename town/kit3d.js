@@ -4,7 +4,14 @@
 import * as THREE from 'three';
 
 const MC = {};
-const m = (c, r = 0.62) => (MC[c + r] ||= new THREE.MeshStandardMaterial({ color: c, roughness: r, metalness: 0 }));
+const m = (c, r = 0.62) => (MC[c + r] ||= r <= 0.35 ? new THREE.MeshPhysicalMaterial({ color: c, roughness: r, metalness: 0, clearcoat: 0.8, clearcoatRoughness: 0.15 })
+  : new THREE.MeshPhysicalMaterial({ color: c, roughness: r, metalness: 0, sheen: 0.6, sheenRoughness: 0.5, sheenColor: new THREE.Color('#FFFFFF') }));   // 말랑한 인형 — 몸은 살짝 보송(sheen), 눈·코는 반짝(clearcoat) (10/31 대표 "캐릭터 디테일")
+const OC = {};
+const outlineOf = (o) => {   // 게임 캐릭터처럼 얇은 테두리 — 뒤집은 껍데기 (색은 그 부분 색을 어둡게)
+  const c = new THREE.Color(o.material.color).multiplyScalar(0.42), k = c.getHexString();
+  const mo = (OC[k] ||= new THREE.MeshBasicMaterial({ color: c, side: THREE.BackSide }));
+  const e = new THREE.Mesh(o.geometry, mo), t = 0.028; e.scale.set(1 + t / Math.max(0.02, o.scale.x), 1 + t / Math.max(0.02, o.scale.y), 1 + t / Math.max(0.02, o.scale.z)); e.castShadow = false; e.raycast = () => {}; o.add(e);
+};
 const G = {
   sph: new THREE.SphereGeometry(1, 28, 20), cap: new THREE.CapsuleGeometry(1, 1, 8, 16), cone: new THREE.ConeGeometry(1, 1, 18),
   cyl: new THREE.CylinderGeometry(1, 1, 1, 24), box: new THREE.BoxGeometry(1, 1, 1), tor: new THREE.TorusGeometry(1, 0.28, 12, 28),
@@ -22,26 +29,40 @@ const SPEC = {
   driver: { human: 1, shirt: '#2E4370', pants: '#2B3A63', vest: '#F28C28', hat: '#2B3A63' }, worker: { human: 1, shirt: '#2E3E63', pants: '#2B3A63', vest: '#24324F', hat: '#2B3A63' },
   boss1: { human: 1, shirt: '#E8E6F2', pants: '#3A4258', vest: '#A79BE0', hat: '#FFFFFF', helmet: 1 }, boss2: { human: 1, shirt: '#EDEFE8', pants: '#3A4258', vest: '#7FC29B', hat: '#FFFFFF', helmet: 1 },
 };
-const face = (head, r, y, { eye = '#26201E', blush = '#F7A6A6', mouth = 1 } = {}) => {
-  [-1, 1].forEach((s) => { P(head, 'sph', eye, [s * r * 0.3, y, r * 0.93], [0.075, 0.09, 0.04], null, 0.3); P(head, 'sph', '#FFFFFF', [s * r * 0.3 + 0.025, y + 0.035, r * 0.96], [0.022, 0.022, 0.01], null, 0.2); P(head, 'sph', blush, [s * r * 0.55, y - 0.13, r * 0.8], [0.11, 0.065, 0.03], null, 0.9); });
-  if (mouth) P(head, 'tor', eye, [0, y - 0.14, r * 0.95], [0.05, 0.035, 0.03], [0, 0, Math.PI], 0.4);
+const face = (head, r, y, { eye = '#26201E', blush = '#F7A6A6', mouth = 1, brow = 1 } = {}) => {   // 큰 반짝 눈(하이라이트 둘) · 눈썹 · 볼터치 · 입
+  [-1, 1].forEach((s) => {
+    const ex = s * r * 0.31;
+    P(head, 'sph', eye, [ex, y, r * 0.92], [0.1, 0.125, 0.05], null, 0.25);
+    P(head, 'sph', '#5A4A6A', [ex, y - 0.045, r * 0.955], [0.06, 0.05, 0.02], null, 0.3);
+    P(head, 'sph', '#FFFFFF', [ex + s * 0.01 + 0.03, y + 0.045, r * 0.975], [0.034, 0.038, 0.012], null, 0.15);
+    P(head, 'sph', '#FFFFFF', [ex - 0.03, y - 0.04, r * 0.975], [0.014, 0.014, 0.008], null, 0.15);
+    if (brow) P(head, 'cap', eye, [ex, y + 0.19, r * 0.9], [0.022, 0.05, 0.02], [0, 0, Math.PI / 2 + s * 0.18], 0.5);
+    P(head, 'sph', blush, [s * r * 0.58, y - 0.15, r * 0.78], [0.13, 0.07, 0.03], null, 0.95);
+  });
+  if (mouth) { P(head, 'tor', eye, [0, y - 0.15, r * 0.95], [0.055, 0.04, 0.03], [0, 0, Math.PI], 0.4); P(head, 'sph', '#F07A8A', [0, y - 0.175, r * 0.94], [0.03, 0.02, 0.01], null, 0.6); }
 };
 export function critter(kind) {
   const sp = SPEC[kind] || SPEC.worker, g = new THREE.Group(), body = new THREE.Group(); g.add(body);
   let legs, arms, head;
   if (sp.human) {   // 사람 — 큰 머리 2등신
-    legs = [-1, 1].map((s) => { const p = new THREE.Group(); p.position.set(s * 0.2, 0.72, 0); body.add(p); P(p, 'cap', sp.pants, [0, -0.3, 0], [0.15, 0.22, 0.15]); P(p, 'sph', '#2A2A2E', [0, -0.66, 0.06], [0.17, 0.1, 0.22]); return p; });
+    legs = [-1, 1].map((s) => { const p = new THREE.Group(); p.position.set(s * 0.2, 0.72, 0); body.add(p); P(p, 'cap', sp.pants, [0, -0.3, 0], [0.15, 0.22, 0.15]); P(p, 'sph', '#2A2A2E', [0, -0.64, 0.06], [0.17, 0.1, 0.22]); P(p, 'cyl', '#F2F2F2', [0, -0.71, 0.06], [0.17, 0.03, 0.22]); return p; });   // 신발 + 흰 밑창
     P(body, 'cap', sp.shirt, [0, 1.05, 0], [0.38, 0.22, 0.3]); P(body, 'cap', sp.vest, [0, 1.07, 0.02], [0.4, 0.2, 0.32]);
     if (kind === 'driver' || kind === 'worker') P(body, 'box', '#E9EEF2', [0, 1.0, 0.33], [0.62, 0.06, 0.02], null, 0.3);
-    arms = [-1, 1].map((s) => { const p = new THREE.Group(); p.position.set(s * 0.43, 1.3, 0); body.add(p); P(p, 'cap', sp.shirt, [0, -0.22, 0], [0.11, 0.16, 0.11]); P(p, 'sph', '#F3CBA8', [0, -0.48, 0], [0.11, 0.11, 0.11]); return p; });
+    arms = [-1, 1].map((s) => { const p = new THREE.Group(); p.position.set(s * 0.43, 1.3, 0); body.add(p); P(p, 'cap', sp.shirt, [0, -0.22, 0], [0.11, 0.16, 0.11]); P(p, 'cyl', sp.vest, [0, -0.36, 0], [0.12, 0.04, 0.12]); P(p, 'sph', kind === 'driver' || kind === 'worker' ? '#F2F2F2' : '#F3CBA8', [0, -0.48, 0], [0.11, 0.11, 0.11]); return p; });   // 소매 끝 · 장갑
     head = new THREE.Group(); head.position.y = 1.95; body.add(head);
     P(head, 'sph', '#F6D2B2', [0, 0, 0], [0.56, 0.54, 0.52]); P(head, 'sph', '#4A3426', [0, 0.1, -0.1], [0.58, 0.5, 0.5]);
-    face(head, 0.52, -0.02, { blush: '#F5A5A0' });
+    [-1, 1].forEach((s) => { P(head, 'sph', '#F1C4A0', [s * 0.55, -0.02, 0], [0.09, 0.12, 0.07]); P(head, 'sph', '#4A3426', [s * 0.42, 0.12, 0.33], [0.12, 0.16, 0.08], [0, 0, s * 0.4]); });   // 귀 · 옆머리
+    P(head, 'sph', '#4A3426', [0, 0.27, 0.38], [0.36, 0.1, 0.12], [0.3, 0, 0]); P(head, 'sph', '#EDB58F', [0, -0.08, 0.53], [0.05, 0.04, 0.04]);   // 앞머리 · 코
+    face(head, 0.52, -0.02, { blush: '#F5A5A0', eye: '#2B211C' });
+    P(body, 'tor', '#FFFFFF', [0, 1.42, 0.02], [0.24, 0.24, 0.2], [Math.PI / 2, 0, 0]);   // 옷깃
+    if (kind === 'driver' || kind === 'worker') [-1, 1].forEach((s) => { P(body, 'box', '#D9DEE3', [s * 0.2, 1.08, 0.31], [0.07, 0.42, 0.03], null, 0.3); });   // 조끼 반사띠
+    P(body, 'cyl', '#3A2E28', [0, 0.82, 0], [0.37, 0.06, 0.3]); P(body, 'box', '#C9A13A', [0, 0.82, 0.3], [0.08, 0.06, 0.03], null, 0.3);   // 벨트 · 버클
     if (sp.helmet) { P(head, 'half', sp.hat, [0, 0.12, 0], [0.62, 0.55, 0.6], null, 0.35); P(head, 'cyl', sp.hat, [0, 0.12, 0.05], [0.68, 0.04, 0.68], null, 0.35); }
     else { P(head, 'half', sp.hat, [0, 0.14, 0], [0.6, 0.48, 0.58]); P(head, 'box', sp.hat, [0, 0.16, 0.5], [0.62, 0.05, 0.38]); }
   } else {   // 동물 — 머리와 몸이 붙은 둥근 몸
     legs = [-1, 1].map((s) => { const p = new THREE.Group(); p.position.set(s * 0.32, 0.36, 0.05); body.add(p); P(p, 'cap', kind === 'penguin' || kind === 'owl' ? '#F3B13E' : kind === 'panda' ? sp.patch : sp.b, [0, -0.16, 0.04], [0.17, 0.1, 0.2]); return p; });
     P(body, 'sph', sp.b, [0, 0.9, 0], [0.72, 0.7, 0.64]);
+    if (kind === 'cat' || kind === 'dog') P(body, 'cap', sp.b, [0, 0.75, -0.68], [0.1, 0.32, 0.1], [-0.9, 0, 0]);   // 꼬리
     if (sp.belly) P(body, 'sph', sp.belly, [0, 0.8, 0.28], [0.46, 0.45, 0.38]);
     arms = [-1, 1].map((s) => { const p = new THREE.Group(); p.position.set(s * 0.64, 1.0, 0.1); body.add(p); P(p, 'cap', kind === 'panda' ? sp.patch : kind === 'penguin' ? sp.b : sp.b, [0, -0.15, 0], [0.13, 0.12, 0.13]); return p; });
     head = new THREE.Group(); head.position.y = 1.62; body.add(head);
@@ -79,6 +100,7 @@ export function critter(kind) {
       default: face(head, r, 0.02);
     }
   }
+  body.traverse((o) => { if (o.isMesh && o.scale.x * o.scale.y * o.scale.z > 0.004 && o.material.roughness > 0.35) outlineOf(o); });   // 큰 부분만 테두리
   const sh = new THREE.Mesh(new THREE.CircleGeometry(0.62, 18), new THREE.MeshBasicMaterial({ color: '#000', transparent: true, opacity: 0.16, depthWrite: false })); sh.rotation.x = -Math.PI / 2; sh.position.y = 0.04; g.add(sh);
   let ph = Math.random() * 6;
   return {
