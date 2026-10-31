@@ -804,7 +804,7 @@ function show() {
   setTimeout(() => stage.querySelectorAll('.boardBtn').forEach((b) => { b.onclick = openBoard; }), 0);
   const key = (location.hash.replace(/^#\/?/, '') || '').split('?')[0];
   (VIEWS[key] || village)();
-  stage.appendChild(talkBar());
+  if (key === 'warehouse') stage.appendChild(talkBar());   // 채팅창은 창고에서만 (10/31 대표 "마을에도 있네")
   swapAv(); setTimeout(swapAv, 400); setTimeout(swapAv, 2500);   // 그림 얼굴 → 3D 캐릭터 얼굴 (또렷하게)
 }
 async function boot() {
