@@ -2,9 +2,10 @@
 // 맨 위 빨간 칸 = 기사 운임 미송금 (fare_unpaid — 맥 도우미가 출고일보 폴더 '기사_운임_미송금_정리' 엑셀에서 올림. '보냄' 누르면 엑셀 보냄 칸에 O)
 // 버튼: 배차 요청 · 자료 넣기(site_inbox — 출고일보 업데이트 때 판매·구매입력) · 거래명세표(공간제작소 · 그 외 · 에이스) · 납품확인서 · 자재승인원 · 견적서 · 입금표
 //   서류 화면은 모두 js/forms.js (같은 머리·카드·버튼)
-import * as S from './store-supabase.js?v=11';
-import * as FM from './forms.js?v=22';
-import * as FL from './flow.js?v=64';   // 맨 위 출고 흐름 (10/28)
+import * as S from './store-supabase.js?v=12';
+import * as FM from './forms.js?v=23';
+import * as FL from './flow.js?v=65';   // 맨 위 출고 흐름 (10/28)
+import * as CN from './cheonan.js?v=1';   // 천안 재고 (10/31)
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const won = (n) => Math.round(Number(n) || 0).toLocaleString();
@@ -28,6 +29,7 @@ export function load(force) {
   H.loading = true; H.at = Date.now();
   S.getGongganWaitCount().then((n) => { H.gwait = n; FL.setGwait(n); ctx.rerender(); }).catch(() => {});   // 공간 올릴 전표 (10/27)
   FL.load(force);
+  CN.load(force);
   Promise.allSettled([S.getFareUnpaid(), S.getInboxCounts()]).then(([f, i]) => {
     if (f.status === 'fulfilled') { H.fare = f.value; H.fareErr = ''; } else H.fareErr = f.reason.message;
     if (i.status === 'fulfilled') { H.inbox = i.value; H.inboxErr = ''; } else H.inboxErr = i.reason.message;
@@ -120,7 +122,7 @@ export function screen(view) {
   }
   const wait = (H.inbox.wait || 0) + (H.inbox.got || 0), chk = H.inbox.check || 0;
   return `<div class="hm">${top('', true)}${subHtml()}<div class="hm-body top"><main class="hm-main">
-    ${FL.main({ fare: H.fare || [], inbox: wait + chk })}${farePanel()}</main></div>${quickHtml(wait, chk)}${boxModal()}${FM.popup()}<input type="file" id="hm-file" multiple accept="image/*,.heic,.pdf,.xlsx,.xls,.csv,.txt" hidden></div>`;
+    ${curGrp() === '창고' ? CN.screen() : `${FL.main({ fare: H.fare || [], inbox: wait + chk })}${farePanel()}`}</main></div>${quickHtml(wait, chk)}${boxModal()}${FM.popup()}<input type="file" id="hm-file" multiple accept="image/*,.heic,.pdf,.xlsx,.xls,.csv,.txt" hidden></div>`;
 }
 
 // 위 2단 메뉴 (10/31 대표 "사이드 메뉴는 상단으로, 투뎁스") — 1단: 출고·전표 확인·서류·거래처, 2단: 고른 묶음의 항목
@@ -130,7 +132,7 @@ function closeN() { return FL.closeItems({ fare: H.fare || [], inbox: (H.inbox.w
 function navHtml() {
   const c = FL.counts(), g = curGrp(), n = (k) => (k ? `<b>${k}</b>` : '');
   const t = (k, lab, badge) => `<button type="button" class="hm-t1 ${g === k ? 'on' : ''}" data-hm="grp" data-g="${k}">${lab}${badge || ''}</button>`;
-  return `<nav class="hm-nav" aria-label="메뉴">${t('출고', '출고', n(closeN()))}${t('전표', '전표 확인', n(c.miss + c.missOld))}${t('서류', '서류')}${t('거래처', '거래처', n(H.gwait))}</nav>`;
+  return `<nav class="hm-nav" aria-label="메뉴">${t('출고', '출고', n(closeN()))}${t('전표', '전표 확인', n(c.miss + c.missOld))}${t('서류', '서류')}${t('거래처', '거래처', n(H.gwait))}${t('창고', '창고', n(CN.waitN()))}</nav>`;
 }
 function subHtml() {
   const c = FL.counts(), v = FL.view(), g = curGrp(), n = (k) => (k ? `<b>${k}</b>` : '');
@@ -141,6 +143,7 @@ function subHtml() {
     전표: [fv('입력 누락', '누락', n(c.miss + c.missOld)), fv('입력 완료', '완료')],
     서류: [it('거래명세표', 'data-hm="go" data-r="stmt"'), it('납품확인서', 'data-hm="form" data-r="deliv"'), it('자재승인원', 'data-hm="form" data-r="approval"'),
       it('입금표', 'data-hm="frame" data-src="./deposit.html?embed=1" data-title="입금표"'), it('견적서', 'data-hm="form" data-r="quote"'), it('전자 송장', 'data-hm="form" data-r="esong"')],
+    창고: [it('천안 재고', 'data-hm="grp" data-g="창고"', true, n(CN.waitN()))],
     거래처: [`<a class="hm-t2" href="/gonggan/">공간 협업툴${n(H.gwait)}</a>`, it('뉴하우징 협업툴', 'disabled', false, '<i>준비중</i>', 'off')],
   }[g] || [];
   return `<div class="hm-subnav"><div class="hm-sin">${items.join('')}</div></div>`;
@@ -196,13 +199,14 @@ export function bind(app, c) {
   ctx = c;
   FL.bind(app, { rerender: () => ctx.rerender(), openFrame, go: (r) => ctx.go(r), me: () => ctx.me(),
     home: (k) => { if (k === 'fare') { H.fareOpen = true; ctx.rerender(); setTimeout(() => { const x = document.querySelector('.hm-fare'); if (x) x.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 0); } else { H.box = true; ctx.rerender(); } } });
+  CN.bind(app, { rerender: () => ctx.rerender(), me: () => ctx.me() });
   const on = () => app.querySelector('.hm');
   app.addEventListener('click', (e) => {
     const t = e.target.closest('[data-hm]'); if (!t || !on()) return;
     const a = t.dataset.hm;
     if (a === 'go') { FM.open(''); closeFrame(); ctx.go(t.dataset.r, t.dataset.mode); }   // 화면을 옮기면 열린 팝업은 닫음
     else if (a === 'fv') { FL.setView(t.dataset.v); H.grp = ''; H.quick = false; ctx.rerender(); }
-    else if (a === 'grp') { const g = t.dataset.g; if (g === '출고') { FL.setView('flow'); H.grp = ''; } else if (g === '전표') { FL.setView('누락'); H.grp = ''; } else H.grp = g; ctx.rerender(); }
+    else if (a === 'grp') { const g = t.dataset.g; if (g === '출고') { FL.setView('flow'); H.grp = ''; } else if (g === '전표') { FL.setView('누락'); H.grp = ''; } else { H.grp = g; if (g === '창고') CN.load(true); } ctx.rerender(); }
     else if (a === 'quick') { H.quick = !H.quick; ctx.rerender(); }
     else if (a === 'fare-all') { H.fareAll = !H.fareAll; ctx.rerender(); }
     else if (a === 'fare-open') { H.fareOpen = !H.fareOpen; ctx.rerender(); if (H.fareOpen) setTimeout(() => { const x = document.querySelector('.hm-fare'); if (x) x.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 0); }

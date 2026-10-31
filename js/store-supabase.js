@@ -293,6 +293,15 @@ export async function addFlowMark(id, name, by) {
   const { error } = await sb.from('site_inbox').upsert({ id, kind: 'flowmark', status: 'mark', name, created_by: by || null });
   return error ? error.message : null;
 }
+export async function getCnOuts() {   // 천안 재고 빼기 (10/31) — site_inbox kind 'cnout' (직원 전용 표), id = 'cnout:<출고 번호>'
+  const { data, error } = await sb.from('site_inbox').select('id,body').eq('kind', 'cnout');
+  if (error) throw new Error(error.message);
+  return (data || []).reduce((a, r) => { try { const b = JSON.parse(r.body || '{}'); if (b.no) a[b.no] = b; } catch (_) { /* 무시 */ } return a; }, {});
+}
+export async function saveCnOut(no, name, body, by) {   // 실패하면 글자, 되면 null
+  const { error } = await sb.from('site_inbox').upsert({ id: `cnout:${no}`, kind: 'cnout', status: 'mark', name, body: JSON.stringify(body), created_by: by || null, updated_at: new Date().toISOString() });
+  return error ? error.message : null;
+}
 export async function getSlipLinks(slips) {   // 전표 번호(20261027-3) → 이카운트 전표 PDF 드라이브 링크
   if (!slips.length) return {};
   const { data, error } = await sb.from('slip_rows').select('drive_id,slip,kind,updated_at').in('slip', slips).order('updated_at', { ascending: false });   // 같은 전표를 다시 받은 PDF 가 있으면 최근 것 먼저 (10/30)
