@@ -1,7 +1,7 @@
 // 홈트 마을 /town (10/29 대표 "게임처럼 · 디자인만 먼저") — 마을 · 단지 · 사무실 · 창고 네 화면, 아직 예시 자료
 // 주소 뒤 #/campus · #/office · #/warehouse 로 화면 바뀜. 직원 계정만 (공간 계정 막음)
 import * as S from '/js/store-supabase.js?v=12';
-import * as CN from '/js/cheonan.js?v=3';   // 천안 재고 — 실사 − 뺀 것, 나갈 것 (10/31)
+import * as CN from '/js/cheonan.js?v=4';   // 천안 재고 — 실사 − 뺀 것, 나갈 것 (10/31)
 import * as JIM from './jim.js?v=2';
 import * as W3D from './v3d.js?v=17';
 import * as O3D from './o3d.js?v=21';
@@ -708,6 +708,35 @@ function openBoard() {
   cv.addEventListener('pointerup', () => { if (!drawing) return; drawing = false; B.draw = cv.toDataURL(); saveBoard(B); });
 }
 
+// ── 맨 아래 채팅창 (10/31 대표 "프린세스메이커처럼 맨 하단에 채팅창") — 톡처럼 적으면 천안 재고에서 뺌 (물어보고 [빼기])
+const TALK = { log: [], pend: null, busy: false };
+function talkBar() {
+  const last = TALK.log.slice(-3);
+  const b = el(`<div class="talk" style="position:absolute;left:50%;bottom:16px;transform:translateX(-50%);width:920px;z-index:30;display:flex;gap:14px;align-items:flex-end;padding:14px 16px;border-radius:22px;background:rgba(255,253,248,.97);box-shadow:0 10px 30px rgba(30,40,60,.22), inset 0 0 0 3px #E8D9BE;pointer-events:auto">
+    <img src="${IMG}seal.webp" alt="" style="width:64px;height:64px;object-fit:contain;flex:none">
+    <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:8px">
+      <div class="tl" style="display:flex;flex-direction:column;gap:4px;font-size:15px;font-weight:700;color:#4A3F3A;line-height:1.45">${last.map((m) => `<div style="${m.me ? 'align-self:flex-end;background:#2B3A55;color:#fff' : 'align-self:flex-start;background:#F3ECDF'};padding:6px 12px;border-radius:12px;max-width:100%">${esc(m.t)}</div>`).join('') || '<div style="color:#A89A8A">실리콘 베이지 2박스 비드앤비 나감</div>'}</div>
+      ${TALK.pend ? '<div style="display:flex;gap:8px"><button type="button" class="btn or" data-tk="ok" style="height:38px">빼기</button><button type="button" class="btn" data-tk="no" style="height:38px">취소</button></div>' : ''}
+      <form style="display:flex;gap:8px"><input name="q" autocomplete="off" placeholder="나간 것 적기" style="flex:1;height:44px;border:2px solid #E8D9BE;border-radius:14px;padding:0 14px;font:700 15px Pretendard,sans-serif;background:#fff;outline:none"><button class="btn" style="height:44px;background:#2B3A55;color:#fff" ${TALK.busy ? 'disabled' : ''}>보내기</button></form>
+    </div></div>`);
+  const redraw = (focus) => { const n = talkBar(); b.replaceWith(n); if (focus) n.querySelector('input').focus(); };
+  b.querySelector('form').onsubmit = async (e) => {
+    e.preventDefault(); const q = e.target.q.value.trim(); if (!q || TALK.busy) return;
+    TALK.log.push({ me: true, t: q }); TALK.busy = true; TALK.pend = null; redraw();
+    try { const r = await CN.talk(q); if (r) { TALK.log.push({ t: r.reply }); TALK.pend = r.kind ? r : null; } } catch (err) { TALK.log.push({ t: `못 알아들었어요 — ${err.message || err}` }); }
+    TALK.busy = false; redraw(true);
+  };
+  b.querySelectorAll('[data-tk]').forEach((x) => { x.onclick = async () => {
+    const a = TALK.pend; TALK.pend = null; if (!a) return;
+    if (x.dataset.tk === 'no') { TALK.log.push({ t: '취소했어요' }); redraw(true); return; }
+    TALK.busy = true; redraw();
+    try { TALK.log.push({ t: await CN.apply(a, ME) }); } catch (err) { TALK.log.push({ t: `못 뺐어요 — ${err.message || err}` }); }
+    TALK.busy = false;
+    if ((location.hash.replace(/^#\/?/, '') || '').startsWith('warehouse')) show(); else redraw(true);
+  }; });
+  return b;
+}
+
 // ── 화면 바꾸기 · 직원 계정만 ───────────────────────────
 function jim() { const v = el('<div class="v"></div>'); stage.appendChild(v); JIM.mount(v, { back: backBtn('#/warehouse', '창고') }); }
 const VIEWS = { '': village, campus, office, warehouse, jim };
@@ -719,6 +748,7 @@ function show() {
   setTimeout(() => stage.querySelectorAll('.boardBtn').forEach((b) => { b.onclick = openBoard; }), 0);
   const key = (location.hash.replace(/^#\/?/, '') || '').split('?')[0];
   (VIEWS[key] || village)();
+  stage.appendChild(talkBar());
   swapAv(); setTimeout(swapAv, 400); setTimeout(swapAv, 2500);   // 그림 얼굴 → 3D 캐릭터 얼굴 (또렷하게)
 }
 async function boot() {

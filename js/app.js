@@ -7,7 +7,7 @@ import { makeMatcher, readPastedText, quotePrev } from './textread.js?v=3';
 import * as DL from './delivery.js';
 import * as SM from './stmt.js?v=104';
 import * as HD from './hdisp.js?v=13';
-import * as HM from './home.js?v=80';
+import * as HM from './home.js?v=81';
 import * as FM from './forms.js?v=23';
 import * as KI from './kiosk.js?v=32';   // 세로형 키오스크 /kiosk (10/29)
 
@@ -3568,6 +3568,8 @@ function saleStockFeed() {
       if (!(/실리콘/.test(l.ours || '') || l.category === '실리콘')) return;
       const color = drSilColor(l); if (!color) return;
       const item = S.getItems().find((it) => it.category === '실리콘' && it.name === color && it.warehouse === stockWH);
+      const nk = (x) => String(x || '').replace(/주식회사|\(주\)|\s/g, '').replace(/엔/g, '앤');
+      if (S.getShipments().some((s) => /^톡 /.test(s.note || '') && Math.abs(new Date(s.date) - new Date(v.date)) <= 3 * 864e5 && nk(s.client).slice(0, 3) && nk(v.cust_name).includes(nk(s.client).slice(0, 3)) && (s.lines || []).some((x) => x.name === color))) return;   // town 채팅으로 이미 뺀 것 (10/31) — 두 번 안 빠지게
       const perBox = (item && item.perBox) || 25;
       const boxes = perBox > 0 ? Math.round((Number(l.qty) || 0) / perBox * 100) / 100 : (Number(l.qty) || 0);
       lines.push({ name: color, category: '실리콘', unit: '박스', qty: boxes, unitPrice: (Number(l.unit_price) || 0) * perBox });   // 재고는 박스단위 → 단가도 박스당 저장(종전가 읽을 때 개당으로 되환산)

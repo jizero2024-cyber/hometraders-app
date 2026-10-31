@@ -191,3 +191,42 @@ export function bind(app, c) {
   app.addEventListener('input', upd);
   app.addEventListener('change', upd);
 }
+
+// ── 톡으로 빼기 (10/31 대표 "톡 형태로 '실리콘 베이지색 비드앤비 나감' 적어도 알아서") — town 맨 아래 채팅창
+//   실리콘 = 사이트 재고 장부(출고 기록) · 구조재 = 천안 실사에서 빼기(cnout). 쓰기 전에 꼭 [빼기] 확인
+const nk = (s) => String(s || '').replace(/주식회사|\(주\)|\s/g, '').replace(/엔/g, '앤');
+export async function talk(text) {
+  const t = String(text || '').trim(); if (!t) return null;
+  if (/들어|입고|들어옴|들어왔/.test(t)) return { reply: '입고는 아직 못 받아요 — 나간 것만 적어 주세요' };
+  await S.init();
+  const sils = S.getItems().filter((it) => (it.category === '실리콘' || /실리콘/.test(it.name)) && isCn(it.warehouse || '천안'));
+  const sil = /실리콘|박스/.test(t) || sils.some((it) => t.includes(it.name)) ? sils.filter((it) => t.includes(it.name) || t.includes(String(it.name).replace(/색$/, ''))).sort((a, b) => b.name.length - a.name.length)[0] : null;
+  const qm = /(\d+(?:\.\d+)?)\s*(박스|box|개|ea|PLT|파레트)?/i.exec(t.replace(/\d+\*\d+\*\d+/g, ' '));
+  const pt = S.getPartners().map((p) => p.name).filter(Boolean).filter((n) => nk(t).includes(nk(n).slice(0, Math.max(3, nk(n).length - 2)))).sort((a, b) => b.length - a.length)[0];
+  let rest = t.replace(/\d+\*\d+\*\d+/g, ' ').replace(qm ? qm[0] : /$^/, ' ').replace(/실리콘|구조재|구조목|박스|나감|나갔어?요?|나갔음|출고|보냄|보냈어?요?|빼줘|빼|천안창고|천안|오늘|에서/g, ' ');
+  if (sil) rest = rest.replace(sil.name, ' ').replace(String(sil.name).replace(/색$/, ''), ' ').replace(/색/g, ' ');
+  const client = pt || (rest.split(/[\s,.]+/).filter((w) => w.length >= 2 && /[가-힣A-Za-z]/.test(w))[0] || '');
+  if (sil) {
+    const qty = qm ? +qm[1] : 1, today = S.todayStr();
+    const dup = S.getShipments().find((s) => s.date === today && s.status !== '취소' && nk(s.client).includes(nk(client).slice(0, 3)) && (s.lines && s.lines.length ? s.lines : [s]).some((l) => l.name === sil.name));
+    return { kind: 'sil', item: sil, qty, client, text: t, dup: !!dup, reply: `실리콘 ${sil.name} ${qty}박스${client ? ` · ${client}` : ''} — 천안에서 뺄까요?${dup ? ' (오늘 같은 거래처·색이 이미 있어요)' : ''}` };
+  }
+  if (!C.stock) await fetchSummary();
+  const g = guess(t);
+  if (g.length) return { kind: 'cn', lines: g, client, text: t, reply: `${g.map((l) => `${l.item} ${num(l.qty)}`).join(' · ')}${client ? ` · ${client}` : ''} — 천안 실사에서 뺄까요?` };
+  return { reply: '품목을 못 찾았어요 — 예) 실리콘 베이지 2박스 비드앤비 나감 · 2*6*12 160 공간 나감' };
+}
+export async function apply(a, me) {
+  if (a.kind === 'sil') {
+    S.addShipment({ date: S.todayStr(), warehouse: a.item.warehouse || '천안창고', client: a.client, status: '출고완료', note: `톡 ${a.text}`, lines: [{ name: a.item.name, category: '실리콘', unit: '박스', qty: a.qty }] });
+    const it = S.getItems().find((x) => x.id === a.item.id);
+    return `뺐어요 · ${a.item.name} 남음 ${num(it ? S.currentStock(it) : 0)}박스`;
+  }
+  const no = `talk-${Date.now().toString(36)}`, d = new Date();
+  const body = { no, md: (d.getMonth() + 1) * 100 + d.getDate(), partner: a.client, lines: a.lines, skip: false, by: me, at: d.toISOString(), talk: a.text };
+  const e = await S.saveCnOut(no, a.client || '톡', body, me);
+  if (e) return `못 뺐어요 — ${e}`;
+  C.outs[no] = body;
+  const sm = summary();
+  return `뺐어요 · ${a.lines.map((l) => { const x = sm.items.find((y) => y.item === l.item); return `${l.item} 남음 ${num(x ? x.left : 0)}`; }).join(' · ')}`;
+}
