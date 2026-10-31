@@ -37,7 +37,7 @@ export function load(force) {
 const FARE_SHEET = 'https://docs.google.com/spreadsheets/d/1UoXiU_raLj5wtT24I3VsRdG-j9XPbcQF/edit';   // 기사 운임 미송금 정리 — 늘 이 파일 하나만 고침, 링크 고정 (10/23 대표)
 const BOARD_SHEET = 'https://docs.google.com/spreadsheets/d/1yBcId-iFWtdmt_og2rA71mbmnicyvoZI/edit';   // 드라이브 홈트레이더스_출고일보/출고일보/출고일보.xlsx — build_board 가 같은 파일을 덮어써서 링크 고정 (10/23 대표 바로가기)
 function top(back, nav) {
-  return `<header class="hm-top ${nav ? 'nav' : ''}"><div class="hm-in">
+  return `<header class="hm-top ${nav ? 'tnav' : ''}"><div class="hm-in">
     ${back ? `<button type="button" class="hm-back" data-hm="go" data-r="${back}">‹</button>` : ''}
     <img src="./icons/logo-full.png" alt="HOME TRADERS" class="hm-logo" data-hm="go" data-r="main">
     ${nav ? navHtml() : ''}
