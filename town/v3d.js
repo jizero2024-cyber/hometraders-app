@@ -2,13 +2,13 @@
 // 마우스로 돌리기 · 확대 · 끌기. 거래처 건물 · 사무실 · 창고 · 우체통 눌러서 씀.
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { critter } from './kit3d.js?v=5';
+import { critter } from './kit3d.js?v=6';
 
 const GX = [-120, -60, 0, 60, 120], GZ = [-100, -50, 0, 50, 100];   // 길 격자
 // 거래처 자리 (블록 가운데). 블록 = 60×50
 export const LOTS = {
   gonggan: [-30, -75, 'office'], woorim: [30, -75, 'ware'], wonik: [90, -75, 'ware'],
-  seosaeng: [-90, -25, 'site'], home: [30, -25, 'home'], suncheon: [-90, 25, 'site'],
+  seosaeng: [-90, -25, 'site'], home: [30, -25, 'home'], kyungdong: [90, -25, 'courier'], suncheon: [-90, 25, 'site'],   // 경동택배 차암점 (10/31) — 실리콘 맡겨 택배로 보내고, 택배로 창고에 오기도
   hanlim: [90, 25, 'yard'], paju: [-90, 75, 'site'], gunsan: [-30, 75, 'site'], anmyeon: [30, 75, 'site'], cheongdo: [90, 75, 'wood'],
 };
 const door = (k) => { const [x, z] = LOTS[k]; return [x, z + 25]; };   // 블록 아래 길
@@ -191,11 +191,19 @@ export function mount(host, o) {
     else if (kind === 'ware') { g = shed(x, z - 3, 0, 30, 18, 9, '#F3F1EC', key === 'wonik' ? '#5D9BF2' : '#FFC531'); pallets(g, -14, 12, 6, key === 'wonik' ? '#F2F2F2' : '#C7CDD4'); }
     else if (kind === 'yard') { g = shed(x, z - 6, 0, 26, 14, 8, '#F3EEE6', '#4FAE6E'); for (let i = 0; i < 5; i++) for (let j = 0; j < 2; j++) { box(5.5, 1.6 + (i % 3) * 0.6, 2.6, '#E7C48A', -12 + i * 6, 0, 11 + j * 3.4, g); } }
     else if (kind === 'office') { g = group(x, z - 2); box(22, 0.4, 18, '#E9E4DA', 0, 0, 0, g); box(16, 8, 12, '#FFFFFF', 0, 0.4, -1, g); box(16.4, 0.6, 12.4, '#2B2522', 0, 8.4, -1, g); const gl = new THREE.Mesh(new THREE.BoxGeometry(12, 5, 0.2), winM); gl.position.set(0, 3.6, 5.1); g.add(gl); box(3, 0.2, 3, '#7CC56A', -8, 0.4, 7, g); }
+    else if (kind === 'courier') {   // 택배 영업소 — 초록 지붕 창고 · 셔터 · 택배 상자 더미 · 택배 트럭 · 컨베이어
+      g = shed(x - 3, z - 5, 0, 24, 14, 8, '#F4F2EC', '#2E8B57');
+      box(8, 5, 0.3, '#C9CDD2', -3, 0, 2.2, g); for (let i = 0; i < 6; i++) box(8, 0.12, 0.32, '#9AA0A6', -3, 0.6 + i * 0.8, 2.25, g);   // 셔터
+      box(10, 2.2, 0.3, '#2E8B57', 4, 6.2, 2.25, g);   // 간판 자리
+      for (let i = 0; i < 9; i++) { const bx2 = 8 + (i % 3) * 1.7, bz2 = 4 + Math.floor(i / 3) * 1.7; box(1.5, 1.2, 1.5, ['#C79A62', '#D8AE74', '#B98A55'][i % 3], bx2, Math.floor(i / 5) * 1.2, bz2, g); }
+      box(9, 0.6, 2, '#5B6470', -3, 0, 6.5, g); for (let i = 0; i < 4; i++) box(1.4, 1, 1.4, '#C79A62', -6.5 + i * 2.3, 0.6, 6.5, g);   // 컨베이어 · 상자
+      const tk = group(x - 13, z + 9); tk.rotation.y = Math.PI / 2; box(6, 3.2, 3, '#FFFFFF', -1, 0.8, 0, tk); box(2.4, 2.4, 2.8, '#2E8B57', 3.2, 0.8, 0, tk); box(6.05, 0.6, 3.05, '#2E8B57', -1, 2.4, 0, tk); [[-3, -1.4], [-0.2, -1.4], [3, -1.4], [-3, 1.4], [-0.2, 1.4], [3, 1.4]].forEach(([a, b]) => { const w = new THREE.Mesh(new THREE.CylinderGeometry(0.65, 0.65, 0.4, 12), mat('#2B2522')); w.rotation.x = Math.PI / 2; w.position.set(a, 0.65, b); tk.add(w); }); clickable(tk, key);
+    }
     else if (kind === 'wood') { g = house(x - 6, z - 4, 0, '#C99A6B', '#5B4636', 1.15); clickable(house(x + 11, z + 2, -0.4, '#E7D2B5', '#7A5A44', 0.95), key); }   // 청도 집 (10/30 — 마을 한가운데 몰려 있던 것 제자리로)
     if (kind !== 'home' && g) clickable(g, key);
   });
   // 빈 블록 — 동네 집 · 공원 · 밭
-  [[90, -25], [-30, 25], [30, 25]].forEach(([bx, bz], bi) => {
+  [[-30, 25], [30, 25]].forEach(([bx, bz], bi0) => { const bi = bi0 + 1;   // [90,-25] 은 경동택배 자리 (10/31)
     const W2 = ['#F4F0E8', '#F2E9DC', '#EEF0EC', '#F6EFE4', '#EFE8E0'], R2 = ['#3F5A7A', '#B8573E', '#4E6E5A', '#4A4E5A', '#7A5A44'];
     for (let i = 0; i < 4; i++) if (i === bi % 2 && !(bi === 2 && i === 3)) house(bx - 15 + (i % 2) * 30 * 0.66 + (i > 1 ? 4 : 0), bz - 10 + Math.floor(i / 2) * 18, (i % 2 ? Math.PI : 0) + (bi - 1) * 0.1, W2[(i + bi) % 5], R2[(i + bi * 2) % 5], 0.9);
     tree(bx + 18, bz - 12, 1.1);
@@ -333,7 +341,7 @@ export function mount(host, o) {
   const tex = (url) => { if (!texC[url]) { const t = loader.load(url); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; texC[url] = t; } return texC[url]; };
   const people = [];
   const person = (av, pts, v) => {   // 3D 캐릭터 (10/29 대표 "이질감") — 마을과 같은 도형 · 빛 · 그림자
-    const c = critter(av); c.g.scale.setScalar(1.7); scene.add(c.g);
+    const c = critter(av); c.g.scale.setScalar(1.7); scene.add(c.g); clickable(c.g, 'av:' + av);   // 누르면 말 걸기 (10/31)
     let L = 0; for (let i = 1; i < pts.length; i++) L += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
     people.push({ c, pts, v, L, t: Math.random() * L * 2 });
   };

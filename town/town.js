@@ -3,9 +3,9 @@
 import * as S from '/js/store-supabase.js?v=12';
 import * as CN from '/js/cheonan.js?v=5';   // 천안 재고 — 실사 − 뺀 것, 나갈 것 (10/31)
 import * as JIM from './jim.js?v=2';
-import * as W3D from './v3d.js?v=19';
-import * as O3D from './o3d.js?v=26';
-import { portrait, KINDS } from './kit3d.js?v=5';
+import * as W3D from './v3d.js?v=20';
+import * as O3D from './o3d.js?v=27';
+import { portrait, KINDS } from './kit3d.js?v=6';
 
 const stage = document.getElementById('stage');
 const IMG = './img/';
@@ -91,6 +91,7 @@ const PLACES = {
   cheongdo: { name: '사람사는집 · 청도', at: [1035, 492], g: [1100, 470], msg: '철물 07:30 착', tone: 'blue' },
   gunsan: { name: '뉴하우징 · 군산 ↓', at: [480, 840], g: [470, 870], msg: 'OSB 40장 가는 중', tone: 'blue' },
   paju: { name: '← 뉴하우징 · 파주', at: [40, 470], g: [20, 560], msg: '에디톤 내일 아침 착', tone: 'blue' },
+  kyungdong: { name: '경동택배 · 차암점', at: [800, 190], g: [900, 330], msg: '실리콘 맡김 · 택배 보내고 받기', tone: 'blue' },
   home: { name: '홈트레이더스 · 천안 직산', at: [585, 190], g: [760, 440], msg: '오늘 출고 11건 · 상차 중 1', tone: 'ok' },
 };
 const TONE = { red: ['#FF5A4E', '#FFFFFF'], amb: ['#FFB547', '#5A3A00'], blue: ['#FFFFFF', '#2F6BD6'], ok: ['#FFFFFF', '#1E8E3E'] };
@@ -158,13 +159,13 @@ function village() {
   // 진짜 3D 마을 (10/29 대표 "진짜 3D로 다시")
   const host = el('<div class="w3host" style="position:fixed;inset:0;z-index:0;background:#BFE3FF"></div>'); document.body.querySelectorAll('.w3host').forEach((n) => n.remove()); document.body.prepend(host);   // 화면 꽉 (10/29 대표 "양옆도 꽉")
   const W = W3D.mount(host, { alive: () => v.isConnected, portrait, places: PLACES, tone: TONE, esc, img: IMG, wf,
-    onPick: (k) => { if (k === 'office') location.hash = '#/office'; else if (k === 'warehouse') location.hash = '#/warehouse'; else if (k === 'mail') v.querySelector('#mail').click(); else openPlace(k); },
+    onPick: (k) => { if (k.startsWith('av:')) { const av = k.slice(3), a = AI.find((x) => x.av === av); openTalk(av, a ? a.who : { driver: '기사님', worker: '현장 인부', boss1: '소장님', boss2: '소장님', dog: '불독', seal: '김맥순' }[av] || '주민'); return; } if (k === 'office') location.hash = '#/office'; else if (k === 'warehouse') location.hash = '#/warehouse'; else if (k === 'mail') v.querySelector('#mail').click(); else openPlace(k); },
     onDrop: (f) => addDrops(f), onWeather: (w) => { v.querySelector('#vwx').textContent = `${w.temp != null ? Math.round(w.temp) + '° ' : ''}${w.label}`; } });
   v.querySelector('#zin').onclick = () => W.zoom(0.75); v.querySelector('#zout').onclick = () => W.zoom(1.33); v.querySelector('#zre').onclick = () => W.reset();
   v.addEventListener('click', (e) => { const b = e.target.closest('[data-pk]'); if (b) openPlace(b.dataset.pk); });
   function openPlace(k) {   // 거래처 카드
     const p = PLACES[k]; if (!p) return; if (k === 'home') { location.hash = '#/campus'; return; }
-    const ORD = { gonggan: ['10/29 구조재 2*6*12 6PLT · 배차 필요', '10/28 유도모음통 15BOX · 하차 완료', '발주 3일째: 루나우드 1PLT · 용마루벤트'], anmyeon: ['10/29 원바 · 배차 기다림 4시간'], hanlim: ['10/28 SPF 2*4*12 80 · 명세서 받음', '10/29 OSB 40장 → 군산 이동 중'], wonik: ['10/29 세라믹 판재 · 실리콘 박스 출고 준비'], woorim: ['10/28 메가타이 철물 · 창고 입고 · 구매 10/28-20'] };
+    const ORD = { gonggan: ['10/29 구조재 2*6*12 6PLT · 배차 필요', '10/28 유도모음통 15BOX · 하차 완료', '발주 3일째: 루나우드 1PLT · 용마루벤트'], anmyeon: ['10/29 원바 · 배차 기다림 4시간'], hanlim: ['10/28 SPF 2*4*12 80 · 명세서 받음', '10/29 OSB 40장 → 군산 이동 중'], wonik: ['10/29 세라믹 판재 · 실리콘 박스 출고 준비'], woorim: ['10/28 메가타이 철물 · 창고 입고 · 구매 10/28-20'] };   // (예시 글 — 예전 그대로)
     const m = el(`<div class="modal"><div class="card pnl" style="width:460px;border-radius:26px;padding:22px 24px;display:flex;flex-direction:column;gap:12px"><div style="display:flex;align-items:center;gap:10px"><div style="flex:1"><div style="font-size:12px;color:#8A7E77">거래처</div><div style="font-size:22px;font-weight:800">${esc(p.name.replace(/[←↓]/g, '').trim())}</div></div><button type="button" class="x" style="width:40px;height:40px;border:0;border-radius:12px;background:#F4EFEA;font-size:18px;cursor:pointer">✕</button></div>
       <div style="padding:10px 12px;border-radius:14px;background:${TONE[p.tone][0] === '#FFFFFF' ? '#F6F2EE' : TONE[p.tone][0]};color:${TONE[p.tone][1] === '#FFFFFF' ? '#fff' : TONE[p.tone][1]};font-weight:800;font-size:14px">${esc(p.msg)}</div>
       <div style="font-size:13px;font-weight:800;color:#8A7E77">진행 중</div>${(ORD[k] || ['진행 중인 출고 없음']).map((o) => `<div style="padding:9px 12px;border-radius:12px;background:#FBF8F5;font-size:13px">${esc(o)}</div>`).join('')}
@@ -534,6 +535,7 @@ function office() {
   }
   function open(k) {
     if (!L) return; const a = AI.find((x) => x.k === k), w = a && L.W[k];
+    if (a) openTalk(a.av, a.who);
     if (a) {
       let body = prow('상태', { ok: '정상', bad: '멈춤 · 실패', run: '지금 작업 중' }[w.st] || '정상', `color:${O3D.DOT[w.st]}`) + (w.note ? prow(esc(w.note)) : '');
       if (k === 'seal') body += prow('오늘 출고', `${L.shipped.length} / ${L.today.length}`) + prow('확인 대기', L.checks.length) + plink('출고 흐름', '/');
@@ -642,6 +644,7 @@ function warehouse() {
       if (k === 'unpaid') { const draw2 = () => P.show('미입금 기사님', `${unpaid.length}명`, unpaid.map((u) => `<div style="display:flex;gap:8px;align-items:center;padding:9px 12px;border-radius:12px;background:#FBF8F5"><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:800">${esc(u.driver || '')}</div><div style="font-size:12px;color:#8A7E77;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(u.job || '')}</div></div><b style="color:#FF453A">${u.amount ? Number(u.amount).toLocaleString() : ''}</b><button type="button" class="btn or" data-paid="${esc(u.id)}" style="height:36px;font-size:12px">입금 완료</button></div>`).join('') || prow('미입금 없음'));
         draw2(); P.el.querySelectorAll('[data-paid]').forEach((b) => { b.onclick = async () => { b.textContent = '…'; const e = await S.markFareSent(b.dataset.paid, ME); if (e) { b.textContent = '실패'; return; } WH.removeWaiter(b.dataset.paid); unpaid.splice(unpaid.findIndex((u) => String(u.id) === b.dataset.paid), 1); b.closest('div').remove(); }; }); return; }
       if (k === 'kiosk') { kioskPanel('es'); return; }
+      if (k === 'noh') openTalk('worker', '노훈님'); else if (k.startsWith('drv:')) { const d0 = drivers.find((d) => String(d.key) === k.slice(4)); openTalk('driver', d0 ? (d0.label.split('→')[0].trim() || '기사님') : '기사님'); }
       if (k === 'kiosk' || k === 'noh' || k.startsWith('drv:')) { const list = (k.startsWith('drv:') ? drivers.filter((d) => String(d.key) === k.slice(4)) : drivers).map((d) => prow(`${esc(d.row.partner)} · ${esc(d.row.site || '')}<div style="font-size:12px;color:#8A7E77">${esc(d.row.veh || '')} ${esc(d.row.time || '')} · ${esc(d.row.item || '')}</div>`, (d.row.steps || []).includes('출고 완료') ? '출고 완료' : '배차 완료', 'color:#1E8E3E')).join(''); P.show(k === 'noh' ? '노훈님 · 오늘 상차' : k === 'kiosk' ? '키오스크 · 오늘 출고' : '기사님', '', list || prow('오늘 출고 없음')); }
     } });
   });
@@ -728,7 +731,11 @@ function openBoard() {
 }
 
 // ── 맨 아래 채팅창 (10/31 대표 "프린세스메이커처럼 맨 하단에 채팅창") — 톡처럼 적으면 천안 재고에서 뺌 (물어보고 [빼기])
-const TALK = { log: [], pend: null, busy: false };
+const TALK = { log: [], pend: null, busy: false, who: null };
+const TALK_HI = { seal: '어서 오세요! 오늘 천안에서 뭐가 나갔나요?', worker: '창고 노훈이에요. 뭐 실어 드렸는지 말씀 주세요!', driver: '기사예요. 뭐 싣고 가는지 적어 주세요.', cat: '배차 담당이에요. 나간 것 적어 주시면 재고에서 뺄게요.' };
+function openTalk(av, name) {   // 캐릭터 누르면 말 걸기 (10/31 대표) — 어느 화면이든 아래 대화창이 그 캐릭터로
+  TALK.who = { av, name }; const cur = stage.querySelector('.talk'), n = talkBar(); if (cur) cur.replaceWith(n); else stage.appendChild(n); n.querySelector('input').focus();
+}
 const TALK_CSS = `<style id="talkcss">
 .talk{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);width:960px;z-index:30;pointer-events:auto;display:flex;gap:16px;align-items:stretch;font-family:Pretendard,sans-serif}
 .talk .tk-pt{flex:none;width:132px;display:flex;flex-direction:column;align-items:center;gap:6px}
@@ -758,16 +765,18 @@ const TALK_CSS = `<style id="talkcss">
 @keyframes tktalk{0%,100%{transform:scaleY(1)}50%{transform:scaleY(.95) translateY(1px)}}
 @keyframes tkblink{0%,100%{opacity:1}50%{opacity:.2}}
 </style>`;
+const portraitOf = (av) => { try { return portrait(av); } catch (e) { return `${IMG}${av}.webp`; } };
 function talkBar() {
   if (!document.getElementById('talkcss')) document.head.insertAdjacentHTML('beforeend', TALK_CSS);
   const me = [...TALK.log].reverse().find((m) => m.me), bot = [...TALK.log].reverse().find((m) => !m.me);
   const fresh = bot && !bot.shown;   // 새 답만 한 글자씩
   const b = el(`<div class="talk">
-    <div class="tk-pt"><div class="tk-fr ${fresh ? 'talking' : ''}"><img src="${IMG}seal.webp" alt=""></div><div class="tk-nm">물범이</div></div>
+    <div class="tk-pt"><div class="tk-fr ${fresh ? 'talking' : ''}"><img src="${portraitOf((TALK.who || {}).av || 'seal')}" alt=""></div><div class="tk-nm">${esc((TALK.who || {}).name || '물범이')}</div></div>
+    ${(location.hash.replace(/^#\/?/, '') || '').startsWith('warehouse') ? '' : '<button type="button" class="tk-x" aria-label="닫기" style="position:absolute;right:-10px;top:-12px;z-index:2;width:30px;height:30px;border-radius:50%;border:2px solid #3A2A12;background:#E8C46A;color:#3A2A12;font-weight:900;cursor:pointer">✕</button>'}
     <div class="tk-win">
       ${TALK.pend && !TALK.busy ? '<div class="tk-ch"><button type="button" class="ok" data-tk="ok">빼기</button><button type="button" data-tk="no">취소</button></div>' : ''}
       ${me ? `<div class="tk-me"><b>나</b>${esc(me.t)}</div>` : ''}
-      <div class="tk-say">${TALK.busy ? '<span class="dots"><span>·</span><span>·</span><span>·</span></span>' : bot ? (fresh ? '' : `${esc(bot.t)}<span class="cur">▼</span>`) : '어서 오세요! 오늘 천안에서 뭐가 나갔나요?<span class="cur">▼</span>'}</div>
+      <div class="tk-say">${TALK.busy ? '<span class="dots"><span>·</span><span>·</span><span>·</span></span>' : bot ? (fresh ? '' : `${esc(bot.t)}<span class="cur">▼</span>`) : `${esc(TALK_HI[(TALK.who || {}).av] || `${(TALK.who || {}).name || '물범이'}예요. 천안에서 나간 것 적어 주세요!`)}<span class="cur">▼</span>`}</div>
       <form><input name="q" autocomplete="off" placeholder="실리콘 베이지 2박스 비드앤비 나감"><button ${TALK.busy ? 'disabled' : ''}>보내기</button></form>
     </div></div>`);
   if (fresh && !TALK.busy) {   // 타자 치듯
@@ -775,6 +784,7 @@ function talkBar() {
     const step = () => { if (!say.isConnected && k) return; k += 1; say.textContent = txt.slice(0, k); if (k < txt.length) setTimeout(step, 28); else { say.insertAdjacentHTML('beforeend', '<span class="cur">▼</span>'); fr.classList.remove('talking'); } };
     setTimeout(step, 60);
   }
+  const xb = b.querySelector('.tk-x'); if (xb) xb.onclick = () => { b.remove(); TALK.who = null; };
   const redraw = (focus) => { const cur = stage.querySelector('.talk'); if (!cur) return; const n = talkBar(); cur.replaceWith(n); if (focus) n.querySelector('input').focus(); };   // 다시 그린 뒤에도 지금 붙어 있는 창을 바꿈
   b.querySelector('form').onsubmit = async (e) => {
     e.preventDefault(); const q = e.target.q.value.trim(); if (!q || TALK.busy) return;

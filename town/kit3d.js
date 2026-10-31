@@ -8,9 +8,9 @@ const m = (c, r = 0.62) => (MC[c + r] ||= r <= 0.35 ? new THREE.MeshPhysicalMate
   : new THREE.MeshPhysicalMaterial({ color: c, roughness: r, metalness: 0, sheen: 0.6, sheenRoughness: 0.5, sheenColor: new THREE.Color('#FFFFFF') }));   // 말랑한 인형 — 몸은 살짝 보송(sheen), 눈·코는 반짝(clearcoat) (10/31 대표 "캐릭터 디테일")
 const OC = {};
 const outlineOf = (o) => {   // 게임 캐릭터처럼 얇은 테두리 — 뒤집은 껍데기 (색은 그 부분 색을 어둡게)
-  const c = new THREE.Color(o.material.color).multiplyScalar(0.42), k = c.getHexString();
+  const c = new THREE.Color(o.material.color).multiplyScalar(0.58), k = c.getHexString();
   const mo = (OC[k] ||= new THREE.MeshBasicMaterial({ color: c, side: THREE.BackSide }));
-  const e = new THREE.Mesh(o.geometry, mo), t = 0.028; e.scale.set(1 + t / Math.max(0.02, o.scale.x), 1 + t / Math.max(0.02, o.scale.y), 1 + t / Math.max(0.02, o.scale.z)); e.castShadow = false; e.raycast = () => {}; o.add(e);
+  const e = new THREE.Mesh(o.geometry, mo), t = 0.018; e.scale.set(1 + t / Math.max(0.02, o.scale.x), 1 + t / Math.max(0.02, o.scale.y), 1 + t / Math.max(0.02, o.scale.z)); e.castShadow = false; e.raycast = () => {}; o.add(e);
 };
 const G = {
   sph: new THREE.SphereGeometry(1, 28, 20), cap: new THREE.CapsuleGeometry(1, 1, 8, 16), cone: new THREE.ConeGeometry(1, 1, 18),
@@ -100,7 +100,7 @@ export function critter(kind) {
       default: face(head, r, 0.02);
     }
   }
-  body.traverse((o) => { if (o.isMesh && o.scale.x * o.scale.y * o.scale.z > 0.004 && o.material.roughness > 0.35) outlineOf(o); });   // 큰 부분만 테두리
+  [head, ...legs, ...arms].map((q) => q.children.find((c) => c.isMesh)).concat(body.children.find((c) => c.isMesh && c.geometry === G.sph) || []).forEach((o) => { if (o) outlineOf(o); });   // 바깥 실루엣(머리·몸·팔다리)만 — 배·무늬·소품엔 안 넣음 (10/31 대표 "윤곽선 부자연")
   const sh = new THREE.Mesh(new THREE.CircleGeometry(0.62, 18), new THREE.MeshBasicMaterial({ color: '#000', transparent: true, opacity: 0.16, depthWrite: false })); sh.rotation.x = -Math.PI / 2; sh.position.y = 0.04; g.add(sh);
   let ph = Math.random() * 6;
   return {
