@@ -36,10 +36,11 @@ export function load(force) {
 
 const FARE_SHEET = 'https://docs.google.com/spreadsheets/d/1UoXiU_raLj5wtT24I3VsRdG-j9XPbcQF/edit';   // 기사 운임 미송금 정리 — 늘 이 파일 하나만 고침, 링크 고정 (10/23 대표)
 const BOARD_SHEET = 'https://docs.google.com/spreadsheets/d/1yBcId-iFWtdmt_og2rA71mbmnicyvoZI/edit';   // 드라이브 홈트레이더스_출고일보/출고일보/출고일보.xlsx — build_board 가 같은 파일을 덮어써서 링크 고정 (10/23 대표 바로가기)
-function top(back) {
-  return `<header class="hm-top"><div class="hm-in">
+function top(back, nav) {
+  return `<header class="hm-top ${nav ? 'nav' : ''}"><div class="hm-in">
     ${back ? `<button type="button" class="hm-back" data-hm="go" data-r="${back}">‹</button>` : ''}
     <img src="./icons/logo-full.png" alt="HOME TRADERS" class="hm-logo" data-hm="go" data-r="main">
+    ${nav ? navHtml() : ''}
     ${fareBadge()}
     <span class="sp"></span><a class="hm-sheet" href="${BOARD_SHEET}" target="_blank" rel="noopener">출고일보 ↗</a><b class="hm-me">${esc(ctx.me())}</b>
     <button type="button" class="hm-link" data-hm="go" data-r="start">처음 화면</button></div></header>`;
@@ -118,30 +119,31 @@ export function screen(view) {
       </div></main>${FM.popup()}</div>`;
   }
   const wait = (H.inbox.wait || 0) + (H.inbox.got || 0), chk = H.inbox.check || 0;
-  return `<div class="hm">${top('')}<div class="hm-body">${sideHtml()}<main class="hm-main">
+  return `<div class="hm">${top('', true)}${subHtml()}<div class="hm-body top"><main class="hm-main">
     ${FL.main({ fare: H.fare || [], inbox: wait + chk })}${farePanel()}</main></div>${quickHtml(wait, chk)}${boxModal()}${FM.popup()}<input type="file" id="hm-file" multiple accept="image/*,.heic,.pdf,.xlsx,.xls,.csv,.txt" hidden></div>`;
 }
 
-// 사이드바 (10/28 대표) — 오늘 마감(출고 흐름과 합침) · 견적 요청 · 서류 변환 · 전표 확인 · 거래처. 자료 넣기는 오른쪽 아래 퀵메뉴로
-function sideHtml() {
-  const c = FL.counts(), v = FL.view(), n = (k) => (k ? `<b>${k}</b>` : '');
-  const it = (lab, attr, on, badge, cls) => `<button type="button" class="hm-si ${on ? 'on' : ''} ${cls || ''}" ${attr}><span>${lab}</span>${badge || ''}</button>`;
-  return `<nav class="hm-side" aria-label="메뉴">
-    ${it('오늘 마감', 'data-hm="fv" data-v="flow"', v === 'flow', n(FL.closeItems({ fare: H.fare || [], inbox: (H.inbox.wait || 0) + (H.inbox.got || 0) + (H.inbox.check || 0) }).filter((i) => i.n).length))}
-    ${it('견적 요청', 'data-hm="fv" data-v="견적"', v === '견적', n(c.quote))}
-    <div class="hm-sg">서류 변환</div>
-    ${it('거래명세표', 'data-hm="go" data-r="stmt"', false, '', 'sub')}
-    ${it('납품확인서', 'data-hm="form" data-r="deliv"', false, '', 'sub')}
-    ${it('자재승인원', 'data-hm="form" data-r="approval"', false, '', 'sub')}
-    ${it('입금표', 'data-hm="frame" data-src="./deposit.html?embed=1" data-title="입금표"', false, '', 'sub')}
-    <div class="hm-sg">전표 확인</div>
-    ${it('입력 누락', 'data-hm="fv" data-v="누락"', v === '누락', n(c.miss + c.missOld), 'sub')}
-    ${it('입력 완료', 'data-hm="fv" data-v="완료"', v === '완료', '', 'sub')}
-    ${it('전체보기', 'data-hm="fv" data-v="기록"', v === '기록', '', 'sub')}
-    <div class="hm-sg">거래처</div>
-    <a class="hm-si sub" href="/gonggan/"><span>공간 협업툴</span>${n(H.gwait)}</a>
-    ${it('뉴하우징 협업툴', 'disabled', false, '<i>준비중</i>', 'sub off')}
-  </nav>`;
+// 위 2단 메뉴 (10/31 대표 "사이드 메뉴는 상단으로, 투뎁스") — 1단: 출고·전표 확인·서류·거래처, 2단: 고른 묶음의 항목
+const GRP_OF = { flow: '출고', 견적: '출고', 기록: '출고', 누락: '전표', 완료: '전표' };
+function curGrp() { return H.grp || GRP_OF[FL.view()] || '출고'; }
+function closeN() { return FL.closeItems({ fare: H.fare || [], inbox: (H.inbox.wait || 0) + (H.inbox.got || 0) + (H.inbox.check || 0) }).filter((i) => i.n).length; }
+function navHtml() {
+  const c = FL.counts(), g = curGrp(), n = (k) => (k ? `<b>${k}</b>` : '');
+  const t = (k, lab, badge) => `<button type="button" class="hm-t1 ${g === k ? 'on' : ''}" data-hm="grp" data-g="${k}">${lab}${badge || ''}</button>`;
+  return `<nav class="hm-nav" aria-label="메뉴">${t('출고', '출고', n(closeN()))}${t('전표', '전표 확인', n(c.miss + c.missOld))}${t('서류', '서류')}${t('거래처', '거래처', n(H.gwait))}</nav>`;
+}
+function subHtml() {
+  const c = FL.counts(), v = FL.view(), g = curGrp(), n = (k) => (k ? `<b>${k}</b>` : '');
+  const it = (lab, attr, on, badge, cls) => `<button type="button" class="hm-t2 ${on ? 'on' : ''} ${cls || ''}" ${attr}>${lab}${badge || ''}</button>`;
+  const fv = (lab, k, badge) => it(lab, `data-hm="fv" data-v="${k}"`, !H.grp && v === k, badge);
+  const items = {
+    출고: [fv('오늘 마감', 'flow', n(closeN())), fv('견적 요청', '견적', n(c.quote)), fv('전체 출고', '기록')],
+    전표: [fv('입력 누락', '누락', n(c.miss + c.missOld)), fv('입력 완료', '완료')],
+    서류: [it('거래명세표', 'data-hm="go" data-r="stmt"'), it('납품확인서', 'data-hm="form" data-r="deliv"'), it('자재승인원', 'data-hm="form" data-r="approval"'),
+      it('입금표', 'data-hm="frame" data-src="./deposit.html?embed=1" data-title="입금표"'), it('견적서', 'data-hm="form" data-r="quote"'), it('전자 송장', 'data-hm="form" data-r="esong"')],
+    거래처: [`<a class="hm-t2" href="/gonggan/">공간 협업툴${n(H.gwait)}</a>`, it('뉴하우징 협업툴', 'disabled', false, '<i>준비중</i>', 'off')],
+  }[g] || [];
+  return `<div class="hm-subnav"><div class="hm-sin">${items.join('')}</div></div>`;
 }
 // 퀵메뉴 — 자료 넣기(끌어다 놓기·붙여넣기도 여기로) · 배차 요청 · 전자 송장 · 견적서
 function quickHtml(wait, chk) {
@@ -199,7 +201,8 @@ export function bind(app, c) {
     const t = e.target.closest('[data-hm]'); if (!t || !on()) return;
     const a = t.dataset.hm;
     if (a === 'go') { FM.open(''); closeFrame(); ctx.go(t.dataset.r, t.dataset.mode); }   // 화면을 옮기면 열린 팝업은 닫음
-    else if (a === 'fv') { FL.setView(t.dataset.v); H.quick = false; ctx.rerender(); }
+    else if (a === 'fv') { FL.setView(t.dataset.v); H.grp = ''; H.quick = false; ctx.rerender(); }
+    else if (a === 'grp') { const g = t.dataset.g; if (g === '출고') { FL.setView('flow'); H.grp = ''; } else if (g === '전표') { FL.setView('누락'); H.grp = ''; } else H.grp = g; ctx.rerender(); }
     else if (a === 'quick') { H.quick = !H.quick; ctx.rerender(); }
     else if (a === 'fare-all') { H.fareAll = !H.fareAll; ctx.rerender(); }
     else if (a === 'fare-open') { H.fareOpen = !H.fareOpen; ctx.rerender(); if (H.fareOpen) setTimeout(() => { const x = document.querySelector('.hm-fare'); if (x) x.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 0); }
