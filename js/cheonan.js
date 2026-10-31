@@ -202,9 +202,9 @@ export async function talk(text) {
   const sils = S.getItems().filter((it) => (it.category === '실리콘' || /실리콘/.test(it.name)) && isCn(it.warehouse || '천안'));
   const sil = /실리콘|박스/.test(t) || sils.some((it) => t.includes(it.name)) ? sils.filter((it) => t.includes(it.name) || t.includes(String(it.name).replace(/색$/, ''))).sort((a, b) => b.name.length - a.name.length)[0] : null;
   const qm = /(\d+(?:\.\d+)?)\s*(박스|box|개|ea|PLT|파레트)?/i.exec(t.replace(/\d+\*\d+\*\d+/g, ' '));
-  const pt = S.getPartners().map((p) => p.name).filter(Boolean).filter((n) => nk(t).includes(nk(n).slice(0, Math.max(3, nk(n).length - 2)))).sort((a, b) => b.length - a.length)[0];
   let rest = t.replace(/\d+\*\d+\*\d+/g, ' ').replace(qm ? qm[0] : /$^/, ' ').replace(/실리콘|구조재|구조목|박스|나감|나갔어?요?|나갔음|출고|보냄|보냈어?요?|빼줘|빼|천안창고|천안|오늘|에서/g, ' ');
   if (sil) rest = rest.replace(sil.name, ' ').replace(String(sil.name).replace(/색$/, ''), ' ').replace(/색/g, ' ');
+  const pt = S.getPartners().map((p) => p.name).filter(Boolean).filter((n) => nk(n).length >= 2 && nk(rest).includes(nk(n).slice(0, Math.max(2, nk(n).length - 1)))).sort((a, b) => b.length - a.length)[0];   // 품목 말을 뺀 나머지에서 거래처 찾기
   const client = pt || (rest.split(/[\s,.]+/).filter((w) => w.length >= 2 && /[가-힣A-Za-z]/.test(w))[0] || '');
   if (sil) {
     const qty = qm ? +qm[1] : 1, today = S.todayStr();
