@@ -1,7 +1,7 @@
 // 홈트 마을 /town (10/29 대표 "게임처럼 · 디자인만 먼저") — 마을 · 단지 · 사무실 · 창고 네 화면, 아직 예시 자료
 // 주소 뒤 #/campus · #/office · #/warehouse 로 화면 바뀜. 직원 계정만 (공간 계정 막음)
-import * as S from '/js/store-supabase.js?v=12';
-import * as CN from '/js/cheonan.js?v=5';   // 천안 재고 — 실사 − 뺀 것, 나갈 것 (10/31)
+import * as S from '/js/store-supabase.js?v=13';
+import * as CN from '/js/cheonan.js?v=6';   // 천안 재고 — 실사 − 뺀 것, 나갈 것 (10/31)
 import * as JIM from './jim.js?v=2';
 import * as W3D from './v3d.js?v=20';
 import * as O3D from './o3d.js?v=27';

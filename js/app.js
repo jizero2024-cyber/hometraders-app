@@ -1,15 +1,15 @@
 import {
   CATEGORIES, UNITS, WH_ICON_KEYS, swatchFor, SILICONE_COLORS,
 } from './data.js?v=2';
-import * as S from './store-supabase.js?v=12';
+import * as S from './store-supabase.js?v=13';
 import { ECOUNT_ITEMS } from './ecount-items.js';
 import { makeMatcher, readPastedText, quotePrev } from './textread.js?v=3';
 import * as DL from './delivery.js';
 import * as SM from './stmt.js?v=104';
-import * as HD from './hdisp.js?v=13';
-import * as HM from './home.js?v=82';
-import * as FM from './forms.js?v=23';
-import * as KI from './kiosk.js?v=32';   // 세로형 키오스크 /kiosk (10/29)
+import * as HD from './hdisp.js?v=14';
+import * as HM from './home.js?v=83';
+import * as FM from './forms.js?v=24';
+import * as KI from './kiosk.js?v=33';   // 세로형 키오스크 /kiosk (10/29)
 
 // 창고 아이콘 세트 (무채색)
 const WH_ICONS = {

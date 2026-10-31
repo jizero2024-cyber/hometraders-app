@@ -2,7 +2,7 @@
 // 상차지·하차지 = 창고 + 거래처(공유 DB — 도우미 배차 주소록도 10/22 여기로 옮김) + 지난 출고에 적힌 상·하차지.
 // 맥 도우미 없이 누구 PC·휴대폰에서도 됨. 새로 적은 주소는 거래처에 저장돼 다음부터 모두에게 뜸.
 // 검색은 초성도 됨 (ㅇㅇㅋㅂ → 원익큐브). [배차 요청] = 배차요청톡 복사 + 출고 목록에 '출고예정'으로 등록.
-import * as S from './store-supabase.js?v=12';
+import * as S from './store-supabase.js?v=13';
 import * as W from './weights.js?v=1';
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

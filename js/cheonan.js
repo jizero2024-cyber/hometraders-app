@@ -2,7 +2,7 @@
 //   실사 = 재고.xlsx '천안' 줄 (맥 town_status.py → site_inbox 'town:stock') — 이카운트 재고는 안 맞아서 안 씀
 //   나갈 것 = 출고 흐름(flow:board) 구매 줄 중 거래처가 '천안…' 인 것 (대표가 전화로 불러 주는 천안 체크리스트)
 //   빼기 = site_inbox kind 'cnout' (직원 전용 표) — 품목·수량을 고른 것만 재고에서 빠짐. 전자 송장 체크·서명은 옆에 표시하고 품목 채우기에 씀
-import * as S from './store-supabase.js?v=12';
+import * as S from './store-supabase.js?v=13';
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = (n) => (Math.round((Number(n) || 0) * 10) / 10).toLocaleString();

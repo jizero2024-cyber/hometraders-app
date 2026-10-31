@@ -304,9 +304,9 @@ export async function saveCnOut(no, name, body, by) {   // 실패하면 글자, 
 }
 export async function getSlipLinks(slips) {   // 전표 번호(20261027-3) → 이카운트 전표 PDF 드라이브 링크
   if (!slips.length) return {};
-  const { data, error } = await sb.from('slip_rows').select('drive_id,slip,kind,updated_at').in('slip', slips).order('updated_at', { ascending: false });   // 같은 전표를 다시 받은 PDF 가 있으면 최근 것 먼저 (10/30)
+  const { data, error } = await sb.from('slip_rows').select('drive_id,slip,kind,file,updated_at').in('slip', slips).order('updated_at', { ascending: false });   // 같은 전표를 다시 받은 PDF 가 있으면 최근 것 먼저 (10/30)
   if (error) throw new Error(error.message);
-  return (data || []).reduce((a, r) => { (a[r.slip] = a[r.slip] || []).push(r); return a; }, {});
+  return (data || []).filter((r) => !r.file || /\.pdf$/i.test(r.file)).reduce((a, r) => { (a[r.slip] = a[r.slip] || []).push(r); return a; }, {});   // 엑셀 전표 링크 줄은 빼고 이카운트 PDF 만 (10/31 대표)
 }
 export async function getInboxCounts() {
   const { data, error } = await sb.from('site_inbox').select('status').neq('kind', 'read').in('status', ['wait', 'got', 'check']);   // 'read' = 사진 읽기 부탁 (자료 아님)
