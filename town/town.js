@@ -3,7 +3,7 @@
 import * as S from '/js/store-supabase.js?v=13';
 import * as CN from '/js/cheonan.js?v=6';   // 천안 재고 — 실사 − 뺀 것, 나갈 것 (10/31)
 import * as JIM from './jim.js?v=2';
-import * as W3D from './v3d.js?v=20';
+import * as W3D from './v3d.js?v=21';
 import * as O3D from './o3d.js?v=27';
 import { portrait, KINDS } from './kit3d.js?v=6';
 
@@ -196,8 +196,8 @@ function village() {
   live().then((L) => { if (!v.isConnected) return; L.shipped.slice(0, 8).forEach((x, i) => {
     const to = lotOf(x); if (!to) return;
     const from = (FROM.find(([re]) => re.test(`${x.from || ''} ${x.memo || ''}`)) || [])[1] || 'home'; if (from === to) return;
-    const done = (x.steps || []).includes('출고 완료');
-    addTruck({ from, to, c: i, dur: 50 + i * 7, delay: -(i * 9 + 5), sub: `${done ? '출고 완료' : '배차 완료'} · ${x.site || ''} · ${x.veh || ''} ${x.time || ''}`.replace(/\s+/g, ' ').trim() });
+    if ((x.steps || []).includes('출고 완료')) return;   // 출고 완료 = 도착한 것 — 트럭·이름표 없앰 (10/31 대표 "완료된 건은 사라져야")
+    addTruck({ from, to, c: i, dur: 50 + i * 7, delay: -(i * 9 + 5), sub: `배차 완료 · ${x.site || ''} · ${x.veh || ''} ${x.time || ''}`.replace(/\s+/g, ' ').trim() });
   }); });
   // 배차 사무실 — 실제 배차 요청 건 (출고 흐름과 같은 자료)
   const disp = v.querySelector('#disp'); let LL = null;
@@ -732,7 +732,22 @@ function openBoard() {
 
 // ── 맨 아래 채팅창 (10/31 대표 "프린세스메이커처럼 맨 하단에 채팅창") — 톡처럼 적으면 천안 재고에서 뺌 (물어보고 [빼기])
 const TALK = { log: [], pend: null, busy: false, who: null };
-const TALK_HI = { seal: '어서 오세요! 오늘 천안에서 뭐가 나갔나요?', worker: '창고 노훈이에요. 뭐 실어 드렸는지 말씀 주세요!', driver: '기사예요. 뭐 싣고 가는지 적어 주세요.', cat: '배차 담당이에요. 나간 것 적어 주시면 재고에서 뺄게요.' };
+const STOCK_EX = ['실리콘 베이지 2박스 비드앤비 나감', '2*6*12 160 공간 나감'];
+const TALK_NPC = {   // 캐릭터마다 맡은 일 안내 + 예시 (10/31 대표 "각자 맡는 예시 안내 NPC") — ex = 눌러서 대화창에 넣기, go = 그 화면으로
+  seal: { hi: '출고일보 담당이에요. 천안에서 나간 걸 톡처럼 적으면 재고에서 빼 드려요.', ex: STOCK_EX },
+  worker: { hi: '창고 노훈이에요. 실은 거 말씀 주시면 천안 재고에서 뺄게요.', ex: STOCK_EX },
+  driver: { hi: '기사예요. 싣고 가는 걸 적어 주시면 재고에서 빠져요.', ex: STOCK_EX },
+  raccoon: { hi: '이카운트 전표를 받아 오고 넣어요. 빠진 전표는 입력 누락에 모여요.', go: [['입력 누락 보기', '/main']] },
+  otter: { hi: '기사님 운임 미송금을 챙겨요. 보낸 건 「보냄」 눌러 주세요.', go: [['운송비 미송금', '/main']] },
+  hedgehog: { hi: '공간제작소 사이트에 올릴 전표를 챙겨요.', go: [['공간 협업툴', '/gonggan/']] },
+  squirrel: { hi: '전표 PDF랑 명세서를 거래처 폴더에 정리해요.', go: [['거래명세표', '/stmt']] },
+  cat: { hi: '배차를 맡아요. 배차 요청은 여기서 넣어요.', go: [['배차 요청', '/homt']] },
+  guppy: { hi: '비토 통화·문자를 모아 출고일보에 넣어요.', go: [['출고 흐름', '/main']] },
+  redpanda: { hi: '박스·카탈로그 디자인을 맡아요.' },
+  owl: { hi: '사이트 기능이 잘 도는지 점검해요. 고장 나면 관제탑에 떠요.' },
+  turtle: { hi: '월마감 — 구매·판매·계산서를 맞춰요.' },
+};
+const josa = (w) => { const c = String(w || '').charCodeAt(String(w || '').length - 1); return c >= 0xAC00 && c <= 0xD7A3 && (c - 0xAC00) % 28 ? '이에요' : '예요'; };
 function openTalk(av, name) {   // 캐릭터 누르면 말 걸기 (10/31 대표) — 어느 화면이든 아래 대화창이 그 캐릭터로
   TALK.who = { av, name }; const cur = stage.querySelector('.talk'), n = talkBar(); if (cur) cur.replaceWith(n); else stage.appendChild(n); n.querySelector('input').focus();
 }
@@ -749,6 +764,7 @@ const TALK_CSS = `<style id="talkcss">
 .talk .tk-me{font-size:13px;font-weight:700;color:#A9B6D8;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .talk .tk-me b{color:#7FD1FF;margin-right:6px}
 .talk .tk-say{min-height:52px;font-size:19px;font-weight:800;line-height:1.5;letter-spacing:.01em;text-shadow:0 2px 0 rgba(0,0,0,.35)}
+.talk .tk-ex{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}.talk .tk-ex button,.talk .tk-ex a{height:30px;padding:0 12px;border-radius:999px;border:1.5px solid rgba(232,196,106,.6);background:rgba(232,196,106,.12);color:#FFE7A8;font:800 12.5px Pretendard,sans-serif;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center}.talk .tk-ex button:hover,.talk .tk-ex a:hover{background:rgba(232,196,106,.28)}
 .talk .tk-say .cur{display:inline-block;margin-left:6px;color:#E8C46A;animation:tkblink 1s steps(2) infinite}
 .talk .tk-ch{position:absolute;right:18px;top:-58px;display:flex;gap:8px}
 .talk .tk-ch button{height:44px;padding:0 18px 0 14px;border-radius:12px;border:3px solid #E8C46A;background:linear-gradient(#2A3766,#1A2347);color:#FFF8E8;font:900 16px Pretendard,sans-serif;cursor:pointer;box-shadow:0 0 0 2px #3A2A12,0 6px 14px rgba(0,0,0,.35)}
@@ -776,7 +792,8 @@ function talkBar() {
     <div class="tk-win">
       ${TALK.pend && !TALK.busy ? '<div class="tk-ch"><button type="button" class="ok" data-tk="ok">빼기</button><button type="button" data-tk="no">취소</button></div>' : ''}
       ${me ? `<div class="tk-me"><b>나</b>${esc(me.t)}</div>` : ''}
-      <div class="tk-say">${TALK.busy ? '<span class="dots"><span>·</span><span>·</span><span>·</span></span>' : bot ? (fresh ? '' : `${esc(bot.t)}<span class="cur">▼</span>`) : `${esc(TALK_HI[(TALK.who || {}).av] || `${(TALK.who || {}).name || '물범이'}예요. 천안에서 나간 것 적어 주세요!`)}<span class="cur">▼</span>`}</div>
+      <div class="tk-say">${TALK.busy ? '<span class="dots"><span>·</span><span>·</span><span>·</span></span>' : bot ? (fresh ? '' : `${esc(bot.t)}<span class="cur">▼</span>`) : `${esc((TALK_NPC[(TALK.who || {}).av] || {}).hi || `${(TALK.who || {}).name || '물범이'}${josa((TALK.who || {}).name || '물범이')}. 천안에서 나간 것 적어 주세요!`)}<span class="cur">▼</span>`}</div>
+      ${(() => { const n = TALK_NPC[(TALK.who || {}).av || 'seal'] || TALK_NPC.seal; return (n.ex || n.go) && !TALK.pend ? `<div class="tk-ex">${(n.ex || []).map((t) => `<button type="button" data-ex="${esc(t)}">${esc(t)}</button>`).join('')}${(n.go || []).map(([t, u]) => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(t)} ›</a>`).join('')}</div>` : ''; })()}
       <form><input name="q" autocomplete="off" placeholder="실리콘 베이지 2박스 비드앤비 나감"><button ${TALK.busy ? 'disabled' : ''}>보내기</button></form>
     </div></div>`);
   if (fresh && !TALK.busy) {   // 타자 치듯
@@ -784,6 +801,7 @@ function talkBar() {
     const step = () => { if (!say.isConnected && k) return; k += 1; say.textContent = txt.slice(0, k); if (k < txt.length) setTimeout(step, 28); else { say.insertAdjacentHTML('beforeend', '<span class="cur">▼</span>'); fr.classList.remove('talking'); } };
     setTimeout(step, 60);
   }
+  b.querySelectorAll('[data-ex]').forEach((x) => { x.onclick = () => { const inp = b.querySelector('input'); inp.value = x.dataset.ex; inp.focus(); }; });
   const xb = b.querySelector('.tk-x'); if (xb) xb.onclick = () => { b.remove(); TALK.who = null; };
   const redraw = (focus) => { const cur = stage.querySelector('.talk'); if (!cur) return; const n = talkBar(); cur.replaceWith(n); if (focus) n.querySelector('input').focus(); };   // 다시 그린 뒤에도 지금 붙어 있는 창을 바꿈
   b.querySelector('form').onsubmit = async (e) => {

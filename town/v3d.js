@@ -193,10 +193,11 @@ export function mount(host, o) {
     else if (kind === 'office') { g = group(x, z - 2); box(22, 0.4, 18, '#E9E4DA', 0, 0, 0, g); box(16, 8, 12, '#FFFFFF', 0, 0.4, -1, g); box(16.4, 0.6, 12.4, '#2B2522', 0, 8.4, -1, g); const gl = new THREE.Mesh(new THREE.BoxGeometry(12, 5, 0.2), winM); gl.position.set(0, 3.6, 5.1); g.add(gl); box(3, 0.2, 3, '#7CC56A', -8, 0.4, 7, g); }
     else if (kind === 'courier') {   // 택배 영업소 — 초록 지붕 창고 · 셔터 · 택배 상자 더미 · 택배 트럭 · 컨베이어
       g = shed(x - 3, z - 5, 0, 24, 14, 8, '#F4F2EC', '#2E8B57');
-      box(8, 5, 0.3, '#C9CDD2', -3, 0, 2.2, g); for (let i = 0; i < 6; i++) box(8, 0.12, 0.32, '#9AA0A6', -3, 0.6 + i * 0.8, 2.25, g);   // 셔터
-      box(10, 2.2, 0.3, '#2E8B57', 4, 6.2, 2.25, g);   // 간판 자리
-      for (let i = 0; i < 9; i++) { const bx2 = 8 + (i % 3) * 1.7, bz2 = 4 + Math.floor(i / 3) * 1.7; box(1.5, 1.2, 1.5, ['#C79A62', '#D8AE74', '#B98A55'][i % 3], bx2, Math.floor(i / 5) * 1.2, bz2, g); }
-      box(9, 0.6, 2, '#5B6470', -3, 0, 6.5, g); for (let i = 0; i < 4; i++) box(1.4, 1, 1.4, '#C79A62', -6.5 + i * 2.3, 0.6, 6.5, g);   // 컨베이어 · 상자
+      box(7, 5, 0.3, '#C9CDD2', -6, 0, 7.15, g); for (let i = 0; i < 6; i++) box(7, 0.12, 0.32, '#9AA0A6', -6, 0.6 + i * 0.8, 7.3, g);   // 셔터 (앞면 z=7)
+      { const c = document.createElement('canvas'); c.width = 512; c.height = 112; const q = c.getContext('2d'); q.fillStyle = '#1F8A4C'; q.fillRect(0, 0, 512, 112); q.fillStyle = '#FFFFFF'; q.font = '900 58px Pretendard, sans-serif'; q.textBaseline = 'middle'; q.fillText('경동택배', 22, 58); q.font = '800 30px Pretendard, sans-serif'; q.fillStyle = '#D8F5E3'; q.fillText('차암점', 300, 62); q.fillStyle = '#F5C431'; q.fillRect(470, 20, 22, 72);
+        const tx = new THREE.CanvasTexture(c); tx.colorSpace = THREE.SRGBColorSpace; const sg = new THREE.Mesh(new THREE.PlaneGeometry(10, 2.2), new THREE.MeshBasicMaterial({ map: tx })); sg.position.set(x - 3 + 4, 6.4, z - 5 + 7.35); scene.add(sg); }   // 간판 — 글자로 그림 (로고 그림 파일은 받으면 바꿈)
+      for (let i = 0; i < 9; i++) { const bx2 = 7 + (i % 3) * 1.7, bz2 = 9 + Math.floor(i / 3) * 1.7; box(1.5, 1.2, 1.5, ['#C79A62', '#D8AE74', '#B98A55'][i % 3], bx2, Math.floor(i / 5) * 1.2, bz2, g); }
+      box(9, 0.6, 2, '#5B6470', -3, 0, 10, g); for (let i = 0; i < 4; i++) box(1.4, 1, 1.4, '#C79A62', -6.5 + i * 2.3, 0.6, 10, g);   // 컨베이어 · 상자
       const tk = group(x - 13, z + 9); tk.rotation.y = Math.PI / 2; box(6, 3.2, 3, '#FFFFFF', -1, 0.8, 0, tk); box(2.4, 2.4, 2.8, '#2E8B57', 3.2, 0.8, 0, tk); box(6.05, 0.6, 3.05, '#2E8B57', -1, 2.4, 0, tk); [[-3, -1.4], [-0.2, -1.4], [3, -1.4], [-3, 1.4], [-0.2, 1.4], [3, 1.4]].forEach(([a, b]) => { const w = new THREE.Mesh(new THREE.CylinderGeometry(0.65, 0.65, 0.4, 12), mat('#2B2522')); w.rotation.x = Math.PI / 2; w.position.set(a, 0.65, b); tk.add(w); }); clickable(tk, key);
     }
     else if (kind === 'wood') { g = house(x - 6, z - 4, 0, '#C99A6B', '#5B4636', 1.15); clickable(house(x + 11, z + 2, -0.4, '#E7D2B5', '#7A5A44', 0.95), key); }   // 청도 집 (10/30 — 마을 한가운데 몰려 있던 것 제자리로)
