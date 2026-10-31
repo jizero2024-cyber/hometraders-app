@@ -231,18 +231,17 @@ export function warehouse(host, o) {
     tag('item:' + it.key, pill(`${it.name} ${Math.floor(it.qty)}${it.unit || ''}`, 'rgba(255,255,255,.95)', '#4A3F3A'), x + (side ? -1.6 : 1.6), y + 2.6, z);
   });
   // 구조재 — 파렛트 위 번들 (o.items: 실사 재고표 줄, plt = 파렛트 수). 남은 것 = 나무 · 나갈 것 = 주황 띠 · 나간 자리 = 바닥 자국
-  const bar = (it) => { const b = Math.max(1, it.base || it.qty), l = Math.max(0, it.qty) / b * 100, p = Math.min(Math.max(0, it.qty), it.pend || 0) / b * 100;
-    return `<div style="min-width:132px;padding:6px 10px 7px;border-radius:12px;background:rgba(34,30,28,.88);color:#fff;font:800 12px Pretendard,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.25);border:1.5px solid ${it.pend ? '#FF8A50' : 'rgba(255,255,255,.18)'}">
-      <div style="display:flex;justify-content:space-between;gap:8px;white-space:nowrap"><span>${it.name}</span><span style="color:#FFD58A">${Math.floor(it.qty).toLocaleString()}</span></div>
-      <div style="margin-top:5px;height:6px;border-radius:3px;background:rgba(255,255,255,.18);overflow:hidden;display:flex"><span style="width:${l - p}%;background:linear-gradient(90deg,#E9B872,#F6D199)"></span><span style="width:${p}%;background:#FF7A45"></span></div>
-      ${it.pend ? `<div style="margin-top:4px;font-size:11px;color:#FFB08A;white-space:nowrap">나갈 ${Math.floor(it.pend).toLocaleString()}</div>` : ''}</div>`; };
+  const bar = (it) => { const b = Math.max(1, it.base || it.qty), l = Math.max(0, it.qty) / b * 100, p = Math.min(Math.max(0, it.qty), it.pend || 0) / b * 100;   // 작은 게임식 이름표 — 이름·남음 + 막대 (나갈 것 주황)
+    return `<div style="padding:3px 7px 4px;border-radius:8px;background:rgba(34,30,28,.86);color:#fff;font:800 10.5px Pretendard,sans-serif;box-shadow:0 3px 10px rgba(0,0,0,.22);border:1px solid ${it.pend ? '#FF8A50' : 'rgba(255,255,255,.15)'};white-space:nowrap">
+      ${it.name} <span style="color:#FFD58A">${Math.floor(it.qty).toLocaleString()}</span>${it.pend ? ` <span style="color:#FF9D70">−${Math.floor(it.pend).toLocaleString()}</span>` : ''}
+      <div style="margin-top:3px;height:4px;border-radius:2px;background:rgba(255,255,255,.18);overflow:hidden;display:flex"><span style="width:${l - p}%;background:#E9B872"></span><span style="width:${p}%;background:#FF7A45"></span></div></div>`; };
   const items = (o.items || []).slice(0, 12);
   items.forEach((it, i) => {
     const col = i % 4, row = Math.floor(i / 4), x0 = -15 + col * 10, z0 = -12 + row * 9;
     const base = it.base || it.qty, per = it.plt ? base / it.plt : 150, N = Math.max(1, Math.min(8, Number(it.plt) || Math.ceil(base / 150)));
     const left = Math.max(0, Math.min(N, Math.round(it.qty / per))), pend = Math.max(0, Math.min(left, Math.round((it.pend || 0) / per)));
     const len = /16/.test(it.name.split('*')[2] || '') ? 7.2 : /13|3900/.test(it.name) ? 5.6 : 5.2;
-    const g = new THREE.Group(); g.position.set(x0, 0, z0); scene.add(g);
+    const g = new THREE.Group(); g.position.set(x0, 0, z0); g.scale.setScalar(1.25); scene.add(g);
     for (let k = 0; k < left; k++) {
       const sx = (k % 2) * 3.2 - 1.6, sy = Math.floor(k / 2) * 1.62, go = k >= left - pend;
       [-1.1, 0, 1.1].forEach((dx) => mesh(new THREE.BoxGeometry(0.4, 0.22, len), tmat(TX.pallet), sx + dx, sy + 0.11, 0, g));
@@ -254,7 +253,7 @@ export function warehouse(host, o) {
     for (let k = left; k < N; k++) { const sx = (k % 2) * 3.2 - 1.6; if (k < 2) { box(2.9, 0.03, len, '#B7AE9E', sx, 0.01, 0, g); [-1.1, 0, 1.1].forEach((dx) => box(0.42, 0.04, len, '#A79E8E', sx + dx, 0.02, 0, g)); } }   // 나간 자리 — 바닥 자국
     if (!left) box(6, 0.05, len, '#B7AE9E', 0, 0.01, 0, g);
     clickable(g, 'item:' + it.key);
-    tag('item:' + it.key, bar(it), x0, Math.ceil(Math.max(left, 1) / 2) * 1.62 + 1.8, z0);
+    tag('item:' + it.key, bar(it), x0, Math.ceil(Math.max(left, 1) / 2) * 2.03 + 0.9, z0 + len * 0.45);   // 번들 바로 위 앞쪽
   });
   // 키오스크 · 지게차 · 불독 · 노훈님
   { const g = new THREE.Group(); g.position.set(-20, 0, 17); scene.add(g); box(2.4, 5.4, 1.6, '#FFFFFF', 0, 0, 0, g); box(2, 2.6, 0.1, '#2B2F36', 0, 2.4, 0.82, g); box(1.8, 2.3, 0.05, '#9FD0FF', 0, 2.55, 0.88, g, { emissive: '#9FD0FF', emissiveIntensity: 0.5 }); clickable(g, 'kiosk'); }
