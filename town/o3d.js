@@ -201,7 +201,7 @@ export function warehouse(host, o) {
   // 뒷벽 간판 · 안전 표지 · 시계
   { const lg = new THREE.TextureLoader().load('/icons/logo-full.png'); lg.colorSpace = THREE.SRGBColorSpace; box(16, 5, 0.3, '#FFFFFF', 0, 13, -WD / 2 + 0.5); const sg = new THREE.Mesh(new THREE.PlaneGeometry(14, 4), new THREE.MeshBasicMaterial({ map: lg, transparent: true })); sg.position.set(0, 15.5, -WD / 2 + 0.7); scene.add(sg); }
   const signT = (bg, fg, t1) => cvs(256, 128, (g, w, h) => { g.fillStyle = bg; g.fillRect(0, 0, w, h); g.fillStyle = fg; g.font = '900 44px Pretendard, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(t1, w / 2, h / 2); });
-  [['#1E8E3E', '#FFFFFF', '안전 제일', -22], ['#F5C431', '#2B2522', '지게차 주의', 22]].forEach(([bg, fg, t1, x]) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(7, 3.5), new THREE.MeshBasicMaterial({ map: signT(bg, fg, t1) })); m.position.set(x, 12, -WD / 2 + 0.7); scene.add(m); });
+  [['#1E8E3E', '#FFFFFF', '안전 제일', -25], ['#F5C431', '#2B2522', '지게차 주의', 22]].forEach(([bg, fg, t1, x]) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(7, 3.5), new THREE.MeshBasicMaterial({ map: signT(bg, fg, t1) })); m.position.set(x, 12, -WD / 2 + 0.7); scene.add(m); });
   { cyl(1.4, 0.3, '#FFFFFF', 12, 17, -WD / 2 + 0.6).rotation.x = Math.PI / 2; const hand = box(0.15, 1, 0.1, '#222', 12, 16.9, -WD / 2 + 0.85); ticks.push((dt, t) => { hand.rotation.z = -t * 0.2; }); }
   // 소품 — 빈 파렛트 더미 · 소화기 · 콘 · 드럼통 · 작업대
   for (let k = 0; k < 6; k++) { const pg = new THREE.Group(); pg.position.set(-26.5, k * 0.55, -16.5); pg.rotation.y = (k % 2) * 0.06; scene.add(pg); [-1.2, 0, 1.2].forEach((dx) => mesh(new THREE.BoxGeometry(0.5, 0.3, 3.4), tmat(TX.pallet), dx, 0.15, 0, pg)); for (let j = 0; j < 5; j++) mesh(new THREE.BoxGeometry(3, 0.12, 0.5), tmat(TX.pallet), 0, 0.36, -1.4 + j * 0.7, pg); }
@@ -212,9 +212,24 @@ export function warehouse(host, o) {
   // 배치 (10/30 대표): 문(앞)에서 양옆 벽을 따라 랙 — 철물류. 구조재는 랙이 아니라 바닥에 번들로.
   const RX = [-WW / 2 + 3.2, WW / 2 - 3.2], RZ = [12, 4, -4, -12];   // 랙 칸 (벽 따라 문 → 안쪽)
   RX.forEach((x) => { RZ.forEach((z) => {
-    [-3.4, 3.4].forEach((dz) => [-1.3, 1.3].forEach((dx) => { box(0.35, 11, 0.35, '#E8732C', x + dx, 0, z + dz); for (let y = 0.6; y < 11; y += 0.9) box(0.37, 0.12, 0.12, '#B4541A', x + dx, y, z + dz); box(0.8, 0.12, 0.8, '#666', x + dx, 0, z + dz); }));
-    [0.3, 3.9, 7.5].forEach((y) => { box(0.25, 0.45, 7.2, '#3F6FB8', x - 1.4, y, z); box(0.25, 0.45, 7.2, '#3F6FB8', x + 1.4, y, z); box(2.6, 0.08, 7, '#A9B4C2', x, y + 0.3, z); });
+    [-3.4, 3.4].forEach((dz) => [-1.3, 1.3].forEach((dx) => { box(0.4, 17, 0.4, '#6B7480', x + dx, 0, z + dz); for (let y = 0.6; y < 17; y += 0.9) box(0.42, 0.12, 0.12, '#4A525C', x + dx, y, z + dz); box(0.8, 0.12, 0.8, '#666', x + dx, 0, z + dz); }));
+    [0.3, 3.9, 7.5, 11.1, 14.7].forEach((y) => { box(0.25, 0.45, 7.2, '#E8732C', x - 1.4, y, z); box(0.25, 0.45, 7.2, '#E8732C', x + 1.4, y, z); box(2.6, 0.08, 7, '#A9B4C2', x, y + 0.3, z); });   // 주황 보 5단
+    [-1, 1].forEach((sg) => { const d = new THREE.Mesh(new THREE.BoxGeometry(0.12, 4.2, 0.12), mat('#4A525C')); d.position.set(x - sg * 1.3, 0, z + 3.4); scene.add(d); });
   }); });
+  // 2층 선반(메자닌) — 안쪽 오른쪽 · 노란 난간 · 계단 (단지 그림, 10/31)
+  { const y = 9, x0 = 19, x1 = 30.5, z0 = -19.6, z1 = -15.2, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
+    box(x1 - x0, 0.5, z1 - z0, '#8E959C', cx, y, cz); box(x1 - x0, 0.08, z1 - z0, '#B9BEC4', cx, y + 0.5, cz);
+    [[x0, z1], [x1, z1], [x0, z0 + 0.6], [x1, z0 + 0.6], [cx, z1]].forEach(([px, pz]) => box(0.5, y, 0.5, '#5B6470', px, 0, pz));
+    box(x1 - x0, 0.15, 0.15, '#F5C431', cx, y + 1.6, z1); box(x1 - x0, 0.15, 0.15, '#F5C431', cx, y + 0.9, z1); for (let px = x0; px <= x1; px += 1.6) box(0.12, 1.6, 0.12, '#F5C431', px, y + 0.5, z1);
+    box(0.15, 0.15, z1 - z0, '#F5C431', x0, y + 1.6, cz); for (let pz = z0; pz <= z1; pz += 1.6) box(0.12, 1.6, 0.12, '#F5C431', x0, y + 0.5, pz);
+    for (let i = 0; i < 10; i++) box(2.4, 0.25, 0.9, '#9AA0A6', x0 - 1.5, i * 0.9, z1 + 7.6 - i * 0.82);   // 계단 (앞 → 위)
+    { const st = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 9.5), mat('#F5C431')); st.position.set(x0 - 2.7, 5.4, z1 + 3.4); st.rotation.x = Math.atan2(9, 8.2); scene.add(st); }
+    [[21.5, '#3F7FE0'], [25, '#F2EEE6'], [28.5, '#2E9A5A']].forEach(([bx, c]) => { box(3, 3.6, 1.4, '#B8BEC6', bx, y + 0.6, z0 + 1); [0, 1, 2].forEach((r) => [0, 1, 2].forEach((k) => box(0.8, 0.7, 0.9, c, bx - 1 + k, y + 1 + r * 1.1, z0 + 1.2))); }); }   // 위 칸 부자재 통
+  // 상하차 문 — 뒷벽 · 파란 셔터 머리 · 노란 볼라드
+  { const dx = -13, dw = 8, dh = 9; box(dw + 1.2, 0.9, 1, '#3F7FE0', dx, dh, -WD / 2 + 0.6); [-1, 1].forEach((sg) => { box(0.6, dh, 0.8, '#C9CDD2', dx + sg * (dw / 2 + 0.3), 0, -WD / 2 + 0.6); cyl(0.35, 1.6, '#F5C431', dx + sg * (dw / 2 + 1.1), 0, -WD / 2 + 1.8); });
+    const sh = box(dw, dh * 0.45, 0.2, '#D5DAE0', dx, dh * 0.55, -WD / 2 + 0.45); for (let i = 0; i < 6; i++) box(dw, 0.08, 0.25, '#AEB5BD', dx, dh * 0.55 + i * 0.68, -WD / 2 + 0.5);
+    const glow = new THREE.Mesh(new THREE.PlaneGeometry(dw, dh * 0.55), new THREE.MeshBasicMaterial({ color: '#FFF6DE' })); glow.position.set(dx, dh * 0.275, -WD / 2 + 0.34); scene.add(glow);
+    box(dw + 2, 0.12, 3, '#F5C431', dx, 0.01, -WD / 2 + 2); sh.castShadow = false; }
   const hw = (o.hw || []).slice(0, 24), hwC = ['#FFFFFF', '#F2EEE6', '#FFE8A3', '#E6EBF0', '#DDE3EA'];
   const boxMat = (c) => tmat(TX.box, c);
   hw.forEach((it, i) => {
