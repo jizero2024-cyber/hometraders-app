@@ -710,15 +710,52 @@ function openBoard() {
 
 // ── 맨 아래 채팅창 (10/31 대표 "프린세스메이커처럼 맨 하단에 채팅창") — 톡처럼 적으면 천안 재고에서 뺌 (물어보고 [빼기])
 const TALK = { log: [], pend: null, busy: false };
+const TALK_CSS = `<style id="talkcss">
+.talk{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);width:960px;z-index:30;pointer-events:auto;display:flex;gap:16px;align-items:stretch;font-family:Pretendard,sans-serif}
+.talk .tk-pt{flex:none;width:132px;display:flex;flex-direction:column;align-items:center;gap:6px}
+.talk .tk-fr{width:118px;height:118px;border-radius:16px;background:radial-gradient(circle at 50% 35%,#FFF7E6,#F1D9A8);border:4px solid #C99A3C;box-shadow:0 0 0 3px #3A2A12,0 0 0 5px #E8C46A,0 10px 24px rgba(0,0,0,.35);display:flex;align-items:flex-end;justify-content:center;overflow:hidden;position:relative}
+.talk .tk-fr img{width:104px;height:104px;object-fit:contain;transform-origin:50% 100%;animation:tkbob 2.4s ease-in-out infinite}
+.talk .tk-fr.talking img{animation:tktalk .28s ease-in-out infinite}
+.talk .tk-nm{margin-top:-14px;z-index:1;padding:3px 14px;border-radius:999px;background:linear-gradient(#E8C46A,#B8862E);color:#3A2A12;font-weight:900;font-size:14px;letter-spacing:.06em;border:2px solid #3A2A12;box-shadow:0 3px 8px rgba(0,0,0,.3)}
+.talk .tk-win{flex:1;min-width:0;position:relative;border-radius:18px;padding:16px 20px 14px;background:linear-gradient(180deg,rgba(28,36,66,.96),rgba(18,24,48,.97));border:3px solid #E8C46A;box-shadow:0 0 0 3px #3A2A12,0 0 0 6px #C99A3C,0 14px 34px rgba(0,0,0,.4),inset 0 0 0 2px rgba(255,255,255,.06);color:#FFF8E8}
+.talk .tk-win::before,.talk .tk-win::after{content:'';position:absolute;width:14px;height:14px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#FFF0B8,#C99A3C 60%,#7A5A1A);top:-9px;box-shadow:0 0 0 2px #3A2A12}
+.talk .tk-win::before{left:-9px}.talk .tk-win::after{right:-9px}
+.talk .tk-me{font-size:13px;font-weight:700;color:#A9B6D8;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.talk .tk-me b{color:#7FD1FF;margin-right:6px}
+.talk .tk-say{min-height:52px;font-size:19px;font-weight:800;line-height:1.5;letter-spacing:.01em;text-shadow:0 2px 0 rgba(0,0,0,.35)}
+.talk .tk-say .cur{display:inline-block;margin-left:6px;color:#E8C46A;animation:tkblink 1s steps(2) infinite}
+.talk .tk-ch{position:absolute;right:18px;top:-58px;display:flex;gap:8px}
+.talk .tk-ch button{height:44px;padding:0 18px 0 14px;border-radius:12px;border:3px solid #E8C46A;background:linear-gradient(#2A3766,#1A2347);color:#FFF8E8;font:900 16px Pretendard,sans-serif;cursor:pointer;box-shadow:0 0 0 2px #3A2A12,0 6px 14px rgba(0,0,0,.35)}
+.talk .tk-ch button::before{content:'▶ ';color:#E8C46A}
+.talk .tk-ch button:hover{background:linear-gradient(#3A4C8A,#24306A);transform:translateY(-1px)}
+.talk .tk-ch button.ok{border-color:#FFB070}.talk .tk-ch button.ok::before{color:#FFB070}
+.talk form{display:flex;gap:8px;margin-top:10px;padding-top:10px;border-top:1px dashed rgba(232,196,106,.35)}
+.talk input{flex:1;height:42px;border:2px solid rgba(232,196,106,.55);border-radius:10px;padding:0 14px;font:700 15px Pretendard,sans-serif;background:rgba(255,255,255,.07);color:#FFF8E8;outline:none}
+.talk input::placeholder{color:#8E9AC0}.talk input:focus{border-color:#E8C46A;background:rgba(255,255,255,.12)}
+.talk form button{height:42px;padding:0 18px;border-radius:10px;border:0;background:linear-gradient(#E8C46A,#B8862E);color:#3A2A12;font:900 15px Pretendard,sans-serif;cursor:pointer;box-shadow:0 3px 0 #7A5A1A}
+.talk form button:active{transform:translateY(2px);box-shadow:0 1px 0 #7A5A1A}
+.talk .dots span{animation:tkblink 1s infinite}.talk .dots span:nth-child(2){animation-delay:.2s}.talk .dots span:nth-child(3){animation-delay:.4s}
+@keyframes tkbob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+@keyframes tktalk{0%,100%{transform:scaleY(1)}50%{transform:scaleY(.95) translateY(1px)}}
+@keyframes tkblink{0%,100%{opacity:1}50%{opacity:.2}}
+</style>`;
 function talkBar() {
-  const last = TALK.log.slice(-3);
-  const b = el(`<div class="talk" style="position:absolute;left:50%;bottom:16px;transform:translateX(-50%);width:920px;z-index:30;display:flex;gap:14px;align-items:flex-end;padding:14px 16px;border-radius:22px;background:rgba(255,253,248,.97);box-shadow:0 10px 30px rgba(30,40,60,.22), inset 0 0 0 3px #E8D9BE;pointer-events:auto">
-    <img src="${IMG}seal.webp" alt="" style="width:64px;height:64px;object-fit:contain;flex:none">
-    <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:8px">
-      <div class="tl" style="display:flex;flex-direction:column;gap:4px;font-size:15px;font-weight:700;color:#4A3F3A;line-height:1.45">${last.map((m) => `<div style="${m.me ? 'align-self:flex-end;background:#2B3A55;color:#fff' : 'align-self:flex-start;background:#F3ECDF'};padding:6px 12px;border-radius:12px;max-width:100%">${esc(m.t)}</div>`).join('') || '<div style="color:#A89A8A">실리콘 베이지 2박스 비드앤비 나감</div>'}</div>
-      ${TALK.pend ? '<div style="display:flex;gap:8px"><button type="button" class="btn or" data-tk="ok" style="height:38px">빼기</button><button type="button" class="btn" data-tk="no" style="height:38px">취소</button></div>' : ''}
-      <form style="display:flex;gap:8px"><input name="q" autocomplete="off" placeholder="나간 것 적기" style="flex:1;height:44px;border:2px solid #E8D9BE;border-radius:14px;padding:0 14px;font:700 15px Pretendard,sans-serif;background:#fff;outline:none"><button class="btn" style="height:44px;background:#2B3A55;color:#fff" ${TALK.busy ? 'disabled' : ''}>보내기</button></form>
+  if (!document.getElementById('talkcss')) document.head.insertAdjacentHTML('beforeend', TALK_CSS);
+  const me = [...TALK.log].reverse().find((m) => m.me), bot = [...TALK.log].reverse().find((m) => !m.me);
+  const fresh = bot && !bot.shown;   // 새 답만 한 글자씩
+  const b = el(`<div class="talk">
+    <div class="tk-pt"><div class="tk-fr ${fresh ? 'talking' : ''}"><img src="${IMG}seal.webp" alt=""></div><div class="tk-nm">물범이</div></div>
+    <div class="tk-win">
+      ${TALK.pend && !TALK.busy ? '<div class="tk-ch"><button type="button" class="ok" data-tk="ok">빼기</button><button type="button" data-tk="no">취소</button></div>' : ''}
+      ${me ? `<div class="tk-me"><b>나</b>${esc(me.t)}</div>` : ''}
+      <div class="tk-say">${TALK.busy ? '<span class="dots"><span>·</span><span>·</span><span>·</span></span>' : bot ? (fresh ? '' : `${esc(bot.t)}<span class="cur">▼</span>`) : '어서 오세요! 오늘 천안에서 뭐가 나갔나요?<span class="cur">▼</span>'}</div>
+      <form><input name="q" autocomplete="off" placeholder="실리콘 베이지 2박스 비드앤비 나감"><button ${TALK.busy ? 'disabled' : ''}>보내기</button></form>
     </div></div>`);
+  if (fresh && !TALK.busy) {   // 타자 치듯
+    bot.shown = true; const say = b.querySelector('.tk-say'), fr = b.querySelector('.tk-fr'), txt = bot.t; let k = 0;
+    const step = () => { if (!say.isConnected && k) return; k += 1; say.textContent = txt.slice(0, k); if (k < txt.length) setTimeout(step, 28); else { say.insertAdjacentHTML('beforeend', '<span class="cur">▼</span>'); fr.classList.remove('talking'); } };
+    setTimeout(step, 60);
+  }
   const redraw = (focus) => { const cur = stage.querySelector('.talk'); if (!cur) return; const n = talkBar(); cur.replaceWith(n); if (focus) n.querySelector('input').focus(); };   // 다시 그린 뒤에도 지금 붙어 있는 창을 바꿈
   b.querySelector('form').onsubmit = async (e) => {
     e.preventDefault(); const q = e.target.q.value.trim(); if (!q || TALK.busy) return;
