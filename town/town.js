@@ -719,7 +719,7 @@ function talkBar() {
       ${TALK.pend ? '<div style="display:flex;gap:8px"><button type="button" class="btn or" data-tk="ok" style="height:38px">빼기</button><button type="button" class="btn" data-tk="no" style="height:38px">취소</button></div>' : ''}
       <form style="display:flex;gap:8px"><input name="q" autocomplete="off" placeholder="나간 것 적기" style="flex:1;height:44px;border:2px solid #E8D9BE;border-radius:14px;padding:0 14px;font:700 15px Pretendard,sans-serif;background:#fff;outline:none"><button class="btn" style="height:44px;background:#2B3A55;color:#fff" ${TALK.busy ? 'disabled' : ''}>보내기</button></form>
     </div></div>`);
-  const redraw = (focus) => { const n = talkBar(); b.replaceWith(n); if (focus) n.querySelector('input').focus(); };
+  const redraw = (focus) => { const cur = stage.querySelector('.talk'); if (!cur) return; const n = talkBar(); cur.replaceWith(n); if (focus) n.querySelector('input').focus(); };   // 다시 그린 뒤에도 지금 붙어 있는 창을 바꿈
   b.querySelector('form').onsubmit = async (e) => {
     e.preventDefault(); const q = e.target.q.value.trim(); if (!q || TALK.busy) return;
     TALK.log.push({ me: true, t: q }); TALK.busy = true; TALK.pend = null; redraw();
