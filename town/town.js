@@ -4,7 +4,7 @@ import * as S from '/js/store-supabase.js?v=12';
 import * as CN from '/js/cheonan.js?v=5';   // 천안 재고 — 실사 − 뺀 것, 나갈 것 (10/31)
 import * as JIM from './jim.js?v=2';
 import * as W3D from './v3d.js?v=19';
-import * as O3D from './o3d.js?v=25';
+import * as O3D from './o3d.js?v=26';
 import { portrait, KINDS } from './kit3d.js?v=5';
 
 const stage = document.getElementById('stage');

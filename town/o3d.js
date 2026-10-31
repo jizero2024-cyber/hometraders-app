@@ -256,7 +256,7 @@ export function warehouse(host, o) {
     tag('item:' + it.key, bar(it), x0, Math.ceil(Math.max(left, 1) / 2) * 2.03 + 0.9, z0 + len * 0.45);   // 번들 바로 위 앞쪽
   });
   // 키오스크 · 지게차 · 불독 · 노훈님
-  { const g = new THREE.Group(); g.position.set(-20, 0, 17); scene.add(g); box(2.4, 5.4, 1.6, '#FFFFFF', 0, 0, 0, g); box(2, 2.6, 0.1, '#2B2F36', 0, 2.4, 0.82, g); box(1.8, 2.3, 0.05, '#9FD0FF', 0, 2.55, 0.88, g, { emissive: '#9FD0FF', emissiveIntensity: 0.5 }); clickable(g, 'kiosk'); }
+  { const g = new THREE.Group(); g.position.set(-20, 0, 17); scene.add(g); box(2.4, 5.4, 1.6, '#FFFFFF', 0, 0, 0, g); box(2, 2.6, 0.1, '#2B2F36', 0, 2.4, 0.82, g); box(1.8, 2.3, 0.05, '#9FD0FF', 0, 2.55, 0.88, g, { emissive: '#9FD0FF', emissiveIntensity: 0.5 }); clickable(g, 'kiosk'); tag('kiosk', pill('키오스크 · 전자 송장', '#2B3A55', '#FFFFFF', DOT.run), -20, 6.6, 17); }
   const fk = new THREE.Group(); scene.add(fk); box(3, 2.2, 4.2, '#F5B400', 0, 0.6, 0, fk); box(0.3, 6, 0.3, '#333', -1, 0, 2.3, fk); box(0.3, 6, 0.3, '#333', 1, 0, 2.3, fk); const fork = box(2.6, 0.25, 2.6, '#333', 0, 0.4, 3.4, fk); box(2.8, 0.2, 2.8, '#B88B55', 0, 0.65, 3.4, fork.parent);
   const dog = critter('dog'); dog.g.scale.setScalar(1.6); scene.add(dog.g); const noh = critter('worker'); noh.g.scale.setScalar(1.7); scene.add(noh.g); clickable(noh.g, 'noh');
   const nohT = tag('noh', pill('노훈님 · 창고', '#fff', '#4A3F3A', DOT.ok), 0, 0, 0);
