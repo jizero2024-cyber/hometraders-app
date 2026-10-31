@@ -170,31 +170,91 @@ export function warehouse(host, o) {
   const K = base(host, { ...o, cam: [14, 52, 118], target: [0, 6, 10], bg: '#E6E2DA' });
   const { scene, box, cyl, mat, clickable, tag, ticks } = K;
   const WW = 70, WD = 40, WH = 22;
-  box(420, 1, 300, '#B9B3A6', 0, -1.6, 30); box(WW, 0.6, WD, '#C9C4BA', 0, -0.6, 0); box(WW, WH, 0.6, '#EDEFF2', 0, 0, -WD / 2); box(0.6, WH, WD, '#E4E7EB', -WW / 2, 0, 0); box(0.6, WH, WD, '#E4E7EB', WW / 2, 0, 0);
+  // ── 게임처럼 디테일 (10/31 대표 "실제 게임처럼 디자인이 디테일하면") — 그림(텍스처)은 캔버스로 직접 그림, 외부 파일 없음
+  const cvs = (w, h, draw, rx = 1, ry = 1) => { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rx, ry); t.anisotropy = 4; return t; };
+  const rnd = (() => { let x = 7; return () => ((x = (x * 16807) % 2147483647) / 2147483647); })();
+  const TX = {
+    floor: cvs(512, 512, (g, w, h) => { g.fillStyle = '#C8C2B6'; g.fillRect(0, 0, w, h); for (let i = 0; i < 2600; i++) { g.fillStyle = `rgba(${rnd() > 0.5 ? '255,255,255' : '60,50,40'},${rnd() * 0.08})`; g.fillRect(rnd() * w, rnd() * h, 1 + rnd() * 3, 1 + rnd() * 3); } for (let i = 0; i < 6; i++) { const gr = g.createRadialGradient(rnd() * w, rnd() * h, 2, rnd() * w, rnd() * h, 60 + rnd() * 60); gr.addColorStop(0, 'rgba(80,70,55,.10)'); gr.addColorStop(1, 'rgba(80,70,55,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); } g.strokeStyle = 'rgba(90,80,65,.35)'; g.lineWidth = 2; g.strokeRect(1, 1, w - 2, h - 2); }, 7, 4),
+    wall: cvs(256, 256, (g, w, h) => { for (let x = 0; x < w; x += 16) { const gr = g.createLinearGradient(x, 0, x + 16, 0); gr.addColorStop(0, '#E9ECEF'); gr.addColorStop(0.45, '#F8F9FA'); gr.addColorStop(0.55, '#D5DAE0'); gr.addColorStop(1, '#E9ECEF'); g.fillStyle = gr; g.fillRect(x, 0, 16, h); } g.fillStyle = 'rgba(0,0,0,.05)'; g.fillRect(0, h - 26, w, 26); }, 10, 1),
+    side: cvs(256, 128, (g, w, h) => { g.fillStyle = '#E4BC82'; g.fillRect(0, 0, w, h); const rows = 6; for (let r = 0; r < rows; r++) { const y = r * h / rows; g.fillStyle = `hsl(33,${48 + rnd() * 12}%,${66 + rnd() * 8}%)`; g.fillRect(0, y + 1, w, h / rows - 2); for (let k = 0; k < 9; k++) { g.strokeStyle = `rgba(150,100,50,${0.15 + rnd() * 0.2})`; g.lineWidth = 1; g.beginPath(); const yy = y + 2 + rnd() * (h / rows - 4); g.moveTo(0, yy); g.bezierCurveTo(w * 0.3, yy + rnd() * 4 - 2, w * 0.6, yy + rnd() * 4 - 2, w, yy); g.stroke(); } g.fillStyle = 'rgba(90,60,30,.45)'; g.fillRect(0, y, w, 1.4); } }),
+    end: cvs(256, 192, (g, w, h) => { g.fillStyle = '#6E4E2E'; g.fillRect(0, 0, w, h); const cols = 4, rows = 6, cw = w / cols, rh = h / rows; for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) { const x = c * cw + 2, y = r * rh + 2, ww = cw - 4, hh = rh - 4; g.fillStyle = `hsl(34,${45 + rnd() * 15}%,${70 + rnd() * 8}%)`; g.fillRect(x, y, ww, hh); const cx = x + ww * (0.2 + rnd() * 0.6), cy = y + hh * (rnd() > 0.5 ? 1.2 : -0.2); g.strokeStyle = 'rgba(160,110,60,.35)'; for (let k = 1; k < 7; k++) { g.beginPath(); g.ellipse(cx, cy, k * 7, k * 5, 0, 0, Math.PI * 2); g.stroke(); } g.fillStyle = 'rgba(60,35,15,.5)'; g.fillRect(x + ww - 9, y + 3, 6, 4); } }),
+    box: cvs(128, 128, (g, w, h) => { g.fillStyle = '#C79A62'; g.fillRect(0, 0, w, h); for (let i = 0; i < 500; i++) { g.fillStyle = `rgba(90,60,30,${rnd() * 0.08})`; g.fillRect(rnd() * w, rnd() * h, 2, 1); } g.fillStyle = '#B88A52'; g.fillRect(0, h * 0.44, w, h * 0.12); g.fillStyle = 'rgba(255,255,255,.9)'; g.fillRect(w * 0.12, h * 0.68, w * 0.5, h * 0.18); g.fillStyle = '#333'; for (let i = 0; i < 8; i++) g.fillRect(w * 0.15 + i * 7, h * 0.71, 3 + (i % 3), h * 0.12); }),
+    hazard: cvs(128, 32, (g, w, h) => { g.fillStyle = '#F5C431'; g.fillRect(0, 0, w, h); g.fillStyle = '#2B2522'; for (let x = -h; x < w + h; x += 24) { g.beginPath(); g.moveTo(x, h); g.lineTo(x + 12, h); g.lineTo(x + 12 + h, 0); g.lineTo(x + h, 0); g.fill(); } }, 12, 1),
+    pallet: cvs(64, 64, (g, w, h) => { g.fillStyle = '#B98B5B'; g.fillRect(0, 0, w, h); for (let i = 0; i < 40; i++) { g.strokeStyle = `rgba(110,75,40,${rnd() * 0.3})`; g.beginPath(); const y = rnd() * h; g.moveTo(0, y); g.lineTo(w, y + rnd() * 3); g.stroke(); } }),
+  };
+  const tmat = (map, c = '#FFFFFF', ex = {}) => new THREE.MeshStandardMaterial({ map, color: c, roughness: 0.85, ...ex });
+  const mesh = (geo, m, x, y, z, p = scene) => { const o2 = new THREE.Mesh(geo, m); o2.position.set(x, y, z); o2.castShadow = true; o2.receiveShadow = true; p.add(o2); return o2; };
+  scene.fog = new THREE.Fog('#E6E2DA', 160, 340);
+  box(420, 1, 300, '#B9B3A6', 0, -1.6, 30);
+  { const f = mesh(new THREE.BoxGeometry(WW, 0.6, WD), tmat(TX.floor), 0, -0.3, 0); f.castShadow = false; }
+  { const mw = tmat(TX.wall); mesh(new THREE.BoxGeometry(WW, WH, 0.6), mw, 0, WH / 2, -WD / 2); const ms = tmat(TX.wall.clone()); ms.map.repeat.set(6, 1); [-1, 1].forEach((sg) => mesh(new THREE.BoxGeometry(0.6, WH, WD), ms, sg * WW / 2, WH / 2, 0)); }
+  // 벽 아래 띠 · 기둥(H빔) · 지붕 트러스 · 천장 등
+  box(WW, 2.2, 0.7, '#5B6470', 0, 0, -WD / 2 + 0.05); [-1, 1].forEach((sg) => box(0.7, 2.2, WD, '#5B6470', sg * (WW / 2 - 0.05), 0, 0));
+  for (let x = -WW / 2; x <= WW / 2; x += 14) { box(1.1, WH, 0.9, '#3F6FB8', x, 0, -WD / 2 + 0.7); box(0.5, WH, 1.6, '#3F6FB8', x, 0, -WD / 2 + 0.9); }
+  [-WD / 2 + 0.7, -WD / 4, 0, WD / 4].forEach((z) => { box(WW, 0.8, 0.8, '#4A7BC4', 0, WH - 0.8, z); for (let x = -WW / 2 + 4; x < WW / 2; x += 8) { const d = new THREE.Mesh(new THREE.BoxGeometry(0.25, 4.6, 0.25), mat('#6E93D0')); d.position.set(x, WH - 2.8, z); d.rotation.z = (x / 8) % 2 ? 0.6 : -0.6; scene.add(d); } });
   box(WW + 1, 0.8, 4, '#3F7FE0', 0, WH, -WD / 2 + 1.4);
-  for (let i = -3; i <= 3; i++) box(0.3, 0.02, WD - 4, '#F5C431', i * 9, 0.01, 0);
+  [[-18, -6], [0, -6], [18, -6], [-18, 8], [0, 8], [18, 8]].forEach(([x, z], i) => {
+    cyl(0.08, 3.4, '#333', x, WH - 3.6, z); const sh = new THREE.Mesh(new THREE.ConeGeometry(1.6, 1.1, 20, 1, true), mat('#2E3440', { side: THREE.DoubleSide })); sh.position.set(x, WH - 4.1, z); scene.add(sh);
+    const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.45, 12, 8), new THREE.MeshBasicMaterial({ color: '#FFF4D6' })); bulb.position.set(x, WH - 4.6, z); scene.add(bulb);
+    if (i % 2 === 0) { const L = new THREE.PointLight('#FFE7BF', 70, 46, 1.5); L.position.set(x, WH - 5, z); scene.add(L); }
+  });
+  // 바닥 — 통로 노란 선 · 구조재 구역 틀 · 앞 문턱 줄무늬
+  for (let i = -3; i <= 3; i++) if (Math.abs(i) !== 2) box(0.3, 0.02, WD - 4, '#F5C431', i * 9, 0.01, 0);
+  [[-21, -17, 42, 0.4], [-21, 7, 42, 0.4], [-21, -17, 0.4, 24], [21, -17, 0.4, 24]].forEach(([x, z, w, d]) => box(w, 0.03, d, '#F5C431', x + w / 2, 0.01, z + d / 2));
+  { const hz = mesh(new THREE.BoxGeometry(WW, 0.1, 1.4), tmat(TX.hazard), 0, 0.05, WD / 2 - 0.8); hz.castShadow = false; }
+  [-1, 1].forEach((sg) => { mesh(new THREE.BoxGeometry(1.2, 2.4, 1.2), tmat(TX.hazard.clone()), sg * (WW / 2 - 0.6), 1.2, WD / 2 - 0.6); });
+  // 뒷벽 간판 · 안전 표지 · 시계
+  { const lg = new THREE.TextureLoader().load('/icons/logo-full.png'); lg.colorSpace = THREE.SRGBColorSpace; box(16, 5, 0.3, '#FFFFFF', 0, 13, -WD / 2 + 0.5); const sg = new THREE.Mesh(new THREE.PlaneGeometry(14, 4), new THREE.MeshBasicMaterial({ map: lg, transparent: true })); sg.position.set(0, 15.5, -WD / 2 + 0.7); scene.add(sg); }
+  const signT = (bg, fg, t1) => cvs(256, 128, (g, w, h) => { g.fillStyle = bg; g.fillRect(0, 0, w, h); g.fillStyle = fg; g.font = '900 44px Pretendard, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(t1, w / 2, h / 2); });
+  [['#1E8E3E', '#FFFFFF', '안전 제일', -22], ['#F5C431', '#2B2522', '지게차 주의', 22]].forEach(([bg, fg, t1, x]) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(7, 3.5), new THREE.MeshBasicMaterial({ map: signT(bg, fg, t1) })); m.position.set(x, 12, -WD / 2 + 0.7); scene.add(m); });
+  { cyl(1.4, 0.3, '#FFFFFF', 12, 17, -WD / 2 + 0.6).rotation.x = Math.PI / 2; const hand = box(0.15, 1, 0.1, '#222', 12, 16.9, -WD / 2 + 0.85); ticks.push((dt, t) => { hand.rotation.z = -t * 0.2; }); }
+  // 소품 — 빈 파렛트 더미 · 소화기 · 콘 · 드럼통 · 작업대
+  for (let k = 0; k < 6; k++) { const pg = new THREE.Group(); pg.position.set(-26.5, k * 0.55, -16.5); pg.rotation.y = (k % 2) * 0.06; scene.add(pg); [-1.2, 0, 1.2].forEach((dx) => mesh(new THREE.BoxGeometry(0.5, 0.3, 3.4), tmat(TX.pallet), dx, 0.15, 0, pg)); for (let j = 0; j < 5; j++) mesh(new THREE.BoxGeometry(3, 0.12, 0.5), tmat(TX.pallet), 0, 0.36, -1.4 + j * 0.7, pg); }
+  [[-WW / 2 + 1.2, 17], [WW / 2 - 1.2, 17], [-WW / 2 + 1.2, -18]].forEach(([x, z]) => { cyl(0.45, 1.8, '#E5302B', x, 0, z); cyl(0.2, 0.4, '#222', x, 1.8, z); box(1.2, 1.6, 0.1, '#E5302B', x, 2.8, z < 0 ? z : z + 0.6); });
+  [[-26, 18], [-23, 18.5], [26, 18], [23, 18.5]].forEach(([x, z]) => { const c = new THREE.Mesh(new THREE.ConeGeometry(0.6, 1.8, 16), mat('#FF6A13')); c.position.set(x, 0.9, z); c.castShadow = true; scene.add(c); const ring = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.48, 0.3, 16), mat('#FFFFFF')); ring.position.set(x, 1.0, z); scene.add(ring); box(1.4, 0.15, 1.4, '#222', x, 0, z); });
+  [[27, -16], [29.3, -16], [28.1, -13.8]].forEach(([x, z], i) => { cyl(1.0, 2.6, ['#2F6FD6', '#2F6FD6', '#1E8E3E'][i], x, 0, z); [0.7, 1.9].forEach((y) => cyl(1.03, 0.12, '#1C3F7A', x, y, z)); });
+  { const wb = new THREE.Group(); wb.position.set(20, 0, -16.5); scene.add(wb); box(8, 0.35, 3, '#8A5A33', 0, 3.2, 0, wb); [[-3.7, -1.3], [3.7, -1.3], [-3.7, 1.3], [3.7, 1.3]].forEach(([x, z]) => box(0.3, 3.2, 0.3, '#555', x, 0, z, wb)); box(8, 0.2, 3, '#777', 0, 1, 0, wb); box(1.2, 0.8, 0.8, '#E5302B', -2, 3.55, 0, wb); box(1.6, 0.5, 1, '#F5B400', 1.5, 3.55, 0.2, wb); }
   // 배치 (10/30 대표): 문(앞)에서 양옆 벽을 따라 랙 — 철물류. 구조재는 랙이 아니라 바닥에 번들로.
   const RX = [-WW / 2 + 3.2, WW / 2 - 3.2], RZ = [12, 4, -4, -12];   // 랙 칸 (벽 따라 문 → 안쪽)
-  RX.forEach((x) => { RZ.forEach((z) => { [-3.4, 3.4].forEach((dz) => [-1.3, 1.3].forEach((dx) => box(0.35, 11, 0.35, '#E8732C', x + dx, 0, z + dz))); [0.3, 3.9, 7.5].forEach((y) => box(3.2, 0.3, 7.2, '#3F6FB8', x, y, z)); }); });
-  const hw = (o.hw || []).slice(0, 24), hwC = ['#9AA5B1', '#C9CDD2', '#F5B400', '#B8BEC6', '#7E8A96'];
+  RX.forEach((x) => { RZ.forEach((z) => {
+    [-3.4, 3.4].forEach((dz) => [-1.3, 1.3].forEach((dx) => { box(0.35, 11, 0.35, '#E8732C', x + dx, 0, z + dz); for (let y = 0.6; y < 11; y += 0.9) box(0.37, 0.12, 0.12, '#B4541A', x + dx, y, z + dz); box(0.8, 0.12, 0.8, '#666', x + dx, 0, z + dz); }));
+    [0.3, 3.9, 7.5].forEach((y) => { box(0.25, 0.45, 7.2, '#3F6FB8', x - 1.4, y, z); box(0.25, 0.45, 7.2, '#3F6FB8', x + 1.4, y, z); box(2.6, 0.08, 7, '#A9B4C2', x, y + 0.3, z); });
+  }); });
+  const hw = (o.hw || []).slice(0, 24), hwC = ['#FFFFFF', '#F2EEE6', '#FFE8A3', '#E6EBF0', '#DDE3EA'];
+  const boxMat = (c) => tmat(TX.box, c);
   hw.forEach((it, i) => {
-    const side = i % 2, slot = Math.floor(i / 2), z = RZ[slot % 4], lvl = Math.floor(slot / 4) % 3, x = RX[side], y = [0.6, 4.2, 7.8][lvl];
-    const g = new THREE.Group(); g.position.set(x, y, z); scene.add(g); for (let k = 0; k < 3; k++) box(2.4, 1.1, 1.8, hwC[(i + k) % hwC.length], 0, (k === 2 ? 1.1 : 0), -2 + k * 2.2 - (k === 2 ? 2.2 : 0), g); clickable(g, 'item:' + it.key);
+    const side = i % 2, slot = Math.floor(i / 2), z = RZ[slot % 4], lvl = Math.floor(slot / 4) % 3, x = RX[side], y = [0.7, 4.3, 7.9][lvl];
+    const g = new THREE.Group(); g.position.set(x, y, z); scene.add(g);
+    const n = Math.max(1, Math.min(6, Math.ceil(Number(it.qty) / 20)));   // 박스 수만큼 쌓음 (20박스 = 한 덩이)
+    for (let k = 0; k < n; k++) mesh(new THREE.BoxGeometry(2.3, 1.05, 1.7), boxMat(hwC[(i + k) % hwC.length]), 0, (k >= 3 ? 1.1 : 0) + 0.52, -2.2 + (k % 3) * 2.2, g).rotation.y = (rnd() - 0.5) * 0.08;
+    clickable(g, 'item:' + it.key);
     tag('item:' + it.key, pill(`${it.name} ${Math.floor(it.qty)}${it.unit || ''}`, 'rgba(255,255,255,.95)', '#4A3F3A'), x + (side ? -1.6 : 1.6), y + 2.6, z);
   });
-  // 구조재 — 바닥 번들 (o.items: 실사 재고표 줄, plt = 파렛트 수)
+  // 구조재 — 파렛트 위 번들 (o.items: 실사 재고표 줄, plt = 파렛트 수). 남은 것 = 나무 · 나갈 것 = 주황 띠 · 나간 자리 = 바닥 자국
+  const bar = (it) => { const b = Math.max(1, it.base || it.qty), l = Math.max(0, it.qty) / b * 100, p = Math.min(Math.max(0, it.qty), it.pend || 0) / b * 100;
+    return `<div style="min-width:132px;padding:6px 10px 7px;border-radius:12px;background:rgba(34,30,28,.88);color:#fff;font:800 12px Pretendard,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.25);border:1.5px solid ${it.pend ? '#FF8A50' : 'rgba(255,255,255,.18)'}">
+      <div style="display:flex;justify-content:space-between;gap:8px;white-space:nowrap"><span>${it.name}</span><span style="color:#FFD58A">${Math.floor(it.qty).toLocaleString()}</span></div>
+      <div style="margin-top:5px;height:6px;border-radius:3px;background:rgba(255,255,255,.18);overflow:hidden;display:flex"><span style="width:${l - p}%;background:linear-gradient(90deg,#E9B872,#F6D199)"></span><span style="width:${p}%;background:#FF7A45"></span></div>
+      ${it.pend ? `<div style="margin-top:4px;font-size:11px;color:#FFB08A;white-space:nowrap">나갈 ${Math.floor(it.pend).toLocaleString()}</div>` : ''}</div>`; };
   const items = (o.items || []).slice(0, 12);
   items.forEach((it, i) => {
     const col = i % 4, row = Math.floor(i / 4), x0 = -15 + col * 10, z0 = -12 + row * 9;
-    const base = it.base || it.qty, per = it.plt ? base / it.plt : 150, N = Math.max(1, Math.min(8, Number(it.plt) || Math.ceil(base / 150)));   // 실사 파렛트 자리 — 남은 것만 나무색, 나갈 것은 주황, 나간 자리는 빈 틀 (10/31)
-    const left = Math.max(0, Math.min(N, Math.round(it.qty / per))), pend = Math.max(0, Math.min(left, Math.round((it.pend || 0) / per))), n = N;
+    const base = it.base || it.qty, per = it.plt ? base / it.plt : 150, N = Math.max(1, Math.min(8, Number(it.plt) || Math.ceil(base / 150)));
+    const left = Math.max(0, Math.min(N, Math.round(it.qty / per))), pend = Math.max(0, Math.min(left, Math.round((it.pend || 0) / per)));
     const len = /16/.test(it.name.split('*')[2] || '') ? 7.2 : /13|3900/.test(it.name) ? 5.6 : 5.2;
     const g = new THREE.Group(); g.position.set(x0, 0, z0); scene.add(g);
-    for (let k = 0; k < left; k++) { const sx = (k % 2) * 3.2 - 1.6, sy = Math.floor(k / 2) * 1.5, go = k >= left - pend; box(2.9, 0.25, len, '#B88B55', sx, sy, 0, g); box(2.7, 1.2, len - 0.2, go ? '#FF8A50' : k % 3 === 2 ? '#D7B37A' : '#E2B87A', sx, sy + 0.25, 0, g); box(2.72, 0.06, 0.1, '#FFFFFF', sx, sy + 0.9, len / 3, g); box(2.72, 0.06, 0.1, '#FFFFFF', sx, sy + 0.9, -len / 3, g); }
-    for (let k = left; k < N; k++) { const sx = (k % 2) * 3.2 - 1.6; if (k < 2) box(2.9, 0.08, len, '#D8D2C6', sx, 0, 0, g); }   // 나간 자리 — 바닥에 빈 자국만
-    if (!left) box(6, 0.4, len, '#D8D2C6', 0, 0, 0, g);
+    for (let k = 0; k < left; k++) {
+      const sx = (k % 2) * 3.2 - 1.6, sy = Math.floor(k / 2) * 1.62, go = k >= left - pend;
+      [-1.1, 0, 1.1].forEach((dx) => mesh(new THREE.BoxGeometry(0.4, 0.22, len), tmat(TX.pallet), sx + dx, sy + 0.11, 0, g));
+      const tint = go ? '#FFC4A6' : '#FFFFFF', sideM = tmat(TX.side, tint), endM = tmat(TX.end, tint);
+      mesh(new THREE.BoxGeometry(2.8, 1.25, len - 0.2), [sideM, sideM, sideM, sideM, endM, endM], sx, sy + 0.25 + 0.62, 0, g);
+      [-len / 3, len / 3].forEach((dz) => box(2.86, 1.29, 0.12, go ? '#FF6A2B' : '#2F6FD6', sx, sy + 0.23, dz, g));
+      if (go && k === left - 1) { const tg = box(0.9, 0.5, 0.05, '#FFFFFF', sx, sy + 0.9, len / 2 - 0.05, g); tg.material = new THREE.MeshBasicMaterial({ map: signT('#FF6A2B', '#FFFFFF', '출고') }); }
+    }
+    for (let k = left; k < N; k++) { const sx = (k % 2) * 3.2 - 1.6; if (k < 2) { box(2.9, 0.03, len, '#B7AE9E', sx, 0.01, 0, g); [-1.1, 0, 1.1].forEach((dx) => box(0.42, 0.04, len, '#A79E8E', sx + dx, 0.02, 0, g)); } }   // 나간 자리 — 바닥 자국
+    if (!left) box(6, 0.05, len, '#B7AE9E', 0, 0.01, 0, g);
     clickable(g, 'item:' + it.key);
-    tag('item:' + it.key, pill(`${it.name} 남 ${Math.floor(it.qty)}${it.base && it.base !== it.qty ? ` / ${Math.floor(it.base)}` : ''}${it.pend ? ` · 나갈 ${Math.floor(it.pend)}` : ''}`, it.pend ? '#FFF1EA' : 'rgba(255,255,255,.95)', it.pend ? '#C2410C' : '#7A5A00'), x0, Math.ceil(Math.max(left, 1) / 2) * 1.5 + 1.6, z0);
+    tag('item:' + it.key, bar(it), x0, Math.ceil(Math.max(left, 1) / 2) * 1.62 + 1.8, z0);
   });
   // 키오스크 · 지게차 · 불독 · 노훈님
   { const g = new THREE.Group(); g.position.set(-20, 0, 17); scene.add(g); box(2.4, 5.4, 1.6, '#FFFFFF', 0, 0, 0, g); box(2, 2.6, 0.1, '#2B2F36', 0, 2.4, 0.82, g); box(1.8, 2.3, 0.05, '#9FD0FF', 0, 2.55, 0.88, g, { emissive: '#9FD0FF', emissiveIntensity: 0.5 }); clickable(g, 'kiosk'); }
