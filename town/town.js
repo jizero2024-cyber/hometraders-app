@@ -1,9 +1,10 @@
 // 홈트 마을 /town (10/29 대표 "게임처럼 · 디자인만 먼저") — 마을 · 단지 · 사무실 · 창고 네 화면, 아직 예시 자료
 // 주소 뒤 #/campus · #/office · #/warehouse 로 화면 바뀜. 직원 계정만 (공간 계정 막음)
-import * as S from '/js/store-supabase.js?v=9t7';
+import * as S from '/js/store-supabase.js?v=12';
+import * as CN from '/js/cheonan.js?v=3';   // 천안 재고 — 실사 − 뺀 것, 나갈 것 (10/31)
 import * as JIM from './jim.js?v=2';
 import * as W3D from './v3d.js?v=17';
-import * as O3D from './o3d.js?v=20';
+import * as O3D from './o3d.js?v=21';
 import { portrait, KINDS } from './kit3d.js?v=3';
 
 const stage = document.getElementById('stage');
@@ -594,17 +595,21 @@ function warehouse() {
   </div>`);
   stage.appendChild(v);
   const P = panelBox(v);
-  Promise.allSettled([S.getTownStock(), live(), S.init()]).then(([sr, lr]) => {   // 재고 = 실사 재고표 (재고.xlsx, 10/30 대표 "실제 최근 재고 체크한 것")
+  Promise.allSettled([S.getTownStock(), live(), S.init(), CN.fetchSummary()]).then(([sr, lr, , cr]) => {   // 재고 = 실사 재고표 (재고.xlsx, 10/30 대표 "실제 최근 재고 체크한 것")
     if (!v.isConnected) return;
     const L = lr.status === 'fulfilled' ? lr.value : { shipped: [], today: [] };
     const ST = (sr.status === 'fulfilled' && sr.value) || { rows: [] };
     const all = (ST.rows || []).map((r, i) => ({ ...r, key: i }));
-    const items = all.filter((r) => /천안/.test(r.wh) && Number(r.qty) > 0).map((r) => ({ r, key: r.key, name: r.item, qty: Number(r.qty), unit: '', cat: '구조재' }));
+    const CS = cr.status === 'fulfilled' ? cr.value : { items: [], wait: 0 };
+    const items = CS.items.filter((x) => x.qty > 0).map((x, i) => ({ key: 'c' + i, c: x, name: x.item, qty: x.left, base: x.qty, out: x.out, pend: x.pend, plt: x.plt, unit: '', cat: '구조재' }));
     const others = all.filter((r) => !/천안/.test(r.wh));
     // 철물 = 실사 자료가 없어서 사이트 재고 장부 (천안 창고 · 재고 있는 것만) — 이름표에 '장부'
     const hw = S.getItems().filter((it) => /천안|신갈/.test(it.warehouse || '천안') && !/구조재|방부목|OSB|합판/.test(`${it.category || ''} ${it.name}`) && S.currentStock(it) > 0)
       .sort((a, b) => S.currentStock(b) - S.currentStock(a)).map((it) => ({ it, key: 'h' + it.id, name: String(it.name).replace(/^[^_]*_/, '').slice(0, 16), qty: S.currentStock(it), unit: it.unit || '' }));
-    v.querySelector('#wat').textContent = `구조재 실사 ${String(ST.updated || '').slice(5).replace('-', '/')} ${items.length}품목 · 랙 장부 ${hw.length} · 오늘 출고 ${L.shipped.length}`;
+    v.querySelector('#wat').textContent = `천안 실사 ${String(ST.updated || '').slice(5).replace('-', '/')} · 남음 ${items.reduce((a, x) => a + x.qty, 0).toLocaleString()} · 나감 ${items.reduce((a, x) => a + x.out, 0).toLocaleString()} · 나갈 것 ${CS.wait}건`;
+    const cb = el('<button type="button" class="btn" style="height:46px;background:#1a1a1a;color:#fff">천안 재고</button>'); v.querySelector('#wat').before(cb);
+    const cnRow = (x) => prow(`${esc(x.name)}<div style="height:8px;margin-top:6px;border-radius:4px;background:#EEE9E2;overflow:hidden;display:flex"><span style="width:${Math.max(0, (x.qty - x.pend) / x.base * 100)}%;background:#C9965A"></span><span style="width:${Math.min(x.qty, x.pend) / x.base * 100}%;background:#FF7A45"></span></div>`, `<b>${Math.floor(x.qty).toLocaleString()}</b><span style="color:#8A7E77"> / ${Math.floor(x.base).toLocaleString()}</span>${x.pend ? `<div style="font-size:12px;color:#E5483B">나갈 ${x.pend.toLocaleString()}</div>` : ''}`);
+    cb.onclick = () => P.show('천안 재고', `실사 ${ST.updated || ''} · 남음 / 실사`, items.map(cnRow).join('') + `<a class="btn" href="/main" style="margin-top:8px;height:40px">빼기 · 고치기</a>`);
     const ob = el('<button type="button" class="btn" style="height:46px">다른 창고</button>'); v.querySelector('#wat').before(ob);
     ob.onclick = () => P.show('다른 창고 실사', `재고표 ${ST.updated || ''}`, others.map((r) => prow(`${esc(r.wh)} · ${esc(r.item)}<div style="font-size:12px;color:#8A7E77">${esc(r.date || '')} ${esc(r.state || '')}</div>`, `${r.qty}${r.plt ? ` · ${r.plt}PLT` : ''}`)).join('') || prow('없음'));
     // 오늘 천안창고에서 실은 차만 — 원익·한림·우림 등 매입처 상차는 뺌 · 번호판·차종은 출고 건 차량 칸(이음 배차안내)에서
@@ -614,6 +619,7 @@ function warehouse() {
     const unpaid = (L.unpaid || []).map((u) => ({ id: u.id, driver: u.driver, amount: u.amount, job: u.job }));
     const WH = O3D.warehouse(host3d('#E6E2DA'), { alive: () => v.isConnected, items, hw, drivers, unpaid, onPick: (k) => {
       if (k.startsWith('item:h')) { const h = hw.find((y) => y.key === k.slice(5)); if (!h) return; P.show(h.it.name, `${h.it.warehouse || ''} · 사이트 재고 장부 (실사 없음)`, prow('장부 재고', `${Math.floor(h.qty)}${h.unit}`) + prow('출고 예정 · 배차 완료', `${Math.floor(S.reservedQty(h.it))}${h.unit}`) + prow('규격', esc(h.it.spec || '—'))); return; }
+      if (k.startsWith('item:c')) { const x = items.find((y) => String(y.key) === k.slice(5)); if (!x) return; P.show(`구조재 ${x.name}`, `천안 · 실사 ${ST.updated || ''}`, cnRow(x) + prow('실사', `${Math.floor(x.base).toLocaleString()}${x.plt ? ` · ${x.plt}PLT` : ''}`) + prow('나감', x.out ? `−${x.out.toLocaleString()}` : '0') + prow('남음', `<b>${Math.floor(x.qty).toLocaleString()}</b>`, x.qty < 0 ? 'color:#E5483B' : '') + x.c.pendList.map((p) => prow(`나갈 것 · ${String(p.md || '').padStart(4, '0').replace(/(..)(..)/, '$1/$2')} ${esc(p.partner || '')} <span style="color:#8A7E77">${esc(p.site || '')}</span>`, `${p.qty.toLocaleString()}`, 'color:#E5483B')).join('')); return; }
       if (k.startsWith('item:')) { const x = items.find((y) => String(y.key) === k.slice(5)); if (!x) return; const r = x.r; P.show(`구조재 ${x.name}`, `${r.wh} · 실사 ${ST.updated || ''}`, prow('수량', `${r.qty}${r.plt ? ` · ${r.plt}PLT` : ''}`) + prow('상태', esc(r.state || '—'), r.state === '확인' ? 'color:#B07A00' : '') + (r.date ? prow('입고일자', esc(r.date)) : '') + (r.note ? prow(`<div style="font-size:12px;line-height:1.5">${esc(r.note)}</div>`) : '')); return; }
       if (k === 'unpaid') { const draw2 = () => P.show('미입금 기사님', `${unpaid.length}명`, unpaid.map((u) => `<div style="display:flex;gap:8px;align-items:center;padding:9px 12px;border-radius:12px;background:#FBF8F5"><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:800">${esc(u.driver || '')}</div><div style="font-size:12px;color:#8A7E77;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(u.job || '')}</div></div><b style="color:#FF453A">${u.amount ? Number(u.amount).toLocaleString() : ''}</b><button type="button" class="btn or" data-paid="${esc(u.id)}" style="height:36px;font-size:12px">입금 완료</button></div>`).join('') || prow('미입금 없음'));
         draw2(); P.el.querySelectorAll('[data-paid]').forEach((b) => { b.onclick = async () => { b.textContent = '…'; const e = await S.markFareSent(b.dataset.paid, ME); if (e) { b.textContent = '실패'; return; } WH.removeWaiter(b.dataset.paid); unpaid.splice(unpaid.findIndex((u) => String(u.id) === b.dataset.paid), 1); b.closest('div').remove(); }; }); return; }

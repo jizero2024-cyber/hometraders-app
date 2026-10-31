@@ -72,6 +72,23 @@ function used() {   // 품목별 뺀 수량
   return u;
 }
 
+export async function fetchSummary() {   // town 창고 (10/31 대표 "town 에서 얼마 남았고 얼마 나가는지 보고 싶어")
+  const [st, fb, o, es] = await Promise.allSettled([S.getTownStock(), S.getFlowBoard(), S.getCnOuts(), S.listSongjang()]);
+  if (st.status === 'fulfilled') C.stock = st.value;
+  if (fb.status === 'fulfilled') C.flow = fb.value;
+  if (o.status === 'fulfilled') C.outs = o.value;
+  if (es.status === 'fulfilled') C.es = es.value;
+  C.at = Date.now();
+  return summary();
+}
+export function summary() {   // 품목별 실사·나감(뺀 것)·남음·나갈 것(아직 안 뺀 천안 줄 추정)
+  const its = items(), u = used(), pend = {}, pl = {};
+  outRows().filter((o) => !C.outs[o.r.no]).forEach((o) => guess(o.text).forEach((g) => {
+    pend[g.item] = (pend[g.item] || 0) + g.qty;
+    (pl[g.item] = pl[g.item] || []).push({ no: o.r.no, md: o.r.md, partner: o.r.partner, site: o.r.site, qty: g.qty });
+  }));
+  return { updated: (C.stock || {}).updated || '', wait: waitN(), items: its.map((it) => ({ ...it, out: u[it.item] || 0, left: it.qty - (u[it.item] || 0), pend: pend[it.item] || 0, pendList: pl[it.item] || [] })) };
+}
 export const waitN = () => outRows().filter((o) => !C.outs[o.r.no]).length;
 
 const CSS = `<style>

@@ -185,12 +185,16 @@ export function warehouse(host, o) {
   // 구조재 — 바닥 번들 (o.items: 실사 재고표 줄, plt = 파렛트 수)
   const items = (o.items || []).slice(0, 12);
   items.forEach((it, i) => {
-    const col = i % 4, row = Math.floor(i / 4), x0 = -15 + col * 10, z0 = -12 + row * 9, n = Math.max(1, Math.min(8, Number(it.plt) || Math.ceil(it.qty / 150)));
+    const col = i % 4, row = Math.floor(i / 4), x0 = -15 + col * 10, z0 = -12 + row * 9;
+    const base = it.base || it.qty, per = it.plt ? base / it.plt : 150, N = Math.max(1, Math.min(8, Number(it.plt) || Math.ceil(base / 150)));   // 실사 파렛트 자리 — 남은 것만 나무색, 나갈 것은 주황, 나간 자리는 빈 틀 (10/31)
+    const left = Math.max(0, Math.min(N, Math.round(it.qty / per))), pend = Math.max(0, Math.min(left, Math.round((it.pend || 0) / per))), n = N;
     const len = /16/.test(it.name.split('*')[2] || '') ? 7.2 : /13|3900/.test(it.name) ? 5.6 : 5.2;
     const g = new THREE.Group(); g.position.set(x0, 0, z0); scene.add(g);
-    for (let k = 0; k < n; k++) { const sx = (k % 2) * 3.2 - 1.6, sy = Math.floor(k / 2) * 1.5; box(2.9, 0.25, len, '#B88B55', sx, sy, 0, g); box(2.7, 1.2, len - 0.2, k % 3 === 2 ? '#D7B37A' : '#E2B87A', sx, sy + 0.25, 0, g); box(2.72, 0.06, 0.1, '#FFFFFF', sx, sy + 0.9, len / 3, g); box(2.72, 0.06, 0.1, '#FFFFFF', sx, sy + 0.9, -len / 3, g); }
+    for (let k = 0; k < left; k++) { const sx = (k % 2) * 3.2 - 1.6, sy = Math.floor(k / 2) * 1.5, go = k >= left - pend; box(2.9, 0.25, len, '#B88B55', sx, sy, 0, g); box(2.7, 1.2, len - 0.2, go ? '#FF8A50' : k % 3 === 2 ? '#D7B37A' : '#E2B87A', sx, sy + 0.25, 0, g); box(2.72, 0.06, 0.1, '#FFFFFF', sx, sy + 0.9, len / 3, g); box(2.72, 0.06, 0.1, '#FFFFFF', sx, sy + 0.9, -len / 3, g); }
+    for (let k = left; k < N; k++) { const sx = (k % 2) * 3.2 - 1.6; if (k < 2) box(2.9, 0.08, len, '#D8D2C6', sx, 0, 0, g); }   // 나간 자리 — 바닥에 빈 자국만
+    if (!left) box(6, 0.4, len, '#D8D2C6', 0, 0, 0, g);
     clickable(g, 'item:' + it.key);
-    tag('item:' + it.key, pill(`${it.name} ${Math.floor(it.qty)}${it.plt ? ` · ${it.plt}PLT` : ''}`, 'rgba(255,255,255,.95)', '#7A5A00'), x0, Math.ceil(n / 2) * 1.5 + 1.6, z0);
+    tag('item:' + it.key, pill(`${it.name} 남 ${Math.floor(it.qty)}${it.base && it.base !== it.qty ? ` / ${Math.floor(it.base)}` : ''}${it.pend ? ` · 나갈 ${Math.floor(it.pend)}` : ''}`, it.pend ? '#FFF1EA' : 'rgba(255,255,255,.95)', it.pend ? '#C2410C' : '#7A5A00'), x0, Math.ceil(Math.max(left, 1) / 2) * 1.5 + 1.6, z0);
   });
   // 키오스크 · 지게차 · 불독 · 노훈님
   { const g = new THREE.Group(); g.position.set(-20, 0, 17); scene.add(g); box(2.4, 5.4, 1.6, '#FFFFFF', 0, 0, 0, g); box(2, 2.6, 0.1, '#2B2F36', 0, 2.4, 0.82, g); box(1.8, 2.3, 0.05, '#9FD0FF', 0, 2.55, 0.88, g, { emissive: '#9FD0FF', emissiveIntensity: 0.5 }); clickable(g, 'kiosk'); }
