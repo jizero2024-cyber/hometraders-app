@@ -3,9 +3,9 @@
 import * as S from '/js/store-supabase.js?v=12';
 import * as CN from '/js/cheonan.js?v=5';   // 천안 재고 — 실사 − 뺀 것, 나갈 것 (10/31)
 import * as JIM from './jim.js?v=2';
-import * as W3D from './v3d.js?v=18';
-import * as O3D from './o3d.js?v=24';
-import { portrait, KINDS } from './kit3d.js?v=4';
+import * as W3D from './v3d.js?v=19';
+import * as O3D from './o3d.js?v=25';
+import { portrait, KINDS } from './kit3d.js?v=5';
 
 const stage = document.getElementById('stage');
 const IMG = './img/';
@@ -617,12 +617,31 @@ function warehouse() {
     const typeOf = (t) => (/다마스|라보/.test(t) ? 'damas' : /5\s*톤\s*축|5톤축|축차/.test(t) ? 'ax5' : /윙|11\s*톤|25\s*톤|츄레라/.test(t) ? 'wing' : /2\.5\s*톤|3\.5\s*톤|5\s*톤/.test(t) ? 'mid' : /1\.4\s*톤/.test(t) ? 'l14' : 'lt');
     const drivers = L.shipped.filter((x) => /천안|신갈|직산/.test(`${x.veh || ''} ${x.memo || ''}`) || !/원익|한림|우림|매입창고|경동|직송/.test(`${x.from || ''} ${x.veh || ''}`)).map((x) => { const t = `${x.veh || ''} ${x.memo || ''}`; return { key: x.case || x.no, row: x, plate: plateOf(t), type: typeOf(t), label: `${(t.match(/(츄레라|다마스|라보)?\s*[가-힣]{1,3}\s*(소장|기사)님?/) || [''])[0] || x.partner || ''} → ${x.site || ''}`.trim().slice(0, 20) }; });
     const unpaid = (L.unpaid || []).map((u) => ({ id: u.id, driver: u.driver, amount: u.amount, job: u.job }));
+    // 키오스크 (10/31 대표 "키오스크 누르면 전자송장 탭, 오늘 천안 지게차나 천안 관련 내용") — 탭: 전자 송장 · 오늘 천안 · 오늘 출고
+    const today = (L.flow && L.flow.today) || '', ymd = `${new Date().getFullYear()}${today.replace('/', '')}`;
+    const CNRE = /천안|신갈|직산|지게차/;
+    const cnToday = ((L.flow && L.flow.rows) || []).filter((x) => (x.day === today || x.arr === today) && CNRE.test(`${(x.buys || []).map((b) => `${b.name} ${b.item}`).join(' ')} ${x.memo || ''} ${x.veh || ''} ${x.from || ''}`));
+    const snip = (x) => { const t = `${x.memo || ''} · ${(x.buys || []).filter((b) => CNRE.test(b.name)).map((b) => b.item).join(' · ')} · ${x.veh || ''}`; return t.split(/\s*[·\/]\s*/).filter((q) => q && CNRE.test(q) || /PLT|박스|롤|장\b|개\b/.test(q)).slice(0, 4).join(' · ') || (x.item || ''); };
+    const kioskPanel = (tab) => {
+      const sjs = (L.sj || []).filter((x) => x.ymd === ymd).concat((L.sj || []).filter((x) => x.ymd !== ymd && !x.signed_at).slice(0, 5));
+      const tabs = [['es', `전자 송장 ${sjs.filter((x) => x.ymd === ymd).length}`], ['cn', `오늘 천안 ${cnToday.length}`], ['out', `오늘 출고 ${drivers.length}`]];
+      const tb = `<div style="display:flex;gap:6px;margin-bottom:4px">${tabs.map(([k2, lab]) => `<button type="button" data-kt="${k2}" style="flex:1;height:38px;border:0;border-radius:12px;font:800 13px Pretendard,sans-serif;cursor:pointer;${k2 === tab ? 'background:#2B3A55;color:#fff' : 'background:#F4EFEA;color:#6B5E55'}">${lab}</button>`).join('')}</div>`;
+      const mdOfY = (y) => `${String(y || '').slice(4, 6)}/${String(y || '').slice(6, 8)}`;
+      const body = tab === 'es' ? (sjs.map((x) => { const n = (x.items || []).length, c = (x.checks || []).length, st = x.signed_at ? ['서명 완료', '#1E8E3E'] : c ? [`체크 ${c}/${n}`, '#B07A00'] : x.opened_at ? ['열어 봄', '#2F7BF6'] : ['안 열어 봄', '#8A7E77'];
+          return `<a href="/s/${esc(x.code || '')}?p=1" target="_blank" rel="noopener" style="text-decoration:none;color:inherit">${prow(`${x.ymd === ymd ? '' : `<span style="color:#B07A00">${mdOfY(x.ymd)}</span> `}<b>${esc(x.partner || '')}</b> <span style="color:#8A7E77">${esc(x.site || '')}</span><div style="font-size:12px;color:#8A7E77;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc((x.items || []).slice(0, 3).map((it) => `${it.name} ${it.qty}${it.unit || ''}`).join(' · '))}${n > 3 ? ` 외 ${n - 3}` : ''}</div>`, st[0], `color:${st[1]}`)}</a>`; }).join('') || prow('오늘 전자 송장 없음'))
+        : tab === 'cn' ? ((cnToday.map((x) => prow(`<b>${esc(x.partner || '')}</b> <span style="color:#8A7E77">${esc(x.site || '')}</span><div style="font-size:12px;color:#5A4E46;line-height:1.5">${esc(snip(x))}</div>${x.veh ? `<div style="font-size:12px;color:#8A7E77">${esc(String(x.veh).slice(0, 60))}</div>` : ''}`, (x.steps || []).slice(-1)[0] || '', 'color:#2B3A55')).join('') || prow('오늘 천안 관련 없음'))
+          + (CS.wait ? prow(`천안 재고 안 뺀 것 <b style="color:#E5483B">${CS.wait}건</b>`, '<a href="/main" style="color:#2F7BF6">빼기 ›</a>') : ''))
+        : (drivers.map((d) => prow(`${esc(d.row.partner)} · ${esc(d.row.site || '')}<div style="font-size:12px;color:#8A7E77">${esc(d.row.veh || '')} ${esc(d.row.time || '')} · ${esc(d.row.item || '')}</div>`, (d.row.steps || []).includes('출고 완료') ? '출고 완료' : '배차 완료', 'color:#1E8E3E')).join('') || prow('오늘 출고 없음'));
+      P.show('키오스크', `${today} 천안창고`, tb + body);
+      P.el.querySelectorAll('[data-kt]').forEach((b) => { b.onclick = () => kioskPanel(b.dataset.kt); });
+    };
     const WH = O3D.warehouse(host3d('#E6E2DA'), { alive: () => v.isConnected, items, hw, drivers, unpaid, onPick: (k) => {
       if (k.startsWith('item:h')) { const h = hw.find((y) => y.key === k.slice(5)); if (!h) return; P.show(h.it.name, `${h.it.warehouse || ''} · 사이트 재고 장부 (실사 없음)`, prow('장부 재고', `${Math.floor(h.qty)}${h.unit}`) + prow('출고 예정 · 배차 완료', `${Math.floor(S.reservedQty(h.it))}${h.unit}`) + prow('규격', esc(h.it.spec || '—'))); return; }
       if (k.startsWith('item:c')) { const x = items.find((y) => String(y.key) === k.slice(5)); if (!x) return; P.show(`구조재 ${x.name}`, `천안 · 실사 ${ST.updated || ''}`, cnRow(x) + prow('실사', `${Math.floor(x.base).toLocaleString()}${x.plt ? ` · ${x.plt}PLT` : ''}`) + prow('나감', x.out ? `−${x.out.toLocaleString()}` : '0') + prow('남음', `<b>${Math.floor(x.qty).toLocaleString()}</b>`, x.qty < 0 ? 'color:#E5483B' : '') + x.c.pendList.map((p) => prow(`나갈 것 · ${String(p.md || '').padStart(4, '0').replace(/(..)(..)/, '$1/$2')} ${esc(p.partner || '')} <span style="color:#8A7E77">${esc(p.site || '')}</span>`, `${p.qty.toLocaleString()}`, 'color:#E5483B')).join('')); return; }
       if (k.startsWith('item:')) { const x = items.find((y) => String(y.key) === k.slice(5)); if (!x) return; const r = x.r; P.show(`구조재 ${x.name}`, `${r.wh} · 실사 ${ST.updated || ''}`, prow('수량', `${r.qty}${r.plt ? ` · ${r.plt}PLT` : ''}`) + prow('상태', esc(r.state || '—'), r.state === '확인' ? 'color:#B07A00' : '') + (r.date ? prow('입고일자', esc(r.date)) : '') + (r.note ? prow(`<div style="font-size:12px;line-height:1.5">${esc(r.note)}</div>`) : '')); return; }
       if (k === 'unpaid') { const draw2 = () => P.show('미입금 기사님', `${unpaid.length}명`, unpaid.map((u) => `<div style="display:flex;gap:8px;align-items:center;padding:9px 12px;border-radius:12px;background:#FBF8F5"><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:800">${esc(u.driver || '')}</div><div style="font-size:12px;color:#8A7E77;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(u.job || '')}</div></div><b style="color:#FF453A">${u.amount ? Number(u.amount).toLocaleString() : ''}</b><button type="button" class="btn or" data-paid="${esc(u.id)}" style="height:36px;font-size:12px">입금 완료</button></div>`).join('') || prow('미입금 없음'));
         draw2(); P.el.querySelectorAll('[data-paid]').forEach((b) => { b.onclick = async () => { b.textContent = '…'; const e = await S.markFareSent(b.dataset.paid, ME); if (e) { b.textContent = '실패'; return; } WH.removeWaiter(b.dataset.paid); unpaid.splice(unpaid.findIndex((u) => String(u.id) === b.dataset.paid), 1); b.closest('div').remove(); }; }); return; }
+      if (k === 'kiosk') { kioskPanel('es'); return; }
       if (k === 'kiosk' || k === 'noh' || k.startsWith('drv:')) { const list = (k.startsWith('drv:') ? drivers.filter((d) => String(d.key) === k.slice(4)) : drivers).map((d) => prow(`${esc(d.row.partner)} · ${esc(d.row.site || '')}<div style="font-size:12px;color:#8A7E77">${esc(d.row.veh || '')} ${esc(d.row.time || '')} · ${esc(d.row.item || '')}</div>`, (d.row.steps || []).includes('출고 완료') ? '출고 완료' : '배차 완료', 'color:#1E8E3E')).join(''); P.show(k === 'noh' ? '노훈님 · 오늘 상차' : k === 'kiosk' ? '키오스크 · 오늘 출고' : '기사님', '', list || prow('오늘 출고 없음')); }
     } });
   });
