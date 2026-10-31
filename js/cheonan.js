@@ -46,6 +46,11 @@ function outRows() {
 const spec = (s) => (/\d+\*\d+\*\d+/.exec(s) || [''])[0];
 function guess(text) {   // 글에서 '2*6*12 6PLT' → 실사 품목·수량 (PLT 는 파렛트당 개수로)
   const its = items(), out = [];
+  for (const it of its) {   // '12자(3600) 3PLT(98·83·196)' 처럼 길이·파렛트별 개수를 적었으면 그 합
+    const len = (/\((\d{4})\)/.exec(it.item) || [])[1]; if (!len) continue;
+    const m = new RegExp(`\\(${len}\\)\\s*\\d+\\s*(?:PLT|pt)\\s*\\(([\\d·,\\s]+)\\)`, 'i').exec(text);
+    if (m) out.push({ item: it.item, qty: m[1].split(/[·,\s]+/).reduce((a, x) => a + (+x || 0), 0) });
+  }
   for (const it of its) {
     const sp = spec(it.item); if (!sp) continue;
     const m = new RegExp(`${sp.replace(/\*/g, '\\*')}(?![\\d*])\\s*(\\d+)\\s*(PLT|pt|파레트|팔레트)?`, 'i').exec(text);
