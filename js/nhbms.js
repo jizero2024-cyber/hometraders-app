@@ -12,12 +12,13 @@ const HEAD = ['일자-No.', '거래처명', '품목명(규격)', '수량', '단�
 const STATUS = ['전체', '결재전', '기안중', '수정요청', '최종완료'];
 const BADGE = { 결재전: 'background:#FFF1E6;color:#B4471A', 기안중: 'background:#EAF1FB;color:#1D4F91', 수정요청: 'background:#FDECEC;color:#B42318', 최종완료: 'background:#1F2328;color:#fff' };
 const ALL = '전체';
+const SETS = '#세트';   // 왼쪽 '세트' — 세트 목록 + 발주서 넣으면 무슨 세트인지 (nh_sites 의 '#세트' 줄, 맥 도우미가 올림)
 const X = '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" fill="none" stroke="#1F2328" stroke-width="1.8" stroke-linecap="round"></path></svg>';
 const DOWN = '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v8M4.5 7L8 10.5 11.5 7M3 13h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
 const PEN = '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M10.5 2.5l3 3L6 13H3v-3z" fill="none" stroke="#1F2328" stroke-width="1.6" stroke-linejoin="round"></path></svg>';
 const TRASH = '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8.5h5.8l.6-8.5" fill="none" stroke="#D92D20" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
 
-const G = { loaded: false, loading: false, err: '', list: [], docs: {}, sites: {}, site: ALL, tab: 'stmt', status: '전체', open: null, zoom: '', reason: '', img: {}, full: {}, pend: null, panel: 'tax', syncAt: null };
+const G = { setOpen: '', match: null, loaded: false, loading: false, err: '', list: [], docs: {}, sites: {}, site: ALL, tab: 'stmt', status: '전체', open: null, zoom: '', reason: '', img: {}, full: {}, pend: null, panel: 'tax', syncAt: null };
 let ctx = { rerender: () => {}, goStart: () => {}, me: () => '', role: () => 'view', logout: () => {} };
 const STAFF = () => ctx.role() === 'staff';
 
@@ -44,7 +45,7 @@ export async function load(force) {
       return { ...d, id, total: m.total ? Number(m.total) : itemsTotal(d), place: sl.map((k) => placeOf[k]).find(Boolean) || '', reg: sl.map((k) => regOf[k]).filter(Boolean).sort()[0] || '' };
     }).filter((d) => (G.docs[d.id] || {}).status !== '삭제').sort((a, b) => (b.ymd + b.slip).localeCompare(a.ymd + a.slip));
     G.syncAt = [...sales.map((r) => r.updated_at), ...docs.map((x) => x.updated_at), ...sites.map((x) => x.updated_at)].filter(Boolean).map((t) => new Date(t)).sort((a, b) => b - a)[0] || null;
-    if (!G.picked || (G.site !== ALL && !siteList().some((s) => s.id === G.site))) G.site = (siteList()[0] || {}).id || ALL;
+    if (G.site !== ALL && G.site !== SETS && !siteList().some((s) => s.id === G.site)) G.site = ALL;
   } catch (e) { G.err = e.message || String(e); if (!G.site) G.site = ALL; }
   G.loaded = true;   // 실패해도 다시 부르지 않음 (계속 다시 부르던 것)
   G.loading = false; ctx.rerender();
@@ -52,7 +53,7 @@ export async function load(force) {
 function siteList() {   // 최근 출고 순
   const by = {};
   G.list.forEach((d) => { const s = siteOf(d); (by[s] = by[s] || { id: s, n: 0, last: '' }).n += 1; if (d.ymd > by[s].last) by[s].last = d.ymd; });
-  Object.values(G.sites).forEach((x) => { if (!by[x.id] && (x.sj || []).length) by[x.id] = { id: x.id, n: 0, last: (x.span || '').slice(-8) }; });
+  Object.values(G.sites).forEach((x) => { if (x.id !== SETS && !by[x.id] && (x.sj || []).length) by[x.id] = { id: x.id, n: 0, last: (x.span || '').slice(-8) }; });
   return Object.values(by).sort((a, b) => b.last.localeCompare(a.last) || a.id.localeCompare(b.id));
 }
 const statusOf = (d) => { const x = G.docs[d.id] || {}; return ['최종완료', '수정요청', '기안중'].includes(x.status) ? x.status : '결재전'; };
@@ -130,12 +131,22 @@ const dspan = (span) => { const m = /^(\d{8})-(\d{8})$/.exec(span || ''); return
 export function screen() {
   if (!G.loaded && !G.loading) load();
   const sites = siteList(), cur = G.site;
+  if (cur === SETS) return shell(sites, cur, `<div style="display:flex;align-items:baseline;gap:12px"><h1 class="nh-h1" style="margin:0;font-size:22px">세트</h1></div>${G.err ? `<div style="padding:12px 14px;border-radius:8px;background:#FDECEC;color:#7A1A12;font-size:13px">${esc(G.err)}</div>` : ''}${setsHtml()}`);
   const mine = G.list.filter((d) => cur === ALL || siteOf(d) === cur);
   const info = G.sites[cur] || null;
   const tabs = cur === ALL ? [['stmt', '거래명세표 · 세금계산서', mine.length]] : [['stmt', '거래명세표 · 세금계산서', mine.length], ['sj', '납품송장', (info && info.sj || []).length], ['set', '세트 대조표', '']];
   if (!tabs.some((t) => t[0] === G.tab)) G.tab = 'stmt';
   const span = info ? dspan(info.span) : '';
   const open = G.open && G.list.find((d) => d.id === G.open);
+  return shell(sites, cur, `
+    <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><h1 class="nh-h1" style="margin:0;font-size:22px">${esc(cur === ALL ? '전체 현장' : cur)}</h1>
+      <span style="font-size:14px;color:#5C5C5C">${esc([info && info.set_name, span].filter(Boolean).join(' · '))}</span></div>
+    ${G.err ? `<div style="padding:12px 14px;border-radius:8px;background:#FDECEC;color:#7A1A12;font-size:13px">${esc(G.err)}</div>` : ''}
+    <div class="nh-tabs" role="tablist" aria-label="보기" style="display:flex;gap:6px;flex-wrap:wrap">${tabs.map(([k, t, n]) => `<button type="button" role="tab" aria-selected="${G.tab === k}" data-nh="tab" data-v="${k}" style="${tabStyle(G.tab === k)}">${t}${n !== '' ? ` <span style="opacity:.7;margin-left:4px">${n}</span>` : ''}</button>`).join('')}</div>
+    ${G.tab === 'sj' ? sjHtml(info) : G.tab === 'set' ? setHtml(info) : stmtHtml(mine)}`, open);
+}
+
+function shell(sites, cur, body, open) {
   return `<div class="nh" style="font-family:Pretendard,'Noto Sans KR',system-ui,sans-serif;color:#1F2328;background:#F7F7F5;min-height:100vh;display:flex;flex-wrap:wrap"><style>
 .nh .nh-cards{display:none}
 @media (max-width:760px){
@@ -154,20 +165,18 @@ export function screen() {
 </style>
   <nav class="nh-nav" aria-label="현장" style="flex:1 1 220px;max-width:240px;background:#fff;border-right:1px solid #E6E4DF;padding:20px 14px;box-sizing:border-box;display:flex;flex-direction:column;gap:4px">
     <div class="nh-logo" style="display:flex;align-items:center;gap:10px;padding:4px 8px 18px"><img src="/icons/partner-newhousing.png" alt="뉴하우징홈" style="height:28px"><span aria-hidden="true" style="color:#8A8A8A">×</span><img src="/icons/logo-full.png" alt="HOME TRADERS" style="height:30px"></div>
-    ${STAFF() ? `<button type="button" data-nh="site" data-v="${ALL}" style="${navStyle(cur === ALL)}"><span>전체</span><span>${G.list.length}</span></button>` : ''}
+    <button type="button" data-nh="site" data-v="${ALL}" style="${navStyle(cur === ALL)}"><span>전체</span><span>${G.list.length}</span></button>
+    <button type="button" data-nh="site" data-v="${SETS}" style="${navStyle(cur === SETS)}"><span>세트</span><span>${((G.sites[SETS] || {}).rows || []).length || ''}</span></button>
+    <div aria-hidden="true" style="height:1px;background:#EFEDE8;margin:6px 4px"></div>
     ${sites.map((s) => `<button type="button" data-nh="site" data-v="${esc(s.id)}" style="${navStyle(cur === s.id)}"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.id)}</span><span>${s.n || ''}</span></button>`).join('')}
     ${STAFF() ? '<button type="button" data-nh="start" style="margin-top:auto;border:0;background:none;text-align:left;padding:14px 8px 4px;font:inherit;font-size:12px;color:#6B6B6B;cursor:pointer">‹ 처음 화면</button>' : ''}
     <button type="button" data-nh="logout" style="${STAFF() ? '' : 'margin-top:auto;'}border:0;background:none;text-align:left;padding:10px 8px 4px;font:inherit;font-size:12px;color:#6B6B6B;cursor:pointer">로그아웃</button>
   </nav>
-  <main class="nh-main" style="flex:999 1 560px;min-width:0;padding:28px 32px 48px;box-sizing:border-box;display:flex;flex-direction:column;gap:18px">
-    <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><h1 class="nh-h1" style="margin:0;font-size:22px">${esc(cur === ALL ? '전체 현장' : cur)}</h1>
-      <span style="font-size:14px;color:#5C5C5C">${esc([info && info.set_name, span].filter(Boolean).join(' · '))}</span></div>
-    ${G.err ? `<div style="padding:12px 14px;border-radius:8px;background:#FDECEC;color:#7A1A12;font-size:13px">${esc(G.err)}</div>` : ''}
-    <div class="nh-tabs" role="tablist" aria-label="보기" style="display:flex;gap:6px;flex-wrap:wrap">${tabs.map(([k, t, n]) => `<button type="button" role="tab" aria-selected="${G.tab === k}" data-nh="tab" data-v="${k}" style="${tabStyle(G.tab === k)}">${t}${n !== '' ? ` <span style="opacity:.7;margin-left:4px">${n}</span>` : ''}</button>`).join('')}</div>
-    ${G.tab === 'sj' ? sjHtml(info) : G.tab === 'set' ? setHtml(info) : stmtHtml(mine)}
+  <main class="nh-main" style="flex:999 1 560px;min-width:0;padding:28px 32px 48px;box-sizing:border-box;display:flex;flex-direction:column;gap:18px">${body}
   </main>
   ${open ? modalHtml(open) : ''}
   <input type="file" id="nh-file" accept="image/*,application/pdf" hidden>
+  <input type="file" id="nh-order" accept=".xlsx,.xls,.xlsm" hidden>
 </div>`;
 }
 
@@ -233,6 +242,94 @@ function setHtml(info) {
           <td style="padding:10px 8px;text-align:center">${sjOf(r)}</td><td style="padding:10px 16px 10px 8px;text-align:right;${l > 0 ? 'font-weight:700;color:#C2410C' : ''}">${l == null ? '' : qn(l)}</td></tr>`; }).join('')}</tbody>
       </table>
     </div>`;
+}
+
+// ── 세트 목록 · 발주서 매칭 ─────────────────────────
+const K = (s) => String(s == null ? '' : s).normalize('NFC').toLowerCase().replace(/[\s_()\[\]/,.·*×x"'″′-]+/g, '');   // nh_bms.py _k 와 같음
+const XLSX_JS = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+const allSets = () => (G.sites[SETS] || {}).rows || [];
+async function readOrder(file) {   // 뉴하우징 발주서 엑셀 → {file, who, model, kind, lines:[{name, qty}]} (nh_bms.py order_docs 와 같은 읽기)
+  const X = await loadJs(XLSX_JS, () => window.XLSX);
+  const wb = X.read(await file.arrayBuffer(), { type: 'array' });
+  const NF = (v) => String(v == null ? '' : v).normalize('NFC').trim();
+  let best = null;
+  for (const sn of wb.SheetNames) {
+    const info = {}; let hdr = null; const lines = [];
+    for (const r of X.utils.sheet_to_json(wb.Sheets[sn], { header: 1, raw: true, defval: null })) {
+      const c = r.map(NF);
+      c.forEach((x, i) => {
+        if (['건축주명', '모   델   명', '모델명'].includes(x)) info[x === '건축주명' ? '건축주명' : '모델'] = c.slice(i + 1, i + 3).find(Boolean) || '';
+        if (x.startsWith('건축주명:')) info['건축주명'] = x.split(':')[1].trim();
+      });
+      if (!hdr && c.includes('품명') && c.includes('수량')) { hdr = [c.indexOf('품명'), c.indexOf('수량')]; continue; }
+      if (hdr) { const nm = c[hdr[0]], q = r[hdr[1]]; if (nm && typeof q === 'number' && !/^(합계|소계|총)/.test(nm)) lines.push({ name: nm.replace(/\s+/g, ' '), qty: q }); }
+    }
+    if (lines.length && (!best || lines.length > best.lines.length)) {
+      const t = `${file.name} ${sn}`, m = /\d{4}/.exec(`${info['모델'] || ''} ${file.name}`);
+      best = { file: file.name, who: (info['건축주명'] || '').replace(/건축주.*|님.*/, '').trim(), model: m ? m[0] : '', kind: /골조/.test(t) ? '골조' : /내장|외장/.test(t) ? '내외장' : '', lines };
+    }
+  }
+  if (!best) throw new Error('품명·수량 칸을 못 찾았어요');
+  return best;
+}
+function rankSets(o) {   // 세트마다 품목이 얼마나 겹치나 + 모델·종류가 같으면 조금 더
+  const ok = new Set(o.lines.map((l) => K(l.name)));
+  return allSets().map((s) => {
+    const sk = new Set(s.items.map((i) => K(i.name)));
+    const hit = [...sk].filter((k) => ok.has(k)).length;
+    const pct = sk.size + ok.size ? Math.round((200 * hit) / (sk.size + ok.size)) : 0;
+    const mod = o.model && s.model.split(' ')[0] === o.model, kind = o.kind && s.kind === o.kind;
+    return { s, hit, pct, mod, kind, score: pct + (mod ? 15 : 0) + (kind ? 10 : 0) };
+  }).sort((a, b) => b.score - a.score);
+}
+function matchRows(s, o) {
+  const om = {}; o.lines.forEach((l) => { const k = K(l.name); om[k] = om[k] || { name: l.name, qty: 0 }; om[k].qty += l.qty; });
+  const used = new Set();
+  const rows = s.items.map((i) => { const k = K(i.name), x = om[k]; if (x) used.add(k); return { name: i.name, spec: i.spec, set: i.qty, order: x ? x.qty : null }; });
+  Object.entries(om).forEach(([k, x]) => { if (!used.has(k)) rows.push({ name: x.name, spec: '', set: null, order: x.qty }); });
+  return rows;
+}
+function setsHtml() {
+  const sets = allSets();
+  const drop = `<div data-nh="order-pick" data-nh-drop="order" tabindex="0" style="border:2px dashed #B8B8B8;border-radius:12px;background:#fff;padding:18px;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:12px;cursor:pointer"><b>발주서 넣기</b><span style="font-size:13px;color:#6B6B6B">엑셀 끌어다 놓기</span><button type="button" data-nh="order-pick" style="height:36px;padding:0 16px;border:1px solid #B8B8B8;border-radius:8px;background:#fff;font:inherit;font-size:13px;cursor:pointer">파일 고르기</button></div>`;
+  const M = G.match;
+  let res = '';
+  if (M && M.err) res = `<div style="padding:12px 14px;border-radius:8px;background:#FDECEC;color:#7A1A12;font-size:13px">${esc(M.err)}</div>`;
+  else if (M && M.loading) res = '<div style="padding:16px;color:#6B6B6B">읽는 중…</div>';
+  else if (M && M.o) {
+    const rk = rankSets(M.o), cur = rk.find((r) => r.s.name === M.pick) || rk[0];
+    const rows = cur ? matchRows(cur.s, M.o) : [];
+    const diff = (r) => (r.set == null || r.order == null ? null : r.order - r.set);
+    res = `<div style="background:#fff;border:2px solid #E8732C;border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+        <div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:13px;color:#5C5C5C">${esc(M.o.file)}${M.o.who ? ` · ${esc(M.o.who)}` : ''} · ${M.o.lines.length}품목</span>
+          <b style="font-size:20px">${cur ? esc(cur.s.name) : '맞는 세트 없음'}${cur ? ` <span style="font-size:15px;color:#C2410C">${cur.pct}%</span>` : ''}</b></div>
+        <button type="button" data-nh="order-clear" aria-label="닫기" style="width:36px;height:36px;border:1px solid #E6E4DF;border-radius:18px;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">${X}</button></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">${rk.slice(0, 5).map((r) => `<button type="button" data-nh="order-set" data-v="${esc(r.s.name)}" style="${tabStyle(cur && r.s.name === cur.s.name)}">${esc(r.s.name)} <span style="opacity:.7;margin-left:4px">${r.pct}%</span></button>`).join('')}</div>
+      <div style="overflow-x:auto"><table style="width:100%;min-width:620px;border-collapse:collapse;font-size:13px">
+        <thead><tr style="background:#FAFAF8;color:#5C5C5C;text-align:left"><th style="padding:10px 8px 10px 12px;font-weight:600">품목</th><th style="padding:10px 8px;font-weight:600">규격</th><th style="padding:10px 8px;font-weight:600;text-align:right">세트</th><th style="padding:10px 8px;font-weight:600;text-align:right">발주</th><th style="padding:10px 12px 10px 8px;font-weight:600;text-align:right">차이</th></tr></thead>
+        <tbody>${rows.map((r) => { const d = diff(r), miss = r.order == null, extra = r.set == null; return `<tr style="border-top:1px solid #EFEDE8;${extra ? 'background:#FFF6EE' : miss ? 'color:#9A9A9A' : ''}">
+          <td style="padding:9px 8px 9px 12px">${esc(r.name)}${extra ? ' <span style="font-size:11px;font-weight:700;color:#B4471A">세트에 없음</span>' : ''}</td><td style="padding:9px 8px;color:#6B6B6B">${esc(r.spec)}</td>
+          <td style="padding:9px 8px;text-align:right">${qn(r.set)}</td><td style="padding:9px 8px;text-align:right">${miss ? '—' : qn(r.order)}</td>
+          <td style="padding:9px 12px 9px 8px;text-align:right;${d ? 'font-weight:700;color:#C2410C' : ''}">${d ? (d > 0 ? '+' : '') + qn(d) : ''}</td></tr>`; }).join('')}</tbody></table></div></div>`;
+  }
+  const cards = sets.map((s) => {
+    const on = G.setOpen === s.name;
+    return `<div style="background:#fff;border:1px solid ${on ? '#1F2328' : '#E6E4DF'};border-radius:12px;overflow:hidden">
+      <button type="button" data-nh="set-open" data-v="${esc(s.name)}" aria-expanded="${on}" style="width:100%;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px;border:0;background:none;font:inherit;text-align:left;cursor:pointer">
+        <span style="display:flex;flex-direction:column;gap:3px"><span style="font-size:12px;color:#6B6B6B">${esc(s.kind)}</span><b style="font-size:17px">${esc(s.model)}</b></span>
+        <span style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;font-size:12px;color:#5C5C5C"><span><b style="font-size:15px;color:#1F2328">${s.items.length}</b> 품목</span><span>발주서 ${s.n_sites}건</span></span></button>
+      ${on ? `<div style="border-top:1px solid #EFEDE8;overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px"><tbody>${s.items.map((i) => `<tr style="border-top:1px solid #F3F2EF"><td style="padding:8px 8px 8px 16px">${esc(i.name)}</td><td style="padding:8px;color:#6B6B6B">${esc(i.spec)}</td><td style="padding:8px 16px 8px 8px;text-align:right;white-space:nowrap">${qn(i.qty)}</td></tr>`).join('')}</tbody></table></div>` : ''}
+    </div>`;
+  }).join('');
+  return `${drop}${res}
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;align-items:start">${cards || `<div style="padding:40px;text-align:center;color:#6B6B6B">${G.loading ? '불러오는 중…' : '없어요'}</div>`}</div>`;
+}
+async function takeOrder(file) {
+  if (!file) return;
+  G.match = { loading: true }; ctx.rerender();
+  try { G.match = { o: await readOrder(file), pick: '' }; } catch (e) { G.match = { err: e.message || String(e) }; }
+  ctx.rerender();
 }
 
 // ── 한 장 보기 ─────────────────────────────────────
@@ -353,6 +450,10 @@ export function bind(app, c) {
     if (!STAFF() && staffOnly.includes(a)) return;
     if (a === 'site') { G.site = t.dataset.v; G.picked = true; G.status = '전체'; G.open = null; ctx.rerender(); }
     else if (a === 'tab') { G.tab = t.dataset.v; ctx.rerender(); }
+    else if (a === 'set-open') { G.setOpen = G.setOpen === t.dataset.v ? '' : t.dataset.v; ctx.rerender(); }
+    else if (a === 'order-pick') { if (e.target.closest('button') && e.target.closest('button') !== t) return; const f = document.getElementById('nh-order'); if (f) { f.value = ''; f.click(); } }
+    else if (a === 'order-set') { G.match.pick = t.dataset.v; ctx.rerender(); }
+    else if (a === 'order-clear') { G.match = null; ctx.rerender(); }
     else if (a === 'status') { G.status = t.dataset.v; ctx.rerender(); }
     else if (a === 'row') { if (e.target.closest('button, input, a, label, select')) return; G.open = id; G.reason = ''; G.zoom = ''; G.panel = 'tax'; ctx.rerender(); }
     else if (a === 'overlay') { if (e.target === t) { await leavePend(); G.open = null; ctx.rerender(); } }
@@ -384,11 +485,17 @@ export function bind(app, c) {
     else if (a === 'logout') ctx.logout();
   });
   app.addEventListener('change', (e) => {
-    const t = e.target; if (!app.querySelector('.nh') || !STAFF()) return;
+    const t = e.target; if (!app.querySelector('.nh')) return;
+    if (t.id === 'nh-order') { takeOrder(t.files && t.files[0]); return; }
+    if (!STAFF()) return;
     if (t.id === 'nh-file') { const f = t.files && t.files[0]; if (G.open) attach(G.open, f); return; }
     if (t.dataset.nh === 'setstatus') { const v = t.value; save(t.dataset.id, v === '결재전' ? { status: null } : v === '기안중' ? { status: v, drafted_at: new Date().toISOString() } : { status: v }); }
   });
   app.addEventListener('input', (e) => { if (e.target.dataset.nh === 'reason') G.reason = e.target.value.slice(0, 300); });
+  const orderBox = (e) => G.site === SETS && e.target.closest && e.target.closest('[data-nh-drop="order"]');
+  app.addEventListener('dragover', (e) => { const b = orderBox(e); if (!b) return; e.preventDefault(); b.style.borderColor = '#1D4F91'; });
+  app.addEventListener('dragleave', (e) => { const b = orderBox(e); if (b) b.style.borderColor = ''; });
+  app.addEventListener('drop', (e) => { const b = orderBox(e); if (!b) return; e.preventDefault(); b.style.borderColor = ''; takeOrder([...((e.dataTransfer && e.dataTransfer.files) || [])][0]); });
   const dropBox = (e) => STAFF() && G.open && e.target.closest && e.target.closest('[data-nh-drop="tax"]');
   app.addEventListener('dragover', (e) => { const b = dropBox(e); if (!b) return; e.preventDefault(); b.style.outline = '3px solid #1D4F91'; });
   app.addEventListener('dragleave', (e) => { const b = dropBox(e); if (b) b.style.outline = ''; });
