@@ -4,7 +4,7 @@
 //   서류 화면은 모두 js/forms.js (같은 머리·카드·버튼)
 import * as S from './store-supabase.js?v=13';
 import * as FM from './forms.js?v=24';
-import * as FL from './flow.js?v=67';   // 맨 위 출고 흐름 (10/28)
+import * as FL from './flow.js?v=68';   // 맨 위 출고 흐름 (10/28)
 import * as CN from './cheonan.js?v=7';   // 천안 재고 (10/31)
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -126,7 +126,7 @@ export function screen(view) {
 }
 
 // 위 2단 메뉴 (10/31 대표 "사이드 메뉴는 상단으로, 투뎁스") — 1단: 출고·전표 확인·서류·거래처, 2단: 고른 묶음의 항목
-const GRP_OF = { flow: '출고', 견적: '출고', 기록: '출고', 누락: '전표', 완료: '전표' };
+const GRP_OF = { flow: '출고', 견적: '출고', 기록: '출고', 누락: '전표', 완료: '전표', 전체: '전표' };
 function curGrp() { return H.grp || GRP_OF[FL.view()] || '출고'; }
 function closeN() { return FL.closeItems({ fare: H.fare || [], inbox: (H.inbox.wait || 0) + (H.inbox.got || 0) + (H.inbox.check || 0) }).filter((i) => i.n).length; }
 function navHtml() {
@@ -140,7 +140,7 @@ function subHtml() {
   const fv = (lab, k, badge) => it(lab, `data-hm="fv" data-v="${k}"`, !H.grp && v === k, badge);
   const items = {
     출고: [fv('오늘 마감', 'flow', n(closeN())), fv('견적 요청', '견적', n(c.quote)), fv('전체 출고', '기록')],
-    전표: [fv('입력 누락', '누락', n(c.miss + c.missOld)), fv('입력 완료', '완료')],
+    전표: [fv('전체보기', '전체'), fv('입력 누락', '누락', n(c.miss + c.missOld)), fv('입력 완료', '완료')],
     서류: [it('거래명세표', 'data-hm="go" data-r="stmt"'), it('납품확인서', 'data-hm="form" data-r="deliv"'), it('자재승인원', 'data-hm="form" data-r="approval"'),
       it('입금표', 'data-hm="frame" data-src="./deposit.html?embed=1" data-title="입금표"'), it('견적서', 'data-hm="form" data-r="quote"'), it('전자 송장', 'data-hm="form" data-r="esong"')],
     창고: [it('천안 재고', 'data-hm="grp" data-g="창고"', true, n(CN.waitN()))],
@@ -206,7 +206,7 @@ export function bind(app, c) {
     const a = t.dataset.hm;
     if (a === 'go') { FM.open(''); closeFrame(); ctx.go(t.dataset.r, t.dataset.mode); }   // 화면을 옮기면 열린 팝업은 닫음
     else if (a === 'fv') { FL.setView(t.dataset.v); H.grp = ''; H.quick = false; ctx.rerender(); }
-    else if (a === 'grp') { const g = t.dataset.g; if (g === '출고') { FL.setView('flow'); H.grp = ''; } else if (g === '전표') { FL.setView('누락'); H.grp = ''; } else { H.grp = g; if (g === '창고') CN.load(true); } ctx.rerender(); }
+    else if (a === 'grp') { const g = t.dataset.g; if (g === '출고') { FL.setView('flow'); H.grp = ''; } else if (g === '전표') { FL.setView('전체'); H.grp = ''; } else { H.grp = g; if (g === '창고') CN.load(true); } ctx.rerender(); }
     else if (a === 'quick') { H.quick = !H.quick; ctx.rerender(); }
     else if (a === 'fare-all') { H.fareAll = !H.fareAll; ctx.rerender(); }
     else if (a === 'fare-open') { H.fareOpen = !H.fareOpen; ctx.rerender(); if (H.fareOpen) setTimeout(() => { const x = document.querySelector('.hm-fare'); if (x) x.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 0); }
