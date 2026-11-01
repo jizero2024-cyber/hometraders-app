@@ -153,7 +153,7 @@ export function screen() {
 }
 </style>
   <nav class="nh-nav" aria-label="현장" style="flex:1 1 220px;max-width:240px;background:#fff;border-right:1px solid #E6E4DF;padding:20px 14px;box-sizing:border-box;display:flex;flex-direction:column;gap:4px">
-    <div class="nh-logo" style="display:flex;align-items:center;gap:10px;padding:4px 8px 18px"><b style="font-size:16px;white-space:nowrap">뉴하우징홈</b><span aria-hidden="true" style="color:#8A8A8A">×</span><img src="/icons/logo-full.png" alt="HOME TRADERS" style="height:30px"></div>
+    <div class="nh-logo" style="display:flex;align-items:center;gap:10px;padding:4px 8px 18px"><img src="/icons/partner-newhousing.png" alt="뉴하우징홈" style="height:28px"><span aria-hidden="true" style="color:#8A8A8A">×</span><img src="/icons/logo-full.png" alt="HOME TRADERS" style="height:30px"></div>
     ${STAFF() ? `<button type="button" data-nh="site" data-v="${ALL}" style="${navStyle(cur === ALL)}"><span>전체</span><span>${G.list.length}</span></button>` : ''}
     ${sites.map((s) => `<button type="button" data-nh="site" data-v="${esc(s.id)}" style="${navStyle(cur === s.id)}"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.id)}</span><span>${s.n || ''}</span></button>`).join('')}
     ${STAFF() ? '<button type="button" data-nh="start" style="margin-top:auto;border:0;background:none;text-align:left;padding:14px 8px 4px;font:inherit;font-size:12px;color:#6B6B6B;cursor:pointer">‹ 처음 화면</button>' : ''}
