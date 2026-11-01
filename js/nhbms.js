@@ -2,7 +2,7 @@
 // 줄 = 이카운트 판매현황의 뉴하우징홈 판매 줄(nh_sales, 맥 도우미 nh_bms.py 가 넣으면 바로 올림) → 거래명세표 변환기(stmt.js)로 장마다 나눔.
 // 왼쪽 = 현장('<지역>-<소장 이니셜>'), 현장 안 = 거래명세표·세금계산서 / 납품송장 / 세트 대조표(nh_sites).
 // 장마다 상태·세금계산서 = nh_docs (첫 화면 출고 흐름 명세표 탭도 같은 표). 뉴하우징 계정(view)은 보기·다운로드만 — 상태·세금계산서 넣기는 직원만.
-import * as S from './nh-store.js?v=1';
+import * as S from './nh-store.js?v=2';
 import * as SM from './stmt.js?v=101';
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -18,7 +18,7 @@ const DOWN = '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"
 const PEN = '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M10.5 2.5l3 3L6 13H3v-3z" fill="none" stroke="#1F2328" stroke-width="1.6" stroke-linejoin="round"></path></svg>';
 const TRASH = '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8.5h5.8l.6-8.5" fill="none" stroke="#D92D20" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
 
-const G = { setOpen: '', match: null, loaded: false, loading: false, err: '', list: [], docs: {}, sites: {}, site: ALL, tab: 'stmt', status: '전체', open: null, zoom: '', reason: '', img: {}, full: {}, pend: null, panel: 'tax', syncAt: null };
+const G = { setOpen: '', setEdit: null, match: null, loaded: false, loading: false, err: '', list: [], docs: {}, sites: {}, site: ALL, tab: 'stmt', status: '전체', open: null, zoom: '', reason: '', img: {}, full: {}, pend: null, panel: 'tax', syncAt: null };
 let ctx = { rerender: () => {}, goStart: () => {}, me: () => '', role: () => 'view', logout: () => {} };
 const STAFF = () => ctx.role() === 'staff';
 
@@ -319,12 +319,49 @@ function setsHtml() {
       <button type="button" data-nh="set-open" data-v="${esc(s.name)}" aria-expanded="${on}" style="width:100%;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px;border:0;background:none;font:inherit;text-align:left;cursor:pointer">
         <span style="display:flex;flex-direction:column;gap:3px"><span style="font-size:12px;color:#6B6B6B">${esc(s.kind)}</span><b style="font-size:17px">${esc(s.model)}</b></span>
         <span style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;font-size:12px;color:#5C5C5C"><span><b style="font-size:15px;color:#1F2328">${s.items.length}</b> 품목</span><span>발주서 ${s.n_sites}건</span></span></button>
-      ${on ? `<div style="border-top:1px solid #EFEDE8;overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px"><tbody>${s.items.map((i) => `<tr style="border-top:1px solid #F3F2EF"><td style="padding:8px 8px 8px 16px">${esc(i.name)}</td><td style="padding:8px;color:#6B6B6B">${esc(i.spec)}</td><td style="padding:8px 16px 8px 8px;text-align:right;white-space:nowrap">${qn(i.qty)}</td></tr>`).join('')}</tbody></table></div>` : ''}
+      ${on && G.setEdit && G.setEdit.orig === s.name ? setEditor() : on ? `${STAFF() ? `<div style="display:flex;justify-content:flex-end;gap:6px;padding:0 12px 10px"><button type="button" data-nh="set-edit" data-v="${esc(s.name)}" style="height:32px;padding:0 12px;border:1px solid #1F2328;border-radius:8px;background:#fff;font:inherit;font-size:13px;font-weight:700;cursor:pointer">고치기</button></div>` : ''}<div style="border-top:1px solid #EFEDE8;overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px"><tbody>${s.items.map((i) => `<tr style="border-top:1px solid #F3F2EF"><td style="padding:8px 8px 8px 16px">${esc(i.name)}</td><td style="padding:8px;color:#6B6B6B">${esc(i.spec)}</td><td style="padding:8px 16px 8px 8px;text-align:right;white-space:nowrap">${qn(i.qty)}</td></tr>`).join('')}</tbody></table></div>` : ''}
     </div>`;
   }).join('');
+  const add = STAFF() ? (G.setEdit && G.setEdit.orig === '' ? `<div style="grid-column:1/-1;background:#fff;border:1px solid #1F2328;border-radius:12px;overflow:hidden">${setEditor()}</div>` : `<button type="button" data-nh="set-new" style="min-height:66px;border:1.5px dashed #B8B8B8;border-radius:12px;background:#F4F4F4;color:#4B4B4B;font:inherit;font-weight:700;font-size:14px;cursor:pointer">+ 새 세트</button>`) : '';
   return `${drop}${res}
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;align-items:start">${cards || `<div style="padding:40px;text-align:center;color:#6B6B6B">${G.loading ? '불러오는 중…' : '없어요'}</div>`}</div>`;
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;align-items:start">${add}${cards || `<div style="padding:40px;text-align:center;color:#6B6B6B">${G.loading ? '불러오는 중…' : '없어요'}</div>`}</div>`;
 }
+const inp = (f, v, w, al) => `<input data-nh-set="${f}" value="${esc(v == null ? '' : v)}" style="width:${w};box-sizing:border-box;height:34px;border:1px solid #D5D8DD;border-radius:6px;padding:0 8px;font:inherit;font-size:13px;${al ? 'text-align:right' : ''}">`;
+function setEditor() {   // 직원 — 세트 이름·품목·수량 고치기 (품목명은 뉴하우징 발주서에 적는 이름 그대로)
+  const E = G.setEdit;
+  return `<div style="border-top:1px solid #EFEDE8;padding:12px;display:flex;flex-direction:column;gap:10px">
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#5C5C5C">종류${inp('kind', E.kind, '110px')}</label><label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#5C5C5C;flex:1">모델${inp('model', E.model, '100%')}</label></div>
+    <div style="overflow-x:auto"><table style="width:100%;min-width:520px;border-collapse:collapse;font-size:13px">
+      <thead><tr style="color:#5C5C5C;text-align:left"><th style="padding:4px;font-weight:600">품목</th><th style="padding:4px;font-weight:600">규격</th><th style="padding:4px;font-weight:600;text-align:right">수량</th><th></th></tr></thead>
+      <tbody>${E.items.map((i, n) => `<tr data-n="${n}"><td style="padding:3px">${inp('name', i.name, '100%')}</td><td style="padding:3px;width:28%">${inp('spec', i.spec, '100%')}</td><td style="padding:3px;width:80px">${inp('qty', i.qty, '100%', 1)}</td>
+        <td style="padding:3px;width:34px"><button type="button" data-nh="set-delrow" data-v="${n}" aria-label="품목 빼기" style="width:30px;height:30px;border-radius:15px;border:1px solid #F1B5AF;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">${TRASH}</button></td></tr>`).join('')}</tbody></table></div>
+    <button type="button" data-nh="set-addrow" style="align-self:flex-start;height:32px;padding:0 12px;border:1.5px dashed #B8B8B8;border-radius:8px;background:#F4F4F4;font:inherit;font-size:13px;font-weight:700;cursor:pointer">+ 품목</button>
+    <div style="display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap">${E.orig ? '<button type="button" data-nh="set-del" style="height:38px;padding:0 14px;border:1px solid #B42318;border-radius:8px;background:#fff;color:#B42318;font:inherit;font-size:13px;font-weight:700;cursor:pointer">세트 삭제</button>' : '<span></span>'}
+      <span style="display:flex;gap:8px"><button type="button" data-nh="set-cancel" style="height:38px;padding:0 14px;border:1px solid #E6E4DF;border-radius:8px;background:#fff;font:inherit;font-size:13px;cursor:pointer">취소</button><button type="button" data-nh="set-save" style="height:38px;padding:0 20px;border:0;border-radius:8px;background:#1F2328;color:#fff;font:inherit;font-size:14px;font-weight:800;cursor:pointer">저장</button></span></div>
+  </div>`;
+}
+async function saveSets(next) {
+  const row = G.sites[SETS] || { id: SETS, sj: [] };
+  const prev = row.rows;
+  row.rows = next; G.sites[SETS] = row; ctx.rerender();
+  const err = await S.saveSets(next);
+  if (err) { row.rows = prev; alert('저장에 실패했어요 — ' + err); ctx.rerender(); return false; }
+  return true;
+}
+async function commitSet() {
+  const E = G.setEdit; if (!E) return;
+  const kind = E.kind.trim(), model = E.model.trim();
+  if (!kind || !model) { alert('종류와 모델을 넣어 주세요'); return; }
+  const name = `${kind} ${model}`;
+  if (name !== E.orig && allSets().some((s) => s.name === name)) { alert('같은 이름의 세트가 있어요'); return; }
+  const items = E.items.map((i) => ({ name: String(i.name || '').trim(), spec: String(i.spec || '').trim(), qty: i.qty === '' || i.qty == null ? null : Number(String(i.qty).replace(/,/g, '')), level: i.level || '' })).filter((i) => i.name);
+  if (items.some((i) => i.qty != null && !Number.isFinite(i.qty))) { alert('수량은 숫자로 넣어 주세요'); return; }
+  const old = allSets().find((s) => s.name === E.orig) || {};
+  const one = { ...old, name, kind, model, n_sites: old.n_sites || 0, items };
+  const list = E.orig ? allSets().map((s) => (s.name === E.orig ? one : s)) : [...allSets(), one];
+  if (await saveSets(list)) { G.setEdit = null; G.setOpen = name; ctx.rerender(); }
+}
+
 async function takeOrder(file) {
   if (!file) return;
   G.match = { loading: true }; ctx.rerender();
@@ -446,7 +483,7 @@ export function bind(app, c) {
   app.addEventListener('click', async (e) => {
     const t = e.target.closest('[data-nh]'); if (!t || !app.querySelector('.nh')) return;
     const a = t.dataset.nh, id = t.dataset.id, cur = G.open && G.list.find((d) => d.id === G.open);
-    const staffOnly = ['addtax', 'pick', 'deltax', 'delrow', 'editsite', 'reject', 'draft', 'pend-save', 'pend-cancel', 'start'];
+    const staffOnly = ['set-edit', 'set-new', 'set-addrow', 'set-delrow', 'set-save', 'set-del', 'addtax', 'pick', 'deltax', 'delrow', 'editsite', 'reject', 'draft', 'pend-save', 'pend-cancel', 'start'];
     if (!STAFF() && staffOnly.includes(a)) return;
     if (a === 'site') { G.site = t.dataset.v; G.picked = true; G.status = '전체'; G.open = null; ctx.rerender(); }
     else if (a === 'tab') { G.tab = t.dataset.v; ctx.rerender(); }
@@ -454,6 +491,13 @@ export function bind(app, c) {
     else if (a === 'order-pick') { if (e.target.closest('button') && e.target.closest('button') !== t) return; const f = document.getElementById('nh-order'); if (f) { f.value = ''; f.click(); } }
     else if (a === 'order-set') { G.match.pick = t.dataset.v; ctx.rerender(); }
     else if (a === 'order-clear') { G.match = null; ctx.rerender(); }
+    else if (a === 'set-edit') { const s0 = allSets().find((s) => s.name === t.dataset.v); if (s0) { G.setEdit = { orig: s0.name, kind: s0.kind, model: s0.model, items: s0.items.map((i) => ({ ...i })) }; ctx.rerender(); } }
+    else if (a === 'set-new') { G.setEdit = { orig: '', kind: '', model: '', items: [{ name: '', spec: '', qty: '' }] }; G.setOpen = ''; ctx.rerender(); }
+    else if (a === 'set-addrow' && G.setEdit) { G.setEdit.items.push({ name: '', spec: '', qty: '' }); ctx.rerender(); }
+    else if (a === 'set-delrow' && G.setEdit) { G.setEdit.items.splice(+t.dataset.v, 1); ctx.rerender(); }
+    else if (a === 'set-cancel') { G.setEdit = null; ctx.rerender(); }
+    else if (a === 'set-save') commitSet();
+    else if (a === 'set-del' && G.setEdit) { if (!confirm(`${G.setEdit.orig} 세트를 삭제하시겠습니까?`)) return; const name = G.setEdit.orig; if (await saveSets(allSets().filter((s) => s.name !== name))) { G.setEdit = null; G.setOpen = ''; ctx.rerender(); } }
     else if (a === 'status') { G.status = t.dataset.v; ctx.rerender(); }
     else if (a === 'row') { if (e.target.closest('button, input, a, label, select')) return; G.open = id; G.reason = ''; G.zoom = ''; G.panel = 'tax'; ctx.rerender(); }
     else if (a === 'overlay') { if (e.target === t) { await leavePend(); G.open = null; ctx.rerender(); } }
@@ -491,7 +535,12 @@ export function bind(app, c) {
     if (t.id === 'nh-file') { const f = t.files && t.files[0]; if (G.open) attach(G.open, f); return; }
     if (t.dataset.nh === 'setstatus') { const v = t.value; save(t.dataset.id, v === '결재전' ? { status: null } : v === '기안중' ? { status: v, drafted_at: new Date().toISOString() } : { status: v }); }
   });
-  app.addEventListener('input', (e) => { if (e.target.dataset.nh === 'reason') G.reason = e.target.value.slice(0, 300); });
+  app.addEventListener('input', (e) => {
+    if (e.target.dataset.nh === 'reason') G.reason = e.target.value.slice(0, 300);
+    const f = e.target.dataset.nhSet; if (!f || !G.setEdit) return;   // 세트 고치는 칸 — 다시 그리지 않고 값만 기억
+    const tr = e.target.closest('tr[data-n]');
+    if (tr) G.setEdit.items[+tr.dataset.n][f] = e.target.value; else G.setEdit[f] = e.target.value;
+  });
   const orderBox = (e) => G.site === SETS && e.target.closest && e.target.closest('[data-nh-drop="order"]');
   app.addEventListener('dragover', (e) => { const b = orderBox(e); if (!b) return; e.preventDefault(); b.style.borderColor = '#1D4F91'; });
   app.addEventListener('dragleave', (e) => { const b = orderBox(e); if (b) b.style.borderColor = ''; });

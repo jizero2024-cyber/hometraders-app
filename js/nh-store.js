@@ -47,3 +47,7 @@ export async function saveDoc(row) {   // 실패하면 글자, 되면 null
   const { error } = await sb.from('nh_docs').upsert(row);
   return error ? error.message : null;
 }
+export async function saveSets(rows) {   // 세트 목록 (nh_sites '#세트') — 직원만 (뉴하우징 계정은 DB 규칙으로 못 씀)
+  const { error } = await sb.from('nh_sites').upsert({ id: '#세트', rows, sj: [], updated_at: new Date().toISOString() });
+  return error ? error.message : null;
+}

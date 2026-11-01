@@ -1,8 +1,8 @@
 // 뉴하우징 페이지 (/newhousing/) — 우리 업무 앱(app.js)과 완전히 따로 (공간제작소 gonggan-app.js 와 같은 방식, 10/28 대표)
 //   뉴하우징 계정은 코드 한 칸으로 로그인. 직원은 첫 화면에서 로그인하고 들어옴 (같은 로그인).
 //   권한(staff · view)은 DB 의 staff_accounts · partner_accounts 가 정함 (2026-10-28-newhousing.sql).
-import * as S from './nh-store.js?v=1';
-import * as NB from './nhbms.js?v=4';
+import * as S from './nh-store.js?v=2';
+import * as NB from './nhbms.js?v=5';
 
 const app = document.getElementById('app');
 const CODE_LOGIN = 'newhousing';   // 뉴하우징 계정 아이디 (비밀번호 = 코드)
