@@ -161,7 +161,7 @@ function detailHtml(r) {
     ${r.pl ? `<div class="fl-k">순이익</div><div class="fl-pld"><span>판매 ${won(r.pl.sale)}</span><i>−</i><span>구매 ${won(r.pl.buy)}</span><i>−</i><span>운반비 ${won(r.pl.fare)}</span><i>=</i><b class="${r.pl.net < 0 ? 'no' : ''}">${won(r.pl.net)}</b><em>${r.pl.sale ? Math.round((100 * r.pl.net) / r.pl.sale) : 0}% · 공급가</em></div>` : ''}
     ${(r.ev || []).length ? `<div class="fl-k">근거</div><div class="fl-memo">${evLinks(r.ev)}</div>` : ''}
     ${r.itab ? `<details class="fd-more" data-mo="rq:${esc(r.no)}" ${(FL.mo || {})['rq:' + r.no] ? 'open' : ''}><summary>발주 요청${r.rq && r.rq.t ? ` · ${esc(r.rq.t.slice(0, 11))}` : ''}</summary>${rqHtml(r).replace('<div class="fl-k">발주 요청</div>', '')}${galHtml(r)}</details>` : ''}
-    ${!r.no.startsWith('Q') || r.veh || r.memo ? `<details class="fd-more" data-mo="${esc(r.no)}" ${(FL.mo || {})[r.no] ? 'open' : ''}><summary>메모</summary>${r.no.startsWith('Q') ? '' : `<div class="fl-k">상차 → 하차</div><div class="fl-it"><b>${esc(r.from || '상차지 확인')}</b> → <b>${esc(r.site_full || r.site || '하차지 확인')}</b></div>`}${r.veh ? `<div class="fl-k">차량</div><div class="fl-it">${esc(r.veh)}</div>` : ''}${r.memo ? `<div class="fl-k">메모</div><div class="fl-it fl-memo">${memoHtml(r)}</div>` : ''}</details>` : ''}
+    ${!r.no.startsWith('Q') || r.veh || r.memo ? `<details class="fd-more" data-mo="${esc(r.no)}" ${(FL.mo || {})[r.no] ? 'open' : ''}><summary>메모</summary>${r.no.startsWith('Q') ? '' : `<div class="fl-k">상차 → 하차</div><div class="fl-it"><b>${esc(r.from || '상차지 확인')}</b> → <b>${esc(r.site_full || r.site || '하차지 확인')}</b></div>`}${r.veh ? `<div class="fl-k">차량</div><div class="fl-it">${esc(r.veh)}</div>` : ''}${r.memo ? `<div class="fl-k">메모</div><div class="fl-it fl-memo">${memoHtml(r)}</div>` : ''}${['배차 요청', '발주', '견적'].includes(FL.cur) ? fareHtml(r) : ''}</details>` : ''}
     ${(r.imgs || []).length ? `<div class="fl-k">사진</div><div class="fl-imgs">${r.imgs.map((x) => `<iframe src="https://drive.google.com/file/d/${encodeURIComponent(x.id)}/preview" title="${esc(x.name)}" loading="lazy"></iframe>`).join('')}</div>` : ''}</div>`;   // 견적 요청 사진 — 펼치면 바로 (10/28 대표)
 }
 // 출고 건 펼침 — 발주 요청 원문 → 사진 띠(발주 사진·명세서) → 품목 표 (11/02 대표, 공간 대조표 https://claude.ai/artifact/R7Qa8xYmhHu19t5dxgbVr1 모양) — flow_detail.py
@@ -240,12 +240,15 @@ function lowRows(r) {   // 품목마다 가장 싼 단가 하나 — 이카운�
     return `<div class="fd-lw"><span class="fd-pd">${esc(o.d)}</span><b>${esc(p.it)}</b><i>${esc(o.k || '')}</i><span>${esc(o.n)}</span><strong>${won(o.p)}</strong>${ev(o)}</div>`;   // 날짜 맨 왼쪽 (11/02 대표)
   });
 }
+function fareHtml(r) {   // 지난 운임 — 메모 안에 (11/02 대표 "상세 내역에 없어도 될 듯, 메모에")
+  const g = r.sug || {}, f = (g.fare || []).map((x) => `<span>${esc(x.d)} ${esc(x.car)} ${Math.round(x.w / 10000)}만${x.fr ? ` · ${esc(x.fr)}` : ''}</span>`).join('');
+  return f ? `<div class="fl-k">지난 운임${g.reg ? ` · ${esc(g.reg)}` : ''}</div><div class="fd-fare">${f}</div>` : '';
+}
 function sugHtml(r) {   // 품목별 단가 — 이카운트 구매 입력 단가(부가세 별도), 매입처마다 최근 값, 근거 전표 (11/02 대표 "단가 데이터는 정확해야 · 근거도") — flow_detail.py
   const g = r.sug;
   const low = lowRows(r), hasBest = g.best && (g.best.pick || []).length;
   const rows = hasBest ? '' : low.length ? `<details class="fd-low" data-mo="low:${esc(r.no)}" ${(FL.mo || {})['low:' + r.no] ? 'open' : ''}><summary><em>추천</em>품목별 가장 싼 단가<span>${low.length}개 · 이카운트 구매 · 부가세 별도</span></summary>${low.join('')}</details>` : '';
-  const f = (g.fare || []).map((x) => `<span>${esc(x.d)} ${esc(x.car)} ${Math.round(x.w / 10000)}만${x.fr ? ` · ${esc(x.fr)}` : ''}</span>`).join('');
-  return `${hasBest ? '' : `<div class="fl-k"><button type="button" class="fl-go fd-rfqb" data-fl="rfq" data-no="${esc(r.no)}">견적요청서</button></div>`}${rows || (hasBest && low.length ? '' : '<div class="fd-pr"><em class="fd-pn">지난 구매 없음</em></div>')}${f ? `<div class="fl-k">지난 운임${g.reg ? ` · ${esc(g.reg)}` : ''}</div><div class="fd-fare">${f}</div>` : ''}`;
+  return `${hasBest ? '' : `<div class="fl-k"><button type="button" class="fl-go fd-rfqb" data-fl="rfq" data-no="${esc(r.no)}">견적요청서</button></div>`}${rows || (hasBest && low.length ? '' : '<div class="fd-pr"><em class="fd-pn">지난 구매 없음</em></div>')}`;   // 지난 운임은 메모 안으로 (11/02 대표)
 }
 function rqHtml(r) {
   const q = r.rq; if (!q) return '';
