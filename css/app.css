@@ -1664,3 +1664,4 @@ textarea.fd-rfqt { width: 100%; box-sizing: border-box; resize: vertical; border
   .hm-body.top .fl-row, .fl-row { grid-template-columns: 70px minmax(0, 1fr) !important; }
   .fl-row .fl-tm b { font-size: 14px; white-space: nowrap; }
 }
+@media (max-width: 820px) { .hm-body.top .fl-row .fl-tm b { font-size: 15px !important; white-space: nowrap; line-height: 1.25; } }
