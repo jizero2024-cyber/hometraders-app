@@ -54,7 +54,7 @@ const filt = (rs, k) => {
 const baseOf = (k) => (k === '전표 전체' ? [...new Set([...rowsOf('입력 누락'), ...baseOf('입력 완료')])] : k === '기록' ? rowsOf('기록') : k === '입력 완료' ? (FL.data ? FL.data.rows.filter((r) => (r.lines || []).length && (slipOk(r) || (r.steps.includes('입력 완료') && !slipTodo().includes(r)))) : []) : FL.all || FL.view === '견적' ? rowsOf(k) : TODAY_ONLY.includes(k) ? rowsOf(k).filter((r) => [r.day, r.arr].includes((FL.data || {}).today) || (k !== '출고 완료' && [md(r.day), r.arr].includes(tmr()))) : k === '견적' ? rowsOf(k).filter(dueToday) : rowsOf(k));
 const listOf = (k) => (barOn(k) ? filt(baseOf(k), k) : baseOf(k));
 const yst = () => { const x = new Date(Date.now() - 864e5); return `${String(x.getMonth() + 1).padStart(2, '0')}/${String(x.getDate()).padStart(2, '0')}`; };
-const slipOk = (r) => !!FL.marks[`slipok:${r.case || r.no}`];   // 전표 확인 체크 → 입력 완료로 (10/28 대표)
+const slipOk = (r) => !!FL.marks[`slipok:${r.no}`] || (!!FL.marks[`slipok:${r.case}`] && allIn1(r));   // 전표 확인 체크 → 입력 완료로 (10/28 대표) · 출고 건마다 따로 — 두 번 나간 건은 판매도 두 번일 때가 있음 (11/02 대표)
 const SHIP = ['배차 완료', '출고 완료', '기록', '입력 누락', '입력 완료'];
 const slipTodo = () => (FL.data ? FL.data.rows.filter((r) => [yst(), (FL.data || {}).today, tmr()].includes(r.day) && r.steps.some((k) => SHIP.includes(k)) && allIn(r) && !slipOk(r)) : []);   // 어제·오늘·내일 배차된 건 중 사건 전체가 다 입력된 것
 const countOf = (k) => (k === '전표' ? slipTodo().length
@@ -491,7 +491,7 @@ export function bind(app, c) {
       ov.addEventListener('click', (ev) => { if (ev.target === ov || ev.target.closest('.hm-x')) ov.remove(); });
       document.body.appendChild(ov);
     }
-    else if (a === 'slipok' && r) { const key = `slipok:${r.case || r.no}`, me = ctx.me ? ctx.me() : ''; S.addFlowMark(key, `${r.partner} ${r.site}`, me).then((err) => { if (err) alert('저장 못 했어요 — ' + err); else { FL.marks[key] = { created_at: new Date().toISOString() }; caseRows(r).forEach((x) => S.setShipCase(x.no, { checked: true, checked_by: me || null }, me).catch(() => {})); ctx.rerender(); } }); }
+    else if (a === 'slipok' && r) { const key = `slipok:${r.no}`, me = ctx.me ? ctx.me() : ''; S.addFlowMark(key, `${r.partner} ${r.site}`, me).then((err) => { if (err) alert('저장 못 했어요 — ' + err); else { FL.marks[key] = { created_at: new Date().toISOString() }; S.setShipCase(r.no, { checked: true, checked_by: me || null }, me).catch(() => {}); ctx.rerender(); } }); }
     else if (a === 'sent' && r) { if (!ask(t, `${r.partner} · ${r.site} 거래처 전달 체크할까요?`)) return; S.addFlowMark(`sent:${r.no}`, `${r.partner} ${r.site}`, ctx.me ? ctx.me() : '').then((err) => { if (err) alert('저장 못 했어요 — ' + err); else { FL.marks[`sent:${r.no}`] = { created_at: new Date().toISOString() }; ctx.rerender(); } }); }
     else if (a === 'stmtgo' && r) { FM.presetStmt(/공간/.test(r.partner) ? 'stmt-gong' : 'stmt-etc', (t.dataset.s || '').split(',').join(' '), r.salerows); ctx.rerender(); }
     else if (a === 'rfq' && r) rfqOpen(r);
