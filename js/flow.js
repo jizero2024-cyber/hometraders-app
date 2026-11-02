@@ -125,7 +125,7 @@ function rowHtml(r) {
   const btns = (BTN[FL.cur] || []).filter(([a]) => a !== 'cmp' || allIn(r) || FL.cur === '전표 전체').map(([a, t], i) => (a === 'cmp' && !allIn(r) ? `<span class="fl-go fl-ph" aria-hidden="true">${t}</span>` : `<button type="button" class="${i ? 'fl-gh' : 'fl-go'}" data-fl="${a}" data-no="${esc(r.no)}">${t}</button>`)).join('');   // 전표 전체 — 없는 버튼은 빈자리로 두어 줄 맞춤 (11/02 대표 "어긋나 보여")
   const asked = FL.cur === '배차 요청' && S.getShipments().find((s) => String(s.note || '').includes(`출고 흐름 ${r.no})`));
   const cn = caseRows(r).length;
-  const chips = [FL.cur === '입력 완료' && slipOk(r) ? '<span class="fl-chip ok">마감 확인</span>' : '', FL.cur === '전표 전체' ? (r.steps.includes('입력 누락') ? '<span class="fl-chip no">입력 누락</span>' : '<span class="fl-chip ok">입력 완료</span>') : '', ...(r.imgs || []).map((x) => `<button type="button" class="fl-chip blu" data-fl="img" data-id="${esc(x.id)}" data-n="${esc(x.name)}">사진</button>`), cn > 1 ? `<span class="fl-chip blu">같은 주문 ${cn}건</span>` : '', (() => { const L = caseRows(r).flatMap((x) => x.miss || []).reduce((a, m) => a + Math.max(0, mLeft(m, Object.fromEntries((FL.data ? FL.data.rows : []).map((x) => [x.no, x])))), 0); return L > 0 ? `<span class="fl-chip no">누락 남음 ${L.toLocaleString()}</span>` : ''; })(), ...(r.chips || []).map((c) => `<span class="fl-chip amb">${esc(c)}</span>`), ['배차 요청', '발주'].includes(FL.cur) && r.sug && r.sug.best && (r.sug.best.pick || []).length ? `<span class="fl-chip ${r.sug.best.one ? 'ok' : 'amb'}">추천 ${esc(r.sug.best.pick.map((p) => p.n.slice(0, 4)).join('+'))}</span>` : '', asked ? `<span class="fl-chip blu">요청함 ${esc((String(asked.note).match(/요청함 (\d\d:\d\d)/) || ['', ''])[1])}</span>` : '', r.late && FL.cur === '배차 요청' ? '<span class="fl-chip no">누락</span>' : '', FL.cur === '배차 완료' && !r.driver ? '<span class="fl-chip amb">기사·운임 확인</span>' : ''].join('');
+  const chips = [FL.cur === '입력 완료' && slipOk(r) ? '<span class="fl-chip ok">마감 확인</span>' : '', FL.cur === '전표 전체' ? (r.steps.includes('입력 누락') ? '<span class="fl-chip no">입력 누락</span>' : '<span class="fl-chip ok">입력 완료</span>') : '', ...(r.imgs || []).map((x) => `<button type="button" class="fl-chip blu" data-fl="img" data-id="${esc(x.id)}" data-n="${esc(x.name)}">사진</button>`), cn > 1 ? `<span class="fl-chip blu">같은 주문 ${cn}건</span>` : '', (() => { const L = caseRows(r).flatMap((x) => x.miss || []).reduce((a, m) => a + Math.max(0, mLeft(m, Object.fromEntries((FL.data ? FL.data.rows : []).map((x) => [x.no, x])))), 0); return L > 0 ? `<span class="fl-chip no">누락 남음 ${L.toLocaleString()}</span>` : ''; })(), ...(r.chips || []).map((c) => `<span class="fl-chip amb">${esc(c)}</span>`), ['배차 요청', '발주'].includes(FL.cur) && sugBest(r) ? `<span class="fl-chip ${sugBest(r).one ? 'ok' : 'amb'}">추천 ${esc(sugBest(r).pick.map((p) => p.n.slice(0, 4)).join('+'))}</span>` : '', asked ? `<span class="fl-chip blu">요청함 ${esc((String(asked.note).match(/요청함 (\d\d:\d\d)/) || ['', ''])[1])}</span>` : '', r.late && FL.cur === '배차 요청' ? '<span class="fl-chip no">누락</span>' : '', FL.cur === '배차 완료' && !r.driver ? '<span class="fl-chip amb">기사·운임 확인</span>' : ''].join('');
   const route = FL.cur === '견적' ? '' : `${esc(r.from || '상차지 확인')} → ${esc(r.site || '하차지 확인')}`;
   return `<div class="fl-row ${FL.sel === r.no ? 'sel' : ''}" data-fl="row" data-no="${esc(r.no)}">
     <div class="fl-c fl-tm ${r.late || dday(r) === FL.data.today ? 'now' : ''}">${(DATE_FIRST.includes(FL.cur) || ['배차 완료', '출고 완료'].includes(FL.cur)) ? `<b>${esc(dday(r))}</b><span>${esc(r.time || '')}</span>` : `<b>${esc(r.time || (r.day === '미정' ? '미정' : '시간 미정'))}</b><span>${esc(dday(r))}</span>`}</div>
@@ -165,13 +165,19 @@ function detailHtml(r) {
     ${(r.imgs || []).length ? `<div class="fl-k">사진</div><div class="fl-imgs">${r.imgs.map((x) => `<iframe src="https://drive.google.com/file/d/${encodeURIComponent(x.id)}/preview" title="${esc(x.name)}" loading="lazy"></iframe>`).join('')}</div>` : ''}</div>`;   // 견적 요청 사진 — 펼치면 바로 (10/28 대표)
 }
 // 출고 건 펼침 — 발주 요청 원문 → 사진 띠(발주 사진·명세서) → 품목 표 (11/02 대표, 공간 대조표 https://claude.ai/artifact/R7Qa8xYmhHu19t5dxgbVr1 모양) — flow_detail.py
+function sugBest(r) {   // 추천 = 제안 1 (물품 + 운임 합계 가장 싼 조합), 제안이 없을 때만 품목 많이 내는 곳 (11/02 대표 "추천은 송림인데 제안1은 케이에스우드야?")
+  const g = r.sug || {}, p0 = (g.plans || [])[0];
+  if (p0 && p0.fok) {
+    const none = (g.prices || []).filter((p) => !p0.vs.some((v) => v.it.some((x) => x.it === p.it))).map((p) => p.it);
+    return { one: p0.vs.length === 1 && !none.length, pick: p0.vs.map((v) => ({ n: v.n, c: v.it.length })), of: (g.prices || []).length || p0.vs.reduce((a, v) => a + v.it.length, 0), trips: p0.trips, via: p0.via, fare: p0.f, none: none.slice(0, 4) };
+  }
+  return g.best && (g.best.pick || []).length ? g.best : null;
+}
 function bestHtml(r) {   // 추천 결론 — 한 곳에서 다 / 나눠 사기 + 차 횟수·운임 (11/02 대표 "한 번에 다 사는 게 좋고, 나눠 사면 운반비도")
-  let b = (r.sug || {}).best; const p0 = ((r.sug || {}).plans || [])[0];
-  if ((!b || !(b.pick || []).length) && p0) b = { one: p0.vs.length === 1, pick: p0.vs.map((v) => ({ n: v.n, c: v.it.length })), of: p0.vs.reduce((a, v) => a + v.it.length, 0), trips: p0.trips, fare: p0.f, none: [] };   // 산 기록 없어도 천안창고 재고 등 제안이 있으면 (11/02)
-  if (!b || !(b.pick || []).length) return '';
+  const b = sugBest(r); if (!b) return '';
   const man = (w) => (w ? `${Math.round(w / 10000)}만` : '');
   const head = b.one ? `<b>${esc(b.pick[0].n)}</b><span>한 곳에서 다 · ${b.of}개 품목</span>`
-    : `<b>${b.pick.map((p) => `${esc(p.n)} ${p.c}`).join(' + ')}</b><span>${b.trips > 1 ? `나눠 사기 · 차 ${b.trips}번` : `${b.pick[0].c}/${b.of} 품목`}</span>`;
+    : `<b>${b.pick.map((p) => `${esc(p.n)} ${p.c}`).join(' + ')}</b><span>${b.via ? '한 차로 두 곳' : b.trips > 1 ? `나눠 사기 · 차 ${b.trips}번` : `${b.pick[0].c}/${b.of} 품목`}</span>`;
   const inner = `<em>추천</em>${head}${b.fare ? `<span class="fd-bf">운임 약 ${man(b.fare)}${b.trips > 1 ? ' (합)' : ''}</span>` : ''}${(b.none || []).length ? `<i>산 기록 없음 ${esc(b.none.join(' · '))}</i>` : ''}<button type="button" class="fl-go fd-rfqb" data-fl="rfq" data-no="${esc(r.no)}">견적요청서</button>`;
   const can = (r.sug.prices || []).length || (r.sug.plans || []).length;   // 추천 줄 누르면 팝업 — 제안·지도·품목별 가장 싼 단가 (11/02 대표 "팝업창으로 · 지도로도")
   return can ? `<div class="fd-best fd-bestb ${b.one ? 'one' : ''}" data-fl="sug" data-no="${esc(r.no)}" role="button" tabindex="0">${inner}<span class="fd-bgo">›</span></div>` : `<div class="fd-best ${b.one ? 'one' : ''}">${inner}</div>`;
