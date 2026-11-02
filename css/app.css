@@ -1528,6 +1528,11 @@ textarea.fd-rfqt { width: 100%; box-sizing: border-box; resize: vertical; border
 .fd-bestd > summary::after { content: '▾'; color: #8A877F; } .fd-bestd[open] > summary::after { content: '▴'; } .fd-bestd[open] > summary { border-radius: 12px 12px 0 0; }
 .fd-bestd > .fd-lwh, .fd-bestd > .fd-lw { background: #fff; border-left: 1.5px solid #A8D5B5; border-right: 1.5px solid #A8D5B5; padding-left: 14px; padding-right: 14px; } .fd-bestd > .fd-lw:last-child { border-bottom: 1.5px solid #A8D5B5; border-radius: 0 0 12px 12px; }
 .fd-bestd:not(.one) > .fd-lwh, .fd-bestd:not(.one) > .fd-lw { border-color: #F2C9A8; }
+.fd-cm { display: grid; grid-template-columns: minmax(120px, 190px) 56px 110px minmax(120px, 1fr) 90px; gap: 10px; align-items: baseline; padding: 7px 14px; font-size: 13.5px; border-top: 1px solid #F2F0EC; }   /* 한 곳 vs 나눠 사기 (11/02) */
+.fd-bestd > .fd-cm { background: #fff; border-left: 1.5px solid #A8D5B5; border-right: 1.5px solid #A8D5B5; } .fd-bestd > .fd-cm:last-child { border-bottom: 1.5px solid #A8D5B5; border-radius: 0 0 12px 12px; } .fd-bestd > .fd-lw:has(+ .fd-lwh) { border-bottom: 0; border-radius: 0; }
+.fd-cm b { font-weight: 800; color: #111; } .fd-cm span { color: #555; font-weight: 600; } .fd-cm em { font-style: normal; font-size: 11px; color: #8A877F; margin-left: 4px; } .fd-cm strong { text-align: right; font-weight: 800; color: #111; }
+.fd-cm.win { background: #F0F8F2 !important; } .fd-cm.win strong { color: #2E7D4F; } .fd-cmh { border-top: 1px solid #E5E2DC; }
+@media (max-width: 600px) { .fd-cm { grid-template-columns: 1fr auto; gap: 2px 8px; } }
 .fd-lwh { display: flex; justify-content: space-between; padding-top: 8px; padding-bottom: 4px; font-size: 12px; font-weight: 700; color: #8A877F; }
 .fd-best i { font-style: normal; color: #E03E2D; font-size: 12.5px; font-weight: 600; } .fd-best .fd-rfqb { margin-left: auto; }
 .fd-prs { display: flex; flex-direction: column; }   /* 품목별 단가 (11/02) */

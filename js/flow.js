@@ -173,7 +173,17 @@ function bestHtml(r) {   // 추천 결론 — 한 곳에서 다 / 나눠 사기 
   const low = lowRows(r);   // 추천 줄 누르면 품목마다 가장 싼 단가·구매처 (11/02 대표 "여길 누르면 품목별 가장 싼 단가")
   const inner = `<em>추천</em>${head}${b.fare ? `<span class="fd-bf">운임 약 ${man(b.fare)}${b.trips > 1 ? ' (합)' : ''}</span>` : ''}${(b.none || []).length ? `<i>산 기록 없음 ${esc(b.none.join(' · '))}</i>` : ''}<button type="button" class="fl-go fd-rfqb" data-fl="rfq" data-no="${esc(r.no)}">견적요청서</button>`;
   if (!low.length) return `<div class="fd-best ${b.one ? 'one' : ''}">${inner}</div>`;
-  return `<details class="fd-bestd ${b.one ? 'one' : ''}" data-mo="low:${esc(r.no)}" ${(FL.mo || {})['low:' + r.no] ? 'open' : ''}><summary class="fd-best ${b.one ? 'one' : ''}">${inner}</summary><div class="fd-lwh"><span>품목별 가장 싼 단가</span><span>이카운트 구매 · 부가세 별도</span></div>${low.join('')}</details>`;
+  return `<details class="fd-bestd ${b.one ? 'one' : ''}" data-mo="low:${esc(r.no)}" ${(FL.mo || {})['low:' + r.no] ? 'open' : ''}><summary class="fd-best ${b.one ? 'one' : ''}">${inner}</summary><div class="fd-lwh"><span>품목별 가장 싼 단가</span><span>이카운트 구매 · 부가세 별도</span></div>${low.join('')}${cmpHtml(r)}</details>`;
+}
+function cmpHtml(r) {   // 한 곳에서 다 vs 품목마다 싼 곳 — 물품 + 구매처→현장 운임(곳마다 차 한 번) (11/02 대표 "나눠 사면 운송비 더 드니까")
+  const c = (r.sug || {}).cmp; if (!c) return '';
+  const won = (n) => Number(n || 0).toLocaleString(), man = (w) => (w ? `${Math.round(w / 1000) / 10}만` : '—');
+  const win = c.fok ? (c.one.t <= c.split.t ? 'one' : 'split') : '';
+  const fs = (x) => (x ? `<em>${esc(x)}</em>` : '');
+  const ln = (k, nm, sub, g, f, fsrc, t) => `<div class="fd-cm ${win === k ? 'win' : ''}"><b>${nm}</b><span>${sub}</span><span>물품 ${won(g)}</span><span>운임 ${f}${fsrc}</span><strong>${c.fok ? won(t) : '—'}</strong></div>`;
+  return `<div class="fd-lwh fd-cmh"><span>운임 포함 비교</span><span>${c.q ? '수량 반영' : '수량 미정 · 단가 합'} · 운임 구매처→현장</span></div>`
+    + ln('one', `한 곳 · ${esc(c.one.n)}`, '차 1번', c.one.g, man(c.one.f), fs(c.one.fs), c.one.t)
+    + ln('split', '품목마다 싼 곳', `차 ${c.split.vs.length}번`, c.split.g, c.split.vs.map((v) => `${esc(v.n.slice(0, 4))} ${man(v.f)}`).join(' + '), fs([...new Set(c.split.vs.map((v) => v.fs))].join('·')), c.split.t);
 }
 function lowRows(r) {   // 품목마다 가장 싼 단가 하나 — 이카운트 구매 단가, 매입처마다 최근 값 중 최저 (flow_detail.py prices)
   const g = r.sug || {}, won = (n) => Number(n).toLocaleString();
