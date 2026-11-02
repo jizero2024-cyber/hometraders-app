@@ -183,8 +183,8 @@ function galHtml(r) {
 }
 function itabHtml(r) {
   const st = (v) => (v === '—' ? '<td class="fd-st na">—</td>' : v ? `<td class="fd-st ok">${esc(v)}</td>` : '<td class="fd-st no">✕</td>');
-  const rows = (r.itab || []).map((x) => `<tr class="${x.miss ? 'fd-miss' : ''}"><td class="fd-ti">${esc(x.it)}</td><td>${esc(x.q)}</td><td>${esc(x.rd || '')}</td><td><span class="fd-src ${esc(x.sc || 'un')}">${esc(x.src)}</span></td><td>${esc(x.d)}</td>${st(x.buy)}${st(x.sale)}</tr>`).join('');
-  return `<div class="fd-tw"><table class="fd-itab"><thead><tr><th>발주요청품목</th><th>수량</th><th>발주요청일</th><th>출고처</th><th>나간 날</th><th>구매</th><th>판매</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  const rows = (r.itab || []).map((x) => `<tr class="${x.miss ? 'fd-miss' : ''}"><td class="fd-ti">${esc(x.it)}</td><td>${esc(x.rd || '')}</td><td>${esc(x.rw || '')}</td><td>${esc(x.q)}</td><td><span class="fd-src ${esc(x.sc || 'un')}">${esc(x.src)}</span></td><td>${esc(x.d)}</td>${st(x.buy)}${st(x.sale)}</tr>`).join('');
+  return `<div class="fd-tw"><table class="fd-itab"><thead><tr><th>발주요청품목</th><th>발주요청일</th><th>요청자</th><th>수량</th><th>출고처</th><th>나간 날</th><th>구매</th><th>판매</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 function linesHtml(r) {
   return (r.lines || []).map((l) => {
@@ -340,25 +340,21 @@ function quoteFor(r) {
   ov.addEventListener('click', (e) => { const b = e.target.closest('[data-fl]'); if (b) clickQ(b); });
 }
 let clickQ = () => {};
-// 견적요청서 — 구매처에 보낼 품목·수량·받을 날·하차 지역 (판매처·현장 이름은 안 넣음, 대표 규칙) · 톡 복사 / 엑셀 (11/02 대표)
+// 견적요청서 — 구매처에 보낼 품목·수량·받을 날 (운반비는 안 물음, 11/02 대표) (판매처·현장 이름은 안 넣음, 대표 규칙) · 톡 복사 / 엑셀 (11/02 대표)
 function rfqItems(r) {
   const seen = new Set();
   return (r.itab || []).filter((x) => { const k = `${x.it}|${x.q}`; if (seen.has(k)) return false; seen.add(k); return true; }).map((x) => ({ it: x.it, q: x.q }));
 }
-function rfqRegion(r) {
-  const m = String(r.site_full || r.site || '').replace(/\(.*?\)/g, '').match(/^\s*([가-힣]+(?:도|시)?)\s+([가-힣]+(?:시|군|구))/);
-  return m ? `${m[1]} ${m[2]}` : '';
-}
 function rfqText(r, v) {
-  const t = (FL.data || {}).today || '', due = [r.arr || (r.day !== '미정' ? r.day : ''), r.time].filter(Boolean).join(' '), reg = rfqRegion(r);
-  return [`[견적 요청] 홈트레이더스${v ? ` → ${v}` : ''}`, `요청일 ${t}`, due ? `받을 날 ${due}` : '', reg ? `하차 ${reg}` : '', '',
-    ...rfqItems(r).map((x, i) => `${i + 1}. ${x.it} ${x.q}`), '', '단가·운반비 견적 부탁드립니다.'].filter((x, i, a) => x !== '' || (a[i - 1] && a[i - 1] !== '')).join('\n');
+  const t = (FL.data || {}).today || '', due = [r.arr || (r.day !== '미정' ? r.day : ''), r.time].filter(Boolean).join(' ');
+  return [`[견적 요청] 홈트레이더스${v ? ` → ${v}` : ''}`, `요청일 ${t}`, due ? `받을 날 ${due}` : '', '',
+    ...rfqItems(r).map((x, i) => `${i + 1}. ${x.it} ${x.q}`), '', '단가 견적 부탁드립니다.'].filter((x, i, a) => x !== '' || (a[i - 1] && a[i - 1] !== '')).join('\n');
 }
 function rfqXlsx(r, v) {
   import('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm').then((X) => {
     const t = (FL.data || {}).today || '', due = [r.arr || (r.day !== '미정' ? r.day : ''), r.time].filter(Boolean).join(' ');
-    const aoa = [[`견적 요청 — 홈트레이더스${v ? ` → ${v}` : ''}`], [`요청일 ${t}`, '', `받을 날 ${due}`, '', `하차 ${rfqRegion(r)}`], [],
-      ['No', '품명', '수량', '단가', '금액', '비고'], ...rfqItems(r).map((x, i) => [i + 1, x.it, x.q, '', '', '']), [], ['', '운반비', '', '', '', ''], ['', '합계 (부가세 포함)', '', '', '', '']];
+    const aoa = [[`견적 요청 — 홈트레이더스${v ? ` → ${v}` : ''}`], [`요청일 ${t}`, '', `받을 날 ${due}`], [],
+      ['No', '품명', '수량', '단가', '금액', '비고'], ...rfqItems(r).map((x, i) => [i + 1, x.it, x.q, '', '', '']), [], ['', '합계 (부가세 포함)', '', '', '', '']];
     const ws = X.utils.aoa_to_sheet(aoa); ws['!cols'] = [{ wch: 5 }, { wch: 34 }, { wch: 10 }, { wch: 12 }, { wch: 14 }, { wch: 24 }];
     const wb = X.utils.book_new(); X.utils.book_append_sheet(wb, ws, '견적요청');
     X.writeFile(wb, `견적요청_${(v || '구매처').replace(/[\\/:*?"<>|\s]/g, '')}_${t.replace('/', '')}.xlsx`);
