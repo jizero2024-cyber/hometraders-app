@@ -1489,3 +1489,17 @@ body.kiosk .ki-t i, body.kiosk .ki-hi, body.kiosk .ki-out i, body.kiosk .ki-s h2
 
 .fl-ph { visibility: hidden; pointer-events: none; }
 .fl-ph .fl-in.ok, .fl-ph .fl-gh { height: 34px; padding: 0 14px; display: inline-flex; align-items: center; border-radius: 999px; font-size: 13px; white-space: nowrap; box-sizing: border-box; border: 1px solid transparent; }
+
+/* 전표 전체 — 버튼 칸 너비 고정, 줄마다 같은 자리 (11/02 대표 "정렬이 안 맞아") */
+.fl-acts.dz { gap: 6px; }
+.fl-acts.dz .fl-stm { margin-right: 0; gap: 6px; }
+.fl-acts.dz .fl-stm > :nth-child(1) { width: 124px; }
+.fl-acts.dz .fl-stm > :nth-child(2) { width: 104px; }
+.fl-acts.dz .fl-stm > :nth-child(3) { width: 108px; justify-content: flex-start; padding: 0 4px; font-weight: 400; }
+.fl-acts.dz > :nth-child(2) { width: 60px; }
+.fl-acts.dz > :nth-child(3), .fl-acts.dz > :nth-child(4) { width: 98px; }
+.fl-acts.dz > :nth-child(5), .fl-acts.dz > :nth-child(6) { width: 70px; }
+.fl-acts.dz > :nth-child(7) { width: 90px; }
+.fl-acts.dz > *, .fl-acts.dz .fl-stm > * { padding-left: 0; padding-right: 0; justify-content: center; box-sizing: border-box; }
+.fl-acts.dz .fl-stm > :nth-child(3) { justify-content: flex-start; padding: 0 4px; }
+.fl-list:has(.fl-acts.dz) { --acts: 884px !important; }   /* 칸 고정 합 — 차량 글자와 안 겹치게 */

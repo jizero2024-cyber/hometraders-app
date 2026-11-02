@@ -129,7 +129,7 @@ function rowHtml(r) {
     <div class="fl-c fl-ds">${chips}${esc(r.item)}</div>
     <div class="fl-c fl-ds fl-rt">${route}</div>
     <div class="fl-c fl-ds fl-v">${FL.cur === '견적' ? '' : esc(r.size || '')}</div>
-    <div class="fl-acts">${STMT_STEPS.includes(FL.cur) ? stmtHtml(r) : ''}${btns}${FL.cur === '전표' ? `<button type="button" class="fl-sent" data-fl="slipok" data-no="${esc(r.no)}"><i></i>입력 확인</button>` : ''}${FL.cur === '전표 전체' ? docHtml(r) : ''}</div></div>${FL.sel === r.no ? detailHtml(r) : ''}`;
+    <div class="fl-acts${FL.cur === '전표 전체' ? ' dz' : ''}">${STMT_STEPS.includes(FL.cur) ? stmtHtml(r) : ''}${btns}${FL.cur === '전표' ? `<button type="button" class="fl-sent" data-fl="slipok" data-no="${esc(r.no)}"><i></i>입력 확인</button>` : ''}${FL.cur === '전표 전체' ? docHtml(r) : ''}</div></div>${FL.sel === r.no ? detailHtml(r) : ''}`;
 }
 const stLab = (x) => (x.steps.includes('출고 완료') || x.steps.includes('기록') ? '출고 완료' : x.steps.includes('배차 완료') ? '배차 완료' : x.steps.includes('배차 요청') ? '배차 요청' : x.steps.includes('발주') ? '발주' : x.steps[0] || '');
 const mGone = (t, by) => by[t.no] && ['출고 완료', '배차 완료'].includes(stLab(by[t.no]));   // 차가 잡힌 것만 보낸 걸로
