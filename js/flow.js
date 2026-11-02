@@ -106,10 +106,9 @@ function stepsHtml() {
 const STMT_STEPS = ['배차 완료', '출고 완료', '기록', '입력 누락', '입력 완료', '전표', '전표 전체'];
 const DATE_FIRST = ['기록', '입력 누락', '입력 완료', '전표', '전표 전체'];   // 날짜를 왼쪽에 진하게 (10/29 대표, 최종 마감 = 출고 날짜)
 const saleSlips = (r) => [...new Set((r.lines || []).filter((l) => l.k === '판매' && l.st === '입력').flatMap((l) => l.slips || []))];
-function docHtml(r) {   // 전표 전체 — 맨 오른쪽 서류 변환 (11/02 대표)
-  const sl = saleSlips(r), no = esc(r.no), b = (a, t, x) => `<button type="button" data-fl="${a}" data-no="${no}" ${x || ''}>${t}</button>`;
-  return `<details class="fl-doc"><summary class="fl-gh">서류변환</summary><div class="fl-docm">${b('stmtgo', '홈트 명세표', sl.length ? `data-s="${esc(sl.join(','))}"` : 'disabled')}${b('deliv', '납품확인서', sl.length ? '' : 'disabled')}${b('approval', '자재승인원')}
-    <button type="button" data-hm="frame" data-src="./deposit.html?embed=1" data-title="입금표">입금표</button>${b('quote', '견적서')}${b('esong', '전자 송장')}</div></details>`;
+function docHtml(r) {   // 전표 전체 — 서류 버튼 맨 오른쪽에 나란히 (11/02 대표)
+  const no = esc(r.no), b = (a, t) => `<button type="button" class="fl-gh" data-fl="${a}" data-no="${no}">${t}</button>`;
+  return `${saleSlips(r).length ? b('deliv', '납품확인서') : ''}${b('approval', '자재승인원')}<button type="button" class="fl-gh" data-hm="frame" data-src="./deposit.html?embed=1" data-title="입금표">입금표</button>${b('quote', '견적서')}${b('esong', '전자 송장')}`;
 }
 function stmtHtml(r) {   // 거래명세표 — 판매전표 PDF 보기 · 전달했는지 (10/28 대표)
   const sl = saleSlips(r);
