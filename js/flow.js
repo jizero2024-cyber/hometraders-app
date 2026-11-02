@@ -81,7 +81,7 @@ const tmr = () => { const x = new Date(Date.now() + 864e5); return `${String(x.g
 const dday = (r) => (TODAY_ONLY.includes(FL.cur) && r.arr) || r.day;   // 배차·출고 목록은 도착 날로 묶음 (상차 오늘 → 내일 8시 착, 10/28 대표)
 const mdN = (d) => { const m = /^(\d{2})\/(\d{2})$/.exec(d || ''); return m ? +m[1] * 100 + +m[2] : 9999; };
 const dayLab = (r0) => { const t = (FL.data || {}).today, r = { ...r0, day: dday(r0) }; if (r.day === t) return '오늘'; if (r.late) return '지난 날'; if (md(r.day) === tmr()) return '내일'; if (r.day === yst()) return '어제'; return r.day === '미정' ? '날짜 미정' : r.day; };
-const BTN = { 견적: [['quote', '견적서']], 발주: [['esong', '전자 송장']], '배차 요청': [['disp', '배차 요청'], ['dispok', '배차 완료'], ['esong', '전자 송장']], '배차 완료': [['shipok', '출고 완료'], ['esong', '전자 송장']],
+const BTN = { 견적: [['quote', '견적서']], 발주: [], '배차 요청': [['disp', '배차 요청'], ['dispok', '배차 완료'], ['esong', '전자 송장']], '배차 완료': [['shipok', '출고 완료'], ['esong', '전자 송장']],
   '출고 완료': [['deliv', '납품확인서'], ['approval', '자재승인원'], ['esong', '전자 송장']] };
 BTN['기록'] = [...BTN['출고 완료'], ['cmp', '대조']];
 BTN['입력 완료'] = [['cmp', '대조']];
@@ -128,7 +128,7 @@ function rowHtml(r) {
   const chips = [FL.cur === '입력 완료' && slipOk(r) ? '<span class="fl-chip ok">마감 확인</span>' : '', FL.cur === '전표 전체' ? (r.steps.includes('입력 누락') ? '<span class="fl-chip no">입력 누락</span>' : '<span class="fl-chip ok">입력 완료</span>') : '', ...(r.imgs || []).map((x) => `<button type="button" class="fl-chip blu" data-fl="img" data-id="${esc(x.id)}" data-n="${esc(x.name)}">사진</button>`), cn > 1 ? `<span class="fl-chip blu">같은 주문 ${cn}건</span>` : '', (() => { const L = caseRows(r).flatMap((x) => x.miss || []).reduce((a, m) => a + Math.max(0, mLeft(m, Object.fromEntries((FL.data ? FL.data.rows : []).map((x) => [x.no, x])))), 0); return L > 0 ? `<span class="fl-chip no">누락 남음 ${L.toLocaleString()}</span>` : ''; })(), ...(r.chips || []).map((c) => `<span class="fl-chip amb">${esc(c)}</span>`), ['배차 요청', '발주'].includes(FL.cur) && sugBest(r) ? `<span class="fl-chip ${sugBest(r).one ? 'ok' : 'amb'}">추천 ${esc(sugBest(r).pick.map((p) => p.n.slice(0, 4)).join('+'))}</span>` : '', asked ? `<span class="fl-chip blu">요청함 ${esc((String(asked.note).match(/요청함 (\d\d:\d\d)/) || ['', ''])[1])}</span>` : '', r.late && FL.cur === '배차 요청' ? '<span class="fl-chip no">누락</span>' : '', FL.cur === '배차 완료' && !r.driver ? '<span class="fl-chip amb">기사·운임 확인</span>' : ''].join('');
   const route = FL.cur === '견적' ? '' : `${esc(r.from || '상차지 확인')} → ${esc(r.site || '하차지 확인')}`;
   return `<div class="fl-row ${FL.sel === r.no ? 'sel' : ''}" data-fl="row" data-no="${esc(r.no)}">
-    <div class="fl-c fl-tm ${r.late || dday(r) === FL.data.today ? 'now' : ''}">${(DATE_FIRST.includes(FL.cur) || ['배차 완료', '출고 완료'].includes(FL.cur)) ? `<b>${esc(dday(r))}</b><span>${esc(r.time || '')}</span>` : `<b>${esc(r.time || (r.day === '미정' ? '미정' : '시간 미정'))}</b><span>${esc(dday(r))}</span>`}</div>
+    <div class="fl-c fl-tm ${r.late || dday(r) === FL.data.today ? 'now' : ''}">${(DATE_FIRST.includes(FL.cur) || ['배차 완료', '출고 완료'].includes(FL.cur)) ? `<b>${esc(dday(r))}</b><span>${esc(r.time || '')}</span>` : `<b>${esc(r.time || (r.day === '미정' ? '미정' : '시간 미정'))}</b><span>${esc(dday(r) === '미정' ? '' : dday(r))}</span>`}</div>
     <div class="fl-c fl-nm"><div class="fl-nmt">${title(r)}</div>${STMT_STEPS.includes(FL.cur) ? ioHtml(r) : ''}</div>
     <div class="fl-c fl-ds">${chips}${esc(r.item)}</div>
     <div class="fl-c fl-ds fl-rt">${route}</div>
