@@ -20,13 +20,17 @@ const STEPS = ['견적', '발주', '배차 요청', '배차 완료', '출고 완
 const LABEL = { 견적: '견적 요청', 전표: '최종 마감' };   // 10/28 대표 "견적 텍스트 견적요청으로"
 const FL = { marks: {}, data: null, err: '', at: 0, loading: false, cur: '배차 요청', view: 'flow', day: '', sel: '', links: {}, gwait: 0, acts: {} };
 let ctx = { rerender: () => {}, openFrame: () => {} };
+// 새로고침해도 보던 화면 그대로 — 단계·보기·펼친 건·검색·접힘·스크롤 (11/02 대표 "새로고침하면 자꾸 첫 화면으로")
+const UI_KEY = 'ht_fl';
+try { const u = JSON.parse(sessionStorage.getItem(UI_KEY) || 'null'); if (u) { Object.assign(FL, { view: u.view || FL.view, cur: u.cur || FL.cur, sel: u.sel || '', all: !!u.all, rqs: u.rqs || {}, mo: u.mo || {} }); FL.restoreY = u.y || 0; } } catch (_) { /* 무시 */ }
+function saveUi() { try { sessionStorage.setItem(UI_KEY, JSON.stringify({ view: FL.view, cur: FL.cur, sel: FL.sel, all: !!FL.all, rqs: FL.rqs || {}, mo: FL.mo || {}, y: Math.round(window.scrollY || 0) })); } catch (_) { /* 무시 */ } }
 
 export function load(force) {
   if (FL.loading || (!force && Date.now() - FL.at < 60000)) return;
   FL.loading = true; FL.at = Date.now();
   S.getFlowMarks().then((m) => { FL.marks = m; ctx.rerender(); }).catch(() => {});
   S.getFlowBoard().then((d) => { FL.data = d; FL.err = ''; }).catch((e) => { FL.err = e.message; })
-    .finally(() => { FL.loading = false; ctx.rerender(); });
+    .finally(() => { FL.loading = false; ctx.rerender(); if (FL.restoreY && FL.data) { const y = FL.restoreY; FL.restoreY = 0; requestAnimationFrame(() => window.scrollTo(0, y)); } });
 }
 export function setGwait(n) { FL.gwait = n || 0; }
 
@@ -379,6 +383,9 @@ function rfqOpen(r) {
 }
 export function bind(app, c) {
   ctx = c;
+  ['click', 'input', 'change'].forEach((ev) => app.addEventListener(ev, () => setTimeout(saveUi, 0)));
+  document.addEventListener('click', (e) => { if (e.target.closest('.hm-side, .hm-top, nav')) setTimeout(saveUi, 0); });
+  window.addEventListener('pagehide', saveUi); window.addEventListener('beforeunload', saveUi);
   app.addEventListener('toggle', (e) => { const d = e.target; if (d.matches && d.matches('details[data-mo]')) { FL.mo = FL.mo || {}; FL.mo[d.dataset.mo] = d.open; } }, true);   // 메모 펼친 것 1분 새로고침에도 유지
   setInterval(() => { if (document.visibilityState === 'visible' && app.querySelector('.fl')) load(true); }, 60000);   // 열어 둔 채로도 1분마다 새로 (도우미는 출고일보가 바뀌면 5분 안에 올림)
   const onRq = (e) => {

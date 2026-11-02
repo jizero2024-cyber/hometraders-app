@@ -4,12 +4,13 @@
 //   서류 화면은 모두 js/forms.js (같은 머리·카드·버튼)
 import * as S from './store-supabase.js?v=13';
 import * as FM from './forms.js?v=25';
-import * as FL from './flow.js?v=87';   // 맨 위 출고 흐름 (10/28)
+import * as FL from './flow.js?v=88';   // 맨 위 출고 흐름 (10/28)
 import * as CN from './cheonan.js?v=7';   // 천안 재고 (10/31)
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const won = (n) => Math.round(Number(n) || 0).toLocaleString();
 const H = { gwait: 0, fare: null, fareErr: '', inbox: {}, inboxErr: '', at: 0, loading: false, fareAll: false, toast: '', busy: false, box: false, text: '', frame: null };
+try { H.grp = sessionStorage.getItem('ht_grp') || ''; } catch (_) { /* 무시 */ }   // 새로고침해도 창고·거래처 묶음 그대로 (11/02)
 let ctx = { rerender: () => {}, go: () => {}, me: () => '', helper: async () => ({}) };
 
 const svg = (stroke, d) => `<svg viewBox="0 0 24 24" style="width:38px;height:38px;fill:none;stroke:${stroke};stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round">${d}</svg>`;
@@ -199,6 +200,7 @@ async function putInbox(items) {
   setTimeout(() => { H.toast = ''; ctx.rerender(); }, 4000);
 }
 
+function saveGrp() { try { sessionStorage.setItem('ht_grp', H.grp || ''); } catch (_) { /* 무시 */ } }
 export function bind(app, c) {
   ctx = c;
   FL.bind(app, { rerender: () => ctx.rerender(), openFrame, go: (r) => ctx.go(r), me: () => ctx.me(),
@@ -209,8 +211,8 @@ export function bind(app, c) {
     const t = e.target.closest('[data-hm]'); if (!t || !on()) return;
     const a = t.dataset.hm;
     if (a === 'go') { FM.open(''); closeFrame(); ctx.go(t.dataset.r, t.dataset.mode); }   // 화면을 옮기면 열린 팝업은 닫음
-    else if (a === 'fv') { FL.setView(t.dataset.v); H.grp = ''; H.quick = false; ctx.rerender(); }
-    else if (a === 'grp') { const g = t.dataset.g; if (g === '출고') { FL.setView('flow'); H.grp = ''; } else if (g === '전표') { FL.setView('전체'); H.grp = ''; } else { H.grp = g; if (g === '창고') CN.load(true); } ctx.rerender(); }
+    else if (a === 'fv') { FL.setView(t.dataset.v); H.grp = ''; H.quick = false; saveGrp(); ctx.rerender(); }
+    else if (a === 'grp') { const g = t.dataset.g; if (g === '출고') { FL.setView('flow'); H.grp = ''; } else if (g === '전표') { FL.setView('전체'); H.grp = ''; } else { H.grp = g; if (g === '창고') CN.load(true); } saveGrp(); ctx.rerender(); }
     else if (a === 'quick') { H.quick = !H.quick; ctx.rerender(); }
     else if (a === 'fare-all') { H.fareAll = !H.fareAll; ctx.rerender(); }
     else if (a === 'fare-open') { H.fareOpen = !H.fareOpen; ctx.rerender(); if (H.fareOpen) setTimeout(() => { const x = document.querySelector('.hm-fare'); if (x) x.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 0); }
