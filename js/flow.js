@@ -317,7 +317,7 @@ function copyText(text) {
 // 견적서 — 뉴하우징·공간제작소면 세트·키트 고르기, 그 외는 품목 글 그대로 → 견적서 화면이 우리 품목명·종전가로 채움
 function closeQ() { const x = document.querySelector('.fl-qov'); if (x) x.remove(); }
 const qLines = (txt) => { let head = '';   // '실리콘 베이지 22·연밤색 8' → 둘째 줄도 '실리콘 연밤색 8' (11/02 대표 견적서)
-  return String(txt || '').split(/\s*·\s*/).map((x) => { const w = x.trim().split(/\s+/); if (w.length >= 3) { head = w[0]; return x.trim(); } return head && w.length === 2 && !x.includes(head) ? `${head} ${x.trim()}` : x.trim(); }).join('\n'); };
+  return String(txt || '').split(/\s*·\s*/).map((x) => { const w = x.trim().split(/\s+/); if (w.length >= 3) { head = w[0]; return x.trim(); } return head && w.length === 2 && /^(베이지|백색|흰색|화이트|그레이|블랙|검정|아이보리|투명|[가-힣]{1,3}색)$/.test(w[0]) && !x.includes(head) ? `${head} ${x.trim()}` : x.trim(); }).join('\n'); };
 function quoteFor(r) {
   const all = (FL.data && FL.data.kits) || {}, kits = /뉴하우징/.test(r.partner) ? all['뉴하우징'] || {} : /공간/.test(r.partner) ? all['공간제작소'] || {} : {};
   const names = Object.keys(kits);
