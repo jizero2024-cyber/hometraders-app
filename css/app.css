@@ -1383,6 +1383,7 @@ body.ki-wide .ks.in { animation: ks-rise .42s cubic-bezier(.16,1,.3,1) !importan
 .hm-t2 { border: 0; background: #F4F3F0; color: #4B4B4B; font: inherit; font-size: 14.5px; font-weight: 700; padding: 9px 18px; border-radius: 999px; display: inline-flex; align-items: center; gap: 7px; cursor: pointer; white-space: nowrap; text-decoration: none; }
 .hm-t2:hover { background: #ECEAE5; }
 .hm-t2.on { background: #111; color: #fff; }
+.hm-t1.off { color: #B5B2AB; cursor: default; } .hm-t1 i { font-style: normal; font-size: 11px; color: #B5B2AB; font-weight: 500; margin-left: 4px; }   /* 창고 준비중 (11/02) */
 .hm-t2.off { color: #B5B2AB; background: #F7F6F3; cursor: default; } .hm-t2 i { font-style: normal; font-size: 11.5px; color: #B5B2AB; font-weight: 400; }
 .hm-body.top { display: block; max-width: 1320px; }
 .hm-body.top .hm-main { padding: 28px 28px 80px; gap: 24px; }
