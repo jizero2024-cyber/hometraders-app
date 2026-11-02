@@ -2,7 +2,7 @@
 // 맥 도우미 flow_board.py 가 출고일보 줄을 출고 건(출고번호)마다 단계로 나눠 site_inbox 'flow:board' 에 올림 → 여기선 읽기만.
 // 버튼은 있는 화면을 그 건 값으로 엶: 배차 요청(/homt) · 전자 송장 · 납품확인서 · 자재승인원 · 견적서 · 공간 올릴 전표
 import * as S from './store-supabase.js?v=13';
-import * as FM from './forms.js?v=24';
+import * as FM from './forms.js?v=25';
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const sv = (d) => `<svg viewBox="0 0 24 24" aria-hidden="true">${d}</svg>`;
@@ -108,7 +108,7 @@ const DATE_FIRST = ['기록', '입력 누락', '입력 완료', '전표', '전�
 const saleSlips = (r) => [...new Set((r.lines || []).filter((l) => l.k === '판매' && l.st === '입력').flatMap((l) => l.slips || []))];
 function docHtml(r) {   // 전표 전체 — 서류 버튼 맨 오른쪽에 나란히 (11/02 대표)
   const no = esc(r.no), b = (a, t) => `<button type="button" class="fl-gh" data-fl="${a}" data-no="${no}">${t}</button>`;
-  return `${saleSlips(r).length ? b('deliv', '납품확인서') : '<span class="fl-gh fl-ph" aria-hidden="true">납품확인서</span>'}${b('approval', '자재승인원')}<button type="button" class="fl-gh" data-hm="frame" data-src="./deposit.html?embed=1" data-title="입금표">입금표</button>${b('quote', '견적서')}${b('esong', '전자 송장')}`;
+  return `${saleSlips(r).length ? b('deliv', '납품확인서') : '<span class="fl-gh fl-ph" aria-hidden="true">납품확인서</span>'}${b('approval', '자재승인원')}${b('quote', '견적서')}${b('esong', '전자 송장')}`;
 }
 function stmtHtml(r) {   // 거래명세표 — 판매전표 PDF 보기 · 전달했는지 (10/28 대표)
   const sl = saleSlips(r);
@@ -229,7 +229,7 @@ export const counts = () => ({
   quote: rowsOf('견적').length, disp: rowsOf('배차 요청').length, songjang: [...rowsOf('배차 완료'), ...rowsOf('출고 완료')].filter((r) => r.day === today()).length,
 });
 export const view = () => FL.view;
-export function setView(v) { FL.view = v === '마감' ? 'flow' : v; FL.sel = ''; if (v === '견적') FL.cur = '견적'; else if (FL.cur === '견적' && v === 'flow') FL.cur = '배차 요청'; }
+export function setView(v) { FL.view = v === '마감' ? 'flow' : v; FL.sel = ''; if (v === '견적') FL.cur = '견적'; else if (v === 'flow' && (FL.cur === '견적' || !STEPS.includes(FL.cur))) FL.cur = '배차 요청'; }   // 전표 확인 → 출고로 오면 오늘 마감 흐름으로 (11/02 대표)
 function slipHtml(kind) {   // 전표 확인 — 입력 누락(오늘 먼저 · 지난 날 아래) / 입력 완료(최근 것부터)
   if (!FL.data) return '<div class="fl-empty">불러오는 중…</div>';
   const t = today(), rows = rowsOf(kind).slice().reverse();
@@ -316,10 +316,12 @@ function copyText(text) {
 }
 // 견적서 — 뉴하우징·공간제작소면 세트·키트 고르기, 그 외는 품목 글 그대로 → 견적서 화면이 우리 품목명·종전가로 채움
 function closeQ() { const x = document.querySelector('.fl-qov'); if (x) x.remove(); }
+const qLines = (txt) => { let head = '';   // '실리콘 베이지 22·연밤색 8' → 둘째 줄도 '실리콘 연밤색 8' (11/02 대표 견적서)
+  return String(txt || '').split(/\s*·\s*/).map((x) => { const w = x.trim().split(/\s+/); if (w.length >= 3) { head = w[0]; return x.trim(); } return head && w.length === 2 && !x.includes(head) ? `${head} ${x.trim()}` : x.trim(); }).join('\n'); };
 function quoteFor(r) {
   const all = (FL.data && FL.data.kits) || {}, kits = /뉴하우징/.test(r.partner) ? all['뉴하우징'] || {} : /공간/.test(r.partner) ? all['공간제작소'] || {} : {};
   const names = Object.keys(kits);
-  if (!names.length) { FM.presetQuote(String(r.items || r.item || '').split(/\s*·\s*/).join('\n'), r.partner, r.site); ctx.rerender(); return; }
+  if (!names.length) { FM.presetQuote(qLines(r.items || r.item), r.partner, r.site); ctx.rerender(); return; }
   FL.qpick = { r, kits }; closeQ();
   const ov = document.createElement('div'); ov.className = 'hm-ov fl-qov';
   ov.innerHTML = `<div class="hm-modal fl-qm" role="dialog" aria-label="견적서"><div class="hm-mh"><b>${esc(r.partner)} 견적서</b><button type="button" class="hm-x" data-fl="qx" aria-label="닫기">✕</button></div>
@@ -419,9 +421,10 @@ export function bind(app, c) {
     }
     else if (a === 'quote' && r) quoteFor(r);
     else if (a === 'qk' && FL.qpick) { const p = FL.qpick, k = t.dataset.k, color = ((document.getElementById('fl-qc') || {}).value || '').trim().toUpperCase(); FL.qpick = null; closeQ();
-      const body = k === '' ? String(p.r.items || p.r.item || '').split(/\s*·\s*/).join('\n') : (p.kits[k] || []).map(([n, q, u]) => `${String(n).replace(/<색상>/g, color || '색상').replace(/_?<색>/g, '')} ${q} ${String(u || '').replace(/\s*\(.*\)/, '')}`.trim()).join('\n');
+      const body = k === '' ? qLines(p.r.items || p.r.item) : (p.kits[k] || []).map(([n, q, u]) => `${String(n).replace(/<색상>/g, color || '색상').replace(/_?<색>/g, '')} ${q} ${String(u || '').replace(/\s*\(.*\)/, '')}`.trim()).join('\n');
       FM.presetQuote(body, p.r.partner, p.r.site); ctx.rerender(); }
     else if (a === 'qx') { FL.qpick = null; closeQ(); }
+    else if (a === 'approval' && r) { const y = new Date().getFullYear(), m_ = /^(\d{2})\/(\d{2})$/.exec(r.day || ''); FM.presetApproval(`${r.site || r.site_full || ''}${r.partner ? ` (${r.partner})` : ''}`.trim(), m_ ? `${y}-${m_[1]}-${m_[2]}` : '', `${r.items || ''} ${r.item || ''}`); ctx.rerender(); }
     else if (a === 'deliv' && r) { FM.presetDeliv(saleSlips(r).join(' ')); ctx.rerender(); }
     else if (['deliv', 'approval', 'quote', 'stmt'].includes(a)) { FM.open(a === 'stmt' ? '' : a); if (a === 'stmt') ctx.go('stmt'); else ctx.rerender(); }
     else if (a === 'pdf') {

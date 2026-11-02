@@ -1498,8 +1498,8 @@ body.kiosk .ki-t i, body.kiosk .ki-hi, body.kiosk .ki-out i, body.kiosk .ki-s h2
 .fl-acts.dz .fl-stm > :nth-child(3) { width: 108px; justify-content: flex-start; padding: 0 4px; font-weight: 400; }
 .fl-acts.dz > :nth-child(2) { width: 60px; }
 .fl-acts.dz > :nth-child(3), .fl-acts.dz > :nth-child(4) { width: 98px; }
-.fl-acts.dz > :nth-child(5), .fl-acts.dz > :nth-child(6) { width: 70px; }
-.fl-acts.dz > :nth-child(7) { width: 90px; }
+.fl-acts.dz > :nth-child(5) { width: 70px; }
+.fl-acts.dz > :nth-child(6) { width: 90px; }
 .fl-acts.dz > *, .fl-acts.dz .fl-stm > * { padding-left: 0; padding-right: 0; justify-content: center; box-sizing: border-box; }
 .fl-acts.dz .fl-stm > :nth-child(3) { justify-content: flex-start; padding: 0 4px; }
-.fl-list:has(.fl-acts.dz) { --acts: 884px !important; }   /* 칸 고정 합 — 차량 글자와 안 겹치게 */
+.fl-list:has(.fl-acts.dz) { --acts: 808px !important; }   /* 칸 고정 합 — 차량 글자와 안 겹치게 */

@@ -3,8 +3,8 @@
 // 버튼: 배차 요청 · 자료 넣기(site_inbox — 출고일보 업데이트 때 판매·구매입력) · 거래명세표(공간제작소 · 그 외 · 에이스) · 납품확인서 · 자재승인원 · 견적서 · 입금표
 //   서류 화면은 모두 js/forms.js (같은 머리·카드·버튼)
 import * as S from './store-supabase.js?v=13';
-import * as FM from './forms.js?v=24';
-import * as FL from './flow.js?v=77';   // 맨 위 출고 흐름 (10/28)
+import * as FM from './forms.js?v=25';
+import * as FL from './flow.js?v=78';   // 맨 위 출고 흐름 (10/28)
 import * as CN from './cheonan.js?v=7';   // 천안 재고 (10/31)
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -132,7 +132,7 @@ function closeN() { return FL.closeItems({ fare: H.fare || [], inbox: (H.inbox.w
 function navHtml() {
   const c = FL.counts(), g = curGrp(), n = (k) => (k ? `<b>${k}</b>` : '');
   const t = (k, lab, badge) => `<button type="button" class="hm-t1 ${g === k ? 'on' : ''}" data-hm="grp" data-g="${k}">${lab}${badge || ''}</button>`;
-  return `<nav class="hm-nav" aria-label="메뉴">${t('출고', '출고', n(closeN()))}${t('전표', '전표 확인', n(c.miss + c.missOld))}${t('서류', '서류')}${t('거래처', '거래처', n(H.gwait))}${t('창고', '창고', n(CN.waitN()))}</nav>`;
+  return `<nav class="hm-nav" aria-label="메뉴">${t('출고', '출고', n(closeN()))}${t('전표', '전표 확인', n(c.miss + c.missOld))}${t('거래처', '거래처', n(H.gwait))}${t('창고', '창고', n(CN.waitN()))}</nav>`;
 }
 function subHtml() {
   const c = FL.counts(), v = FL.view(), g = curGrp(), n = (k) => (k ? `<b>${k}</b>` : '');
@@ -148,14 +148,18 @@ function subHtml() {
   }[g] || [];
   return `<div class="hm-subnav"><div class="hm-sin">${items.join('')}</div></div>`;
 }
-// 퀵메뉴 — 자료 넣기(끌어다 놓기·붙여넣기도 여기로) · 배차 요청 · 전자 송장 · 견적서
+// 퀵메뉴 — 자료 넣기(끌어다 놓기·붙여넣기도 여기로) · 배차 요청 · 서류 전부 (11/02 대표 "서류 탭 없애고 퀵메뉴에")
 function quickHtml(wait, chk) {
   return `<div class="hm-quick ${H.quick ? 'open' : ''}">
     ${H.quick ? `<div class="hm-qm">
       <button type="button" data-hm="box">자료 넣기${chk ? ` <b class="r">확인 ${chk}</b>` : wait ? ` <b>대기 ${wait}</b>` : ''}</button>
       <button type="button" data-hm="frame" data-src="/homt?embed=1" data-title="배차 요청">배차 요청</button>
-      <button type="button" data-hm="form" data-r="esong">전자 송장</button>
-      <button type="button" data-hm="form" data-r="quote">견적서</button></div>` : ''}
+      <button type="button" data-hm="go" data-r="stmt">거래명세표</button>
+      <button type="button" data-hm="form" data-r="deliv">납품확인서</button>
+      <button type="button" data-hm="form" data-r="approval">자재승인원</button>
+      <button type="button" data-hm="frame" data-src="./deposit.html?embed=1" data-title="입금표">입금표</button>
+      <button type="button" data-hm="form" data-r="quote">견적서</button>
+      <button type="button" data-hm="form" data-r="esong">전자 송장</button></div>` : ''}
     <button type="button" class="hm-qb" id="hm-drop" data-hm="quick" aria-label="퀵메뉴">${H.quick ? '✕' : '＋'}</button>
     ${H.toast ? `<span class="hm-toast">${esc(H.toast)}</span>` : ''}</div>`;
 }

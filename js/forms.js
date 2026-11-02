@@ -276,6 +276,12 @@ export function presetStmt(route, text, rows) {   // 출고 흐름 [명세표] �
 export function presetDeliv(text) {   // 출고 흐름 [납품확인서] — 그 건 판매전표 번호로 바로 (10/28 대표 "납품확인서 요청 오면 여기서 발행")
   const f = F.deliv; f.text = text || ''; f.files = []; f.confirms = null; f.err = ''; open('deliv'); if (f.text) loadDeliv(); else ctx.rerender();
 }
+export function presetApproval(site, ship, items) {   // 전표 전체 [자재승인원] — 그 건 현장·출고일 채우기 (11/02 대표)
+  const a = F.approval; a.site = site || ''; a.ship = ship || ''; a.file = null; a.out = null; a.err = ''; a.want = items || '';
+  if (a.presets && a.presets.length) { const p = a.presets.find((x) => String(items || '').includes(x.key) || String(x.name).split(/\s+/).some((w) => w.length > 1 && String(items || '').includes(w))); if (p) a.preset = p.key; }
+  else a.presets = null;
+  open('approval');
+}
 export function presetQuote(text, partner, site) {   // 출고 흐름 견적 요청 → 품목 글을 넣고 바로 읽기 (우리 품목명·종전가는 도우미 판독) (10/28 대표 "자동으로 품목 들어가고 견적서 나오게")
   const q = F.quote; q.text = text; q.files = []; q.doc = null; q.out = null; q.err = ''; q.preset = { partner: partner || '', site: site || '' };
   open('quote'); loadQuote();
@@ -351,7 +357,7 @@ function approvalScreen() {
   const a = F.approval, up = ctx.helperUp();
   if (up && !a.presets && !a.busy) {
     a.busy = true;
-    ctx.helper('/api/approval/presets').then((j) => { a.presets = j.presets || []; a.preset = a.preset || (a.presets[0] || {}).key || ''; })
+    ctx.helper('/api/approval/presets').then((j) => { a.presets = j.presets || []; const w_ = String(a.want || ''), p_ = a.presets.find((x) => w_.includes(x.key) || String(x.name).split(/\s+/).some((t) => t.length > 1 && w_.includes(t))); a.preset = (p_ || {}).key || a.preset || (a.presets[0] || {}).key || ''; })
       .catch((e) => { a.err = e.message; }).finally(() => { a.busy = false; ctx.rerender(); });
   }
   const body = `${noHelper()}<section class="fm-in"><div class="fm-form">
@@ -405,7 +411,7 @@ function quoteScreen() {
     <div class="fm-qf">
       <span>공급가 <b id="fm-qsup">${won(sup)}</b></span><span>부가세 <b id="fm-qvat">${won(sup * 0.1)}</b></span><span class="tot">합계 <b id="fm-qtotal">${won(sup * 1.1)}원</b></span>
       <span class="sp"></span>
-      ${q.out ? `<a class="fm-btn ghost" href="${ctx.helperFile(q.out)}">${esc(q.out.split('/').pop())}</a>` : ''}
+      ${q.out ? `<a class="fm-btn ghost" href="${ctx.helperFile(q.out)}" target="_blank" rel="noopener">엑셀 받기</a>` : ''}
       <button type="button" class="fm-btn" data-fm="q-make" ${q.busy || !ctx.helperUp() ? 'disabled' : ''}>${q.busy ? '만드는 중…' : '견적서 만들기'}</button></div>
     ${q.err ? `<div class="hm-err">${esc(q.err)}</div>` : ''}
   </section>`;
@@ -432,7 +438,7 @@ async function makeQuote() {
   if (!d.partner.trim()) { q.err = '거래처를 적어 주세요'; ctx.rerender(); return; }
   if (!lines.length) { q.err = '품명·수량이 있는 줄이 없어요'; ctx.rerender(); return; }
   q.busy = true; q.err = ''; ctx.rerender();
-  try { const r = await ctx.helper('/api/quote', { doc: { partner: d.partner, owner: d.owner, manager: d.manager, site: d.site, doc_date: d.doc_date }, lines }); q.out = r.out; }
+  try { const r = await ctx.helper('/api/quote', { doc: { partner: d.partner, owner: d.owner, manager: d.manager, site: d.site, doc_date: d.doc_date }, lines }); q.out = r.out; if (r.out) { const a_ = document.createElement('a'); a_.href = ctx.helperFile(r.out); a_.download = ''; document.body.appendChild(a_); a_.click(); a_.remove(); } }   // 만들면 바로 받기 (11/02 대표 "견적서 만들기 안 된다")
   catch (e) { q.err = e.message || String(e); }
   q.busy = false; ctx.rerender();
 }
