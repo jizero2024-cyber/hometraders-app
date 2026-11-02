@@ -5033,6 +5033,10 @@ function render() {
 function openSheet(html) { state.sheet = html; state.fabOpen = false; render(); }
 function closeSheet() { state.sheet = null; state.docEditLines = false; render(); }
 
+document.addEventListener('click', () => {   // /main 도 화면 한 번 누르면 전체 화면 — 키오스크처럼 주소창 숨김 (11/02 대표)
+  if (state.route !== 'main' || window.parent !== window || document.fullscreenElement) return;
+  try { const p = document.documentElement.requestFullscreen && document.documentElement.requestFullscreen({ navigationUI: 'hide' }); if (p) p.catch(() => {}); } catch (_) { /* 무시 */ }
+});
 app.addEventListener('click', (e) => {
   // 세그먼트 / 아이콘 선택 토글 (data-act 없는 버튼도 동작하도록 최상단에서 처리)
   const segBtn = e.target.closest('.seg button, .iconpick button');
