@@ -22,7 +22,7 @@ const FL = { marks: {}, data: null, err: '', at: 0, loading: false, cur: '배차
 let ctx = { rerender: () => {}, openFrame: () => {} };
 // 새로고침해도 보던 화면 그대로 — 단계·보기·펼친 건·검색·접힘·스크롤 (11/02 대표 "새로고침하면 자꾸 첫 화면으로")
 const UI_KEY = 'ht_fl';
-try { const u = JSON.parse(sessionStorage.getItem(UI_KEY) || 'null'); if (u) { Object.assign(FL, { view: u.view || FL.view, cur: u.cur || FL.cur, sel: u.sel || '', all: !!u.all, rqs: u.rqs || {}, mo: u.mo || {} }); FL.restoreY = u.y || 0; } } catch (_) { /* 무시 */ }
+try { const u = JSON.parse(sessionStorage.getItem(UI_KEY) || 'null'); if (u) { Object.assign(FL, { view: u.view || FL.view, cur: u.cur || FL.cur, sel: '', all: !!u.all, rqs: u.rqs || {}, mo: {} });   /* 새로고침하면 펼친 것 다 접힘 (11/02 대표) — 1분 자동 갱신 때는 그대로 */ FL.restoreY = u.y || 0; } } catch (_) { /* 무시 */ }
 function saveUi() { try { sessionStorage.setItem(UI_KEY, JSON.stringify({ view: FL.view, cur: FL.cur, sel: FL.sel, all: !!FL.all, rqs: FL.rqs || {}, mo: FL.mo || {}, y: Math.round(window.scrollY || 0) })); } catch (_) { /* 무시 */ } }
 
 export function load(force) {
