@@ -1617,3 +1617,4 @@ textarea.fd-rfqt { width: 100%; box-sizing: border-box; resize: vertical; border
 .fd-low { border: 0; background: #ECF6EF; }
 .fd-fare span { border: 0; }
 .fl-ev, .fl-ln { border: 0; }
+.fl-lh, .fl-row { border-bottom: 0; } .fl-row { margin-bottom: 2px; } .fl-row:hover { background: #F7F5F1; }   /* 리스트 줄 구분선도 뺌 (11/02) */
