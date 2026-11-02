@@ -1669,3 +1669,5 @@ textarea.fd-rfqt { width: 100%; box-sizing: border-box; resize: vertical; border
 .fl-row.sel, .hm-body.top .fl-row.sel { background: #FAFAF9 !important; border-radius: 14px 14px 0 0 !important; margin-bottom: 0 !important; box-shadow: none !important; }
 .fl-row.sel + .fl-det { background: #FAFAF9 !important; margin: 0 0 14px !important; border-radius: 0 0 14px 14px !important; padding-top: 6px; border: 0 !important; box-shadow: none !important; }
 .fl-row.sel + .fl-det .fd-tw, .fl-row.sel + .fl-det .fd-fare span { background: #fff; }
+.fl-det .fd-tw, .fl-row.sel + .fl-det .fd-tw { background: #FFFFFF !important; border: 0 !important; box-shadow: 0 1px 2px rgba(0,0,0,.03); border-radius: 12px; padding: 4px 8px; }   /* 품목 표는 깨끗한 흰색 (11/02 대표) */
+.fl-det .fd-itab, .fl-det .fd-itab tr, .fl-det .fd-itab th, .fl-det .fd-itab td { background: #FFFFFF; }
