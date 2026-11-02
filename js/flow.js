@@ -152,7 +152,7 @@ function detailHtml(r) {
     ${r.why ? `<div class="fl-why">${esc(r.why)}</div>` : ''}
     ${r.itab ? itabHtml(r) : buys || `<div class="fl-it">${esc(r.items)}</div>`}
     ${caseHtml(r)}
-    <div class="fl-k">전표</div><div>${linesHtml(r)}</div>
+    ${['배차 요청', '발주'].includes(FL.cur) && r.sug ? sugHtml(r) : `<div class="fl-k">전표</div><div>${linesHtml(r)}</div>`}
     ${r.pl ? `<div class="fl-k">순이익</div><div class="fl-pld"><span>판매 ${won(r.pl.sale)}</span><i>−</i><span>구매 ${won(r.pl.buy)}</span><i>−</i><span>운반비 ${won(r.pl.fare)}</span><i>=</i><b class="${r.pl.net < 0 ? 'no' : ''}">${won(r.pl.net)}</b><em>${r.pl.sale ? Math.round((100 * r.pl.net) / r.pl.sale) : 0}% · 공급가</em></div>` : ''}
     ${(r.ev || []).length ? `<div class="fl-k">근거</div><div class="fl-memo">${evLinks(r.ev)}</div>` : ''}
     ${r.itab ? `<details class="fd-more" data-mo="rq:${esc(r.no)}" ${(FL.mo || {})['rq:' + r.no] ? 'open' : ''}><summary>발주 요청${r.rq && r.rq.t ? ` · ${esc(r.rq.t.slice(0, 11))}` : ''}</summary>${rqHtml(r).replace('<div class="fl-k">발주 요청</div>', '')}${galHtml(r)}</details>` : ''}
@@ -160,6 +160,11 @@ function detailHtml(r) {
     ${(r.imgs || []).length ? `<div class="fl-k">사진</div><div class="fl-imgs">${r.imgs.map((x) => `<iframe src="https://drive.google.com/file/d/${encodeURIComponent(x.id)}/preview" title="${esc(x.name)}" loading="lazy"></iframe>`).join('')}</div>` : ''}</div>`;   // 견적 요청 사진 — 펼치면 바로 (10/28 대표)
 }
 // 출고 건 펼침 — 발주 요청 원문 → 사진 띠(발주 사진·명세서) → 품목 표 (11/02 대표, 공간 대조표 https://claude.ai/artifact/R7Qa8xYmhHu19t5dxgbVr1 모양) — flow_detail.py
+function sugHtml(r) {   // 견적 요청 추천 — 지난 구매 단가가 있는 매입처, 지난 운임 (11/02 대표 "배차 요청 상세엔 견적 요청 어디에 하는 게 좋을지") — flow_detail.py · buy_suggest.py
+  const g = r.sug, v = (g.v || []).map((x, i) => `<div class="fd-sv"><b class="${i === 0 ? 'top' : ''}">${esc(x.n)}</b><span>${x.c}/${x.of} 품목</span><em>단가 ${esc(x.d)}</em>${(x.miss || []).length ? `<i>없음 ${esc(x.miss.join(' · '))}</i>` : ''}</div>`).join('');
+  const f = (g.fare || []).map((x) => `<span>${esc(x.d)} ${esc(x.car)} ${Math.round(x.w / 10000)}만${x.fr ? ` · ${esc(x.fr)}` : ''}</span>`).join('');
+  return `<div class="fl-k">견적 요청 추천</div><div class="fd-sug">${v || '<div class="fd-sv"><span>지난 구매 없음</span></div>'}${(g.combo || []).length ? `<div class="fd-sv"><span>나눠 사기</span><em>${esc(g.combo.join(' · '))}</em></div>` : ''}</div>${f ? `<div class="fl-k">지난 운임${g.reg ? ` · ${esc(g.reg)}` : ''}</div><div class="fd-fare">${f}</div>` : ''}`;
+}
 function rqHtml(r) {
   const q = r.rq; if (!q) return '';
   const more = (q.more || []).map((m) => `<div class="fd-rqm"><span class="fd-rqt ${m.tag === '취소' ? 'no' : m.tag === '변경' || m.tag === '누락' ? 'amb' : 'blu'}">${esc(m.tag)}</span><span class="fd-rqw">${esc(m.t)}</span><span class="fd-rqx">${esc(m.x)}</span></div>`).join('');

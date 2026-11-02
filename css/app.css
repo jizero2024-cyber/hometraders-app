@@ -1509,3 +1509,8 @@ body.kiosk .ki-t i, body.kiosk .ki-hi, body.kiosk .ki-out i, body.kiosk .ki-s h2
 .fd-more > summary { cursor: pointer; font-size: 11.5px; color: #A3A09A; font-weight: 800; list-style: none; padding: 4px 0; }
 .fd-more > summary::-webkit-details-marker { display: none; }
 .fd-more > summary::after { content: ' ▾'; } .fd-more[open] > summary::after { content: ' ▴'; }
+.fd-sug { display: flex; flex-direction: column; gap: 2px; }   /* 견적 요청 추천 (11/02) */
+.fd-sv { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; padding: 6px 0; border-bottom: 1px solid #F2F0EC; font-size: 14px; }
+.fd-sv b { font-weight: 800; color: #1A1A1A; min-width: 120px; } .fd-sv b.top { color: #C2410C; }
+.fd-sv span { font-weight: 700; color: #333; } .fd-sv em { font-style: normal; color: #8A877F; font-size: 12.5px; } .fd-sv i { font-style: normal; color: #E03E2D; font-size: 12.5px; }
+.fd-fare { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; color: #555; font-weight: 600; }
