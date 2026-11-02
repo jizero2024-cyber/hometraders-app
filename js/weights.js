@@ -51,3 +51,19 @@ export function label(kg) {
   if (kg >= 1000) return `약 ${(Math.round(kg / 100) / 10).toFixed(1)}톤`;
   return `약 ${Math.max(10, Math.round(kg / 10) * 10)}kg`;
 }
+
+// 가장 긴 자재 — 배차 요청 때 길이도 말해야 함 (11/02 대표 "세라믹사이딩은 3m 여서 배차요청할 때 길이 관련해서도")
+// 세라믹사이딩 3m · 구조재·방부목 2*6*12 → 12자(3.6m) · '3.6m' '3600' 처럼 적힌 길이
+export function longest(text) {
+  let best = null;
+  String(text || '').split(/[·,+\n]|\s\/\s/).map((x) => x.trim()).filter(Boolean).forEach((t) => {
+    let m = null, nm = '';
+    const lum = t.match(/2\s*[*x×]\s*\d{1,2}\s*[*x×]\s*(\d{1,2})|2\s*[*x×]\s*\d{1,2}\s+(\d{1,2})\s*자/i);
+    const mm = t.match(/(\d(?:\.\d+)?)\s*m(?![m²])|\b([1-9]\d{3})\s*(?:mm)?\b(?!\s*[*x×])/i);
+    if (/세라믹|판재|EFX\d|\b[EZ]-\d/i.test(t) && !/메탈|코너|못|페인트|클립|조이너|후레싱|스타터|스페이서/.test(t)) { m = 3; nm = '세라믹사이딩'; }
+    else if (lum) { m = Math.round(Number(lum[1] || lum[2]) * 0.3048 * 10) / 10; nm = `${lum[1] || lum[2]}자`; }
+    else if (mm) { const v = mm[1] ? Number(mm[1]) : Number(mm[2]) / 1000; if (v >= 2 && v <= 13) { m = v; nm = t.replace(/\s*\d.*$/, '') || ''; } }
+    if (m && (!best || m > best.m)) best = { m, nm };
+  });
+  return best;
+}

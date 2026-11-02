@@ -3,7 +3,7 @@
 // 맥 도우미 없이 누구 PC·휴대폰에서도 됨. 새로 적은 주소는 거래처에 저장돼 다음부터 모두에게 뜸.
 // 검색은 초성도 됨 (ㅇㅇㅋㅂ → 원익큐브). [배차 요청] = 배차요청톡 복사 + 출고 목록에 '출고예정'으로 등록.
 import * as S from './store-supabase.js?v=13';
-import * as W from './weights.js?v=1';
+import * as W from './weights.js?v=2';
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 // 품목 고르기 — 이음물류 톡 배차 요청(7/27~10/20, 282건)에 자주 나온 자재 순. 기본값 건축자재 (10/22 대표)
@@ -158,6 +158,8 @@ export function dispatchText() {
   L.push(`운임: ${F.pay}`);
   L.push(`물건: ${F.goods.trim() || '○○'}`);
   if (F.weight.trim()) L.push(`무게: ${F.weight.trim()}`);
+  const ln = W.longest(F.goods);
+  if (ln) L.push(`길이: ${ln.m}m${ln.nm ? ` (${ln.nm})` : ''} — 적재함 길이 확인 부탁드립니다`);
   if (F.sched.trim()) L.push(`일정: ${F.sched.trim()}`);
   L.push('', '감사합니다!');
   return L.join('\n');
