@@ -1678,3 +1678,11 @@ textarea.fd-rfqt { width: 100%; box-sizing: border-box; resize: vertical; border
   .fl-list:has(.fl-acts.dz) .fl-lh > :nth-child(n+6) { display: none !important; }
   .fl-list .fl-row .fl-acts.dz { grid-column: 2 / -1 !important; justify-content: flex-start !important; flex-wrap: nowrap; }
 }
+/* 중간 폭(821~1199) — 글 칸은 화면에 맞게 줄이고 버튼은 아래 줄로, 오른쪽 잘림 없게 (11/02 "이상하게 떠") */
+@media (min-width: 821px) and (max-width: 1199px) {
+  .hm-body.top .fl-list .fl-lh, .hm-body.top .fl-list .fl-row, body.hm-wall .fl-list .fl-lh, body.hm-wall .fl-list .fl-row,
+  .hm-body.top .fl-list:has(.fl-acts.dz) .fl-lh, .hm-body.top .fl-list:has(.fl-acts.dz) .fl-row, body.hm-wall .fl-list:has(.fl-acts.dz) .fl-lh, body.hm-wall .fl-list:has(.fl-acts.dz) .fl-row { grid-template-columns: 84px minmax(0, 1.3fr) minmax(0, 1.3fr) minmax(0, 1.1fr) 56px !important; row-gap: 10px !important; }
+  .hm-body.top .fl-list .fl-lh > :nth-child(n+6), body.hm-wall .fl-list .fl-lh > :nth-child(n+6) { display: none !important; }
+  .hm-body.top .fl-list .fl-row .fl-acts, body.hm-wall .fl-list .fl-row .fl-acts { grid-column: 2 / -1 !important; justify-content: flex-start !important; flex-wrap: wrap !important; }
+  .fl-list .fl-row .fl-acts:empty { display: none; }
+}

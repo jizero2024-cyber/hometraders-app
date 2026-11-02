@@ -194,14 +194,15 @@ function plansHtml(r) {   // 제안 1·2·3 — 구매처 조합마다 물품 + 
 }
 function sugMap(el, r) {   // 지도 — 시·군 중심 좌표, 제안마다 색 선 (OpenStreetMap)
   const g = r.sug || {}, ps = g.plans || [];
-  if (!el || !g.sll) { if (el) el.remove(); return; }
+  const has = g.sll || ps.some((p) => p.vs.some((v) => v.ll)) || (g.near || []).some((v) => v.ll);   // 현장 주소 모르면 매입처만 (11/02 "지도 안 나오는 것도")
+  if (!el || !has) { if (el) el.remove(); return; }
   const go = () => {
     const L = window.L, m = L.map(el, { scrollWheelZoom: false, attributionControl: true });
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 12, attribution: '© OpenStreetMap' }).addTo(m);
-    const pts = [g.sll], seen = {};
-    L.circleMarker(g.sll, { radius: 9, color: '#E03E2D', fillColor: '#E03E2D', fillOpacity: 0.9 }).addTo(m).bindTooltip(`현장 · ${r.site || ''}`, { permanent: true, direction: 'top' });
+    const pts = g.sll ? [g.sll] : [], seen = {};
+    if (g.sll) L.circleMarker(g.sll, { radius: 9, color: '#E03E2D', fillColor: '#E03E2D', fillOpacity: 0.9 }).addTo(m).bindTooltip(`현장 · ${r.site || ''}`, { permanent: true, direction: 'top' });
     ps.slice().reverse().forEach((p) => { const i = ps.indexOf(p); p.vs.forEach((v) => { if (!v.ll) return; pts.push(v.ll);
-      L.polyline([v.ll, g.sll], { color: PCOL[i], weight: i === 0 ? 5 : 3, opacity: i === 0 ? 0.9 : 0.6, dashArray: i === 0 ? null : '6 6' }).addTo(m);
+      if (g.sll) L.polyline([v.ll, g.sll], { color: PCOL[i], weight: i === 0 ? 5 : 3, opacity: i === 0 ? 0.9 : 0.6, dashArray: i === 0 ? null : '6 6' }).addTo(m);
       if (!seen[v.n]) { seen[v.n] = 1; L.circleMarker(v.ll, { radius: 7, color: PCOL[i], fillColor: '#fff', fillOpacity: 1, weight: 3 }).addTo(m).bindTooltip(`${v.n.slice(0, 6)} · ${v.loc}`, { permanent: true, direction: 'right' }); } }); });
     (g.near || []).forEach((v) => { if (v.ll && !seen[v.n]) { seen[v.n] = 1; pts.push(v.ll); L.circleMarker(v.ll, { radius: 6, color: '#8A877F', fillColor: '#8A877F', fillOpacity: 0.7 }).addTo(m).bindTooltip(`${v.n.slice(0, 6)} · 가까운 매입처`, { direction: 'right' }); } });
     m.fitBounds(pts, { padding: [40, 40], maxZoom: 10 });
