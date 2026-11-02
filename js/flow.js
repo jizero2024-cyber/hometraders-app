@@ -175,14 +175,14 @@ function bestHtml(r) {   // 추천 결론 — 한 곳에서 다 / 나눠 사기 
 function sugHtml(r) {   // 품목별 단가 — 이카운트 구매 입력 단가(부가세 별도), 매입처마다 최근 값, 근거 전표 (11/02 대표 "단가 데이터는 정확해야 · 근거도") — flow_detail.py
   const g = r.sug, won = (n) => Number(n).toLocaleString();
   const ev = (x) => `<span class="fd-pd">${esc(x.d)}</span>${x.S ? `<button type="button" class="fd-ps" data-fl="pdf" data-k="구매" data-s="${esc(x.S)}" title="${esc(x.i || '')}">${esc(x.s)}</button>` : `<span class="fd-ps na" title="${esc(x.i || '')}">${esc(x.s)}</span>`}`;
-  const cell = (x, top) => `<div class="fd-pc ${top ? 'top' : ''}"><b>${esc(x.n)}</b><span>${won(x.p)}</span>${ev(x)}</div>`;
-  const rows = (g.prices || []).map((p) => {
-    if ((p.opts || []).length) return `<div class="fd-pr"><div class="fd-pi">${esc(p.it)}<em>종류 확인</em></div><div class="fd-pv">${p.opts.map((o, i) => `<div class="fd-pc ${i === 0 ? 'top' : ''}"><i>${esc(o.k)}</i><b>${esc(o.n)}</b><span>${won(o.p)}</span>${ev(o)}</div>`).join('')}</div></div>`;
-    if (!(p.v || []).length) return `<div class="fd-pr"><div class="fd-pi">${esc(p.it)}</div><div class="fd-pv"><em class="fd-pn">${p.vague ? '품명 확인' : '산 기록 없음'}</em></div></div>`;
-    return `<div class="fd-pr"><div class="fd-pi">${esc(p.it)}${p.m ? `<em>${esc(p.m)}</em>` : ''}</div><div class="fd-pv">${p.v.map((x, i) => cell(x, i === 0)).join('')}</div></div>`;
-  }).join('');
+  const low = (g.prices || []).map((p) => {   // 추천 한 줄 펼치면 품목마다 가장 싼 단가 하나 (11/02 대표)
+    const o = (p.opts || []).length ? p.opts[0] : (p.v || []).length ? p.v.reduce((m, x) => (x.p < m.p ? x : m)) : null;
+    if (!o) return `<div class="fd-lw"><span class="fd-pd"></span><b>${esc(p.it)}</b><em class="fd-pn">${p.vague ? '품명 확인' : '산 기록 없음'}</em></div>`;
+    return `<div class="fd-lw"><span class="fd-pd">${esc(o.d)}</span><b>${esc(p.it)}</b><i>${esc(o.k || '')}</i><span>${esc(o.n)}</span><strong>${won(o.p)}</strong>${ev(o).replace(/^<span class="fd-pd">[^<]*<\/span>/, '')}</div>`;   // 날짜 맨 왼쪽 (11/02 대표)
+  });
+  const rows = low.length ? `<details class="fd-low" data-mo="low:${esc(r.no)}" ${(FL.mo || {})['low:' + r.no] ? 'open' : ''}><summary><em>추천</em>품목별 가장 싼 단가<span>${low.length}개 · 이카운트 구매 · 부가세 별도</span></summary>${low.join('')}</details>` : '';
   const f = (g.fare || []).map((x) => `<span>${esc(x.d)} ${esc(x.car)} ${Math.round(x.w / 10000)}만${x.fr ? ` · ${esc(x.fr)}` : ''}</span>`).join('');
-  return `<div class="fl-k">품목별 단가 · 이카운트 구매 (부가세 별도) ${(g.best && (g.best.pick || []).length) ? '' : `<button type="button" class="fl-go fd-rfqb" data-fl="rfq" data-no="${esc(r.no)}">견적요청서</button>`}</div><div class="fd-prs">${rows || '<div class="fd-pr"><em class="fd-pn">지난 구매 없음</em></div>'}</div>${f ? `<div class="fl-k">지난 운임${g.reg ? ` · ${esc(g.reg)}` : ''}</div><div class="fd-fare">${f}</div>` : ''}`;
+  return `${(g.best && (g.best.pick || []).length) ? '' : `<div class="fl-k"><button type="button" class="fl-go fd-rfqb" data-fl="rfq" data-no="${esc(r.no)}">견적요청서</button></div>`}${rows || '<div class="fd-pr"><em class="fd-pn">지난 구매 없음</em></div>'}${f ? `<div class="fl-k">지난 운임${g.reg ? ` · ${esc(g.reg)}` : ''}</div><div class="fd-fare">${f}</div>` : ''}`;
 }
 function rqHtml(r) {
   const q = r.rq; if (!q) return '';

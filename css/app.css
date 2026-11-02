@@ -1534,3 +1534,13 @@ body.kiosk .ki-t i, body.kiosk .ki-hi, body.kiosk .ki-out i, body.kiosk .ki-s h2
 .fd-ps { border: 0; background: #EAF4EC; color: #2E7D4F; font: inherit; font-size: 11.5px; font-weight: 700; padding: 1px 6px; border-radius: 6px; cursor: pointer; } .fd-ps.na { background: #F4F3F0; color: #8A877F; }
 .fd-pn { font-style: normal; color: #A3A09A; font-size: 13px; }
 @media (max-width: 600px) { .fd-pr { grid-template-columns: 1fr; gap: 4px; } }
+.fd-low { background: #fff; border: 1.5px solid #A8D5B5; border-radius: 12px; padding: 0 14px; margin: 6px 0; }   /* 추천 — 품목별 가장 싼 단가 (11/02) */
+.fd-low > summary { display: flex; align-items: center; gap: 10px; padding: 10px 0; cursor: pointer; font-size: 14px; font-weight: 800; color: #1A1A1A; list-style: none; }
+.fd-low > summary::-webkit-details-marker { display: none; }
+.fd-low > summary::after { content: '▾'; margin-left: auto; color: #8A877F; } .fd-low[open] > summary::after { content: '▴'; }
+.fd-low > summary em { font-style: normal; font-size: 11.5px; font-weight: 800; color: #fff; background: #2E7D4F; border-radius: 6px; padding: 2px 7px; }
+.fd-low > summary span { font-size: 12px; font-weight: 600; color: #8A877F; }
+.fd-lw { display: grid; grid-template-columns: 44px minmax(90px, 140px) minmax(90px, 160px) minmax(100px, 150px) 80px auto; align-items: baseline; gap: 10px; padding: 7px 0; border-top: 1px solid #F2F0EC; font-size: 13.5px; justify-content: start; }
+.fd-lw b { font-weight: 800; color: #111; } .fd-lw i { font-style: normal; color: #6B4FA0; font-weight: 700; font-size: 12.5px; } .fd-lw span:not(.fd-pd) { font-weight: 700; color: #333; } .fd-lw strong { font-weight: 800; color: #111; text-align: right; }
+.fd-lw .fd-pn { grid-column: 3 / -1; }
+@media (max-width: 600px) { .fd-lw { grid-template-columns: 40px 1fr auto; gap: 2px 8px; } .fd-lw i:empty { display: none; } }
