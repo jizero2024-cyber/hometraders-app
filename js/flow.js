@@ -151,13 +151,14 @@ function detailHtml(r) {
   return `<div class="fl-det">
     ${r.why ? `<div class="fl-why">${esc(r.why)}</div>` : ''}
     ${r.no.startsWith('Q') ? '' : `<div class="fl-k">상차 → 하차</div><div class="fl-it"><b>${esc(r.from || '상차지 확인')}</b> → <b>${esc(r.site_full || r.site || '하차지 확인')}</b></div>`}
-    ${r.itab ? `${rqHtml(r)}${galHtml(r)}${itabHtml(r)}` : buys || `<div class="fl-it">${esc(r.items)}</div>`}
+    ${r.itab ? itabHtml(r) : buys || `<div class="fl-it">${esc(r.items)}</div>`}
     ${r.veh ? `<div class="fl-k">차량</div><div class="fl-it">${esc(r.veh)}</div>` : ''}
     ${r.memo ? `<div class="fl-k">메모</div><div class="fl-it fl-memo">${memoHtml(r)}</div>` : ''}
     ${caseHtml(r)}
     <div class="fl-k">전표</div><div>${linesHtml(r)}</div>
     ${r.pl ? `<div class="fl-k">순이익</div><div class="fl-pld"><span>판매 ${won(r.pl.sale)}</span><i>−</i><span>구매 ${won(r.pl.buy)}</span><i>−</i><span>운반비 ${won(r.pl.fare)}</span><i>=</i><b class="${r.pl.net < 0 ? 'no' : ''}">${won(r.pl.net)}</b><em>${r.pl.sale ? Math.round((100 * r.pl.net) / r.pl.sale) : 0}% · 공급가</em></div>` : ''}
     ${(r.ev || []).length ? `<div class="fl-k">근거</div><div class="fl-memo">${evLinks(r.ev)}</div>` : ''}
+    ${r.itab ? `${rqHtml(r)}${galHtml(r)}` : ''}
     ${(r.imgs || []).length ? `<div class="fl-k">사진</div><div class="fl-imgs">${r.imgs.map((x) => `<iframe src="https://drive.google.com/file/d/${encodeURIComponent(x.id)}/preview" title="${esc(x.name)}" loading="lazy"></iframe>`).join('')}</div>` : ''}</div>`;   // 견적 요청 사진 — 펼치면 바로 (10/28 대표)
 }
 // 출고 건 펼침 — 발주 요청 원문 → 사진 띠(발주 사진·명세서) → 품목 표 (11/02 대표, 공간 대조표 https://claude.ai/artifact/R7Qa8xYmhHu19t5dxgbVr1 모양) — flow_detail.py
