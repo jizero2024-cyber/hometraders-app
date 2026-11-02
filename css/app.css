@@ -1602,3 +1602,18 @@ textarea.fd-rfqt { width: 100%; box-sizing: border-box; resize: vertical; border
 .fd-more > summary:hover { color: #1A1A1A; }
 .fd-more[open] > summary { color: #1A1A1A; margin-bottom: 4px; }
 .fd-tw { align-self: stretch; } .fd-itab { width: 100%; } .fd-itab td.fd-ti { max-width: none; }   /* 품목 표는 넓게 (11/02 대표 "이 부분은 넓게가 더 나아") */
+/* 선 빼기 — 테두리·구분선 대신 바탕색으로만 나눔 (11/02 대표 "선 많은 게 싫어") */
+.fl-det { border: 0; }
+.fd-tw { border: 0; }
+.fd-itab th, .fd-itab td { border-bottom: 0; }
+.fd-itab thead th { padding-bottom: 4px; }
+.fd-more { border-top: 0; margin-top: 0; padding-top: 0; }
+.fd-best, .fd-bestd > summary { border: 0 !important; background: #FFF1E6; }
+.fd-best.one, .fd-bestd.one > summary { background: #ECF6EF; }
+.fd-bestd > .fd-lwh, .fd-bestd > .fd-lw, .fd-bestd > .fd-cm, .fd-bestd > .fd-nr { border: 0 !important; background: #FFF8F2; }
+.fd-bestd.one > .fd-lwh, .fd-bestd.one > .fd-lw, .fd-bestd.one > .fd-cm, .fd-bestd.one > .fd-nr { background: #F5FAF6; }
+.fd-bestd > :last-child { border-radius: 0 0 12px 12px; }
+.fd-lw, .fd-cm, .fd-nr { border-top: 0 !important; }
+.fd-low { border: 0; background: #ECF6EF; }
+.fd-fare span { border: 0; }
+.fl-ev, .fl-ln { border: 0; }
