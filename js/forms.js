@@ -354,8 +354,8 @@ function printDeliv() {
 
 // ── 자재승인원 ─────────────────────────────────────────
 function approvalScreen() {
-  const a = F.approval, up = ctx.helperUp();
-  if (up && !a.presets && !a.busy) {
+  const a = F.approval;   // 맥 도우미에 바로 못 닿아도 사무실 맥이 대신 만듦 (11/02 '오웬스 사이트에서 되고 있어?')
+  if (!a.presets && !a.busy && !a.err) {
     a.busy = true;
     ctx.helper('/api/approval/presets').then((j) => { a.presets = j.presets || []; const w_ = String(a.want || ''), p_ = a.presets.find((x) => w_.includes(x.key) || String(x.name).split(/\s+/).some((t) => t.length > 1 && w_.includes(t))); a.preset = (p_ || {}).key || a.preset || (a.presets[0] || {}).key || ''; })
       .catch((e) => { a.err = e.message; }).finally(() => { a.busy = false; ctx.rerender(); });
@@ -367,7 +367,7 @@ function approvalScreen() {
     <label>발행일자<input type="date" data-fm-a="issue" value="${esc(a.issue || today())}"></label>
     <label>납품확인서<button type="button" class="fm-btn ghost" data-fm="ap-pick">${a.file ? esc(a.file.name) : 'PDF 고르기'}</button></label>
     </div><input type="file" id="fm-ap-file" accept=".pdf,application/pdf" hidden>
-    <div class="fm-row"><span class="sp"></span><button type="button" class="fm-btn" data-fm="ap-make" ${a.busy || !up ? 'disabled' : ''}>${a.busy ? '만드는 중…' : '만들기'}</button></div>
+    <div class="fm-row"><span class="sp"></span><button type="button" class="fm-btn" data-fm="ap-make" ${a.busy || !(a.presets || []).length ? 'disabled' : ''}>${a.busy ? '만드는 중…' : '만들기'}</button></div>
     ${a.err ? `<div class="hm-err">${esc(a.err)}</div>` : ''}</section>
     ${a.out ? `<section class="fm-out"><div class="fm-oh"><b>${esc(a.out.name)}</b><span class="sp"></span><a class="fm-btn" href="${a.out.url}" download="${esc(a.out.name)}">내려받기</a></div></section>` : ''}`;
   return page('main', '자재승인원', body);

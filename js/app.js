@@ -8,7 +8,7 @@ import * as DL from './delivery.js';
 import * as SM from './stmt.js?v=104';
 import * as HD from './hdisp.js?v=15';
 import * as HM from './home.js?v=134';
-import * as FM from './forms.js?v=25';
+import * as FM from './forms.js?v=26';
 import * as KI from './kiosk.js?v=34';   // 세로형 키오스크 /kiosk (10/29)
 
 // 창고 아이콘 세트 (무채색)
