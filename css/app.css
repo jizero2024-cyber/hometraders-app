@@ -1517,6 +1517,7 @@ body.kiosk .ki-t i, body.kiosk .ki-hi, body.kiosk .ki-out i, body.kiosk .ki-s h2
 .fd-rfqb { margin-left: 8px; padding: 4px 10px; font-size: 12px; vertical-align: 1px; }   /* 견적요청서 (11/02) */
 .fd-rfq { max-width: 560px; width: calc(100vw - 32px); }
 .fd-rfqv { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+textarea.fd-rfqt { width: 100%; box-sizing: border-box; resize: vertical; border: 1px solid #E5E2DC; border-radius: 8px; padding: 10px 12px; background: #fff; }
 .fd-rfqt { max-height: 50vh; overflow: auto; font-family: Pretendard, sans-serif; font-size: 14px; line-height: 1.55; color: #1A1A1A; }
 .fd-rfqa { display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px; }
 .fd-best { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; background: #fff; border: 1.5px solid #F2C9A8; border-radius: 12px; padding: 10px 14px; margin-bottom: 6px; font-size: 14px; }   /* 견적 추천 결론 (11/02) */

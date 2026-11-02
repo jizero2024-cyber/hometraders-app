@@ -154,10 +154,10 @@ function detailHtml(r) {
   const buys = (r.buys || []).filter((b) => b.name).map((b) => `<div class="fl-k">${esc(b.name)}</div><div class="fl-it">${esc(b.item)}</div>`).join('');
   return `<div class="fl-det">
     ${r.why ? `<div class="fl-why">${esc(r.why)}</div>` : ''}
-    ${['배차 요청', '발주'].includes(FL.cur) ? bestHtml(r) : ''}
+    ${['배차 요청', '발주', '견적'].includes(FL.cur) ? bestHtml(r) : ''}
     ${r.itab ? itabHtml(r) : buys || `<div class="fl-it">${esc(r.items)}</div>`}
     ${caseHtml(r)}
-    ${['배차 요청', '발주'].includes(FL.cur) ? (r.sug ? sugHtml(r) : (r.itab || []).length ? `<div class="fl-k">견적 요청 추천 <button type="button" class="fl-go fd-rfqb" data-fl="rfq" data-no="${esc(r.no)}">견적요청서</button></div>` : '') : `<div class="fl-k">전표</div><div>${linesHtml(r)}</div>`}
+    ${['배차 요청', '발주', '견적'].includes(FL.cur) ? (r.sug ? sugHtml(r) : (r.itab || r.qitems || []).length || FL.cur === '견적' ? `<div class="fl-k">견적 요청 추천 <button type="button" class="fl-go fd-rfqb" data-fl="rfq" data-no="${esc(r.no)}">견적요청서</button></div>` : '') : `<div class="fl-k">전표</div><div>${linesHtml(r)}</div>`}${FL.cur === '견적' && (r.lines || []).length ? `<div class="fl-k">전표</div><div>${linesHtml(r)}</div>` : ''}
     ${r.pl ? `<div class="fl-k">순이익</div><div class="fl-pld"><span>판매 ${won(r.pl.sale)}</span><i>−</i><span>구매 ${won(r.pl.buy)}</span><i>−</i><span>운반비 ${won(r.pl.fare)}</span><i>=</i><b class="${r.pl.net < 0 ? 'no' : ''}">${won(r.pl.net)}</b><em>${r.pl.sale ? Math.round((100 * r.pl.net) / r.pl.sale) : 0}% · 공급가</em></div>` : ''}
     ${(r.ev || []).length ? `<div class="fl-k">근거</div><div class="fl-memo">${evLinks(r.ev)}</div>` : ''}
     ${r.itab ? `<details class="fd-more" data-mo="rq:${esc(r.no)}" ${(FL.mo || {})['rq:' + r.no] ? 'open' : ''}><summary>발주 요청${r.rq && r.rq.t ? ` · ${esc(r.rq.t.slice(0, 11))}` : ''}</summary>${rqHtml(r).replace('<div class="fl-k">발주 요청</div>', '')}${galHtml(r)}</details>` : ''}
@@ -365,12 +365,13 @@ let clickQ = () => {};
 // 견적요청서 — 구매처에 보낼 품목·수량·받을 날 (운반비는 안 물음, 11/02 대표) (판매처·현장 이름은 안 넣음, 대표 규칙) · 톡 복사 / 엑셀 (11/02 대표)
 function rfqItems(r) {
   const seen = new Set();
-  return (r.itab || []).filter((x) => { const k = `${x.it}|${x.q}`; if (seen.has(k)) return false; seen.add(k); return true; }).map((x) => ({ it: x.it, q: x.q }));
+  const src = (r.itab || []).length ? r.itab : (r.qitems || []).length ? r.qitems : String(r.items || r.item || '').split(/\s*·\s*|\n/).filter(Boolean).map((t) => ({ it: t, q: '' }));   // 견적 요청 건은 품목 글 (11/02 대표)
+  return src.filter((x) => { const k = `${x.it}|${x.q}`; if (seen.has(k)) return false; seen.add(k); return true; }).map((x) => ({ it: x.it, q: x.q }));
 }
 function rfqText(r, v) {
   const t = (FL.data || {}).today || '', due = [r.arr || (r.day !== '미정' ? r.day : ''), r.time].filter(Boolean).join(' ');
   return [`요청일 ${t}`, due ? `받을 날 ${due}` : '', '',
-    ...rfqItems(r).map((x, i) => `${i + 1}. ${x.it} ${x.q}`), '', '단가 견적 부탁드립니다.'].filter((x, i, a) => x !== '' || (a[i - 1] && a[i - 1] !== '')).join('\n');
+    ...rfqItems(r).map((x, i) => `${i + 1}. ${x.it}${x.q ? ' ' + x.q : ''}`), '', '단가 견적 부탁드립니다.'].filter((x, i, a) => x !== '' || (a[i - 1] && a[i - 1] !== '')).join('\n');
 }
 function rfqXlsx(r, v) {
   import('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm').then((X) => {
@@ -386,13 +387,13 @@ function rfqOpen(r) {
   closeQ(); const v = '';   // 구매처 고르기 뺌 — 품목별 단가 칸에 매입처가 다 보임 (11/02 대표)
   const ov = document.createElement('div'); ov.className = 'hm-ov fl-qov';
   const draw = () => { ov.innerHTML = `<div class="hm-modal fd-rfq" role="dialog" aria-label="견적요청서"><div class="hm-mh"><b>견적요청서</b><button type="button" class="hm-x" aria-label="닫기">✕</button></div>
-    <pre class="fl-tx fd-rfqt">${esc(rfqText(r, v))}</pre>
+    <textarea class="fl-tx fd-rfqt" rows="10" aria-label="견적요청서">${esc(rfqText(r, v))}</textarea>
     <div class="fd-rfqa"><button type="button" class="fl-go" data-a="copy">톡 복사</button><button type="button" class="fl-gh" data-a="xlsx">엑셀 받기</button></div></div>`; };
   draw();
   ov.addEventListener('click', (e) => {
     if (e.target === ov || e.target.closest('.hm-x')) { ov.remove(); return; }
     const b = e.target.closest('button'); if (!b) return;
-    if (b.dataset.a === 'copy') copyText(rfqText(r, v)).then(() => { b.textContent = '복사됨'; setTimeout(() => { b.textContent = '톡 복사'; }, 1500); });
+    if (b.dataset.a === 'copy') copyText(ov.querySelector('.fd-rfqt').value).then(() => { b.textContent = '복사됨'; setTimeout(() => { b.textContent = '톡 복사'; }, 1500); });
     else if (b.dataset.a === 'xlsx') rfqXlsx(r, v);
   });
   document.body.appendChild(ov);
