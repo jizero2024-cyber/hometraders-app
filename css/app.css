@@ -1567,8 +1567,7 @@ textarea.fd-rfqt { width: 100%; box-sizing: border-box; resize: vertical; border
 .fd-itab td.fd-ti { min-width: 200px; max-width: 420px; }
 /* 버튼 먼 것 다 — 글 칸에 최대 너비, 남는 자리는 오른쪽으로 (11/02 대표 "버튼이 먼 것들은 다 수정") */
 @media (min-width: 821px) {
-  .hm-body.top .fl-list .fl-lh, .hm-body.top .fl-list .fl-row, body.hm-wall .fl-list .fl-lh, body.hm-wall .fl-list .fl-row { grid-template-columns: 96px minmax(150px, 340px) minmax(140px, 420px) minmax(130px, 300px) 64px 470px !important; justify-content: start; }
-  .hm-body.top .fl-list:has(.fl-acts.dz) .fl-lh, .hm-body.top .fl-list:has(.fl-acts.dz) .fl-row, body.hm-wall .fl-list:has(.fl-acts.dz) .fl-lh, body.hm-wall .fl-list:has(.fl-acts.dz) .fl-row { grid-template-columns: 96px minmax(150px, 340px) minmax(140px, 420px) minmax(130px, 300px) 64px 812px !important; }
+  .hm-body.top .fl-list .fl-lh, .hm-body.top .fl-list .fl-row, body.hm-wall .fl-list .fl-lh, body.hm-wall .fl-list .fl-row { grid-template-columns: 96px minmax(150px, 1.5fr) minmax(140px, 1.4fr) minmax(130px, 1.2fr) 64px 300px !important; }   /* 리스트는 넓게, 버튼은 차량 바로 옆 (11/02 대표 "넓직하게가 좋긴 해") */
 }
 .fd-best .fd-rfqb { margin-left: 8px; }
 .fd-low > summary::after { margin-left: 4px; }
