@@ -140,14 +140,14 @@ function subHtml() {
   const it = (lab, attr, on, badge, cls) => `<button type="button" class="hm-t2 ${on ? 'on' : ''} ${cls || ''}" ${attr}>${lab}${badge || ''}</button>`;
   const fv = (lab, k, badge) => it(lab, `data-hm="fv" data-v="${k}"`, !H.grp && v === k, badge);
   const items = {
-    출고: [fv('오늘 마감', 'flow', n(closeN())), fv('견적 요청', '견적', n(c.quote)), fv('전체 출고', '기록')],
+    출고: [],   // 2단 탭 뺌 — 견적 요청은 흐름 단계에 있음 (11/02 대표 "출고 밑에 탭 필요 없어")
     전표: [fv('전체보기', '전체'), fv('입력 누락', '누락', n(c.miss + c.missOld)), fv('입력 완료', '완료')],
     서류: [it('거래명세표', 'data-hm="go" data-r="stmt"'), it('납품확인서', 'data-hm="form" data-r="deliv"'), it('자재승인원', 'data-hm="form" data-r="approval"'),
       it('입금표', 'data-hm="frame" data-src="./deposit.html?embed=1" data-title="입금표"'), it('견적서', 'data-hm="form" data-r="quote"'), it('전자 송장', 'data-hm="form" data-r="esong"')],
     창고: [it('천안 재고', 'data-hm="grp" data-g="창고"', true, n(CN.waitN()))],
     거래처: [`<a class="hm-t2" href="/gonggan/">공간 협업툴${n(H.gwait)}</a>`, it('뉴하우징 협업툴', 'disabled', false, '<i>준비중</i>', 'off')],
   }[g] || [];
-  return `<div class="hm-subnav"><div class="hm-sin">${items.join('')}</div></div>`;
+  return items.length ? `<div class="hm-subnav"><div class="hm-sin">${items.join('')}</div></div>` : '';
 }
 // 퀵메뉴 — 자료 넣기(끌어다 놓기·붙여넣기도 여기로) · 배차 요청 · 서류 전부 (11/02 대표 "서류 탭 없애고 퀵메뉴에")
 function quickHtml(wait, chk) {
