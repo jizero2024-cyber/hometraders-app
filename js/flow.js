@@ -176,8 +176,8 @@ function galHtml(r) {
 }
 function itabHtml(r) {
   const st = (v) => (v === '—' ? '<td class="fd-st na">—</td>' : v ? `<td class="fd-st ok">${esc(v)}</td>` : '<td class="fd-st no">✕</td>');
-  const rows = (r.itab || []).map((x) => `<tr class="${x.miss ? 'fd-miss' : ''}"><td class="fd-ti">${esc(x.it)}</td><td>${esc(x.q)}</td><td><span class="fd-src ${esc(x.sc || 'un')}">${esc(x.src)}</span></td><td>${esc(x.d)}</td>${st(x.sale)}${st(x.buy)}</tr>`).join('');
-  return `<div class="fd-tw"><table class="fd-itab"><thead><tr><th>발주요청품목</th><th>수량</th><th>출고처</th><th>나간 날</th><th>판매</th><th>구매</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  const rows = (r.itab || []).map((x) => `<tr class="${x.miss ? 'fd-miss' : ''}"><td class="fd-ti">${esc(x.it)}</td><td>${esc(x.q)}</td><td>${esc(x.rd || '')}</td><td><span class="fd-src ${esc(x.sc || 'un')}">${esc(x.src)}</span></td><td>${esc(x.d)}</td>${st(x.sale)}${st(x.buy)}</tr>`).join('');
+  return `<div class="fd-tw"><table class="fd-itab"><thead><tr><th>발주요청품목</th><th>수량</th><th>발주요청일</th><th>출고처</th><th>나간 날</th><th>판매</th><th>구매</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 function linesHtml(r) {
   return (r.lines || []).map((l) => {
