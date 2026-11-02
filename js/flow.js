@@ -376,18 +376,16 @@ function rfqXlsx(r, v) {
   }).catch((e) => alert('엑셀을 못 만들었어요 — ' + (e.message || e)));
 }
 function rfqOpen(r) {
-  closeQ(); const vs = ((r.sug || {}).v || []).map((x) => x.n); let v = vs[0] || '';
+  closeQ(); const v = '';   // 구매처 고르기 뺌 — 품목별 단가 칸에 매입처가 다 보임 (11/02 대표)
   const ov = document.createElement('div'); ov.className = 'hm-ov fl-qov';
   const draw = () => { ov.innerHTML = `<div class="hm-modal fd-rfq" role="dialog" aria-label="견적요청서"><div class="hm-mh"><b>견적요청서</b><button type="button" class="hm-x" aria-label="닫기">✕</button></div>
-    <div class="fd-rfqv">${vs.map((n) => `<button type="button" class="fl-sb mid ${n === v ? 'on' : ''}" data-v="${esc(n)}">${esc(n)}</button>`).join('')}<button type="button" class="fl-sb mid ${v ? '' : 'on'}" data-v="">구매처 빼기</button></div>
     <pre class="fl-tx fd-rfqt">${esc(rfqText(r, v))}</pre>
     <div class="fd-rfqa"><button type="button" class="fl-go" data-a="copy">톡 복사</button><button type="button" class="fl-gh" data-a="xlsx">엑셀 받기</button></div></div>`; };
   draw();
   ov.addEventListener('click', (e) => {
     if (e.target === ov || e.target.closest('.hm-x')) { ov.remove(); return; }
     const b = e.target.closest('button'); if (!b) return;
-    if (b.dataset.v !== undefined) { v = b.dataset.v; draw(); }
-    else if (b.dataset.a === 'copy') copyText(rfqText(r, v)).then(() => { b.textContent = '복사됨'; setTimeout(() => { b.textContent = '톡 복사'; }, 1500); });
+    if (b.dataset.a === 'copy') copyText(rfqText(r, v)).then(() => { b.textContent = '복사됨'; setTimeout(() => { b.textContent = '톡 복사'; }, 1500); });
     else if (b.dataset.a === 'xlsx') rfqXlsx(r, v);
   });
   document.body.appendChild(ov);
