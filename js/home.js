@@ -4,7 +4,7 @@
 //   서류 화면은 모두 js/forms.js (같은 머리·카드·버튼)
 import * as S from './store-supabase.js?v=13';
 import * as FM from './forms.js?v=25';
-import * as FL from './flow.js?v=100';   // 맨 위 출고 흐름 (10/28)
+import * as FL from './flow.js?v=101';   // 맨 위 출고 흐름 (10/28)
 import * as CN from './cheonan.js?v=7';   // 천안 재고 (10/31)
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

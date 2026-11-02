@@ -157,7 +157,7 @@ function detailHtml(r) {
     ${['배차 요청', '발주', '견적'].includes(FL.cur) ? bestHtml(r) : ''}
     ${r.itab ? itabHtml(r) : buys || `<div class="fl-it">${esc(r.items)}</div>`}
     ${caseHtml(r)}
-    ${['배차 요청', '발주', '견적'].includes(FL.cur) ? (r.sug ? sugHtml(r) : (r.itab || r.qitems || []).length || FL.cur === '견적' ? `<div class="fl-k">견적 요청 추천 <button type="button" class="fl-go fd-rfqb" data-fl="rfq" data-no="${esc(r.no)}">견적요청서</button></div>` : '') : `<div class="fl-k">전표</div><div>${linesHtml(r)}</div>`}${FL.cur === '견적' && (r.lines || []).length ? `<div class="fl-k">전표</div><div>${linesHtml(r)}</div>` : ''}
+    ${['배차 요청', '발주', '견적'].includes(FL.cur) ? (r.sug ? sugHtml(r) : (r.itab || r.qitems || []).length || FL.cur === '견적' ? `<div class="fl-k">견적 요청 추천 <button type="button" class="fl-go fd-rfqb" data-fl="rfq" data-no="${esc(r.no)}">견적요청서</button></div>` : '') : `<div class="fl-k">전표</div><div>${linesHtml(r)}</div>`}
     ${r.pl ? `<div class="fl-k">순이익</div><div class="fl-pld"><span>판매 ${won(r.pl.sale)}</span><i>−</i><span>구매 ${won(r.pl.buy)}</span><i>−</i><span>운반비 ${won(r.pl.fare)}</span><i>=</i><b class="${r.pl.net < 0 ? 'no' : ''}">${won(r.pl.net)}</b><em>${r.pl.sale ? Math.round((100 * r.pl.net) / r.pl.sale) : 0}% · 공급가</em></div>` : ''}
     ${(r.ev || []).length ? `<div class="fl-k">근거</div><div class="fl-memo">${evLinks(r.ev)}</div>` : ''}
     ${r.itab ? `<details class="fd-more" data-mo="rq:${esc(r.no)}" ${(FL.mo || {})['rq:' + r.no] ? 'open' : ''}><summary>발주 요청${r.rq && r.rq.t ? ` · ${esc(r.rq.t.slice(0, 11))}` : ''}</summary>${rqHtml(r).replace('<div class="fl-k">발주 요청</div>', '')}${galHtml(r)}</details>` : ''}
@@ -173,7 +173,7 @@ function bestHtml(r) {   // 추천 결론 — 한 곳에서 다 / 나눠 사기 
   const low = lowRows(r);   // 추천 줄 누르면 품목마다 가장 싼 단가·구매처 (11/02 대표 "여길 누르면 품목별 가장 싼 단가")
   const inner = `<em>추천</em>${head}${b.fare ? `<span class="fd-bf">운임 약 ${man(b.fare)}${b.trips > 1 ? ' (합)' : ''}</span>` : ''}${(b.none || []).length ? `<i>산 기록 없음 ${esc(b.none.join(' · '))}</i>` : ''}<button type="button" class="fl-go fd-rfqb" data-fl="rfq" data-no="${esc(r.no)}">견적요청서</button>`;
   if (!low.length) return `<div class="fd-best ${b.one ? 'one' : ''}">${inner}</div>`;
-  return `<details class="fd-bestd ${b.one ? 'one' : ''}" data-mo="low:${esc(r.no)}" ${(FL.mo || {})['low:' + r.no] ? 'open' : ''}><summary class="fd-best ${b.one ? 'one' : ''}">${inner}</summary><div class="fd-lwh"><span>품목별 가장 싼 단가</span><span>이카운트 구매 · 부가세 별도</span></div>${low.join('')}${cmpHtml(r)}</details>`;
+  return `<details class="fd-bestd ${b.one ? 'one' : ''}" data-mo="low:${esc(r.no)}" ${(FL.mo || {})['low:' + r.no] ? 'open' : ''}><summary class="fd-best ${b.one ? 'one' : ''}">${inner}</summary><div class="fd-lwh"><span>품목별 가장 싼 단가</span><span>이카운트 구매 · 부가세 별도</span></div>${low.join('')}${cmpHtml(r)}${nearHtml(r)}</details>`;
 }
 function cmpHtml(r) {   // 한 곳에서 다 vs 품목마다 싼 곳 — 물품 + 구매처→현장 운임(곳마다 차 한 번) (11/02 대표 "나눠 사면 운송비 더 드니까")
   const c = (r.sug || {}).cmp; if (!c) return '';
@@ -184,6 +184,11 @@ function cmpHtml(r) {   // 한 곳에서 다 vs 품목마다 싼 곳 — 물품 
   return `<div class="fd-lwh fd-cmh"><span>운임 포함 비교</span><span>${c.q ? '수량 반영' : '수량 미정 · 단가 합'} · 운임 구매처→현장</span></div>`
     + ln('one', `한 곳 · ${esc(c.one.n)}`, '차 1번', c.one.g, man(c.one.f), fs(c.one.fs), c.one.t)
     + ln('split', '품목마다 싼 곳', `차 ${c.split.vs.length}번`, c.split.g, c.split.vs.map((v) => `${esc(v.n.slice(0, 4))} ${man(v.f)}`).join(' + '), fs([...new Set(c.split.vs.map((v) => v.fs))].join('·')), c.split.t);
+}
+function nearHtml(r) {   // 현장 가까운 매입처 — 그 품목 산 적 있는 곳, 최근 단가 (11/02 대표 "아산 현장이면 아산에 있는 매입처")
+  const g = r.sug || {}; if (!(g.near || []).length) return '';
+  return `<div class="fd-lwh fd-cmh"><span>현장 가까운 매입처</span><span>${esc((g.nreg || []).join('·'))}</span></div>`
+    + g.near.map((v) => `<div class="fd-nr"><b>${esc(v.n)}</b><span>${esc(v.loc)}</span><span>${v.it.map((x) => `${esc(x.it)} <strong>${Number(x.p).toLocaleString()}</strong>`).join(' · ')}</span></div>`).join('');
 }
 function lowRows(r) {   // 품목마다 가장 싼 단가 하나 — 이카운트 구매 단가, 매입처마다 최근 값 중 최저 (flow_detail.py prices)
   const g = r.sug || {}, won = (n) => Number(n).toLocaleString();
