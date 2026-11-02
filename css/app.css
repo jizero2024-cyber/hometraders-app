@@ -1601,3 +1601,4 @@ textarea.fd-rfqt { width: 100%; box-sizing: border-box; resize: vertical; border
 .fd-more > summary { font-size: 12.5px; color: #6B6A66; font-weight: 700; padding: 6px 0; }
 .fd-more > summary:hover { color: #1A1A1A; }
 .fd-more[open] > summary { color: #1A1A1A; margin-bottom: 4px; }
+.fd-tw { align-self: stretch; } .fd-itab { width: 100%; } .fd-itab td.fd-ti { max-width: none; }   /* 품목 표는 넓게 (11/02 대표 "이 부분은 넓게가 더 나아") */
