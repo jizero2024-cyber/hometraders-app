@@ -125,7 +125,7 @@ function rowHtml(r) {
   const btns = (BTN[FL.cur] || []).filter(([a]) => a !== 'cmp' || allIn(r) || FL.cur === '전표 전체').map(([a, t], i) => (a === 'cmp' && !allIn(r) ? `<span class="fl-go fl-ph" aria-hidden="true">${t}</span>` : `<button type="button" class="${i ? 'fl-gh' : 'fl-go'}" data-fl="${a}" data-no="${esc(r.no)}">${t}</button>`)).join('');   // 전표 전체 — 없는 버튼은 빈자리로 두어 줄 맞춤 (11/02 대표 "어긋나 보여")
   const asked = FL.cur === '배차 요청' && S.getShipments().find((s) => String(s.note || '').includes(`출고 흐름 ${r.no})`));
   const cn = caseRows(r).length;
-  const chips = [FL.cur === '입력 완료' && slipOk(r) ? '<span class="fl-chip ok">마감 확인</span>' : '', FL.cur === '전표 전체' ? (r.steps.includes('입력 누락') ? '<span class="fl-chip no">입력 누락</span>' : '<span class="fl-chip ok">입력 완료</span>') : '', ...(r.imgs || []).map((x) => `<button type="button" class="fl-chip blu" data-fl="img" data-id="${esc(x.id)}" data-n="${esc(x.name)}">사진</button>`), cn > 1 ? `<span class="fl-chip blu">같은 주문 ${cn}건</span>` : '', (() => { const L = caseRows(r).flatMap((x) => x.miss || []).reduce((a, m) => a + Math.max(0, mLeft(m, Object.fromEntries((FL.data ? FL.data.rows : []).map((x) => [x.no, x])))), 0); return L > 0 ? `<span class="fl-chip no">누락 남음 ${L.toLocaleString()}</span>` : ''; })(), ...(r.chips || []).map((c) => `<span class="fl-chip amb">${esc(c)}</span>`), asked ? `<span class="fl-chip blu">요청함 ${esc((String(asked.note).match(/요청함 (\d\d:\d\d)/) || ['', ''])[1])}</span>` : '', r.late && FL.cur === '배차 요청' ? '<span class="fl-chip no">누락</span>' : '', FL.cur === '배차 완료' && !r.driver ? '<span class="fl-chip amb">기사·운임 확인</span>' : ''].join('');
+  const chips = [FL.cur === '입력 완료' && slipOk(r) ? '<span class="fl-chip ok">마감 확인</span>' : '', FL.cur === '전표 전체' ? (r.steps.includes('입력 누락') ? '<span class="fl-chip no">입력 누락</span>' : '<span class="fl-chip ok">입력 완료</span>') : '', ...(r.imgs || []).map((x) => `<button type="button" class="fl-chip blu" data-fl="img" data-id="${esc(x.id)}" data-n="${esc(x.name)}">사진</button>`), cn > 1 ? `<span class="fl-chip blu">같은 주문 ${cn}건</span>` : '', (() => { const L = caseRows(r).flatMap((x) => x.miss || []).reduce((a, m) => a + Math.max(0, mLeft(m, Object.fromEntries((FL.data ? FL.data.rows : []).map((x) => [x.no, x])))), 0); return L > 0 ? `<span class="fl-chip no">누락 남음 ${L.toLocaleString()}</span>` : ''; })(), ...(r.chips || []).map((c) => `<span class="fl-chip amb">${esc(c)}</span>`), ['배차 요청', '발주'].includes(FL.cur) && r.sug && r.sug.best && (r.sug.best.pick || []).length ? `<span class="fl-chip ${r.sug.best.one ? 'ok' : 'amb'}">추천 ${esc(r.sug.best.pick.map((p) => p.n.slice(0, 4)).join('+'))}</span>` : '', asked ? `<span class="fl-chip blu">요청함 ${esc((String(asked.note).match(/요청함 (\d\d:\d\d)/) || ['', ''])[1])}</span>` : '', r.late && FL.cur === '배차 요청' ? '<span class="fl-chip no">누락</span>' : '', FL.cur === '배차 완료' && !r.driver ? '<span class="fl-chip amb">기사·운임 확인</span>' : ''].join('');
   const route = FL.cur === '견적' ? '' : `${esc(r.from || '상차지 확인')} → ${esc(r.site || '하차지 확인')}`;
   return `<div class="fl-row ${FL.sel === r.no ? 'sel' : ''}" data-fl="row" data-no="${esc(r.no)}">
     <div class="fl-c fl-tm ${r.late || dday(r) === FL.data.today ? 'now' : ''}">${(DATE_FIRST.includes(FL.cur) || ['배차 완료', '출고 완료'].includes(FL.cur)) ? `<b>${esc(dday(r))}</b><span>${esc(r.time || '')}</span>` : `<b>${esc(r.time || (r.day === '미정' ? '미정' : '시간 미정'))}</b><span>${esc(dday(r))}</span>`}</div>
@@ -154,6 +154,7 @@ function detailHtml(r) {
   const buys = (r.buys || []).filter((b) => b.name).map((b) => `<div class="fl-k">${esc(b.name)}</div><div class="fl-it">${esc(b.item)}</div>`).join('');
   return `<div class="fl-det">
     ${r.why ? `<div class="fl-why">${esc(r.why)}</div>` : ''}
+    ${['배차 요청', '발주'].includes(FL.cur) ? bestHtml(r) : ''}
     ${r.itab ? itabHtml(r) : buys || `<div class="fl-it">${esc(r.items)}</div>`}
     ${caseHtml(r)}
     ${['배차 요청', '발주'].includes(FL.cur) && r.sug ? sugHtml(r) : `<div class="fl-k">전표</div><div>${linesHtml(r)}</div>`}
@@ -164,10 +165,17 @@ function detailHtml(r) {
     ${(r.imgs || []).length ? `<div class="fl-k">사진</div><div class="fl-imgs">${r.imgs.map((x) => `<iframe src="https://drive.google.com/file/d/${encodeURIComponent(x.id)}/preview" title="${esc(x.name)}" loading="lazy"></iframe>`).join('')}</div>` : ''}</div>`;   // 견적 요청 사진 — 펼치면 바로 (10/28 대표)
 }
 // 출고 건 펼침 — 발주 요청 원문 → 사진 띠(발주 사진·명세서) → 품목 표 (11/02 대표, 공간 대조표 https://claude.ai/artifact/R7Qa8xYmhHu19t5dxgbVr1 모양) — flow_detail.py
+function bestHtml(r) {   // 추천 결론 — 한 곳에서 다 / 나눠 사기 + 차 횟수·운임 (11/02 대표 "한 번에 다 사는 게 좋고, 나눠 사면 운반비도")
+  const b = (r.sug || {}).best; if (!b || !(b.pick || []).length) return '';
+  const man = (w) => (w ? `${Math.round(w / 10000)}만` : '');
+  const head = b.one ? `<b>${esc(b.pick[0].n)}</b><span>한 곳에서 다 · ${b.of}개 품목</span>`
+    : `<b>${b.pick.map((p) => `${esc(p.n)} ${p.c}`).join(' + ')}</b><span>${b.trips > 1 ? `나눠 사기 · 차 ${b.trips}번` : `${b.pick[0].c}/${b.of} 품목`}</span>`;
+  return `<div class="fd-best ${b.one ? 'one' : ''}"><em>추천</em>${head}${b.fare ? `<span class="fd-bf">운임 약 ${man(b.fare)}${b.trips > 1 ? ' (합)' : ''}</span>` : ''}${(b.none || []).length ? `<i>구매처 없음 ${esc(b.none.join(' · '))}</i>` : ''}<button type="button" class="fl-go fd-rfqb" data-fl="rfq" data-no="${esc(r.no)}">견적요청서</button></div>`;
+}
 function sugHtml(r) {   // 견적 요청 추천 — 지난 구매 단가가 있는 매입처, 지난 운임 (11/02 대표 "배차 요청 상세엔 견적 요청 어디에 하는 게 좋을지") — flow_detail.py · buy_suggest.py
   const g = r.sug, v = (g.v || []).map((x, i) => `<div class="fd-sv"><b class="${i === 0 ? 'top' : ''}">${esc(x.n)}</b><span>${x.c}/${x.of} 품목</span><em>단가 ${esc(x.d)}</em>${(x.miss || []).length ? `<i>없음 ${esc(x.miss.join(' · '))}</i>` : ''}</div>`).join('');
   const f = (g.fare || []).map((x) => `<span>${esc(x.d)} ${esc(x.car)} ${Math.round(x.w / 10000)}만${x.fr ? ` · ${esc(x.fr)}` : ''}</span>`).join('');
-  return `<div class="fl-k">견적 요청 추천 <button type="button" class="fl-go fd-rfqb" data-fl="rfq" data-no="${esc(r.no)}">견적요청서</button></div><div class="fd-sug">${v || '<div class="fd-sv"><span>지난 구매 없음</span></div>'}${(g.combo || []).length ? `<div class="fd-sv"><span>나눠 사기</span><em>${esc(g.combo.join(' · '))}</em></div>` : ''}</div>${f ? `<div class="fl-k">지난 운임${g.reg ? ` · ${esc(g.reg)}` : ''}</div><div class="fd-fare">${f}</div>` : ''}`;
+  return `<div class="fl-k">견적 요청 추천 ${(g.best && (g.best.pick || []).length) ? '' : `<button type="button" class="fl-go fd-rfqb" data-fl="rfq" data-no="${esc(r.no)}">견적요청서</button>`}</div><div class="fd-sug">${v || '<div class="fd-sv"><span>지난 구매 없음</span></div>'}${(g.combo || []).length ? `<div class="fd-sv"><span>나눠 사기</span><em>${esc(g.combo.join(' · '))}</em></div>` : ''}</div>${f ? `<div class="fl-k">지난 운임${g.reg ? ` · ${esc(g.reg)}` : ''}</div><div class="fd-fare">${f}</div>` : ''}`;
 }
 function rqHtml(r) {
   const q = r.rq; if (!q) return '';
@@ -347,13 +355,13 @@ function rfqItems(r) {
 }
 function rfqText(r, v) {
   const t = (FL.data || {}).today || '', due = [r.arr || (r.day !== '미정' ? r.day : ''), r.time].filter(Boolean).join(' ');
-  return [`[견적 요청] 홈트레이더스${v ? ` → ${v}` : ''}`, `요청일 ${t}`, due ? `받을 날 ${due}` : '', '',
+  return [`요청일 ${t}`, due ? `받을 날 ${due}` : '', '',
     ...rfqItems(r).map((x, i) => `${i + 1}. ${x.it} ${x.q}`), '', '단가 견적 부탁드립니다.'].filter((x, i, a) => x !== '' || (a[i - 1] && a[i - 1] !== '')).join('\n');
 }
 function rfqXlsx(r, v) {
   import('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm').then((X) => {
     const t = (FL.data || {}).today || '', due = [r.arr || (r.day !== '미정' ? r.day : ''), r.time].filter(Boolean).join(' ');
-    const aoa = [[`견적 요청 — 홈트레이더스${v ? ` → ${v}` : ''}`], [`요청일 ${t}`, '', `받을 날 ${due}`], [],
+    const aoa = [['견적 요청'], [`요청일 ${t}`, '', `받을 날 ${due}`], [],
       ['No', '품명', '수량', '단가', '금액', '비고'], ...rfqItems(r).map((x, i) => [i + 1, x.it, x.q, '', '', '']), [], ['', '합계 (부가세 포함)', '', '', '', '']];
     const ws = X.utils.aoa_to_sheet(aoa); ws['!cols'] = [{ wch: 5 }, { wch: 34 }, { wch: 10 }, { wch: 12 }, { wch: 14 }, { wch: 24 }];
     const wb = X.utils.book_new(); X.utils.book_append_sheet(wb, ws, '견적요청');
