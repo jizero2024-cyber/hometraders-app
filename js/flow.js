@@ -524,7 +524,9 @@ export function bind(app, c) {
     else if (a === 'sync') {   // 사무실 맥 /api/refresh — 뒤에서 3~5분, 끝나면 1분마다 새로 받는 판에 그대로 보임
       if (FL.syncing) return;
       FL.syncing = true; ctx.rerender();
-      S.relayHelper('/api/refresh', {}, '').catch(() => {}).finally(() => { setTimeout(() => { FL.syncing = false; load(true); ctx.rerender(); }, 240000); });
+      const at0 = (FL.data || {}).at, t0 = Date.now(), end = () => { FL.syncing = false; load(true); ctx.rerender(); };   // 새 출고 흐름이 올라오면 바로 끝 (11/02 "새로고침 중에서 멈춰") · 최대 5분
+      const poll = () => S.getFlowBoard().then((d) => { if (d && d.at && d.at !== at0) { FL.data = d; end(); } else if (Date.now() - t0 > 300000) end(); else setTimeout(poll, 10000); }).catch(() => (Date.now() - t0 > 300000 ? end() : setTimeout(poll, 10000)));
+      S.relayHelper('/api/refresh', {}, '').catch(() => {}).finally(() => setTimeout(poll, 10000));
     }
     else if (a === 'old') { FL.old = !FL.old; ctx.rerender(); }
     else if (a === 'go') { const k = t.dataset.k; if (k === 'fare' || k === 'box') ctx.home(k); else if (k.startsWith('v-flow-')) { FL.view = 'flow'; FL.cur = k.slice(7); FL.sel = ''; ctx.rerender(); setTimeout(() => { const el = document.getElementById('fl-list'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 0); } else { FL.view = k.slice(2); ctx.rerender(); } }
