@@ -159,20 +159,20 @@ function detailHtml(r) {
 // 출고 건 펼침 — 발주 요청 원문 → 사진 띠(발주 사진·명세서) → 품목 표 (11/02 대표, 공간 대조표 https://claude.ai/artifact/R7Qa8xYmhHu19t5dxgbVr1 모양) — flow_detail.py
 function rqHtml(r) {
   const q = r.rq; if (!q) return '';
-  const more = (q.more || []).map((m) => `<div class="fl-rqm"><span class="fl-rqt ${m.tag === '취소' ? 'no' : m.tag === '변경' ? 'amb' : 'blu'}">${esc(m.tag)}</span><span class="fl-rqw">${esc(m.t)}</span><span class="fl-rqx">${esc(m.x)}</span></div>`).join('');
-  return `<div class="fl-k">발주 요청</div><div class="fl-rq"><div class="fl-rqh"><span>${esc(q.t)}</span>${q.due ? `<b>받을 날 ${esc(q.due)}</b>` : ''}</div><div class="fl-rqx">${esc(q.x)}</div>${more}</div>`;
+  const more = (q.more || []).map((m) => `<div class="fd-rqm"><span class="fd-rqt ${m.tag === '취소' ? 'no' : m.tag === '변경' || m.tag === '누락' ? 'amb' : 'blu'}">${esc(m.tag)}</span><span class="fd-rqw">${esc(m.t)}</span><span class="fd-rqx">${esc(m.x)}</span></div>`).join('');
+  return `<div class="fl-k">발주 요청</div><div class="fd-rq"><div class="fd-rqh"><span>${esc(q.t)}</span>${q.due ? `<b>받을 날 ${esc(q.due)}</b>` : ''}</div><div class="fd-rqx">${esc(q.x)}</div>${more}</div>`;
 }
 function galHtml(r) {
-  const q = r.rq || {}, fr = (id, cap) => `<figure class="fl-gf"><iframe src="https://drive.google.com/file/d/${encodeURIComponent(id)}/preview" title="${esc(cap)}" loading="lazy"></iframe><figcaption><a href="https://drive.google.com/file/d/${encodeURIComponent(id)}/view" target="_blank" rel="noopener">${esc(cap)}</a></figcaption></figure>`;
-  const ph = (q.imgs || []).length ? q.imgs.map((x) => fr(x.id, '발주 사진')).join('') : '<figure class="fl-gf na"><div>발주 사진 없음</div></figure>';
+  const q = r.rq || {}, fr = (id, cap) => `<figure class="fd-gf"><iframe src="https://drive.google.com/file/d/${encodeURIComponent(id)}/preview" title="${esc(cap)}" loading="lazy"></iframe><figcaption><a href="https://drive.google.com/file/d/${encodeURIComponent(id)}/view" target="_blank" rel="noopener">${esc(cap)}</a></figcaption></figure>`;
+  const ph = (q.imgs || []).length ? q.imgs.map((x) => fr(x.id, '발주 사진')).join('') : '<figure class="fd-gf na"><div>발주 사진 없음</div></figure>';
   const docs = (r.docs || []).map((d) => fr(d.id, d.cap)).join('');
   const pdf = (r.dpdf || []).flatMap((s_) => { const x = (FL.links[s_] || []).find((y) => y.kind === '구매' && y.drive_id); return x ? [fr(x.drive_id, `구매 전표 ${s_.replace(/^\d{4}(\d\d)(\d\d)-/, '$1/$2-')}`)] : []; }).join('');
-  return `<div class="fl-gal">${ph}${docs}${pdf}</div>`;
+  return `<div class="fd-gal">${ph}${docs}${pdf}</div>`;
 }
 function itabHtml(r) {
-  const st = (v) => (v === '—' ? '<td class="fl-st na">—</td>' : v ? `<td class="fl-st ok">${esc(v)}</td>` : '<td class="fl-st no">✕</td>');
-  const rows = (r.itab || []).map((x) => `<tr><td class="fl-ti">${esc(x.it)}</td><td>${esc(x.q)}</td><td><span class="fl-src ${esc(x.sc || 'un')}">${esc(x.src)}</span></td><td>${esc(x.d)}</td>${st(x.sale)}${st(x.buy)}</tr>`).join('');
-  return `<div class="fl-tw"><table class="fl-itab"><thead><tr><th>품목</th><th>수량</th><th>출고처</th><th>나간 날</th><th>판매</th><th>구매</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  const st = (v) => (v === '—' ? '<td class="fd-st na">—</td>' : v ? `<td class="fd-st ok">${esc(v)}</td>` : '<td class="fd-st no">✕</td>');
+  const rows = (r.itab || []).map((x) => `<tr><td class="fd-ti">${esc(x.it)}</td><td>${esc(x.q)}</td><td><span class="fd-src ${esc(x.sc || 'un')}">${esc(x.src)}</span></td><td>${esc(x.d)}</td>${st(x.sale)}${st(x.buy)}</tr>`).join('');
+  return `<div class="fd-tw"><table class="fd-itab"><thead><tr><th>품목</th><th>수량</th><th>출고처</th><th>나간 날</th><th>판매</th><th>구매</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 function linesHtml(r) {
   return (r.lines || []).map((l) => {
