@@ -164,7 +164,7 @@ function rqHtml(r) {
 }
 function galHtml(r) {
   const q = r.rq || {}, fr = (id, cap) => `<figure class="fd-gf"><iframe src="https://drive.google.com/file/d/${encodeURIComponent(id)}/preview" title="${esc(cap)}" loading="lazy"></iframe><figcaption><a href="https://drive.google.com/file/d/${encodeURIComponent(id)}/view" target="_blank" rel="noopener">${esc(cap)}</a></figcaption></figure>`;
-  const ph = (q.imgs || []).length ? q.imgs.map((x) => fr(x.id, '발주 사진')).join('') : '<figure class="fd-gf na"><div>발주 사진 없음</div></figure>';
+  const ph = (q.imgs || []).length ? q.imgs.map((x) => fr(x.id, '발주 사진')).join('') : '<figure class="fd-gf na" title="발주 사진 없음" aria-label="발주 사진 없음">+</figure>';
   const docs = (r.docs || []).map((d) => fr(d.id, d.cap)).join('');
   const pdf = (r.dpdf || []).flatMap((s_) => { const x = (FL.links[s_] || []).find((y) => y.kind === '구매' && y.drive_id); return x ? [fr(x.drive_id, `구매 전표 ${s_.replace(/^\d{4}(\d\d)(\d\d)-/, '$1/$2-')}`)] : []; }).join('');
   return `<div class="fd-gal">${ph}${docs}${pdf}</div>`;
