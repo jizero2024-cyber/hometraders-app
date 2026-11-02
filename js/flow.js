@@ -157,7 +157,7 @@ function detailHtml(r) {
     ${['배차 요청', '발주'].includes(FL.cur) ? bestHtml(r) : ''}
     ${r.itab ? itabHtml(r) : buys || `<div class="fl-it">${esc(r.items)}</div>`}
     ${caseHtml(r)}
-    ${['배차 요청', '발주'].includes(FL.cur) && r.sug ? sugHtml(r) : `<div class="fl-k">전표</div><div>${linesHtml(r)}</div>`}
+    ${['배차 요청', '발주'].includes(FL.cur) ? (r.sug ? sugHtml(r) : (r.itab || []).length ? `<div class="fl-k">견적 요청 추천 <button type="button" class="fl-go fd-rfqb" data-fl="rfq" data-no="${esc(r.no)}">견적요청서</button></div>` : '') : `<div class="fl-k">전표</div><div>${linesHtml(r)}</div>`}
     ${r.pl ? `<div class="fl-k">순이익</div><div class="fl-pld"><span>판매 ${won(r.pl.sale)}</span><i>−</i><span>구매 ${won(r.pl.buy)}</span><i>−</i><span>운반비 ${won(r.pl.fare)}</span><i>=</i><b class="${r.pl.net < 0 ? 'no' : ''}">${won(r.pl.net)}</b><em>${r.pl.sale ? Math.round((100 * r.pl.net) / r.pl.sale) : 0}% · 공급가</em></div>` : ''}
     ${(r.ev || []).length ? `<div class="fl-k">근거</div><div class="fl-memo">${evLinks(r.ev)}</div>` : ''}
     ${r.itab ? `<details class="fd-more" data-mo="rq:${esc(r.no)}" ${(FL.mo || {})['rq:' + r.no] ? 'open' : ''}><summary>발주 요청${r.rq && r.rq.t ? ` · ${esc(r.rq.t.slice(0, 11))}` : ''}</summary>${rqHtml(r).replace('<div class="fl-k">발주 요청</div>', '')}${galHtml(r)}</details>` : ''}
