@@ -1477,3 +1477,12 @@ body.kiosk .ki-t i, body.kiosk .ki-hi, body.kiosk .ki-out i, body.kiosk .ki-s h2
 .fd-src.hl { border-color: #2E7D4F; color: #2E7D4F; } .fd-src.kj { border-color: #6B4FA0; color: #6B4FA0; } .fd-src.kt { border-color: #1D4F91; color: #1D4F91; }
 .fd-src.cs { border-color: #0E7C86; color: #0E7C86; } .fd-src.wi { border-color: #9A5B13; color: #9A5B13; } .fd-src.ns { border-color: #B4531B; color: #B4531B; } .fd-src.ca { border-color: #4B5563; color: #4B5563; background: #F3F4F6; }
 @media (max-width: 600px) { .fd-gf { flex-basis: 82vw; } .fd-gf iframe { height: 380px; } }
+
+/* 전표 전체 — 서류 변환 (11/02) */
+.fl-doc { position: relative; }
+.fl-doc > summary { list-style: none; cursor: pointer; }
+.fl-doc > summary::-webkit-details-marker { display: none; }
+.fl-docm { position: absolute; right: 0; top: calc(100% + 6px); z-index: 30; min-width: 140px; padding: 6px; background: #fff; border: 1px solid #E5E5EA; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.12); display: flex; flex-direction: column; }
+.fl-docm button { all: unset; box-sizing: border-box; padding: 9px 12px; border-radius: 8px; font-size: 13px; cursor: pointer; white-space: nowrap; }
+.fl-docm button:hover { background: #F2F2F7; }
+.fl-docm button[disabled] { color: #C7C7CC; cursor: default; background: none; }

@@ -106,6 +106,11 @@ function stepsHtml() {
 const STMT_STEPS = ['배차 완료', '출고 완료', '기록', '입력 누락', '입력 완료', '전표', '전표 전체'];
 const DATE_FIRST = ['기록', '입력 누락', '입력 완료', '전표', '전표 전체'];   // 날짜를 왼쪽에 진하게 (10/29 대표, 최종 마감 = 출고 날짜)
 const saleSlips = (r) => [...new Set((r.lines || []).filter((l) => l.k === '판매' && l.st === '입력').flatMap((l) => l.slips || []))];
+function docHtml(r) {   // 전표 전체 — 맨 오른쪽 서류 변환 (11/02 대표)
+  const sl = saleSlips(r), no = esc(r.no), b = (a, t, x) => `<button type="button" data-fl="${a}" data-no="${no}" ${x || ''}>${t}</button>`;
+  return `<details class="fl-doc"><summary class="fl-gh">서류</summary><div class="fl-docm">${b('stmtgo', '거래명세표', sl.length ? `data-s="${esc(sl.join(','))}"` : 'disabled')}${b('deliv', '납품확인서', sl.length ? '' : 'disabled')}${b('approval', '자재승인원')}
+    <button type="button" data-hm="frame" data-src="./deposit.html?embed=1" data-title="입금표">입금표</button>${b('quote', '견적서')}${b('esong', '전자 송장')}</div></details>`;
+}
 function stmtHtml(r) {   // 거래명세표 — 판매전표 PDF 보기 · 전달했는지 (10/28 대표)
   const sl = saleSlips(r);
   if (!sl.length) return '';
@@ -125,7 +130,7 @@ function rowHtml(r) {
     <div class="fl-c fl-ds">${chips}${esc(r.item)}</div>
     <div class="fl-c fl-ds fl-rt">${route}</div>
     <div class="fl-c fl-ds fl-v">${FL.cur === '견적' ? '' : esc(r.size || '')}</div>
-    <div class="fl-acts">${STMT_STEPS.includes(FL.cur) ? stmtHtml(r) : ''}${btns}${FL.cur === '전표' ? `<button type="button" class="fl-sent" data-fl="slipok" data-no="${esc(r.no)}"><i></i>입력 확인</button>` : ''}</div></div>${FL.sel === r.no ? detailHtml(r) : ''}`;
+    <div class="fl-acts">${STMT_STEPS.includes(FL.cur) ? stmtHtml(r) : ''}${btns}${FL.cur === '전표' ? `<button type="button" class="fl-sent" data-fl="slipok" data-no="${esc(r.no)}"><i></i>입력 확인</button>` : ''}${FL.cur === '전표 전체' ? docHtml(r) : ''}</div></div>${FL.sel === r.no ? detailHtml(r) : ''}`;
 }
 const stLab = (x) => (x.steps.includes('출고 완료') || x.steps.includes('기록') ? '출고 완료' : x.steps.includes('배차 완료') ? '배차 완료' : x.steps.includes('배차 요청') ? '배차 요청' : x.steps.includes('발주') ? '발주' : x.steps[0] || '');
 const mGone = (t, by) => by[t.no] && ['출고 완료', '배차 완료'].includes(stLab(by[t.no]));   // 차가 잡힌 것만 보낸 걸로
@@ -338,7 +343,7 @@ export function bind(app, c) {
     if (L) L.innerHTML = listHtml(); if (n) n.textContent = `${listOf(FL.cur).length}건`;
   };
   app.addEventListener('input', onRq);
-  document.addEventListener('click', (e) => { const d = document.querySelector('.fl-rqp[open]'); if (d && !d.contains(e.target)) d.open = false; });
+  document.addEventListener('click', (e) => { const d = document.querySelector('.fl-rqp[open]'); if (d && !d.contains(e.target)) d.open = false; document.querySelectorAll('.fl-doc[open]').forEach((x) => { if (!x.contains(e.target) || e.target.closest('.fl-docm button')) x.open = false; }); });
   app.addEventListener('input', (e) => { const f = e.target.closest('[data-rqf]'); if (!f) return; const w = f.value.trim().toLowerCase(); f.parentNode.querySelectorAll('label').forEach((l) => { l.style.display = !w || l.textContent.toLowerCase().includes(w) ? '' : 'none'; }); });
   const onClick = (e) => {
     const t = e.target.closest('[data-fl]'); if (!t || (!app.querySelector('.fl') && !t.closest('.fl-qov'))) return;
@@ -390,7 +395,7 @@ export function bind(app, c) {
     else if (a === 'old') { FL.old = !FL.old; ctx.rerender(); }
     else if (a === 'go') { const k = t.dataset.k; if (k === 'fare' || k === 'box') ctx.home(k); else if (k.startsWith('v-flow-')) { FL.view = 'flow'; FL.cur = k.slice(7); FL.sel = ''; ctx.rerender(); setTimeout(() => { const el = document.getElementById('fl-list'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 0); } else { FL.view = k.slice(2); ctx.rerender(); } }
     else if (a === 'close') { if (t.classList.contains('on')) alert('오늘 마감했어요'); }
-    else if (a === 'row') { if (e.target.closest('button,a')) return; FL.sel = FL.sel === t.dataset.no ? '' : t.dataset.no; if (FL.sel && r) fetchLinks(r); ctx.rerender(); }
+    else if (a === 'row') { if (e.target.closest('button,a,details')) return; FL.sel = FL.sel === t.dataset.no ? '' : t.dataset.no; if (FL.sel && r) fetchLinks(r); ctx.rerender(); }
     else if (a === 'disp' && r) ctx.openFrame('배차 요청', dispSrc(r));
     else if ((a === 'dispok' || a === 'shipok') && r) {   // 배차 완료·출고 완료 → 운영 DB ship_case (10/29 대표)
       const ok = a === 'dispok', hm = new Date().toTimeString().slice(0, 5);
