@@ -186,10 +186,12 @@ const PCOL = ['#2E7D4F', '#E8732C', '#3D6FB4'];
 function plansHtml(r) {   // 제안 1·2·3 — 구매처 조합마다 물품 + 운임 싼 순 (flow_detail.py plans) · 제안 1만 펼침
   const ps = (r.sug || {}).plans || []; if (!ps.length) return '';
   const won = (n) => Number(n || 0).toLocaleString(), man = (w) => (w ? `${Math.round(w / 1000) / 10}만` : '—');
+  const car = (c) => (c ? `${c.n}${c.k > 1 ? ` ${c.k}대` : ''}` : ''), kg = (c) => (c.kg >= 1000 ? `${Math.round(c.kg / 100) / 10}톤` : `${c.kg}kg`);   // 품목 무게 → 차 크기 (flow_detail car_of)
+  const cars = (p) => (p.via ? car(p.tc) : p.vs.map((v) => car(v.tc)).filter(Boolean).join(' + '));
   return ps.map((p, i) => `<details class="fd-pl" style="--pc:${PCOL[i]}" ${i === 0 ? 'open' : ''}><summary class="fd-plh">
-      <em>제안 ${i + 1}</em><div class="fd-plt"><b>${p.vs.map((v) => esc(v.n)).join(' + ')}</b><span>${p.via ? '한 차로 두 곳 · 경유비 별도' : `차 ${p.trips}번`} · 물품 ${won(p.g)} · 운임 ${man(p.f)}</span></div>
+      <em>제안 ${i + 1}</em><div class="fd-plt"><b>${p.vs.map((v) => esc(v.n)).join(' + ')}</b><span>${p.via ? '한 차로 두 곳 · 경유비 별도' : `차 ${p.trips}번`}${cars(p) ? ` · ${cars(p)}` : ''} · 물품 ${won(p.g)} · 운임 ${man(p.f)}</span></div>
       <div class="fd-plr"><strong>${p.fok ? won(p.t) : '운임 확인'}</strong>${p.d != null ? `<i>+${won(p.d)}</i>` : ''}</div></summary>
-    ${p.vs.map((v) => `<div class="fd-plv"><div class="fd-plvh"><b>${esc(v.n)}</b><span>${esc(v.loc || '위치 확인')}</span><span class="fd-plf">운임 ${man(v.f)}${v.fs ? ` · ${esc(v.fs)}` : ''}${v.kd ? ` · 차 ${man(v.car)} / 경동 ${man(v.kd)} (${v.boxes}박스)` : ''}</span></div>
+    ${p.vs.map((v) => `<div class="fd-plv"><div class="fd-plvh"><b>${esc(v.n)}</b><span>${esc(v.loc || '위치 확인')}</span><span class="fd-plf">${v.tc ? `${car(v.tc)} · 짐 ${kg(v.tc)}${v.tc.part ? '+' : ''} · ` : ''}운임 ${man(v.f)}${v.fs ? ` · ${esc(v.fs)}` : ''}${v.kd ? ` · 차 ${man(v.car)} / 경동 ${man(v.kd)} (${v.boxes}박스)` : ''}</span></div>
       ${v.it.map((x) => `<div class="fd-pli"><span>${esc(x.it)}</span><b>${won(x.p)}</b></div>`).join('')}</div>`).join('')}</details>`).join('');
 }
 function sugMap(el, r) {   // 지도 — 시·군 중심 좌표, 제안마다 색 선 (OpenStreetMap)
