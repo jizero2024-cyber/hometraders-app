@@ -1538,6 +1538,20 @@ textarea.fd-rfqt { width: 100%; box-sizing: border-box; resize: vertical; border
 .fd-nr b { font-weight: 800; color: #111; } .fd-nr span { color: #555; font-weight: 600; } .fd-nr strong { color: #111; font-weight: 800; } .fd-bestd > .fd-nr:last-child { border-bottom: 1.5px solid #A8D5B5; border-radius: 0 0 12px 12px; }
 .fd-bestd > .fd-cm:not(:last-child) { border-bottom: 0; border-radius: 0; }
 @media (max-width: 600px) { .fd-nr { grid-template-columns: 1fr auto; } }
+.fd-bestb { cursor: pointer; } .fd-bestb:hover { background: #F7FBF8; } .fd-bestb .fd-bgo { color: #8A877F; font-size: 18px; font-weight: 700; margin-left: 2px; }   /* 추천 팝업 (11/02) */
+.fd-sugm { width: min(920px, calc(100vw - 32px)); max-height: calc(100vh - 48px); display: flex; flex-direction: column; }
+.fd-sgb { overflow: auto; padding: 4px 2px 8px; display: flex; flex-direction: column; gap: 10px; }
+.fd-pl { border: 1.5px solid var(--pc); border-radius: 12px; padding: 10px 14px; background: #fff; }
+.fd-plh { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 12px; } .fd-plh em { font-style: normal; font-size: 12px; font-weight: 800; color: #fff; background: var(--pc); border-radius: 6px; padding: 2px 8px; }
+.fd-plh b { font-size: 15px; font-weight: 800; color: #111; } .fd-plh span { color: #555; font-weight: 600; font-size: 13px; } .fd-plh strong { margin-left: auto; font-size: 17px; font-weight: 800; color: var(--pc); } .fd-plh i { font-style: normal; font-size: 12.5px; color: #E03E2D; font-weight: 700; }
+.fd-plsum { display: flex; gap: 14px; justify-content: flex-end; font-size: 12.5px; color: #8A877F; font-weight: 600; padding: 2px 0 4px; }
+.fd-plv { display: grid; grid-template-columns: minmax(110px, 170px) 80px 1fr 110px; gap: 10px; padding: 6px 0; border-top: 1px solid #F2F0EC; font-size: 13px; align-items: baseline; }
+.fd-plv b { font-weight: 800; color: #111; } .fd-plv span { color: #555; font-weight: 600; } .fd-plv em { font-style: normal; font-size: 11px; color: #8A877F; margin-left: 4px; } .fd-plv span:last-child { text-align: right; }
+.fd-map { height: 320px; border-radius: 12px; border: 1px solid #E5E2DC; z-index: 0; }
+.fd-sgk { display: flex; justify-content: space-between; font-size: 12.5px; font-weight: 800; color: #555; padding: 4px 2px 0; } .fd-sgk span + span { font-weight: 600; color: #8A877F; }
+.fd-sgl { border: 1px solid #E5E2DC; border-radius: 12px; padding: 0 14px; background: #fff; } .fd-sgl .fd-lw:first-child { border-top: 0; }
+.fd-sugm .fd-lwh { padding: 4px 2px 0; border: 0; } .fd-sugm .fd-nr { border: 1px solid #E5E2DC; border-radius: 10px; margin-top: 4px; }
+@media (max-width: 600px) { .fd-plv { grid-template-columns: 1fr auto; } .fd-map { height: 240px; } }
 .fd-lwh { display: flex; justify-content: space-between; padding-top: 8px; padding-bottom: 4px; font-size: 12px; font-weight: 700; color: #8A877F; }
 .fd-best i { font-style: normal; color: #E03E2D; font-size: 12.5px; font-weight: 600; } .fd-best .fd-rfqb { margin-left: auto; }
 .fd-prs { display: flex; flex-direction: column; }   /* 품목별 단가 (11/02) */

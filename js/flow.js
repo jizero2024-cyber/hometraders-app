@@ -170,20 +170,51 @@ function bestHtml(r) {   // 추천 결론 — 한 곳에서 다 / 나눠 사기 
   const man = (w) => (w ? `${Math.round(w / 10000)}만` : '');
   const head = b.one ? `<b>${esc(b.pick[0].n)}</b><span>한 곳에서 다 · ${b.of}개 품목</span>`
     : `<b>${b.pick.map((p) => `${esc(p.n)} ${p.c}`).join(' + ')}</b><span>${b.trips > 1 ? `나눠 사기 · 차 ${b.trips}번` : `${b.pick[0].c}/${b.of} 품목`}</span>`;
-  const low = lowRows(r);   // 추천 줄 누르면 품목마다 가장 싼 단가·구매처 (11/02 대표 "여길 누르면 품목별 가장 싼 단가")
   const inner = `<em>추천</em>${head}${b.fare ? `<span class="fd-bf">운임 약 ${man(b.fare)}${b.trips > 1 ? ' (합)' : ''}</span>` : ''}${(b.none || []).length ? `<i>산 기록 없음 ${esc(b.none.join(' · '))}</i>` : ''}<button type="button" class="fl-go fd-rfqb" data-fl="rfq" data-no="${esc(r.no)}">견적요청서</button>`;
-  if (!low.length) return `<div class="fd-best ${b.one ? 'one' : ''}">${inner}</div>`;
-  return `<details class="fd-bestd ${b.one ? 'one' : ''}" data-mo="low:${esc(r.no)}" ${(FL.mo || {})['low:' + r.no] ? 'open' : ''}><summary class="fd-best ${b.one ? 'one' : ''}">${inner}</summary><div class="fd-lwh"><span>품목별 가장 싼 단가</span><span>이카운트 구매 · 부가세 별도</span></div>${low.join('')}${cmpHtml(r)}${nearHtml(r)}</details>`;
+  const can = (r.sug.prices || []).length || (r.sug.plans || []).length;   // 추천 줄 누르면 팝업 — 제안·지도·품목별 가장 싼 단가 (11/02 대표 "팝업창으로 · 지도로도")
+  return can ? `<div class="fd-best fd-bestb ${b.one ? 'one' : ''}" data-fl="sug" data-no="${esc(r.no)}" role="button" tabindex="0">${inner}<span class="fd-bgo">›</span></div>` : `<div class="fd-best ${b.one ? 'one' : ''}">${inner}</div>`;
 }
-function cmpHtml(r) {   // 한 곳에서 다 vs 품목마다 싼 곳 — 물품 + 구매처→현장 운임(곳마다 차 한 번) (11/02 대표 "나눠 사면 운송비 더 드니까")
-  const c = (r.sug || {}).cmp; if (!c) return '';
+const PCOL = ['#2E7D4F', '#E8732C', '#3D6FB4'];
+function plansHtml(r) {   // 제안 1·2·3 — 구매처 조합마다 물품 + 운임 싼 순 (flow_detail.py plans)
+  const ps = (r.sug || {}).plans || []; if (!ps.length) return '';
   const won = (n) => Number(n || 0).toLocaleString(), man = (w) => (w ? `${Math.round(w / 1000) / 10}만` : '—');
-  const win = c.fok ? (c.one.t <= c.split.t ? 'one' : 'split') : '';
-  const fs = (x) => (x ? `<em>${esc(x)}</em>` : '');
-  const ln = (k, nm, sub, g, f, fsrc, t) => `<div class="fd-cm ${win === k ? 'win' : ''}"><b>${nm}</b><span>${sub}</span><span>물품 ${won(g)}</span><span>운임 ${f}${fsrc}</span><strong>${c.fok ? won(t) : '—'}</strong></div>`;
-  return `<div class="fd-lwh fd-cmh"><span>운임 포함 비교</span><span>${c.q ? '수량 반영' : '수량 미정 · 단가 합'} · 운임 구매처→현장</span></div>`
-    + ln('one', `한 곳 · ${esc(c.one.n)}`, '차 1번', c.one.g, man(c.one.f), fs(c.one.fs), c.one.t)
-    + ln('split', '품목마다 싼 곳', `차 ${c.split.vs.length}번`, c.split.g, c.split.vs.map((v) => `${esc(v.n.slice(0, 4))} ${man(v.f)}`).join(' + '), fs([...new Set(c.split.vs.map((v) => v.fs))].join('·')), c.split.t);
+  return ps.map((p, i) => `<div class="fd-pl" style="--pc:${PCOL[i]}"><div class="fd-plh"><em>제안 ${i + 1}</em><b>${p.vs.map((v) => esc(v.n)).join(' + ')}</b><span>${p.via ? '한 차로 두 곳 · 경유비 별도' : `차 ${p.trips}번`}</span><strong>${p.fok ? won(p.t) : '운임 확인'}</strong>${p.d != null ? `<i>+${won(p.d)}</i>` : ''}</div>`
+    + `<div class="fd-plsum"><span>물품 ${won(p.g)}</span><span>운임 ${man(p.f)}</span></div>`
+    + p.vs.map((v) => `<div class="fd-plv"><b>${esc(v.n)}</b><span>${esc(v.loc || '위치 확인')}</span><span>${v.it.map((x) => `${esc(x.it)} ${won(x.p)}`).join(' · ')}</span><span>운임 ${man(v.f)}${v.fs ? `<em>${esc(v.fs)}</em>` : ''}</span></div>`).join('') + '</div>').join('');
+}
+function sugMap(el, r) {   // 지도 — 시·군 중심 좌표, 제안마다 색 선 (OpenStreetMap)
+  const g = r.sug || {}, ps = g.plans || [];
+  if (!el || !g.sll) { if (el) el.remove(); return; }
+  const go = () => {
+    const L = window.L, m = L.map(el, { scrollWheelZoom: false, attributionControl: true });
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 12, attribution: '© OpenStreetMap' }).addTo(m);
+    const pts = [g.sll], seen = {};
+    L.circleMarker(g.sll, { radius: 9, color: '#E03E2D', fillColor: '#E03E2D', fillOpacity: 0.9 }).addTo(m).bindTooltip(`현장 · ${r.site || ''}`, { permanent: true, direction: 'top' });
+    ps.slice().reverse().forEach((p) => { const i = ps.indexOf(p); p.vs.forEach((v) => { if (!v.ll) return; pts.push(v.ll);
+      L.polyline([v.ll, g.sll], { color: PCOL[i], weight: i === 0 ? 5 : 3, opacity: i === 0 ? 0.9 : 0.6, dashArray: i === 0 ? null : '6 6' }).addTo(m);
+      if (!seen[v.n]) { seen[v.n] = 1; L.circleMarker(v.ll, { radius: 7, color: PCOL[i], fillColor: '#fff', fillOpacity: 1, weight: 3 }).addTo(m).bindTooltip(`${v.n.slice(0, 6)} · ${v.loc}`, { permanent: true, direction: 'right' }); } }); });
+    (g.near || []).forEach((v) => { if (v.ll && !seen[v.n]) { seen[v.n] = 1; pts.push(v.ll); L.circleMarker(v.ll, { radius: 6, color: '#8A877F', fillColor: '#8A877F', fillOpacity: 0.7 }).addTo(m).bindTooltip(`${v.n.slice(0, 6)} · 가까운 매입처`, { direction: 'right' }); } });
+    m.fitBounds(pts, { padding: [40, 40], maxZoom: 10 });
+  };
+  if (window.L) { go(); return; }
+  const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css'; document.head.appendChild(css);
+  const js = document.createElement('script'); js.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js'; js.onload = go; js.onerror = () => el.remove(); document.head.appendChild(js);
+}
+function sugOpen(r) {
+  closeQ();
+  const b = (r.sug || {}).best || {}, low = lowRows(r);
+  const ov = document.createElement('div'); ov.className = 'hm-ov fl-qov';
+  ov.innerHTML = `<div class="hm-modal fd-sugm" role="dialog" aria-label="추천 구매처"><div class="hm-mh"><b>${esc(r.partner || '')}${r.site ? ` · ${esc(r.site)}` : ''}</b><button type="button" class="hm-x" aria-label="닫기">✕</button></div>
+    <div class="fd-sgb">${plansHtml(r)}<div class="fd-map" id="fd-map"></div>
+    ${low.length ? `<div class="fd-sgk"><span>품목별 가장 싼 단가</span><span>이카운트 구매 · 부가세 별도</span></div><div class="fd-sgl">${low.join('')}</div>` : ''}
+    ${nearHtml(r)}${(r.sug.plans || [])[0] && !r.sug.plans[0].q ? '<div class="fd-sgk"><span>수량 미정 · 단가 합</span><span>운임 구매처→현장</span></div>' : ''}</div>
+    <div class="fd-rfqa"><button type="button" class="fl-go" data-a="rfq">견적요청서</button></div></div>`;
+  ov.addEventListener('click', (e) => {
+    if (e.target === ov || e.target.closest('.hm-x')) { ov.remove(); return; }
+    const t = e.target.closest('[data-a="rfq"]'); if (t) { ov.remove(); rfqOpen(r); return; }
+  });
+  document.body.appendChild(ov);
+  sugMap(ov.querySelector('#fd-map'), r);
 }
 function nearHtml(r) {   // 현장 가까운 매입처 — 그 품목 산 적 있는 곳, 최근 단가 (11/02 대표 "아산 현장이면 아산에 있는 매입처")
   const g = r.sug || {}; if (!(g.near || []).length) return '';
@@ -448,6 +479,7 @@ export function bind(app, c) {
     else if (a === 'sent' && r) { if (!ask(t, `${r.partner} · ${r.site} 거래처 전달 체크할까요?`)) return; S.addFlowMark(`sent:${r.no}`, `${r.partner} ${r.site}`, ctx.me ? ctx.me() : '').then((err) => { if (err) alert('저장 못 했어요 — ' + err); else { FL.marks[`sent:${r.no}`] = { created_at: new Date().toISOString() }; ctx.rerender(); } }); }
     else if (a === 'stmtgo' && r) { FM.presetStmt(/공간/.test(r.partner) ? 'stmt-gong' : 'stmt-etc', (t.dataset.s || '').split(',').join(' '), r.salerows); ctx.rerender(); }
     else if (a === 'rfq' && r) rfqOpen(r);
+    else if (a === 'sug' && r) sugOpen(r);
     else if (a === 'evx') {   // 카톡·문자 원문 — 같은 방 앞뒤 대화 (배차안내까지)
       closeQ(); const ov = document.createElement('div'); ov.className = 'hm-ov fl-qov';
       ov.innerHTML = `<div class="hm-modal fl-txm" role="dialog" aria-label="원문"><div class="hm-mh"><b>${esc(t.textContent)}</b><button type="button" class="hm-x" aria-label="닫기">✕</button></div><pre class="fl-tx">${esc(t.dataset.x || '')}</pre></div>`;
@@ -524,5 +556,6 @@ export function bind(app, c) {
     }
   };
   app.addEventListener('click', onClick);
+  document.addEventListener('click', (e) => { const t = e.target.closest('.fd-sugm [data-fl="pdf"]'); if (t) { onClick(e); t.closest('.fl-qov').remove(); } });   // 추천 팝업 안 근거 전표
   clickQ = (b) => onClick({ target: b, stopPropagation() {} });
 }
