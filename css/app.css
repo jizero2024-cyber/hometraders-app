@@ -1560,3 +1560,5 @@ textarea.fd-rfqt { width: 100%; box-sizing: border-box; resize: vertical; border
 .fd-lw b { font-weight: 800; color: #111; } .fd-lw i { font-style: normal; color: #6B4FA0; font-weight: 700; font-size: 12.5px; } .fd-lw span:not(.fd-pd) { font-weight: 700; color: #333; } .fd-lw strong { font-weight: 800; color: #111; text-align: right; }
 .fd-lw .fd-pn { grid-column: 3 / -1; }
 @media (max-width: 600px) { .fd-lw { grid-template-columns: 40px 1fr auto; gap: 2px 8px; } .fd-lw i:empty { display: none; } }
+.fl-ln { grid-template-columns: 56px minmax(0, 340px) auto 72px; justify-content: start; }   /* 상태가 이름 바로 옆 (11/02 대표 "너무 멀어") */
+.fl-ln .fl-by:empty { display: none; } .fl-ln:has(.fl-by:empty) { grid-template-columns: 56px minmax(0, 340px) 72px; }
