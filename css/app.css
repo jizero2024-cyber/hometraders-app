@@ -1686,3 +1686,4 @@ textarea.fd-rfqt { width: 100%; box-sizing: border-box; resize: vertical; border
   .hm-body.top .fl-list .fl-row .fl-acts, body.hm-wall .fl-list .fl-row .fl-acts { grid-column: 2 / -1 !important; justify-content: flex-start !important; flex-wrap: wrap !important; }
   .fl-list .fl-row .fl-acts:empty { display: none; }
 }
+@media (min-width: 821px) and (max-width: 1199px) { .hm-me, .hm-link { display: none !important; } .hm-nav a, .hm-nav button, .hm-nav > * { white-space: nowrap; } }
