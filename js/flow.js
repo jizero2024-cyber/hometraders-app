@@ -182,7 +182,7 @@ function plansHtml(r) {   // 제안 1·2·3 — 구매처 조합마다 물품 + 
   const won = (n) => Number(n || 0).toLocaleString(), man = (w) => (w ? `${Math.round(w / 1000) / 10}만` : '—');
   return ps.map((p, i) => `<div class="fd-pl" style="--pc:${PCOL[i]}"><div class="fd-plh"><em>제안 ${i + 1}</em><b>${p.vs.map((v) => esc(v.n)).join(' + ')}</b><span>${p.via ? '한 차로 두 곳 · 경유비 별도' : `차 ${p.trips}번`}</span><strong>${p.fok ? won(p.t) : '운임 확인'}</strong>${p.d != null ? `<i>+${won(p.d)}</i>` : ''}</div>`
     + `<div class="fd-plsum"><span>물품 ${won(p.g)}</span><span>운임 ${man(p.f)}</span></div>`
-    + p.vs.map((v) => `<div class="fd-plv"><b>${esc(v.n)}</b><span>${esc(v.loc || '위치 확인')}</span><span>${v.it.map((x) => `${esc(x.it)} ${won(x.p)}`).join(' · ')}</span><span>운임 ${man(v.f)}${v.fs ? `<em>${esc(v.fs)}</em>` : ''}${v.kd ? `<em>차 ${man(v.car)} · 경동 ${man(v.kd)} (${v.boxes}박스)</em>` : ''}</span></div>`).join('') + '</div>').join('');
+    + p.vs.map((v) => `<div class="fd-plv"><b>${esc(v.n)}</b><span>${esc(v.loc || '위치 확인')}</span><span class="fd-plit">${v.it.map((x) => `<span>${esc(x.it)} <b>${won(x.p)}</b></span>`).join('')}</span><span>운임 ${man(v.f)}${v.fs ? `<em>${esc(v.fs)}</em>` : ''}${v.kd ? `<em>차 ${man(v.car)} · 경동 ${man(v.kd)} (${v.boxes}박스)</em>` : ''}</span></div>`).join('') + '</div>').join('');
 }
 function sugMap(el, r) {   // 지도 — 시·군 중심 좌표, 제안마다 색 선 (OpenStreetMap)
   const g = r.sug || {}, ps = g.plans || [];
