@@ -166,7 +166,9 @@ function detailHtml(r) {
 }
 // 출고 건 펼침 — 발주 요청 원문 → 사진 띠(발주 사진·명세서) → 품목 표 (11/02 대표, 공간 대조표 https://claude.ai/artifact/R7Qa8xYmhHu19t5dxgbVr1 모양) — flow_detail.py
 function bestHtml(r) {   // 추천 결론 — 한 곳에서 다 / 나눠 사기 + 차 횟수·운임 (11/02 대표 "한 번에 다 사는 게 좋고, 나눠 사면 운반비도")
-  const b = (r.sug || {}).best; if (!b || !(b.pick || []).length) return '';
+  let b = (r.sug || {}).best; const p0 = ((r.sug || {}).plans || [])[0];
+  if ((!b || !(b.pick || []).length) && p0) b = { one: p0.vs.length === 1, pick: p0.vs.map((v) => ({ n: v.n, c: v.it.length })), of: p0.vs.reduce((a, v) => a + v.it.length, 0), trips: p0.trips, fare: p0.f, none: [] };   // 산 기록 없어도 천안창고 재고 등 제안이 있으면 (11/02)
+  if (!b || !(b.pick || []).length) return '';
   const man = (w) => (w ? `${Math.round(w / 10000)}만` : '');
   const head = b.one ? `<b>${esc(b.pick[0].n)}</b><span>한 곳에서 다 · ${b.of}개 품목</span>`
     : `<b>${b.pick.map((p) => `${esc(p.n)} ${p.c}`).join(' + ')}</b><span>${b.trips > 1 ? `나눠 사기 · 차 ${b.trips}번` : `${b.pick[0].c}/${b.of} 품목`}</span>`;
@@ -180,7 +182,7 @@ function plansHtml(r) {   // 제안 1·2·3 — 구매처 조합마다 물품 + 
   const won = (n) => Number(n || 0).toLocaleString(), man = (w) => (w ? `${Math.round(w / 1000) / 10}만` : '—');
   return ps.map((p, i) => `<div class="fd-pl" style="--pc:${PCOL[i]}"><div class="fd-plh"><em>제안 ${i + 1}</em><b>${p.vs.map((v) => esc(v.n)).join(' + ')}</b><span>${p.via ? '한 차로 두 곳 · 경유비 별도' : `차 ${p.trips}번`}</span><strong>${p.fok ? won(p.t) : '운임 확인'}</strong>${p.d != null ? `<i>+${won(p.d)}</i>` : ''}</div>`
     + `<div class="fd-plsum"><span>물품 ${won(p.g)}</span><span>운임 ${man(p.f)}</span></div>`
-    + p.vs.map((v) => `<div class="fd-plv"><b>${esc(v.n)}</b><span>${esc(v.loc || '위치 확인')}</span><span>${v.it.map((x) => `${esc(x.it)} ${won(x.p)}`).join(' · ')}</span><span>운임 ${man(v.f)}${v.fs ? `<em>${esc(v.fs)}</em>` : ''}</span></div>`).join('') + '</div>').join('');
+    + p.vs.map((v) => `<div class="fd-plv"><b>${esc(v.n)}</b><span>${esc(v.loc || '위치 확인')}</span><span>${v.it.map((x) => `${esc(x.it)} ${won(x.p)}`).join(' · ')}</span><span>운임 ${man(v.f)}${v.fs ? `<em>${esc(v.fs)}</em>` : ''}${v.kd ? `<em>차 ${man(v.car)} · 경동 ${man(v.kd)} (${v.boxes}박스)</em>` : ''}</span></div>`).join('') + '</div>').join('');
 }
 function sugMap(el, r) {   // 지도 — 시·군 중심 좌표, 제안마다 색 선 (OpenStreetMap)
   const g = r.sug || {}, ps = g.plans || [];
