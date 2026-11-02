@@ -1562,3 +1562,6 @@ textarea.fd-rfqt { width: 100%; box-sizing: border-box; resize: vertical; border
 @media (max-width: 600px) { .fd-lw { grid-template-columns: 40px 1fr auto; gap: 2px 8px; } .fd-lw i:empty { display: none; } }
 .fl-ln { grid-template-columns: 56px minmax(0, 340px) auto 72px; justify-content: start; }   /* 상태가 이름 바로 옆 (11/02 대표 "너무 멀어") */
 .fl-ln .fl-by:empty { display: none; } .fl-ln:has(.fl-by:empty) { grid-template-columns: 56px minmax(0, 340px) 72px; }
+.fd-itab { width: auto; min-width: 0; }   /* 품목 표 — 칸을 내용만큼, 버튼·✕가 멀지 않게 (11/02 대표 "버튼이 너무 멀어") */
+.fd-itab th, .fd-itab td { padding-left: 10px; padding-right: 22px; }
+.fd-itab td.fd-ti { min-width: 200px; max-width: 420px; }
