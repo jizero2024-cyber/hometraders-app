@@ -170,19 +170,26 @@ function bestHtml(r) {   // 추천 결론 — 한 곳에서 다 / 나눠 사기 
   const man = (w) => (w ? `${Math.round(w / 10000)}만` : '');
   const head = b.one ? `<b>${esc(b.pick[0].n)}</b><span>한 곳에서 다 · ${b.of}개 품목</span>`
     : `<b>${b.pick.map((p) => `${esc(p.n)} ${p.c}`).join(' + ')}</b><span>${b.trips > 1 ? `나눠 사기 · 차 ${b.trips}번` : `${b.pick[0].c}/${b.of} 품목`}</span>`;
-  return `<div class="fd-best ${b.one ? 'one' : ''}"><em>추천</em>${head}${b.fare ? `<span class="fd-bf">운임 약 ${man(b.fare)}${b.trips > 1 ? ' (합)' : ''}</span>` : ''}${(b.none || []).length ? `<i>산 기록 없음 ${esc(b.none.join(' · '))}</i>` : ''}<button type="button" class="fl-go fd-rfqb" data-fl="rfq" data-no="${esc(r.no)}">견적요청서</button></div>`;
+  const low = lowRows(r);   // 추천 줄 누르면 품목마다 가장 싼 단가·구매처 (11/02 대표 "여길 누르면 품목별 가장 싼 단가")
+  const inner = `<em>추천</em>${head}${b.fare ? `<span class="fd-bf">운임 약 ${man(b.fare)}${b.trips > 1 ? ' (합)' : ''}</span>` : ''}${(b.none || []).length ? `<i>산 기록 없음 ${esc(b.none.join(' · '))}</i>` : ''}<button type="button" class="fl-go fd-rfqb" data-fl="rfq" data-no="${esc(r.no)}">견적요청서</button>`;
+  if (!low.length) return `<div class="fd-best ${b.one ? 'one' : ''}">${inner}</div>`;
+  return `<details class="fd-bestd ${b.one ? 'one' : ''}" data-mo="low:${esc(r.no)}" ${(FL.mo || {})['low:' + r.no] ? 'open' : ''}><summary class="fd-best ${b.one ? 'one' : ''}">${inner}</summary><div class="fd-lwh"><span>품목별 가장 싼 단가</span><span>이카운트 구매 · 부가세 별도</span></div>${low.join('')}</details>`;
 }
-function sugHtml(r) {   // 품목별 단가 — 이카운트 구매 입력 단가(부가세 별도), 매입처마다 최근 값, 근거 전표 (11/02 대표 "단가 데이터는 정확해야 · 근거도") — flow_detail.py
-  const g = r.sug, won = (n) => Number(n).toLocaleString();
-  const ev = (x) => `<span class="fd-pd">${esc(x.d)}</span>${x.S ? `<button type="button" class="fd-ps" data-fl="pdf" data-k="구매" data-s="${esc(x.S)}" title="${esc(x.i || '')}">${esc(x.s)}</button>` : `<span class="fd-ps na" title="${esc(x.i || '')}">${esc(x.s)}</span>`}`;
-  const low = (g.prices || []).map((p) => {   // 추천 한 줄 펼치면 품목마다 가장 싼 단가 하나 (11/02 대표)
+function lowRows(r) {   // 품목마다 가장 싼 단가 하나 — 이카운트 구매 단가, 매입처마다 최근 값 중 최저 (flow_detail.py prices)
+  const g = r.sug || {}, won = (n) => Number(n).toLocaleString();
+  const ev = (x) => (x.S ? `<button type="button" class="fd-ps" data-fl="pdf" data-k="구매" data-s="${esc(x.S)}" title="${esc(x.i || '')}">${esc(x.s)}</button>` : `<span class="fd-ps na" title="${esc(x.i || '')}">${esc(x.s)}</span>`);
+  return (g.prices || []).map((p) => {
     const o = (p.opts || []).length ? p.opts[0] : (p.v || []).length ? p.v.reduce((m, x) => (x.p < m.p ? x : m)) : null;
     if (!o) return `<div class="fd-lw"><span class="fd-pd"></span><b>${esc(p.it)}</b><em class="fd-pn">${p.vague ? '품명 확인' : '산 기록 없음'}</em></div>`;
-    return `<div class="fd-lw"><span class="fd-pd">${esc(o.d)}</span><b>${esc(p.it)}</b><i>${esc(o.k || '')}</i><span>${esc(o.n)}</span><strong>${won(o.p)}</strong>${ev(o).replace(/^<span class="fd-pd">[^<]*<\/span>/, '')}</div>`;   // 날짜 맨 왼쪽 (11/02 대표)
+    return `<div class="fd-lw"><span class="fd-pd">${esc(o.d)}</span><b>${esc(p.it)}</b><i>${esc(o.k || '')}</i><span>${esc(o.n)}</span><strong>${won(o.p)}</strong>${ev(o)}</div>`;   // 날짜 맨 왼쪽 (11/02 대표)
   });
-  const rows = low.length ? `<details class="fd-low" data-mo="low:${esc(r.no)}" ${(FL.mo || {})['low:' + r.no] ? 'open' : ''}><summary><em>추천</em>품목별 가장 싼 단가<span>${low.length}개 · 이카운트 구매 · 부가세 별도</span></summary>${low.join('')}</details>` : '';
+}
+function sugHtml(r) {   // 품목별 단가 — 이카운트 구매 입력 단가(부가세 별도), 매입처마다 최근 값, 근거 전표 (11/02 대표 "단가 데이터는 정확해야 · 근거도") — flow_detail.py
+  const g = r.sug;
+  const low = lowRows(r), hasBest = g.best && (g.best.pick || []).length;
+  const rows = hasBest ? '' : low.length ? `<details class="fd-low" data-mo="low:${esc(r.no)}" ${(FL.mo || {})['low:' + r.no] ? 'open' : ''}><summary><em>추천</em>품목별 가장 싼 단가<span>${low.length}개 · 이카운트 구매 · 부가세 별도</span></summary>${low.join('')}</details>` : '';
   const f = (g.fare || []).map((x) => `<span>${esc(x.d)} ${esc(x.car)} ${Math.round(x.w / 10000)}만${x.fr ? ` · ${esc(x.fr)}` : ''}</span>`).join('');
-  return `${(g.best && (g.best.pick || []).length) ? '' : `<div class="fl-k"><button type="button" class="fl-go fd-rfqb" data-fl="rfq" data-no="${esc(r.no)}">견적요청서</button></div>`}${rows || '<div class="fd-pr"><em class="fd-pn">지난 구매 없음</em></div>'}${f ? `<div class="fl-k">지난 운임${g.reg ? ` · ${esc(g.reg)}` : ''}</div><div class="fd-fare">${f}</div>` : ''}`;
+  return `${hasBest ? '' : `<div class="fl-k"><button type="button" class="fl-go fd-rfqb" data-fl="rfq" data-no="${esc(r.no)}">견적요청서</button></div>`}${rows || (hasBest && low.length ? '' : '<div class="fd-pr"><em class="fd-pn">지난 구매 없음</em></div>')}${f ? `<div class="fl-k">지난 운임${g.reg ? ` · ${esc(g.reg)}` : ''}</div><div class="fd-fare">${f}</div>` : ''}`;
 }
 function rqHtml(r) {
   const q = r.rq; if (!q) return '';
