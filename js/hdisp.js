@@ -292,6 +292,7 @@ function submit(ctx) {
       note: [FLOW_NO ? `배차 요청함 ${new Date().toTimeString().slice(0, 5)}(출고 흐름 ${FLOW_NO})` : '배차 요청함(홈트 첫 화면)', F.weight && `무게 ${cut(F.weight, MAX.phone)}`, F.sched && `일정 ${cut(F.sched, MAX.text)}`].filter(Boolean).join(' · '),
     });
     if (FLOW_NO && S.setShipCase) S.setShipCase(FLOW_NO, { disp: `배차 요청함 ${new Date().toTimeString().slice(0, 5)}` }, (ctx && ctx.me && ctx.me()) || '').catch(() => {});   // 운영 DB 먼저
+    if (FLOW_NO && S.addShipEvidence) S.addShipEvidence(FLOW_NO, `배차 상차지 ${cut(F.from.name, MAX.name)} | ${cut(F.from.addr || '', MAX.addr)} | ${F.from.kind || '직접'}`, (ctx && ctx.me && ctx.me()) || '').catch(() => {});   // 상차지 → 그 출고 건 구매처·출고처 (11/02 대표 "연동해")
     alert('배차요청톡을 복사했어요. 이음물류 카톡방에 붙여넣으세요.\n출고 목록에도 \'출고예정\'으로 등록했어요.');
     Object.assign(F, { from: null, to: null, cars: [], vehicle: '', pay: '현불', goods: '건축자재', weight: '', sched: '', say: false, sayAs: '홈트레이더스', open: '', q: { from: '', to: '' } });
     ctx.rerender();

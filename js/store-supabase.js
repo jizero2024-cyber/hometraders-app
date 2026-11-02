@@ -677,6 +677,12 @@ export async function saveReview(id, patch) {
   if (error) throw new Error(error.message);
   reviews = reviews.map((r) => (r.id === id ? { ...r, ...row } : r));
 }
+export async function addShipEvidence(no, summary, who) {   // 출고 건 근거 한 줄 (11/02 배차 요청 상차지 → 구매처 연동, 맥 도우미가 읽음)
+  if (!no || !summary) return null;
+  const now = new Date().toISOString();
+  const { error } = await sb.from('ship_evidence').upsert({ id: `site:${no}:${now}`, no, src: 'site', at: now.slice(0, 16).replace('T', ' '), who: who || null, summary });
+  return error ? error.message : null;
+}
 export async function setShipCase(no, patch, who, need) {   // 출고 흐름 버튼 → 운영 DB ship_case 먼저 (10/28 대표 "데이터베이스 먼저") · 바꾼 칸은 src 'site' 로 (맥 도우미가 출고일보 글로 안 덮음)
   if (!no) return null;
   const { data: cur, error: e1 } = await sb.from('ship_case').select('*').eq('no', no).maybeSingle();
