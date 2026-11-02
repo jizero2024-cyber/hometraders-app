@@ -147,7 +147,7 @@ function detailHtml(r) {
   return `<div class="fl-det">
     ${r.why ? `<div class="fl-why">${esc(r.why)}</div>` : ''}
     ${r.no.startsWith('Q') ? '' : `<div class="fl-k">상차 → 하차</div><div class="fl-it"><b>${esc(r.from || '상차지 확인')}</b> → <b>${esc(r.site_full || r.site || '하차지 확인')}</b></div>`}
-    ${buys || `<div class="fl-it">${esc(r.items)}</div>`}
+    ${r.itab ? `${rqHtml(r)}${galHtml(r)}${itabHtml(r)}` : buys || `<div class="fl-it">${esc(r.items)}</div>`}
     ${r.veh ? `<div class="fl-k">차량</div><div class="fl-it">${esc(r.veh)}</div>` : ''}
     ${r.memo ? `<div class="fl-k">메모</div><div class="fl-it fl-memo">${memoHtml(r)}</div>` : ''}
     ${caseHtml(r)}
@@ -155,6 +155,24 @@ function detailHtml(r) {
     ${r.pl ? `<div class="fl-k">순이익</div><div class="fl-pld"><span>판매 ${won(r.pl.sale)}</span><i>−</i><span>구매 ${won(r.pl.buy)}</span><i>−</i><span>운반비 ${won(r.pl.fare)}</span><i>=</i><b class="${r.pl.net < 0 ? 'no' : ''}">${won(r.pl.net)}</b><em>${r.pl.sale ? Math.round((100 * r.pl.net) / r.pl.sale) : 0}% · 공급가</em></div>` : ''}
     ${(r.ev || []).length ? `<div class="fl-k">근거</div><div class="fl-memo">${evLinks(r.ev)}</div>` : ''}
     ${(r.imgs || []).length ? `<div class="fl-k">사진</div><div class="fl-imgs">${r.imgs.map((x) => `<iframe src="https://drive.google.com/file/d/${encodeURIComponent(x.id)}/preview" title="${esc(x.name)}" loading="lazy"></iframe>`).join('')}</div>` : ''}</div>`;   // 견적 요청 사진 — 펼치면 바로 (10/28 대표)
+}
+// 출고 건 펼침 — 발주 요청 원문 → 사진 띠(발주 사진·명세서) → 품목 표 (11/02 대표, 공간 대조표 https://claude.ai/artifact/R7Qa8xYmhHu19t5dxgbVr1 모양) — flow_detail.py
+function rqHtml(r) {
+  const q = r.rq; if (!q) return '';
+  const more = (q.more || []).map((m) => `<div class="fl-rqm"><span class="fl-rqt ${m.tag === '취소' ? 'no' : m.tag === '변경' ? 'amb' : 'blu'}">${esc(m.tag)}</span><span class="fl-rqw">${esc(m.t)}</span><span class="fl-rqx">${esc(m.x)}</span></div>`).join('');
+  return `<div class="fl-k">발주 요청</div><div class="fl-rq"><div class="fl-rqh"><span>${esc(q.t)}</span>${q.due ? `<b>받을 날 ${esc(q.due)}</b>` : ''}</div><div class="fl-rqx">${esc(q.x)}</div>${more}</div>`;
+}
+function galHtml(r) {
+  const q = r.rq || {}, fr = (id, cap) => `<figure class="fl-gf"><iframe src="https://drive.google.com/file/d/${encodeURIComponent(id)}/preview" title="${esc(cap)}" loading="lazy"></iframe><figcaption><a href="https://drive.google.com/file/d/${encodeURIComponent(id)}/view" target="_blank" rel="noopener">${esc(cap)}</a></figcaption></figure>`;
+  const ph = (q.imgs || []).length ? q.imgs.map((x) => fr(x.id, '발주 사진')).join('') : '<figure class="fl-gf na"><div>발주 사진 없음</div></figure>';
+  const docs = (r.docs || []).map((d) => fr(d.id, d.cap)).join('');
+  const pdf = (r.dpdf || []).flatMap((s_) => { const x = (FL.links[s_] || []).find((y) => y.kind === '구매' && y.drive_id); return x ? [fr(x.drive_id, `구매 전표 ${s_.replace(/^\d{4}(\d\d)(\d\d)-/, '$1/$2-')}`)] : []; }).join('');
+  return `<div class="fl-gal">${ph}${docs}${pdf}</div>`;
+}
+function itabHtml(r) {
+  const st = (v) => (v === '—' ? '<td class="fl-st na">—</td>' : v ? `<td class="fl-st ok">${esc(v)}</td>` : '<td class="fl-st no">✕</td>');
+  const rows = (r.itab || []).map((x) => `<tr><td class="fl-ti">${esc(x.it)}</td><td>${esc(x.q)}</td><td><span class="fl-src ${esc(x.sc || 'un')}">${esc(x.src)}</span></td><td>${esc(x.d)}</td>${st(x.sale)}${st(x.buy)}</tr>`).join('');
+  return `<div class="fl-tw"><table class="fl-itab"><thead><tr><th>품목</th><th>수량</th><th>출고처</th><th>나간 날</th><th>판매</th><th>구매</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 function linesHtml(r) {
   return (r.lines || []).map((l) => {
