@@ -1514,3 +1514,8 @@ body.kiosk .ki-t i, body.kiosk .ki-hi, body.kiosk .ki-out i, body.kiosk .ki-s h2
 .fd-sv b { font-weight: 800; color: #1A1A1A; min-width: 120px; } .fd-sv b.top { color: #C2410C; }
 .fd-sv span { font-weight: 700; color: #333; } .fd-sv em { font-style: normal; color: #8A877F; font-size: 12.5px; } .fd-sv i { font-style: normal; color: #E03E2D; font-size: 12.5px; }
 .fd-fare { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; color: #555; font-weight: 600; }
+.fd-rfqb { margin-left: 8px; padding: 4px 10px; font-size: 12px; vertical-align: 1px; }   /* 견적요청서 (11/02) */
+.fd-rfq { max-width: 560px; width: calc(100vw - 32px); }
+.fd-rfqv { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+.fd-rfqt { max-height: 50vh; overflow: auto; font-family: Pretendard, sans-serif; font-size: 14px; line-height: 1.55; color: #1A1A1A; }
+.fd-rfqa { display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px; }

@@ -163,7 +163,7 @@ function detailHtml(r) {
 function sugHtml(r) {   // 견적 요청 추천 — 지난 구매 단가가 있는 매입처, 지난 운임 (11/02 대표 "배차 요청 상세엔 견적 요청 어디에 하는 게 좋을지") — flow_detail.py · buy_suggest.py
   const g = r.sug, v = (g.v || []).map((x, i) => `<div class="fd-sv"><b class="${i === 0 ? 'top' : ''}">${esc(x.n)}</b><span>${x.c}/${x.of} 품목</span><em>단가 ${esc(x.d)}</em>${(x.miss || []).length ? `<i>없음 ${esc(x.miss.join(' · '))}</i>` : ''}</div>`).join('');
   const f = (g.fare || []).map((x) => `<span>${esc(x.d)} ${esc(x.car)} ${Math.round(x.w / 10000)}만${x.fr ? ` · ${esc(x.fr)}` : ''}</span>`).join('');
-  return `<div class="fl-k">견적 요청 추천</div><div class="fd-sug">${v || '<div class="fd-sv"><span>지난 구매 없음</span></div>'}${(g.combo || []).length ? `<div class="fd-sv"><span>나눠 사기</span><em>${esc(g.combo.join(' · '))}</em></div>` : ''}</div>${f ? `<div class="fl-k">지난 운임${g.reg ? ` · ${esc(g.reg)}` : ''}</div><div class="fd-fare">${f}</div>` : ''}`;
+  return `<div class="fl-k">견적 요청 추천 <button type="button" class="fl-go fd-rfqb" data-fl="rfq" data-no="${esc(r.no)}">견적요청서</button></div><div class="fd-sug">${v || '<div class="fd-sv"><span>지난 구매 없음</span></div>'}${(g.combo || []).length ? `<div class="fd-sv"><span>나눠 사기</span><em>${esc(g.combo.join(' · '))}</em></div>` : ''}</div>${f ? `<div class="fl-k">지난 운임${g.reg ? ` · ${esc(g.reg)}` : ''}</div><div class="fd-fare">${f}</div>` : ''}`;
 }
 function rqHtml(r) {
   const q = r.rq; if (!q) return '';
@@ -336,6 +336,47 @@ function quoteFor(r) {
   ov.addEventListener('click', (e) => { const b = e.target.closest('[data-fl]'); if (b) clickQ(b); });
 }
 let clickQ = () => {};
+// 견적요청서 — 구매처에 보낼 품목·수량·받을 날·하차 지역 (판매처·현장 이름은 안 넣음, 대표 규칙) · 톡 복사 / 엑셀 (11/02 대표)
+function rfqItems(r) {
+  const seen = new Set();
+  return (r.itab || []).filter((x) => { const k = `${x.it}|${x.q}`; if (seen.has(k)) return false; seen.add(k); return true; }).map((x) => ({ it: x.it, q: x.q }));
+}
+function rfqRegion(r) {
+  const m = String(r.site_full || r.site || '').replace(/\(.*?\)/g, '').match(/^\s*([가-힣]+(?:도|시)?)\s+([가-힣]+(?:시|군|구))/);
+  return m ? `${m[1]} ${m[2]}` : '';
+}
+function rfqText(r, v) {
+  const t = (FL.data || {}).today || '', due = [r.arr || (r.day !== '미정' ? r.day : ''), r.time].filter(Boolean).join(' '), reg = rfqRegion(r);
+  return [`[견적 요청] 홈트레이더스${v ? ` → ${v}` : ''}`, `요청일 ${t}`, due ? `받을 날 ${due}` : '', reg ? `하차 ${reg}` : '', '',
+    ...rfqItems(r).map((x, i) => `${i + 1}. ${x.it} ${x.q}`), '', '단가·운반비 견적 부탁드립니다.'].filter((x, i, a) => x !== '' || (a[i - 1] && a[i - 1] !== '')).join('\n');
+}
+function rfqXlsx(r, v) {
+  import('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm').then((X) => {
+    const t = (FL.data || {}).today || '', due = [r.arr || (r.day !== '미정' ? r.day : ''), r.time].filter(Boolean).join(' ');
+    const aoa = [[`견적 요청 — 홈트레이더스${v ? ` → ${v}` : ''}`], [`요청일 ${t}`, '', `받을 날 ${due}`, '', `하차 ${rfqRegion(r)}`], [],
+      ['No', '품명', '수량', '단가', '금액', '비고'], ...rfqItems(r).map((x, i) => [i + 1, x.it, x.q, '', '', '']), [], ['', '운반비', '', '', '', ''], ['', '합계 (부가세 포함)', '', '', '', '']];
+    const ws = X.utils.aoa_to_sheet(aoa); ws['!cols'] = [{ wch: 5 }, { wch: 34 }, { wch: 10 }, { wch: 12 }, { wch: 14 }, { wch: 24 }];
+    const wb = X.utils.book_new(); X.utils.book_append_sheet(wb, ws, '견적요청');
+    X.writeFile(wb, `견적요청_${(v || '구매처').replace(/[\\/:*?"<>|\s]/g, '')}_${t.replace('/', '')}.xlsx`);
+  }).catch((e) => alert('엑셀을 못 만들었어요 — ' + (e.message || e)));
+}
+function rfqOpen(r) {
+  closeQ(); const vs = ((r.sug || {}).v || []).map((x) => x.n); let v = vs[0] || '';
+  const ov = document.createElement('div'); ov.className = 'hm-ov fl-qov';
+  const draw = () => { ov.innerHTML = `<div class="hm-modal fd-rfq" role="dialog" aria-label="견적요청서"><div class="hm-mh"><b>견적요청서</b><button type="button" class="hm-x" aria-label="닫기">✕</button></div>
+    <div class="fd-rfqv">${vs.map((n) => `<button type="button" class="fl-sb mid ${n === v ? 'on' : ''}" data-v="${esc(n)}">${esc(n)}</button>`).join('')}<button type="button" class="fl-sb mid ${v ? '' : 'on'}" data-v="">구매처 빼기</button></div>
+    <pre class="fl-tx fd-rfqt">${esc(rfqText(r, v))}</pre>
+    <div class="fd-rfqa"><button type="button" class="fl-go" data-a="copy">톡 복사</button><button type="button" class="fl-gh" data-a="xlsx">엑셀 받기</button></div></div>`; };
+  draw();
+  ov.addEventListener('click', (e) => {
+    if (e.target === ov || e.target.closest('.hm-x')) { ov.remove(); return; }
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.v !== undefined) { v = b.dataset.v; draw(); }
+    else if (b.dataset.a === 'copy') copyText(rfqText(r, v)).then(() => { b.textContent = '복사됨'; setTimeout(() => { b.textContent = '톡 복사'; }, 1500); });
+    else if (b.dataset.a === 'xlsx') rfqXlsx(r, v);
+  });
+  document.body.appendChild(ov);
+}
 export function bind(app, c) {
   ctx = c;
   app.addEventListener('toggle', (e) => { const d = e.target; if (d.matches && d.matches('details[data-mo]')) { FL.mo = FL.mo || {}; FL.mo[d.dataset.mo] = d.open; } }, true);   // 메모 펼친 것 1분 새로고침에도 유지
@@ -366,6 +407,7 @@ export function bind(app, c) {
     else if (a === 'slipok' && r) { const key = `slipok:${r.case || r.no}`, me = ctx.me ? ctx.me() : ''; S.addFlowMark(key, `${r.partner} ${r.site}`, me).then((err) => { if (err) alert('저장 못 했어요 — ' + err); else { FL.marks[key] = { created_at: new Date().toISOString() }; caseRows(r).forEach((x) => S.setShipCase(x.no, { checked: true, checked_by: me || null }, me).catch(() => {})); ctx.rerender(); } }); }
     else if (a === 'sent' && r) { if (!ask(t, `${r.partner} · ${r.site} 거래처 전달 체크할까요?`)) return; S.addFlowMark(`sent:${r.no}`, `${r.partner} ${r.site}`, ctx.me ? ctx.me() : '').then((err) => { if (err) alert('저장 못 했어요 — ' + err); else { FL.marks[`sent:${r.no}`] = { created_at: new Date().toISOString() }; ctx.rerender(); } }); }
     else if (a === 'stmtgo' && r) { FM.presetStmt(/공간/.test(r.partner) ? 'stmt-gong' : 'stmt-etc', (t.dataset.s || '').split(',').join(' '), r.salerows); ctx.rerender(); }
+    else if (a === 'rfq' && r) rfqOpen(r);
     else if (a === 'evx') {   // 카톡·문자 원문 — 같은 방 앞뒤 대화 (배차안내까지)
       closeQ(); const ov = document.createElement('div'); ov.className = 'hm-ov fl-qov';
       ov.innerHTML = `<div class="hm-modal fl-txm" role="dialog" aria-label="원문"><div class="hm-mh"><b>${esc(t.textContent)}</b><button type="button" class="hm-x" aria-label="닫기">✕</button></div><pre class="fl-tx">${esc(t.dataset.x || '')}</pre></div>`;
