@@ -108,17 +108,17 @@ const DATE_FIRST = ['기록', '입력 누락', '입력 완료', '전표', '전�
 const saleSlips = (r) => [...new Set((r.lines || []).filter((l) => l.k === '판매' && l.st === '입력').flatMap((l) => l.slips || []))];
 function docHtml(r) {   // 전표 전체 — 서류 버튼 맨 오른쪽에 나란히 (11/02 대표)
   const no = esc(r.no), b = (a, t) => `<button type="button" class="fl-gh" data-fl="${a}" data-no="${no}">${t}</button>`;
-  return `${saleSlips(r).length ? b('deliv', '납품확인서') : ''}${b('approval', '자재승인원')}<button type="button" class="fl-gh" data-hm="frame" data-src="./deposit.html?embed=1" data-title="입금표">입금표</button>${b('quote', '견적서')}${b('esong', '전자 송장')}`;
+  return `${saleSlips(r).length ? b('deliv', '납품확인서') : '<span class="fl-gh fl-ph" aria-hidden="true">납품확인서</span>'}${b('approval', '자재승인원')}<button type="button" class="fl-gh" data-hm="frame" data-src="./deposit.html?embed=1" data-title="입금표">입금표</button>${b('quote', '견적서')}${b('esong', '전자 송장')}`;
 }
 function stmtHtml(r) {   // 거래명세표 — 판매전표 PDF 보기 · 전달했는지 (10/28 대표)
   const sl = saleSlips(r);
-  if (!sl.length) return '';
+  if (!sl.length) return FL.cur === '전표 전체' ? '<span class="fl-stm fl-ph" aria-hidden="true"><span class="fl-in ok">이카운트 명세표</span><span class="fl-gh">홈트 명세표</span><span class="fl-sent"><i></i>거래처 전달</span></span>' : '';
   const mk = FL.marks[`sent:${r.no}`];
   return `<span class="fl-stm"><button type="button" class="fl-in ok" data-fl="pdf" data-k="판매" data-s="${esc(sl.join(','))}">이카운트 명세표</button><button type="button" class="fl-gh" data-fl="stmtgo" data-no="${esc(r.no)}" data-s="${esc(sl.join(','))}">홈트 명세표</button>
     ${mk ? `<span class="fl-sent on" title="전달 ${esc(String(mk.created_at || '').slice(5, 10).replace('-', '/'))}"><i>✓</i>거래처 전달</span>` : `<button type="button" class="fl-sent" data-fl="sent" data-no="${esc(r.no)}"><i></i>거래처 전달</button>`}</span>`;
 }
 function rowHtml(r) {
-  const btns = (BTN[FL.cur] || []).filter(([a]) => a !== 'cmp' || allIn(r)).map(([a, t], i) => `<button type="button" class="${i ? 'fl-gh' : 'fl-go'}" data-fl="${a}" data-no="${esc(r.no)}">${t}</button>`).join('');
+  const btns = (BTN[FL.cur] || []).filter(([a]) => a !== 'cmp' || allIn(r) || FL.cur === '전표 전체').map(([a, t], i) => (a === 'cmp' && !allIn(r) ? `<span class="fl-go fl-ph" aria-hidden="true">${t}</span>` : `<button type="button" class="${i ? 'fl-gh' : 'fl-go'}" data-fl="${a}" data-no="${esc(r.no)}">${t}</button>`)).join('');   // 전표 전체 — 없는 버튼은 빈자리로 두어 줄 맞춤 (11/02 대표 "어긋나 보여")
   const asked = FL.cur === '배차 요청' && S.getShipments().find((s) => String(s.note || '').includes(`출고 흐름 ${r.no})`));
   const cn = caseRows(r).length;
   const chips = [FL.cur === '입력 완료' && slipOk(r) ? '<span class="fl-chip ok">마감 확인</span>' : '', FL.cur === '전표 전체' ? (r.steps.includes('입력 누락') ? '<span class="fl-chip no">입력 누락</span>' : '<span class="fl-chip ok">입력 완료</span>') : '', ...(r.imgs || []).map((x) => `<button type="button" class="fl-chip blu" data-fl="img" data-id="${esc(x.id)}" data-n="${esc(x.name)}">사진</button>`), cn > 1 ? `<span class="fl-chip blu">같은 주문 ${cn}건</span>` : '', (() => { const L = caseRows(r).flatMap((x) => x.miss || []).reduce((a, m) => a + Math.max(0, mLeft(m, Object.fromEntries((FL.data ? FL.data.rows : []).map((x) => [x.no, x])))), 0); return L > 0 ? `<span class="fl-chip no">누락 남음 ${L.toLocaleString()}</span>` : ''; })(), ...(r.chips || []).map((c) => `<span class="fl-chip amb">${esc(c)}</span>`), asked ? `<span class="fl-chip blu">요청함 ${esc((String(asked.note).match(/요청함 (\d\d:\d\d)/) || ['', ''])[1])}</span>` : '', r.late && FL.cur === '배차 요청' ? '<span class="fl-chip no">누락</span>' : '', FL.cur === '배차 완료' && !r.driver ? '<span class="fl-chip amb">기사·운임 확인</span>' : ''].join('');
@@ -220,7 +220,7 @@ function listHtml() {
 function fitActs() {
   const L = document.querySelector('.fl-list');
   if (!L) return;
-  const w = Math.max(0, ...[...L.querySelectorAll('.fl-row .fl-acts')].map((a) => [...a.children].reduce((s_, c) => s_ + c.getBoundingClientRect().width + 6, 0)));
+  const w = Math.max(0, ...[...L.querySelectorAll('.fl-row .fl-acts')].map((a) => [...a.children].reduce((s_, c) => s_ + c.getBoundingClientRect().width + 6 + (parseFloat(getComputedStyle(c).marginRight) || 0), 0) + 4));
   if (w && Math.abs(w - (FL.acts[FL.cur] || 0)) > 2) { FL.acts[FL.cur] = Math.ceil(w); L.style.setProperty('--acts', `${FL.acts[FL.cur]}px`); }
 }
 const today = () => (FL.data || {}).today;

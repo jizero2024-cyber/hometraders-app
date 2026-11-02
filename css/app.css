@@ -1486,3 +1486,6 @@ body.kiosk .ki-t i, body.kiosk .ki-hi, body.kiosk .ki-out i, body.kiosk .ki-s h2
 .fl-docm button { all: unset; box-sizing: border-box; padding: 9px 12px; border-radius: 8px; font-size: 13px; cursor: pointer; white-space: nowrap; }
 .fl-docm button:hover { background: #F2F2F7; }
 .fl-docm button[disabled] { color: #C7C7CC; cursor: default; background: none; }
+
+.fl-ph { visibility: hidden; pointer-events: none; }
+.fl-ph .fl-in.ok, .fl-ph .fl-gh { height: 34px; padding: 0 14px; display: inline-flex; align-items: center; border-radius: 999px; font-size: 13px; white-space: nowrap; box-sizing: border-box; border: 1px solid transparent; }
