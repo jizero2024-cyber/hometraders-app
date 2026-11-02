@@ -170,10 +170,10 @@ function bestHtml(r) {   // 추천 결론 — 한 곳에서 다 / 나눠 사기 
   const man = (w) => (w ? `${Math.round(w / 10000)}만` : '');
   const head = b.one ? `<b>${esc(b.pick[0].n)}</b><span>한 곳에서 다 · ${b.of}개 품목</span>`
     : `<b>${b.pick.map((p) => `${esc(p.n)} ${p.c}`).join(' + ')}</b><span>${b.trips > 1 ? `나눠 사기 · 차 ${b.trips}번` : `${b.pick[0].c}/${b.of} 품목`}</span>`;
-  return `<div class="fd-best ${b.one ? 'one' : ''}"><em>추천</em>${head}${b.fare ? `<span class="fd-bf">운임 약 ${man(b.fare)}${b.trips > 1 ? ' (합)' : ''}</span>` : ''}${(b.none || []).length ? `<i>구매처 없음 ${esc(b.none.join(' · '))}</i>` : ''}<button type="button" class="fl-go fd-rfqb" data-fl="rfq" data-no="${esc(r.no)}">견적요청서</button></div>`;
+  return `<div class="fd-best ${b.one ? 'one' : ''}"><em>추천</em>${head}${b.fare ? `<span class="fd-bf">운임 약 ${man(b.fare)}${b.trips > 1 ? ' (합)' : ''}</span>` : ''}${(b.none || []).length ? `<i>산 기록 없음 ${esc(b.none.join(' · '))}</i>` : ''}<button type="button" class="fl-go fd-rfqb" data-fl="rfq" data-no="${esc(r.no)}">견적요청서</button></div>`;
 }
 function sugHtml(r) {   // 견적 요청 추천 — 지난 구매 단가가 있는 매입처, 지난 운임 (11/02 대표 "배차 요청 상세엔 견적 요청 어디에 하는 게 좋을지") — flow_detail.py · buy_suggest.py
-  const g = r.sug, v = (g.v || []).map((x, i) => `<div class="fd-sv"><b class="${i === 0 ? 'top' : ''}">${esc(x.n)}</b><span>${x.c}/${x.of} 품목</span><em>단가 ${esc(x.d)}</em>${(x.miss || []).length ? `<i>없음 ${esc(x.miss.join(' · '))}</i>` : ''}</div>`).join('');
+  const g = r.sug, v = (g.v || []).map((x, i) => `<div class="fd-sv"><b class="${i === 0 ? 'top' : ''}">${esc(x.n)}</b><span>${x.c}/${x.of} 품목</span><em>단가 ${esc(x.d)}</em>${(x.miss || []).length ? `<i>산 기록 없음 ${esc(x.miss.join(' · '))}</i>` : ''}</div>`).join('');
   const f = (g.fare || []).map((x) => `<span>${esc(x.d)} ${esc(x.car)} ${Math.round(x.w / 10000)}만${x.fr ? ` · ${esc(x.fr)}` : ''}</span>`).join('');
   return `<div class="fl-k">견적 요청 추천 ${(g.best && (g.best.pick || []).length) ? '' : `<button type="button" class="fl-go fd-rfqb" data-fl="rfq" data-no="${esc(r.no)}">견적요청서</button>`}</div><div class="fd-sug">${v || '<div class="fd-sv"><span>지난 구매 없음</span></div>'}${(g.combo || []).length ? `<div class="fd-sv"><span>나눠 사기</span><em>${esc(g.combo.join(' · '))}</em></div>` : ''}</div>${f ? `<div class="fl-k">지난 운임${g.reg ? ` · ${esc(g.reg)}` : ''}</div><div class="fd-fare">${f}</div>` : ''}`;
 }
