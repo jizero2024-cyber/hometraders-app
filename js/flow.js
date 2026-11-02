@@ -172,10 +172,17 @@ function bestHtml(r) {   // 추천 결론 — 한 곳에서 다 / 나눠 사기 
     : `<b>${b.pick.map((p) => `${esc(p.n)} ${p.c}`).join(' + ')}</b><span>${b.trips > 1 ? `나눠 사기 · 차 ${b.trips}번` : `${b.pick[0].c}/${b.of} 품목`}</span>`;
   return `<div class="fd-best ${b.one ? 'one' : ''}"><em>추천</em>${head}${b.fare ? `<span class="fd-bf">운임 약 ${man(b.fare)}${b.trips > 1 ? ' (합)' : ''}</span>` : ''}${(b.none || []).length ? `<i>산 기록 없음 ${esc(b.none.join(' · '))}</i>` : ''}<button type="button" class="fl-go fd-rfqb" data-fl="rfq" data-no="${esc(r.no)}">견적요청서</button></div>`;
 }
-function sugHtml(r) {   // 견적 요청 추천 — 지난 구매 단가가 있는 매입처, 지난 운임 (11/02 대표 "배차 요청 상세엔 견적 요청 어디에 하는 게 좋을지") — flow_detail.py · buy_suggest.py
-  const g = r.sug, v = (g.v || []).map((x, i) => `<div class="fd-sv"><b class="${i === 0 ? 'top' : ''}">${esc(x.n)}</b><span>${x.c}/${x.of} 품목</span><em>단가 ${esc(x.d)}</em>${(x.miss || []).length ? `<i>산 기록 없음 ${esc(x.miss.join(' · '))}</i>` : ''}</div>`).join('');
+function sugHtml(r) {   // 품목별 단가 — 이카운트 구매 입력 단가(부가세 별도), 매입처마다 최근 값, 근거 전표 (11/02 대표 "단가 데이터는 정확해야 · 근거도") — flow_detail.py
+  const g = r.sug, won = (n) => Number(n).toLocaleString();
+  const ev = (x) => `<span class="fd-pd">${esc(x.d)}</span>${x.S ? `<button type="button" class="fd-ps" data-fl="pdf" data-k="구매" data-s="${esc(x.S)}" title="${esc(x.i || '')}">${esc(x.s)}</button>` : `<span class="fd-ps na" title="${esc(x.i || '')}">${esc(x.s)}</span>`}`;
+  const cell = (x, top) => `<div class="fd-pc ${top ? 'top' : ''}"><b>${esc(x.n)}</b><span>${won(x.p)}</span>${ev(x)}</div>`;
+  const rows = (g.prices || []).map((p) => {
+    if ((p.opts || []).length) return `<div class="fd-pr"><div class="fd-pi">${esc(p.it)}<em>종류 확인</em></div><div class="fd-pv">${p.opts.map((o, i) => `<div class="fd-pc ${i === 0 ? 'top' : ''}"><i>${esc(o.k)}</i><b>${esc(o.n)}</b><span>${won(o.p)}</span>${ev(o)}</div>`).join('')}</div></div>`;
+    if (!(p.v || []).length) return `<div class="fd-pr"><div class="fd-pi">${esc(p.it)}</div><div class="fd-pv"><em class="fd-pn">${p.vague ? '품명 확인' : '산 기록 없음'}</em></div></div>`;
+    return `<div class="fd-pr"><div class="fd-pi">${esc(p.it)}${p.m ? `<em>${esc(p.m)}</em>` : ''}</div><div class="fd-pv">${p.v.map((x, i) => cell(x, i === 0)).join('')}</div></div>`;
+  }).join('');
   const f = (g.fare || []).map((x) => `<span>${esc(x.d)} ${esc(x.car)} ${Math.round(x.w / 10000)}만${x.fr ? ` · ${esc(x.fr)}` : ''}</span>`).join('');
-  return `<div class="fl-k">견적 요청 추천 ${(g.best && (g.best.pick || []).length) ? '' : `<button type="button" class="fl-go fd-rfqb" data-fl="rfq" data-no="${esc(r.no)}">견적요청서</button>`}</div><div class="fd-sug">${v || '<div class="fd-sv"><span>지난 구매 없음</span></div>'}${(g.combo || []).length ? `<div class="fd-sv"><span>나눠 사기</span><em>${esc(g.combo.join(' · '))}</em></div>` : ''}</div>${f ? `<div class="fl-k">지난 운임${g.reg ? ` · ${esc(g.reg)}` : ''}</div><div class="fd-fare">${f}</div>` : ''}`;
+  return `<div class="fl-k">품목별 단가 · 이카운트 구매 (부가세 별도) ${(g.best && (g.best.pick || []).length) ? '' : `<button type="button" class="fl-go fd-rfqb" data-fl="rfq" data-no="${esc(r.no)}">견적요청서</button>`}</div><div class="fd-prs">${rows || '<div class="fd-pr"><em class="fd-pn">지난 구매 없음</em></div>'}</div>${f ? `<div class="fl-k">지난 운임${g.reg ? ` · ${esc(g.reg)}` : ''}</div><div class="fd-fare">${f}</div>` : ''}`;
 }
 function rqHtml(r) {
   const q = r.rq; if (!q) return '';

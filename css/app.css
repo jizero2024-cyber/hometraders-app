@@ -1524,3 +1524,13 @@ body.kiosk .ki-t i, body.kiosk .ki-hi, body.kiosk .ki-out i, body.kiosk .ki-s h2
 .fd-best em { font-style: normal; font-size: 11.5px; font-weight: 800; color: #fff; background: #E8732C; border-radius: 6px; padding: 2px 7px; } .fd-best.one em { background: #2E7D4F; }
 .fd-best b { font-weight: 800; color: #1A1A1A; font-size: 15px; } .fd-best span { color: #555; font-weight: 700; } .fd-best .fd-bf { color: #B4531B; }
 .fd-best i { font-style: normal; color: #E03E2D; font-size: 12.5px; font-weight: 600; } .fd-best .fd-rfqb { margin-left: auto; }
+.fd-prs { display: flex; flex-direction: column; }   /* 품목별 단가 (11/02) */
+.fd-pr { display: grid; grid-template-columns: minmax(120px, 200px) 1fr; gap: 10px; padding: 8px 0; border-bottom: 1px solid #F2F0EC; align-items: start; }
+.fd-pi { font-weight: 800; color: #111; font-size: 14px; } .fd-pi em { display: block; font-style: normal; font-weight: 500; font-size: 11.5px; color: #8A877F; margin-top: 2px; }
+.fd-pv { display: flex; flex-wrap: wrap; gap: 6px; }
+.fd-pc { display: inline-flex; align-items: baseline; gap: 6px; padding: 4px 10px; border-radius: 8px; background: #fff; border: 1px solid #EEECE7; font-size: 13px; }
+.fd-pc.top { border-color: #2E7D4F; background: #F1F8F3; } .fd-pc b { font-weight: 800; color: #1A1A1A; } .fd-pc span { font-weight: 800; color: #111; } .fd-pc i { font-style: normal; font-size: 12px; color: #6B4FA0; font-weight: 700; }
+.fd-pd { font-weight: 600 !important; color: #8A877F !important; font-size: 12px; }
+.fd-ps { border: 0; background: #EAF4EC; color: #2E7D4F; font: inherit; font-size: 11.5px; font-weight: 700; padding: 1px 6px; border-radius: 6px; cursor: pointer; } .fd-ps.na { background: #F4F3F0; color: #8A877F; }
+.fd-pn { font-style: normal; color: #A3A09A; font-size: 13px; }
+@media (max-width: 600px) { .fd-pr { grid-template-columns: 1fr; gap: 4px; } }
