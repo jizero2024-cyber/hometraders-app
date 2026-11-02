@@ -1504,3 +1504,4 @@ body.kiosk .ki-t i, body.kiosk .ki-hi, body.kiosk .ki-out i, body.kiosk .ki-s h2
 .fl-acts.dz .fl-stm > :nth-child(3) { justify-content: flex-start; padding: 0 4px; }
 .fl-list:has(.fl-acts.dz) { --acts: 808px !important; }   /* 칸 고정 합 — 차량 글자와 안 겹치게 */
 @media (min-width: 821px) { .hm-body.top .fl-list:has(.fl-acts.dz) .fl-lh, .hm-body.top .fl-list:has(.fl-acts.dz) .fl-row, body.hm-wall .fl-list:has(.fl-acts.dz) .fl-lh, body.hm-wall .fl-list:has(.fl-acts.dz) .fl-row { grid-template-columns: 96px minmax(150px, 1.5fr) minmax(140px, 1.4fr) minmax(130px, 1.2fr) 64px 812px !important; } }   /* 전표 전체 — 470px 고정을 이김 (11/02 "거래처 체크 겹쳐") */
+.fl-it.fl-memo { flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 0; }   /* 펼침 메모 — 덩어리를 위에서 아래로 (11/02 대표 "어긋나 보여") */
