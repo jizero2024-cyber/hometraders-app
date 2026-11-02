@@ -1621,3 +1621,41 @@ textarea.fd-rfqt { width: 100%; box-sizing: border-box; resize: vertical; border
 .fd-fare span { border: 0; }
 .fl-ev, .fl-ln { border: 0; }
 .fl-lh, .fl-row { border-bottom: 0; } .fl-row { margin-bottom: 2px; } .fl-row:hover { background: #F7F5F1; }   /* 리스트 줄 구분선도 뺌 (11/02) */
+/* 세로 화면 정리 (11/02 대표 "세로형에도 맞게 깔끔하게") — 선 없이, 버튼은 줄 아래 가로로 */
+@media (max-width: 820px) {
+  .hm-top .hm-in { flex-wrap: wrap; row-gap: 6px; padding: 10px 16px 0; align-items: center; }
+  .hm-top .hm-logo { height: 26px; }
+  .hm-top .hm-me { display: none; }
+  .hm-top .hm-link { font-size: 12px; color: #8A877F; padding: 4px 6px; order: 4; }
+  .hm-top .hm-farebtn { order: 2; font-size: 12.5px; padding: 5px 10px; }
+  .hm-top .sp { order: 3; flex: 1; }
+  .hm-top .hm-sheet { order: 3; font-size: 12.5px; padding: 5px 10px; }
+  .hm-top .hm-nav { order: 9; flex: 0 0 100%; overflow-x: auto; scrollbar-width: none; gap: 18px; border: 0; }
+  .hm-top .hm-nav::-webkit-scrollbar { display: none; }
+  .fl-sub.fl-tg { justify-content: flex-start; gap: 6px; margin: 4px 0 6px; }
+  .fl-sub.fl-tg .fl-sb { padding: 6px 12px; font-size: 13px; }
+  .fl-sub.fl-tg .fl-sync { margin-left: auto; }
+  .hm-body.top .fl-row, .fl-row { grid-template-columns: 58px minmax(0, 1fr) !important; grid-template-areas: "t n" "t d" "a a" !important; row-gap: 6px; padding: 12px 8px; }
+  .fl-row .fl-tm b { font-size: 15px; line-height: 1.2; } .fl-row .fl-tm span { font-size: 11.5px; }
+  .fl-row .fl-nmt { font-size: 15px; line-height: 1.35; }
+  .fl-row .fl-ds { font-size: 13.5px; line-height: 1.45; }
+  .hm-body.top .fl-row .fl-acts, .fl-row .fl-acts { grid-area: a; flex-direction: row !important; flex-wrap: wrap; justify-content: flex-start; gap: 6px; margin-top: 2px; }
+  .fl-row .fl-acts .fl-go, .fl-row .fl-acts .fl-gh { height: 32px; padding: 0 12px; font-size: 12.5px; }
+  .fl-det { margin: 2px 0 10px; padding: 12px; border-radius: 14px; }
+  .fd-tw { padding: 0; background: transparent; overflow: visible; }
+  .fd-itab, .fd-itab tbody { display: block; width: 100%; }
+  .fd-itab thead { display: none; }
+  .fd-itab tbody tr { display: grid; grid-template-columns: auto auto 1fr auto auto; grid-template-areas: "it it it q q" "src src due buy sale" "rd rw rw rw rw"; gap: 4px 10px; align-items: center; background: #fff; border-radius: 12px; padding: 10px 12px; margin-bottom: 6px; }
+  .fd-itab td { padding: 0 !important; border: 0 !important; white-space: normal; font-size: 13px; }
+  .fd-itab td:nth-child(1) { grid-area: rd; color: #8A877F; font-weight: 600; font-size: 12px; }
+  .fd-itab td:nth-child(2) { grid-area: rw; color: #8A877F; font-weight: 600; font-size: 12px; }
+  .fd-itab td:nth-child(3) { grid-area: it; font-size: 14.5px; min-width: 0 !important; }
+  .fd-itab td:nth-child(4) { grid-area: q; text-align: right; font-weight: 800; }
+  .fd-itab td:nth-child(5) { grid-area: src; }
+  .fd-itab td:nth-child(6) { grid-area: due; color: #555; } .fd-itab td:nth-child(6)::before { content: '납기 '; color: #A3A09A; font-weight: 600; }
+  .fd-itab td:nth-child(7) { grid-area: buy; } .fd-itab td:nth-child(7)::before { content: '구매 '; color: #A3A09A; font-weight: 600; font-size: 12px; }
+  .fd-itab td:nth-child(8) { grid-area: sale; } .fd-itab td:nth-child(8)::before { content: '판매 '; color: #A3A09A; font-weight: 600; font-size: 12px; }
+  .fd-best, .fd-bestd > summary { flex-wrap: wrap; gap: 6px 10px; padding: 10px 12px; }
+  .fd-bestd > summary .fd-rfqb { margin-left: 0; }
+  .fl-why { font-size: 12px; }
+}
