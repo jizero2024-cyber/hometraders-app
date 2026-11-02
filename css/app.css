@@ -1665,3 +1665,7 @@ textarea.fd-rfqt { width: 100%; box-sizing: border-box; resize: vertical; border
   .fl-row .fl-tm b { font-size: 14px; white-space: nowrap; }
 }
 @media (max-width: 820px) { .hm-body.top .fl-row .fl-tm b { font-size: 15px !important; white-space: nowrap; line-height: 1.25; } }
+/* 펼친 줄 + 상세를 한 덩어리로 — 아주 연한 회색 하나로 이어 붙임 (11/02 대표 "따로 놀아 보여") */
+.fl-row.sel, .hm-body.top .fl-row.sel { background: #F4F3F0 !important; border-radius: 14px 14px 0 0 !important; margin-bottom: 0 !important; box-shadow: none !important; }
+.fl-row.sel + .fl-det { background: #F4F3F0 !important; margin: 0 0 14px !important; border-radius: 0 0 14px 14px !important; padding-top: 6px; border: 0 !important; box-shadow: none !important; }
+.fl-row.sel + .fl-det .fd-tw, .fl-row.sel + .fl-det .fd-fare span { background: #fff; }
