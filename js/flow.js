@@ -108,14 +108,14 @@ const DATE_FIRST = ['기록', '입력 누락', '입력 완료', '전표', '전�
 const saleSlips = (r) => [...new Set((r.lines || []).filter((l) => l.k === '판매' && l.st === '입력').flatMap((l) => l.slips || []))];
 function docHtml(r) {   // 전표 전체 — 맨 오른쪽 서류 변환 (11/02 대표)
   const sl = saleSlips(r), no = esc(r.no), b = (a, t, x) => `<button type="button" data-fl="${a}" data-no="${no}" ${x || ''}>${t}</button>`;
-  return `<details class="fl-doc"><summary class="fl-gh">서류</summary><div class="fl-docm">${b('stmtgo', '거래명세표', sl.length ? `data-s="${esc(sl.join(','))}"` : 'disabled')}${b('deliv', '납품확인서', sl.length ? '' : 'disabled')}${b('approval', '자재승인원')}
+  return `<details class="fl-doc"><summary class="fl-gh">서류변환</summary><div class="fl-docm">${b('stmtgo', '홈트 명세표', sl.length ? `data-s="${esc(sl.join(','))}"` : 'disabled')}${b('deliv', '납품확인서', sl.length ? '' : 'disabled')}${b('approval', '자재승인원')}
     <button type="button" data-hm="frame" data-src="./deposit.html?embed=1" data-title="입금표">입금표</button>${b('quote', '견적서')}${b('esong', '전자 송장')}</div></details>`;
 }
 function stmtHtml(r) {   // 거래명세표 — 판매전표 PDF 보기 · 전달했는지 (10/28 대표)
   const sl = saleSlips(r);
   if (!sl.length) return '';
   const mk = FL.marks[`sent:${r.no}`];
-  return `<span class="fl-stm"><button type="button" class="fl-in ok" data-fl="pdf" data-k="판매" data-s="${esc(sl.join(','))}">명세표 ›</button><button type="button" class="fl-gh" data-fl="stmtgo" data-no="${esc(r.no)}" data-s="${esc(sl.join(','))}">변환</button>
+  return `<span class="fl-stm"><button type="button" class="fl-in ok" data-fl="pdf" data-k="판매" data-s="${esc(sl.join(','))}">이카운트 명세표</button><button type="button" class="fl-gh" data-fl="stmtgo" data-no="${esc(r.no)}" data-s="${esc(sl.join(','))}">홈트 명세표</button>
     ${mk ? `<span class="fl-sent on" title="전달 ${esc(String(mk.created_at || '').slice(5, 10).replace('-', '/'))}"><i>✓</i>거래처 전달</span>` : `<button type="button" class="fl-sent" data-fl="sent" data-no="${esc(r.no)}"><i></i>거래처 전달</button>`}</span>`;
 }
 function rowHtml(r) {
