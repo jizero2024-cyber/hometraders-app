@@ -460,6 +460,10 @@ const CLIENTS = {                                   // 받는 곳 정보 (알고
   공간제작소: { ceo: '박정진', biz: '812-88-00492', addr: '경기도 화성시 우정읍 매향리 989', mail: 'gg-arch@naver.com' },
 };
 
+const CLIENTS_OLD = {                               // 바뀌기 전 정보 — until 전날 건까지 (에이스 8/27 명세서: 곽동욱 · 매향리 2-22)
+  공간제작소: { until: '20261001', ceo: '곽동욱', addr: '경기도 화성시 우정읍 매향리 2-22' },
+};
+
 const ACE = {
   name: '에이스 목재 산업', ceo: '이혜원', biz: '373-26-00984',
   addr: '인천광역시 서구 고산후로 95번길 24', mail: 'lhw6150@naver.com',
@@ -472,7 +476,7 @@ function aceHtml(doc) {
   const no = `제 ${doc.ymd.slice(2)}-${String(doc.slip || '').split('-')[1] || doc.seq}호`;
   const iso = `${doc.ymd.slice(0, 4)}-${doc.ymd.slice(4, 6)}-${doc.ymd.slice(6, 8)}`;
   const ck = nfc(doc.partner).replace(/\(주\)|주식회사|㈜|\s/g, '');
-  const cl = CLIENTS[ck] || {};
+  const cl = { ...(CLIENTS[ck] || {}), ...((CLIENTS_OLD[ck] && doc.ymd < CLIENTS_OLD[ck].until) ? CLIENTS_OLD[ck] : {}) };   // 9월까지 건은 그때 대표자·주소 (11/03 대표 "예전 명세서 형식으로")
   const rows = doc.items.map((it, i) => `<tr>
       <td class="c">${i + 1}</td><td class="nm">${esc2(it.name).replace(/([_*(])/g, '$1&#8203;')}</td>
       <td class="c">${esc2(it.spec || '')}</td><td class="c">${esc2(it.bd || '')}</td>
@@ -493,7 +497,7 @@ function aceHtml(doc) {
     </table>
     <p class="say">아래와 같이 납품하였음을 확인합니다.</p>
     <table class="total"><colgroup><col style="width:52%"><col></colgroup>
-      <tr><td class="hd">합계금액 (공급가액 + 세액)</td><td class="hd sum">${won(supply + vat)}원</td></tr></table>
+      <tr><td class="hd">합계금액 (공급가액 + 세액)</td><td class="hd sum">일금　${won(supply + vat)}　원정</td></tr></table>
     <table class="items ace">
       <colgroup><col style="width:5%"><col style="width:22%"><col style="width:14%"><col style="width:10%"><col style="width:9%"><col style="width:11%"><col style="width:15%"><col style="width:14%"></colgroup>
       <thead><tr><th>NO</th><th>품　명</th><th>규　격</th><th>B/D</th><th>수량</th><th>단가</th><th>공급가액</th><th>세액</th></tr></thead>
@@ -504,6 +508,7 @@ function aceHtml(doc) {
     <table class="foot2"><colgroup><col style="width:18%"><col></colgroup>
       <tr><td class="lb">납기 / 납품일</td><td>${d.getMonth() + 1}월 ${d.getDate()}일</td></tr>
       <tr><td class="lb">입금계좌</td><td>${ACE.bank}</td></tr>
+      <tr><td class="lb">특기사항</td><td></td></tr>
 </table>
   </section>`;
 }
