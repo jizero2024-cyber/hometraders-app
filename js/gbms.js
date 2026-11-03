@@ -55,7 +55,7 @@ export async function load(biz, force) {
     sales.forEach((r) => { const k = slipKey(r.slip); if (r.board_no && !noOf[k]) noOf[k] = r.board_no; });
     const manual = docs.filter((x) => x.manual && x.manual.items).map(manualDoc);   // 직접 등록한 장 (10/23)
     G.list = [...list.map((d) => ({ ...d, id: docId(d), total: ovTotal(docId(d)) ?? itemsTotal(d) })), ...manual]
-      .map((d) => ({ ...d, site0: d.site, site: ((G.docs[d.id] || {}).manual || {}).site || d.site, reg: d.manual ? (d.reg || '') : (biz !== 'ace' && d.ymd < HIDE_BEFORE) ? '' : (d.slips || [d.slip]).map((sl) => regOf[sl]).filter(Boolean).sort()[0] || '',   // 7~9월은 언제 전달했는지 몰라 등록일 '-' (11/03 대표) no: d.manual ? '' : (d.slips || [d.slip]).map((sl) => noOf[slipKey(sl)]).find(Boolean) || '' }))   // 직접 등록한 장은 번호가 이카운트 전표가 아님
+      .map((d) => ({ ...d, site0: d.site, site: ((G.docs[d.id] || {}).manual || {}).site || d.site, reg: d.manual ? (d.reg || '') : (biz !== 'ace' && d.ymd < HIDE_BEFORE) ? '' : (d.slips || [d.slip]).map((sl) => regOf[sl]).filter(Boolean).sort()[0] || '', no: d.manual ? '' : (d.slips || [d.slip]).map((sl) => noOf[slipKey(sl)]).find(Boolean) || '' }))   // 직접 등록한 장은 번호가 이카운트 전표가 아님 · 7~9월(홈트)은 언제 전달했는지 몰라 등록일 '-' (11/03 대표)
       .filter((d) => (G.docs[d.id] || {}).status !== '삭제')                         // 지운 장은 안 보임 (10/23)
       .filter((d) => biz === 'ace' || d.ymd >= HIDE_BEFORE || (G.docs[d.id] || {}).status === '최종완료')   // 숨김은 홈트만 — 에이스 9/10·9/17 이 빠졌던 것 (11/03)   // 7~9월은 입금 끝난(최종완료) 장만 보임 (11/03 대표) — 나머지는 올릴 전표로
       .filter((d) => ctx.role() !== 'view' || (G.docs[d.id] || {}).tax_name || (G.docs[d.id] || {}).status === '최종완료')        // 세금계산서 안 넣은 장은 공간제작소 계정엔 일단 숨김 (11/03 대표) — 직원은 계산서 넣으려고 그대로 봄
