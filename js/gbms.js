@@ -46,7 +46,7 @@ export async function load(biz, force) {
     const lineNo = (id) => { const p = String(id).split('|')[1] || ''; return /^\d+$/.test(p) ? +p : 1e6; };   // 전표 줄 순서대로 (1, 2, … 10 — 붙인 실리콘·운반비는 뒤)
     sales.sort((a, b) => String(a.id).split('|')[0].localeCompare(String(b.id).split('|')[0]) || lineNo(a.id) - lineNo(b.id));
     const rows = sales.map((r) => [r.slip, r.partner, r.name, r.qty, r.price, r.supply, r.vat]);
-    const list = rows.length ? SM.splitSheets(SM.parseSales([[HEAD, ...rows]]), {}) : [];
+    const list = rows.length ? SM.splitSheets(SM.parseSales([[HEAD, ...rows]]), biz === 'ace' ? { perVoucher: true } : {}) : [];   // 에이스는 전표(=그날) 한 장 (11/03 대표 — 품목별로 나누는 건 홈트만)
     G.docs = Object.fromEntries(docs.map((x) => [x.id, x]));
     G.sales = sales;
     const regOf = {};
@@ -67,7 +67,7 @@ export async function load(biz, force) {
         ws.forEach((x) => { G.waitMeta[x.slip] = x; });   // 전표 → {pdf, who}
         const w = ws.flatMap((x) => x.rows || []);
         w.sort((a, b) => String(a.id).split('|')[0].localeCompare(String(b.id).split('|')[0]) || lineNo(a.id) - lineNo(b.id));
-        const wl = w.length ? SM.splitSheets(SM.parseSales([[HEAD, ...w.map((r) => [r.slip, r.partner, r.name, r.qty, r.price, r.supply, r.vat])]]), {}) : [];
+        const wl = w.length ? SM.splitSheets(SM.parseSales([[HEAD, ...w.map((r) => [r.slip, r.partner, r.name, r.qty, r.price, r.supply, r.vat])]]), wb === 'ace' ? { perVoucher: true } : {}) : [];
         const used = new Set();                          // 장에 보이는 품목 줄 = 올라갈 줄 (묶인 장은 d.slips 가 비어 첫 전표 줄만 가던 것 — 11/03)
         const rowsOf = (d) => d.items.map((it) => { const r = w.find((x, k) => !used.has(k) && x.ymd === d.ymd && Math.round(+x.supply) === Math.round(it.supply) && Math.round(+x.vat) === Math.round(it.vat) && +x.qty === +it.qty && String(x.name).includes(String(it.name).slice(0, 12))); if (r) used.add(w.indexOf(r)); return r; }).filter(Boolean);
         G.waitAll.push(...wl.map((d) => ({ ...d, biz: wb, id: docId(d), total: itemsTotal(d), rows: rowsOf(d) })));
