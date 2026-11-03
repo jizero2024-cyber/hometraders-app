@@ -1,7 +1,7 @@
 // 공간제작소 BMS — 거래명세표 · 세금계산서 · 기안 (2026-10-23, 시안 https://claude.ai/artifact/Kmkve915nhwknjJYE76xGE)
 // 줄 = 이카운트 판매현황의 공간제작소 판매 줄(gonggan_sales, 맥 도우미가 올림) → 거래명세표 변환기(stmt.js)로 장마다 나눔.
 // 장마다 상태·세금계산서·수정요청 사유 = gonggan_docs. 홈트레이더스·현구 과장님 같은 화면.
-import * as S from './gonggan-store.js?v=9';   // 우리 업무 앱 저장소와 따로 (10/23)
+import * as S from './gonggan-store.js?v=10';   // 우리 업무 앱 저장소와 따로 (10/23)
 import * as SM from './stmt.js?v=101';
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -48,6 +48,7 @@ export async function load(biz, force) {
     const rows = sales.map((r) => [r.slip, r.partner, r.name, r.qty, r.price, r.supply, r.vat]);
     const list = rows.length ? SM.splitSheets(SM.parseSales([[HEAD, ...rows]]), {}) : [];
     G.docs = Object.fromEntries(docs.map((x) => [x.id, x]));
+    G.sales = sales;
     const regOf = {};
     sales.forEach((r) => { const k = slipKey(r.slip); if (r.reg && (!regOf[k] || r.reg < regOf[k])) regOf[k] = r.reg; });
     const noOf = {};                                      // 판매전표 → 출고일보 출고번호 (10/26 대표 "맨 왼쪽에 표시")
@@ -80,7 +81,7 @@ export async function load(biz, force) {
 const statusPick = (id, st) => LIM() ? `<span style="display:inline-block;padding:4px 10px;border-radius:12px;font-size:12px;font-weight:700;${BADGE[st]}">${st}</span>` : `<select data-gb="setstatus" data-id="${esc(id)}" aria-label="상태 바꾸기" style="appearance:none;-webkit-appearance:none;border:0;cursor:pointer;padding:4px 10px;border-radius:12px;font:inherit;font-size:12px;font-weight:700;text-align:center;${BADGE[st]}">${STATUS.slice(1).map((k) => `<option style="color:#1F2328;background:#fff" ${k === st ? 'selected' : ''}>${k}</option>`).join('')}</select>`;
 // 보기 계정(view) — 수정요청 · 기안 확정만 (10/27 대표). 최종완료는 우리가 입금 확인 후. 고치기·넣기·지우기 버튼은 안 보이고 눌려도 안 됨
 const LIM = () => ctx.role() === 'view';
-const LIM_ACTS = new Set(['editsite', 'edittitle', 'edittotal', 'delrow', 'delstmt', 'deltax', 'replace', 'addstmt', 'addtax', 'pend-save', 'pend-cancel', 'editno', 'reg', 'reg-save']);
+const LIM_ACTS = new Set(['revert', 'editsite', 'edittitle', 'edittotal', 'delrow', 'delstmt', 'deltax', 'replace', 'addstmt', 'addtax', 'pend-save', 'pend-cancel', 'editno', 'reg', 'reg-save']);
 // 10/27 대표 "기안확정이랑 수정요청 그리고 다운받기만" — 이 계정은 아래 보기·다운로드·기안 확정·수정요청만 (나머지는 눌려도 안 됨)
 const LIM_OK = new Set(['row', 'close', 'overlay', 'panel', 'zoom', 'unzoom', 'both', 'draft', 'reject', 'reason', 'month', 'status', 'page', 'size', 'site', 'q', 'feed', 'biz', 'logout', 'copyno', 'pdf', 'copy', 'jpg', 'view']);
 const limHtml = (h) => (!LIM() ? h : h.replace(/<button[^>]*data-gb="(?:editsite|edittitle|edittotal|delrow|delstmt|deltax|replace|addstmt|addtax|pend-save|editno)"[^>]*>[\s\S]*?<\/button>/g, '')
@@ -330,6 +331,18 @@ async function waitSkip(id) {
   catch (e) { G.err = e.message || String(e); }
   G.waitBusy = ''; await load(G.biz, true);
 }
+async function revertDoc(d) {   // 목록 장 → 올릴 전표 (11/03 대표 "되돌리기 버튼, 올릴 전표로 가지게") — 세금계산서·상태는 남아 다시 올리면 그대로
+  if (G.busy) return;
+  const used = new Set(), rs = (G.sales || []);
+  const rows = d.items.map((it) => { const r = rs.find((x, k) => !used.has(k) && x.ymd === d.ymd && Math.round(+x.supply) === Math.round(it.supply) && Math.round(+x.vat) === Math.round(it.vat) && +x.qty === +it.qty && String(x.name).includes(String(it.name).slice(0, 12))); if (r) used.add(rs.indexOf(r)); return r; }).filter(Boolean);
+  if (rows.length !== d.items.length) { alert(`이 장 품목 ${d.items.length}줄 중 ${rows.length}줄만 찾았어요. 새로고침 뒤 다시 해 주세요.`); return; }
+  if (!confirm(`올릴 전표로 되돌리시겠습니까?\n${md(d.ymd)} ${d.site || ''} ${won(d.total)}원`)) return;
+  const slips = [...new Set(rows.flatMap((r) => [String(r.id).split('|')[0], originOf(r.id)]))];
+  G.busy = 'revert'; ctx.rerender();
+  try { await S.revertSheet(slips, rows.map((r) => r.id)); G.open = null; S.askRefresh().catch(() => {}); }
+  catch (e) { alert(e.message || String(e)); }
+  G.busy = ''; await load(G.biz, true);
+}
 async function waitUp(id) {   // 장마다 [올리기] (11/03 대표 "올리기 버튼 어디 갔어") — 묶인 전표 줄까지 그 장 그대로
   const d = G.wait.find((x) => x.id === id); if (!d || G.waitBusy) return;
   if (d.rows.length !== d.items.length) { alert(`이 장 품목 ${d.items.length}줄 중 ${d.rows.length}줄만 찾았어요. 새로고침 뒤 다시 눌러 주세요.`); return; }
@@ -439,6 +452,7 @@ function modalHtml(d) {
           <span style="display:flex;align-items:center;gap:8px;font-size:13px;color:#5C5C5C">합계 ${won(d.total)}원 <button type="button" data-gb="edittotal" aria-label="합계 고치기" style="border:0;background:none;padding:2px;cursor:pointer;display:inline-flex;vertical-align:middle">${PEN}</button> ${isWaitSheet(d) ? '<span style="display:inline-block;padding:4px 10px;border-radius:12px;font-size:12px;font-weight:700;background:#FFF1E6;color:#B4471A">올릴 전표</span>' : statusPick(d.id, st)}${x.paid ? paidTag(x.paid) : ''}${x.delivered ? `<span style="font-size:12px;font-weight:700;color:#1E6B34">✓ ${esc(x.delivered)} 전달완료</span>` : ''}</span></div>
         <div style="display:flex;gap:8px;align-items:center">
           ${hasPend() ? `<button type="button" data-gb="pend-save" style="height:40px;padding:0 22px;border:0;border-radius:8px;background:#1F2328;color:#fff;font:inherit;font-size:15px;font-weight:800;cursor:pointer">저장</button>` : ''}
+          ${isWaitSheet(d) || d.manual || ctx.role() !== 'staff' ? '' : `<button type="button" data-gb="revert" style="height:40px;padding:0 14px;border:0;border-radius:8px;background:#FFF1E6;color:#B4471A;font:inherit;font-size:14px;font-weight:700;cursor:pointer">${G.busy === 'revert' ? '되돌리는 중…' : '되돌리기'}</button>`}
           ${isWaitSheet(d) ? '' : `<button type="button" data-gb="delrow" aria-label="목록에서 삭제" title="목록에서 삭제" style="width:40px;height:40px;border:1px solid #F1B5AF;border-radius:8px;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">${TRASH}</button>`}
           <button type="button" data-gb="both" style="height:40px;padding:0 16px;border:1px solid #1F2328;border-radius:8px;background:#fff;color:#1F2328;font:inherit;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">${DOWN}2장 한 번에 다운로드</button>
           <button type="button" data-gb="close" aria-label="닫기" style="width:40px;height:40px;border:1px solid #E6E4DF;border-radius:20px;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">${X}</button>
@@ -751,6 +765,7 @@ export function bind(app, c) {
       (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(done).catch(() => { const ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); done(); });
       return;
     }
+    if (a === 'revert' && cur) { revertDoc(cur); return; }
     if (a === 'wait-up' && id) { waitUp(id); return; }
     if (a === 'wait-apply') { waitApply(); return; }
     if (a === 'wait-pick' && id) { if (G.waitOn.has(id)) G.waitOn.delete(id); else G.waitOn.add(id); ctx.rerender(); return; }

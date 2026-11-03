@@ -60,7 +60,14 @@ export async function putWaitRows(slips, rows, reg) {
     logi: false, biz: 'homt', reg, updated_at: new Date().toISOString() }));
   const { error } = await sb.from('gonggan_sales').upsert(live, { onConflict: 'id' });
   if (error) throw new Error(error.message);
-  await sb.from('site_inbox').delete().in('id', slips.map((sl) => `gw:${sl}`));
+  await sb.from('site_inbox').delete().in('id', slips.flatMap((sl) => [`gw:${sl}`, `gb:${sl}`]));   // 되돌렸던 전표를 다시 올리면 되돌리기 표시도 지움
+}
+// [되돌리기] (11/03 대표) — 목록 줄을 지우고 맥에 '되돌림'(site_inbox kind=gback) 표시 → 다음 조회 때 올릴 전표로
+export async function revertSheet(slips, rowIds) {
+  const now = new Date().toISOString();
+  const { error: e1 } = await sb.from('site_inbox').upsert(slips.map((sl) => ({ id: `gb:${sl}`, kind: 'gback', status: 'gback', name: sl, body: '', created_by: 'site', updated_at: now })), { onConflict: 'id' });
+  if (e1) throw new Error(e1.message);
+  for (let k = 0; k < rowIds.length; k += 100) { const { error } = await sb.from('gonggan_sales').delete().in('id', rowIds.slice(k, k + 100)); if (error) throw new Error(error.message); }
 }
 // [새로고침] (11/03 대표 "올릴 전표 새로고침 버튼도 안 보여") — 사무실 맥 /api/refresh(이카운트 다시 받기 + 공간 조회 깨우기)를 site_inbox 'read' 로 부탁
 export async function askRefresh() {
