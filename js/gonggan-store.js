@@ -72,7 +72,7 @@ export async function revertSheet(slips, rowIds) {
 // [새로고침] (11/03 대표 "올릴 전표 새로고침 버튼도 안 보여") — 사무실 맥 /api/refresh(이카운트 다시 받기 + 공간 조회 깨우기)를 site_inbox 'read' 로 부탁
 export async function askRefresh() {
   const id = 'read_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-  const { error } = await sb.from('site_inbox').insert({ id, kind: 'read', name: '/api/refresh', status: 'wait', body: JSON.stringify({ path: '/api/refresh', body: {} }) });
+  const { error } = await sb.from('site_inbox').insert({ id, kind: 'read', name: '/api/refresh', status: 'wait', body: JSON.stringify({ path: '/api/refresh', body: { only: 'gonggan' } }) });   // 공간 협업툴은 판매현황만 (11/03, 약 35초)
   if (error) throw new Error(error.message);
   return id;
 }
