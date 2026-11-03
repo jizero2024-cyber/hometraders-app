@@ -54,7 +54,7 @@ const filt = (rs, k) => {
 const baseOf = (k) => (k === '전표 전체' ? [...new Set([...rowsOf('입력 누락'), ...baseOf('입력 확인'), ...baseOf('최종 완료')])] : k === '입력 확인' ? (FL.data ? FL.data.rows.filter((r) => (r.lines || []).length && r.steps.includes('입력 완료') && !slipOk(r)) : []) : k === '최종 완료' ? (FL.data ? FL.data.rows.filter((r) => (r.lines || []).length && slipOk(r)) : []) : k === '기록' ? rowsOf('기록') : k === '입력 완료' ? (FL.data ? FL.data.rows.filter((r) => (r.lines || []).length && (slipOk(r) || (r.steps.includes('입력 완료') && !slipTodo().includes(r)))) : []) : FL.all || FL.view === '견적' ? rowsOf(k) : TODAY_ONLY.includes(k) ? rowsOf(k).filter((r) => [r.day, r.arr].includes((FL.data || {}).today) || (k !== '출고 완료' && [md(r.day), r.arr].includes(tmr()))) : k === '견적' ? rowsOf(k).filter(dueToday) : rowsOf(k));
 const listOf = (k) => (barOn(k) ? filt(baseOf(k), k) : baseOf(k));
 const yst = () => { const x = new Date(Date.now() - 864e5); return `${String(x.getMonth() + 1).padStart(2, '0')}/${String(x.getDate()).padStart(2, '0')}`; };
-const slipOk = (r) => !!FL.marks[`slipok:${r.no}`] || (!!FL.marks[`slipok:${r.case}`] && allIn1(r));   // 전표 확인 체크 → 입력 완료로 (10/28 대표) · 출고 건마다 따로 — 두 번 나간 건은 판매도 두 번일 때가 있음 (11/02 대표)
+const slipOk = (r) => !!r.gdone || !!FL.marks[`slipok:${r.no}`] || (!!FL.marks[`slipok:${r.case}`] && allIn1(r));   // 전표 확인 체크 → 입력 완료로 (10/28 대표) · 출고 건마다 따로 — 두 번 나간 건은 판매도 두 번일 때가 있음 (11/02 대표)
 const SHIP = ['배차 완료', '출고 완료', '기록', '입력 누락', '입력 완료'];
 const slipTodo = () => (FL.data ? FL.data.rows.filter((r) => [yst(), (FL.data || {}).today, tmr()].includes(r.day) && r.steps.some((k) => SHIP.includes(k)) && allIn(r) && !slipOk(r)) : []);   // 어제·오늘·내일 배차된 건 중 사건 전체가 다 입력된 것
 const countOf = (k) => (k === '전표' ? slipTodo().length
