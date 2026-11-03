@@ -54,6 +54,7 @@ export async function load(biz, force) {
     G.list = [...list.map((d) => ({ ...d, id: docId(d), total: ovTotal(docId(d)) ?? itemsTotal(d) })), ...manual]
       .map((d) => ({ ...d, site0: d.site, site: ((G.docs[d.id] || {}).manual || {}).site || d.site, reg: d.manual ? (d.reg || '') : (d.slips || [d.slip]).map((sl) => regOf[sl]).filter(Boolean).sort()[0] || '', no: d.manual ? '' : (d.slips || [d.slip]).map((sl) => noOf[slipKey(sl)]).find(Boolean) || '' }))   // 직접 등록한 장은 번호가 이카운트 전표가 아님
       .filter((d) => (G.docs[d.id] || {}).status !== '삭제')                         // 지운 장은 안 보임 (10/23)
+      .filter((d) => ctx.role() !== 'view' || (G.docs[d.id] || {}).tax_name)        // 세금계산서 안 넣은 장은 공간제작소 계정엔 일단 숨김 (11/03 대표) — 직원은 계산서 넣으려고 그대로 봄
       .sort((a, b) => (b.ymd + b.slip).localeCompare(a.ymd + a.slip));
     G.wait = [];                                         // 올릴 전표 (10/27) — 홈트 목록에만, 공간제작소 계정은 안 봄
     if (ctx.role() === 'staff') {                        // 에이스 화면에서도 사이드바 숫자가 보이게 (10/27 대표)
