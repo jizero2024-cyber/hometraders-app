@@ -13,13 +13,14 @@ const KIND_ORDER = { 창고: 0, 거래처: 1, '지난 배차': 2, 택배: 3 };
 
 // 화면이 다시 그려져도(공유 DB 실시간 갱신 등) 적던 내용이 남도록 여기 보관
 // 보안: 화면 속성(data-*)에서 온 이름은 아래 목록에 있는 칸만 바꿈 · 공유 DB 로 가는 글자는 길이 제한 · 화면에 찍는 값은 모두 esc()
-const SIDES = new Set(['from', 'to']);
-const SET_KEYS = new Set(['pay', 'weight', 'sched', 'goods', 'sayAs']);
-const IN_KEYS = new Set(['vehicle', 'goods', 'weight', 'sched', 'from.addr', 'from.phone', 'to.name', 'to.addr', 'to.phone']);
+const SIDES = new Set(['from', 'from2', 'to']);
+const SET_KEYS = new Set(['pay', 'weight', 'sched', 'arr', 'goods', 'sayAs']);
+const IN_KEYS = new Set(['vehicle', 'goods', 'weight', 'sched', 'arr', 'from.addr', 'from2.addr', 'from2.name', 'from.phone', 'to.name', 'to.addr', 'to.phone']);
 const MAX = { name: 60, addr: 120, phone: 30, text: 100 };
 const LOAD_PHONE = '010-6207-8478';   // 상차지 연락처는 항상 이 번호 (10/22 대표) — 거래처 전화는 톡에 안 넣음
 const cut = (v, n) => String(v || '').trim().slice(0, n);
-const F = { from: null, to: null, cars: [], vehicle: '', pay: '현불', goods: '건축자재', weight: '', sched: '', say: false, sayAs: '홈트레이더스', open: '', q: { from: '', to: '' } };
+const F0 = () => ({ from: null, from2: null, two: false, to: null, cars: [], vehicle: '', pay: '현불', goods: '건축자재', weight: '', sched: '오늘 상차', arr: '', say: false, sayAs: '홈트레이더스', open: '', q: { from: '', from2: '', to: '' } });
+const F = F0();
 
 // ── 초성 검색 ─────────────────────────────────────────
 const CHO = 'ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ';
@@ -113,7 +114,7 @@ const IC = {
 };
 function endHtml(t, lab) {
   const p = F[t];
-  const ico = t === 'from' ? '<span class="hd-ico"><span class="hd-sq"></span></span>' : `<span class="hd-ico hd-pin">${IC.pin}</span>`;
+  const ico = t !== 'to' ? '<span class="hd-ico"><span class="hd-sq"></span></span>' : `<span class="hd-ico hd-pin">${IC.pin}</span>`;
   if (!p) return `<div class="hd-field hd-end hd-end-${t}">${ico}<div class="hd-end-lab">${lab}</div>
       <input class="hd-in hd-search hd-end-q" id="hd-q-${t}" data-hd-q="${t}" maxlength="60" value="${esc(F.q[t])}" placeholder="이름 · 주소 · 초성" autocomplete="off">
       <div class="hd-list" id="hd-list-${t}" style="${F.open === t ? '' : 'display:none'}">${listHtml(t)}</div>
@@ -122,11 +123,11 @@ function endHtml(t, lab) {
   return `<div class="hd-field hd-end hd-end-${t}">${ico}<div class="hd-end-lab">${lab}<span class="hd-kind">${esc(p.kind || '직접')}</span><button type="button" class="hd-x" data-hd="clear" data-t="${t}">바꾸기</button></div>
     ${direct ? `<input class="hd-in hd-end-q" data-hd-in="${t}.name" maxlength="60" value="${esc(p.name)}" placeholder="현장 이름">` : `<div class="hd-end-nm">${esc(p.name)}</div>`}
     <input class="hd-in hd-end-in" data-hd-in="${t}.addr" maxlength="120" value="${esc(p.addr)}" placeholder="주소">
-    ${t === 'from' ? `<div class="hd-end-sub">연락처 ${LOAD_PHONE}</div>`
+    ${t === 'from2' ? '' : t === 'from' ? `<div class="hd-end-sub">연락처 ${LOAD_PHONE}</div>`
       : `<input class="hd-in hd-end-in" data-hd-in="${t}.phone" maxlength="30" value="${esc(p.phone)}" placeholder="연락처" inputmode="tel">`}</div>`;
 }
 const routeCard = () => `<div class="hd-route">
-    <div class="hd-ends">${endHtml('from', '상차')}${endHtml('to', '하차')}</div>
+    <div class="hd-ends">${endHtml('from', F.two ? '1차 상차' : '상차')}${F.two ? `${endHtml('from2', '2차 상차')}<button type="button" class="hd-direct" data-hd="two">2차 상차지 빼기</button>` : '<button type="button" class="hd-direct" data-hd="two">＋ 2차 상차지</button>'}${endHtml('to', '하차')}</div>
     <button type="button" class="hd-swap" data-hd="swap" aria-label="상차 하차 바꾸기">${IC.swap}</button>
   </div>`;
 // 오늘 배차 요청 마감 15:00 (10/27 대표)
@@ -141,27 +142,20 @@ function dlHtml() {
 
 // 차량은 여러 대 골라도 됨 — "1톤 또는 1.4톤" (10/22 대표). 직접 적은 차량(F.vehicle)은 맨 뒤에
 const carText = () => [...VEHICLES.filter((v) => F.cars.includes(v)), F.vehicle.trim()].filter(Boolean).join(' 또는 ');
+// 배차요청톡 — 대표가 쓰는 짧은 양식 (11/03): 상차지(1차·2차) · 하차지 주소 → '1톤/현불/오늘 상차' → 도착 → 물건·무게·길이
 export function dispatchText() {
-  const L = ['배차 부탁드립니다!'];
+  const L = ['배차를 부탁드리겠습니다!'];
   if (F.say) L.push(`${F.sayAs} 물건이라고 하시면 됩니다!`);   // 상차지에서 누구 물건인지 — 매입처 직송·맡긴 물건 찾을 때 (이음물류 톡 10/22 분석)
-  L.push('');
-  const place = (lab, p) => {
-    L.push(`${lab}: ${p ? (p.name || p.addr || '○○') : '○○'}`);
-    if (p && p.addr && p.name) L.push(p.addr);
-    const phone = lab === '상차지' ? LOAD_PHONE : p && p.phone;
-    if (phone) L.push(`연락처: ${phone}`);
-    L.push('');
-  };
-  place('상차지', F.from);
-  place('하차지', F.to);
-  L.push(`차량: ${carText() || '○톤'}`);
-  L.push(`운임: ${F.pay}`);
-  L.push(`물건: ${F.goods.trim() || '○○'}`);
+  const at = (p) => (p ? (p.addr || '').trim() || p.name || '○○' : '○○');
+  if (F.two) { L.push(`1차 상차지: ${at(F.from)}`); L.push(`2차 상차지: ${at(F.from2)}`); } else L.push(`상차지: ${at(F.from)}`);
+  L.push(`하차지: ${at(F.to)}`);
+  L.push([carText() || '○톤', F.pay, F.sched.trim()].filter(Boolean).join('/'));
+  if (F.arr.trim()) L.push(F.arr.trim());
+  const g = F.goods.trim(), ln = W.longest(g);
+  if (g && g !== '건축자재') L.push(`물건: ${g}`);
   if (F.weight.trim()) L.push(`무게: ${F.weight.trim()}`);
-  const ln = W.longest(F.goods);
   if (ln) L.push(`길이: ${ln.m}m${ln.nm ? ` (${ln.nm})` : ''} — 적재함 길이 확인 부탁드립니다`);
-  if (F.sched.trim()) L.push(`일정: ${F.sched.trim()}`);
-  L.push('', '감사합니다!');
+  L.push(`상차 연락처: ${LOAD_PHONE}`);
   return L.join('\n');
 }
 
@@ -182,7 +176,7 @@ function applyPre() {
   const car = VEHICLES.find((v) => v === p.car);
   if (car) F.cars = [car]; else if (p.car) F.vehicle = cut(p.car, MAX.text);
   if (p.goods) F.goods = cut(p.goods, MAX.text);
-  if (p.sched) F.sched = cut(p.sched, MAX.text);
+  if (p.sched) F.arr = cut(`${p.sched} 착`, MAX.text);   // 출고 흐름 날짜·시간 = 도착 (11/03 양식)
   if (p.say) { F.say = true; F.sayAs = p.say === '에이스' ? '에이스' : '홈트레이더스'; }
 }
 const chip = (k, v, on) => `<button type="button" class="hd-chip ${on ? 'on' : ''}" data-hd="set" data-k="${k}" data-v="${esc(v)}">${esc(v)}</button>`;
@@ -208,8 +202,10 @@ export function homtScreen() {
       <input class="hd-in" data-hd-in="goods" maxlength="100" value="${esc(GOODS.includes(F.goods) ? '' : F.goods)}" placeholder="직접 입력 (예: 방킬라이 1PLT · 3m)"></div>
     <div class="hd-field"><label>${IC.scale} 무게</label><div class="hd-chips" id="hd-wt">${wtChips()}</div>
       <input class="hd-in" data-hd-in="weight" maxlength="100" value="${esc(F.weight === '최대중량' || (F.weight && F.weight === wtEst()) ? '' : F.weight)}" placeholder="예: 600kg"></div>
-    <div class="hd-field"><label>${IC.clock} 일정</label><div class="hd-chips">${chip('sched', '오늘 상차 / 내일 하차', F.sched === '오늘 상차 / 내일 하차')}${chip('sched', '바로 상차 / 바로 하차', F.sched === '바로 상차 / 바로 하차')}</div>
-      <input class="hd-in" data-hd-in="sched" maxlength="100" value="${esc(['오늘 상차 / 내일 하차', '바로 상차 / 바로 하차'].includes(F.sched) ? '' : F.sched)}" placeholder="예: 내일 오전 8시 착"></div>
+    <div class="hd-field"><label>${IC.clock} 상차</label><div class="hd-chips">${['오늘 상차', '바로 상차', '내일 상차'].map((v) => chip('sched', v, F.sched === v)).join('')}</div>
+      <input class="hd-in" data-hd-in="sched" maxlength="100" value="${esc(['오늘 상차', '바로 상차', '내일 상차'].includes(F.sched) ? '' : F.sched)}" placeholder="예: 오후 2시 상차"></div>
+    <div class="hd-field"><label>${IC.clock} 도착</label><div class="hd-chips">${['내일 오전 8시 착', '바로 하차'].map((v) => chip('arr', v, F.arr === v)).join('')}</div>
+      <input class="hd-in" data-hd-in="arr" maxlength="100" value="${esc(['내일 오전 8시 착', '바로 하차'].includes(F.arr) ? '' : F.arr)}" placeholder="예: 내일 오전 10시 착"></div>
     <div class="hd-field"><label>배차요청톡 미리보기</label><pre class="hd-pre" id="hd-pre">${esc(dispatchText())}</pre></div>
     ${dlHtml()}
     <button type="button" class="hd-go" data-hd="submit">배차 요청</button>
@@ -239,6 +235,7 @@ export function bind(app, ctx) {
     else if (a === 'set') { const key = t.dataset.k; if (!SET_KEYS.has(key)) return; F[key] = F[key] === t.dataset.v && key !== 'pay' && key !== 'sayAs' ? '' : t.dataset.v; ctx.rerender(); }
     else if (a === 'car') { const v = t.dataset.v; if (!VEHICLES.includes(v)) return; F.cars = F.cars.includes(v) ? F.cars.filter((x) => x !== v) : [...F.cars, v]; ctx.rerender(); }
     else if (a === 'say') { F.say = !!t.checked; ctx.rerender(); }
+    else if (a === 'two') { F.two = !F.two; if (!F.two) F.from2 = null; else F.open = 'from2'; ctx.rerender(); }
     else if (a === 'swap') { [F.from, F.to] = [F.to, F.from]; [F.q.from, F.q.to] = [F.q.to, F.q.from]; F.open = ''; ctx.rerender(); }
     else if (a === 'submit') submit(ctx);
   });
@@ -268,7 +265,7 @@ function focusQ(t) {
 // 새로 적은 곳·빈 주소 채운 곳을 거래처(공유 DB)에 저장 — 다음부터 다른 직원 화면에도 뜸. 있던 주소는 덮어쓰지 않음
 function savePlaces() {
   const whs = new Set(S.getWarehouses().map((w) => norm(w.name)));
-  [F.from, F.to].forEach((p) => {
+  [F.from, F.two && F.from2, F.to].filter(Boolean).forEach((p) => {
     if (!p || !p.name || p.kind === '택배' || p.kind === '현장' || whs.has(norm(p.name))) return;   // 직접 입력한 현장은 거래처가 아님
     const ex = S.getPartners().find((x) => norm(x.name) === norm(p.name));
     const addr = cut(p.addr, MAX.addr), phone = cut(p.phone, MAX.phone);
@@ -281,7 +278,7 @@ function savePlaces() {
 }
 
 function submit(ctx) {
-  if (!F.from || !F.to) return alert('상차지와 하차지를 골라 주세요.');
+  if (!F.from || !F.to || (F.two && !F.from2)) return alert('상차지와 하차지를 골라 주세요.');
   if (!F.to.name && !(F.to.addr || '').trim()) return alert('하차지 주소를 적어 주세요.');
   if (!carText()) return alert('차량을 골라 주세요.');
   const text = dispatchText();
@@ -291,12 +288,12 @@ function submit(ctx) {
       date: S.todayStr(), warehouse: cut(F.from.name, MAX.name), client: cut(F.to.name, MAX.name), status: '출고예정', method: '배차',
       name: cut(F.goods, MAX.text), qty: 0, unit: '', vehicle: cut(carText(), MAX.text), payment: F.pay,
       loadPlace: cut(F.from.name, MAX.name), loadAddr: cut(F.from.addr, MAX.addr), unloadPlace: cut(F.to.name || F.to.addr, MAX.name), unloadAddr: cut(F.to.addr, MAX.addr),
-      note: [FLOW_NO ? `배차 요청함 ${new Date().toTimeString().slice(0, 5)}(출고 흐름 ${FLOW_NO})` : '배차 요청함(홈트 첫 화면)', F.weight && `무게 ${cut(F.weight, MAX.phone)}`, F.sched && `일정 ${cut(F.sched, MAX.text)}`].filter(Boolean).join(' · '),
+      note: [FLOW_NO ? `배차 요청함 ${new Date().toTimeString().slice(0, 5)}(출고 흐름 ${FLOW_NO})` : '배차 요청함(홈트 첫 화면)', F.weight && `무게 ${cut(F.weight, MAX.phone)}`, F.two && F.from2 && `2차 상차 ${cut(F.from2.name || F.from2.addr, MAX.name)}`, F.sched && `일정 ${cut([F.sched, F.arr].filter(Boolean).join(' / '), MAX.text)}`].filter(Boolean).join(' · '),
     });
     if (FLOW_NO && S.setShipCase) S.setShipCase(FLOW_NO, { disp: `배차 요청함 ${new Date().toTimeString().slice(0, 5)}` }, (ctx && ctx.me && ctx.me()) || '').catch(() => {});   // 운영 DB 먼저
     if (FLOW_NO && S.addShipEvidence) S.addShipEvidence(FLOW_NO, `배차 상차지 ${cut(F.from.name, MAX.name)} | ${cut(F.from.addr || '', MAX.addr)} | ${F.from.kind || '직접'}`, (ctx && ctx.me && ctx.me()) || '').catch(() => {});   // 상차지 → 그 출고 건 구매처·출고처 (11/02 대표 "연동해")
     alert('배차요청톡을 복사했어요. 이음물류 카톡방에 붙여넣으세요.\n출고 목록에도 \'출고예정\'으로 등록했어요.');
-    Object.assign(F, { from: null, to: null, cars: [], vehicle: '', pay: '현불', goods: '건축자재', weight: '', sched: '', say: false, sayAs: '홈트레이더스', open: '', q: { from: '', to: '' } });
+    Object.assign(F, F0());
     ctx.rerender();
   };
   const fallback = () => {
