@@ -387,6 +387,25 @@ function docBox0(kind, d) {
   const del = kind === 'stmt' && canDelStmt ? `<button type="button" data-gb="delstmt" aria-label="거래명세표 지우기" style="position:absolute;bottom:8px;right:46px;width:30px;height:30px;border-radius:15px;border:1px solid #F1B5AF;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">${TRASH}</button>` : kind === 'tax' && staff ? `<button type="button" data-gb="deltax" aria-label="세금계산서 지우기" style="position:absolute;bottom:8px;right:46px;width:30px;height:30px;border-radius:15px;border:1px solid #F1B5AF;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">${TRASH}</button>` : '';   // 잘못 넣은 세금계산서 지우기 (10/23 대표)
   return `<figure data-gb="panel" data-k="${kind}" style="margin:0;display:flex;flex-direction:column;gap:8px;${G.panel === kind ? 'outline:2px solid #1D4F91;outline-offset:6px;border-radius:6px' : ''}">${cap}<div ${kind === 'tax' ? 'data-gb-drop="tax"' : ''} style="position:relative;aspect-ratio:1588/1400;border:1px solid #D9D9D9;border-radius:6px;overflow:hidden;background:#fff">${pdf && !pdfView(d.id, src) ? '<div style="height:100%;display:flex;align-items:center;justify-content:center;color:#6B6B6B;font-size:13px">불러오는 중…</div>' : `<button type="button" data-gb="zoom" data-k="${kind}" aria-label="${label} 크게 보기" style="display:flex;align-items:flex-start;justify-content:center;width:100%;height:100%;padding:0;border:0;background:none;cursor:zoom-in"><img src="${pdf ? pdfView(d.id, src) : src}" alt="${label}" style="max-width:100%;max-height:100%;object-fit:contain;display:block"></button>`}${del}${pen}</div></figure>`;
 }
+// 세금계산서 발행용 — 홈택스 칸 순서대로 하나씩 복사 (11/03 대표). 금액은 그 장 합계(고친 합계 있으면 그것) 기준
+const GG_BIZNO = '812-88-00492';
+function taxFields(d) {
+  const total = Math.round(d.total), ov = ovTotal(d.id) != null;
+  const supply = ov ? Math.round(total / 1.1) : d.items.reduce((a, i) => a + i.supply, 0), vat = total - supply;
+  const nm = (n) => String(n || '').replace(/\s*\[[^\]]*\]?\s*$/, '').trim();
+  const item = `${nm((d.items[0] || {}).name)}${d.items.length > 1 ? ` 외 ${d.items.length - 1}건` : ''}`;
+  return [['사업자번호', GG_BIZNO], ['작성일자', d.ymd], ['품목', item], ['공급가액', String(supply)], ['세액', String(vat)], ['합계', String(total)]];
+}
+function taxCopyBar(d) {
+  const f = taxFields(d), k = (G.taxStep || {})[d.id] || 0, nx = f[k % f.length];
+  const show = (lab, v) => (/공급가액|세액|합계/.test(lab) ? won(v) : lab === '작성일자' ? `${v.slice(0, 4)}-${v.slice(4, 6)}-${v.slice(6)}` : v);
+  return `<div style="display:flex;flex-direction:column;gap:8px;padding:12px 14px;border-radius:10px;background:#F4F7FB">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><b style="font-size:14px">세금계산서</b>
+      <button type="button" data-gb="taxcopy" data-k="next" style="height:34px;padding:0 14px;border:0;border-radius:8px;background:#1D4F91;color:#fff;font:inherit;font-size:13px;font-weight:700;cursor:pointer">복사 · ${esc(nx[0])} ${esc(show(nx[0], nx[1]))}</button>
+      <span style="flex:1"></span>
+      <button type="button" data-gb="taxcopy" data-k="reset" style="height:30px;padding:0 10px;border:0;border-radius:6px;background:transparent;color:#5C5C5C;font:inherit;font-size:12px;cursor:pointer">처음부터</button></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">${f.map(([lab, v], i) => `<button type="button" data-gb="taxcopy" data-k="${i}" style="height:30px;padding:0 10px;border:0;border-radius:15px;font:inherit;font-size:12px;cursor:pointer;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${i === k % f.length ? 'background:#1D4F91;color:#fff;font-weight:700' : i < k % f.length || (k >= f.length) ? 'background:#E3EAF4;color:#5C6B80' : 'background:#fff;color:#1F2328'}">${esc(lab)} ${esc(show(lab, v))}</button>`).join('')}</div></div>`;
+}
 // 거래명세표 품명 — 직원 계정만 글자로 복사 (11/03 대표 "품명은 복사 붙여넣기 할 수 있게")
 function nameList(d) {
   const rows = d.items.map((i, k) => `<div style="display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:6px;background:${k % 2 ? '#fff' : '#F7F7F5'}">
@@ -412,7 +431,7 @@ function modalHtml(d) {
           <button type="button" data-gb="close" aria-label="닫기" style="width:40px;height:40px;border:1px solid #E6E4DF;border-radius:20px;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">${X}</button>
         </div>
       </div>
-      <div class="gb-two" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px">${docBox('stmt', d)}${docBox('tax', d)}</div>${ctx.role() === 'staff' ? nameList(d) : ''}${isWaitSheet(d) ? waitInfo(d).filter((w) => w.pdf).map((w) => `<div style="font-size:13px;font-weight:600;color:#5C5C5C">이카운트 판매전표 ${esc(w.slip.slice(4))}</div><iframe src="${esc(w.pdf)}" title="판매전표 ${esc(w.slip)}" style="width:100%;height:60vh;border:0;border-radius:8px;background:#FAFAF8"></iframe>`).join('') : ''}
+      <div class="gb-two" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px">${docBox('stmt', d)}${docBox('tax', d)}</div>${ctx.role() === 'staff' ? taxCopyBar(d) + nameList(d) : ''}${isWaitSheet(d) ? waitInfo(d).filter((w) => w.pdf).map((w) => `<div style="font-size:13px;font-weight:600;color:#5C5C5C">이카운트 판매전표 ${esc(w.slip.slice(4))}</div><iframe src="${esc(w.pdf)}" title="판매전표 ${esc(w.slip)}" style="width:100%;height:60vh;border:0;border-radius:8px;background:#FAFAF8"></iframe>`).join('') : ''}
       ${st === '수정요청' && x.reason ? `<div style="padding:12px 14px;border-radius:8px;background:#FDECEC;border:1px solid #F5C2C0;color:#7A1A12;font-size:13px;line-height:1.5"><b>수정요청</b><br>${esc(x.reason)}</div>` : ''}
       <div style="margin:4px -22px -22px;padding:18px 22px 22px;background:#F3F4F6;border-radius:0 0 14px 14px;display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px">
         <label style="flex:1 1 480px;display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#3F3F46">수정요청 사유
@@ -701,6 +720,17 @@ export function bind(app, c) {
     if (LIM() && (LIM_ACTS.has(a) || !LIM_OK.has(a))) return;
     if (a === 'view') { G.view = t.dataset.v; G.open = null; if (G.biz === 'ace') { setBiz('homt'); ctx.go('gonggan'); } else ctx.rerender(); return; }   // 올릴 전표는 홈트 것 — 에이스에서 누르면 홈트로
     if (a === 'wait-sync') { waitSync(); return; }   // 올릴 전표 새로고침 (11/03)
+    if (a === 'taxcopy') {   // 계산서 칸 하나 복사 → 다음 칸으로
+      const d = G.open && findSheet(G.open); if (!d) return;
+      G.taxStep = G.taxStep || {};
+      const f = taxFields(d), cur = (G.taxStep[d.id] || 0) % f.length;
+      if (t.dataset.k === 'reset') { G.taxStep[d.id] = 0; ctx.rerender(); return; }
+      const i = t.dataset.k === 'next' ? cur : +t.dataset.k;
+      const txt = f[i][1];
+      const go = () => { G.taxStep[d.id] = (i + 1) % f.length; ctx.rerender(); };
+      (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(go).catch(() => { const ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); go(); });
+      return;
+    }
     if (a === 'copyname') {   // 품명 복사 — 전체는 줄마다 한 줄씩
       const d = G.open && findSheet(G.open); if (!d) return;
       const txt = t.dataset.k === 'all' ? d.items.map((i) => i.name).join('\n') : (d.items[+t.dataset.k] || {}).name || '';
