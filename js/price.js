@@ -28,7 +28,7 @@ function bodyHtml() {
   if (P.sort) items.sort((a, b) => ((b.m[P.sort] || {}).d || '').localeCompare((a.m[P.sort] || {}).d || '') || a.n.localeCompare(b.n));
   else items.sort((a, b) => a.c.localeCompare(b.c) || a.n.localeCompare(b.n));
   const head = `<tr><th class="pr-n">품목 <i>판가 · 부가세 별도 (구조재는 자당 · 포함)</i></th>${cols.map((c) => `<th data-pr="sort" data-k="${esc(c)}" class="pr-pc ${P.sort === c ? 'on' : ''}">${esc(c.replace(/\(주\)|주식회사|㈜/g, '').trim())}</th>`).join('')}</tr>`;
-  const cell = (n, r) => { if (!r) return '<td></td>'; const ja = jaOf(n, r.pr); const up = r.pp ? (r.pr > r.pp ? 'up' : 'dn') : ''; return `<td class="pr-num" title="${esc(r.p)} · ${esc(r.s)}${r.pp ? ` · 직전 ${won(r.pp)} (${md(r.pd)})` : ''}">${ja ? `<b class="${up}">자당 ${won(ja)}</b><i>전표 ${won(r.pr)} 별도</i>` : `<b class="${up}">${won(r.pr)}</b>`}<em>${md(r.d)}</em></td>`; };   // 구조재는 자당(부가세 포함)이 크게, 전표 단가는 작게 (11/03 대표)
+  const cell = (n, r) => { if (!r) return '<td></td>'; const ja = jaOf(n, r.pr); const up = r.pp ? (r.pr > r.pp ? 'up' : 'dn') : ''; return `<td class="pr-num pr-cl" data-pr="hist" data-n="${esc(n)}" data-p="${esc(r.p)}" title="${esc(r.p)} · ${esc(r.s)}${r.pp ? ` · 직전 ${won(r.pp)} (${md(r.pd)})` : ''}">${ja ? `<b class="${up}">자당 ${won(ja)}</b><i>전표 ${won(r.pr)} 별도</i>` : `<b class="${up}">${won(r.pr)}</b>`}<em>${md(r.d)}</em></td>`; };   // 구조재는 자당(부가세 포함)이 크게, 전표 단가는 작게 (11/03 대표)
   let lastC = null;
   const body = items.slice(0, P.lim).map((it) => { const g = !P.sort && it.c !== lastC; lastC = it.c; return `${g ? `<tr class="pr-cat"><td colspan="${cols.length + 1}">${esc(it.c)}</td></tr>` : ''}<tr><td class="pr-n">${esc(it.n)}</td>${cols.map((c) => cell(it.n, it.m[c])).join('')}</tr>`; }).join('');
   return { head, html: body || `<tr><td colspan="${cols.length + 1}" class="pr-none">없음</td></tr>`, n: items.length };
@@ -107,5 +107,15 @@ export function bind(app, c) {
     else if (a === 'by') { P.by = t.dataset.v; P.sort = ''; ctx.rerender(); }
     else if (a === 'sort') { const k = t.dataset.k; P.sort = P.sort === k ? '' : k; ctx.rerender(); }   // 거래처 칸 누르면 그 거래처에 판 품목이 위로
     else if (a === 'more') { P.lim += 1000; ctx.rerender(); }
+    else if (a === 'hist') {   // 그 거래처·품목 날짜별 판가 (11/03 대표 "누르면 날짜별로 판가 좌르륵")
+      const r = ((P.data && P.data.rows) || []).find((x) => x.k === 's' && x.n === t.dataset.n && x.p === t.dataset.p); if (!r) return;
+      const ov = document.createElement('div'); ov.className = 'hm-ov';
+      const h = r.h || [];
+      ov.innerHTML = `<div class="hm-modal pr-hm" role="dialog" aria-label="날짜별 판가"><div class="hm-mh"><b>${esc(r.p)}</b><button type="button" class="hm-x" aria-label="닫기">✕</button></div>
+        <div class="pr-hn">${esc(r.n)}</div><table class="pr-t"><thead><tr><th>날짜</th><th class="pr-num">${jaOf(r.n, r.pr) ? '자당 <i>포함</i>' : '판가 <i>별도</i>'}</th>${jaOf(r.n, r.pr) ? '<th class="pr-num">전표 단가 <i>별도</i></th>' : ''}<th class="pr-num">수량</th><th>전표</th></tr></thead>
+        <tbody>${h.map(([d, pr, q, sl], i) => { const ja = jaOf(r.n, pr), nx = h[i + 1]; const up = nx && nx[1] !== pr ? (pr > nx[1] ? 'up' : 'dn') : ''; return `<tr><td class="pr-d">${esc(d.replace(/-/g, '.'))}</td><td class="pr-num"><b class="${up}">${ja ? won(ja) : won(pr)}</b></td>${ja ? `<td class="pr-num">${won(pr)}</td>` : ''}<td class="pr-num">${won(q)}</td><td class="pr-s">${esc(sl.replace(/^(\d\d)(\d\d)-/, '$1/$2-'))}</td></tr>`; }).join('')}</tbody></table></div>`;
+      ov.addEventListener('click', (ev) => { if (ev.target === ov || ev.target.closest('.hm-x')) ov.remove(); });
+      document.body.appendChild(ov);
+    }
   });
 }

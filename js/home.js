@@ -4,7 +4,7 @@
 //   서류 화면은 모두 js/forms.js (같은 머리·카드·버튼)
 import * as S from './store-supabase.js?v=13';
 import * as FM from './forms.js?v=26';
-import * as PR from './price.js?v=4';   // 단가표 (11/03)
+import * as PR from './price.js?v=5';   // 단가표 (11/03)
 import * as FL from './flow.js?v=123';   // 맨 위 출고 흐름 (10/28)
 import * as CN from './cheonan.js?v=7';   // 천안 재고 (10/31)
 
