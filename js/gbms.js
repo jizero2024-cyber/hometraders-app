@@ -16,7 +16,7 @@ const DOWN = '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"
 const CHEV = '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" style="position:absolute;right:14px;top:12px;pointer-events:none"><path d="M4 6l4 4 4-4" fill="none" stroke="#1F2328" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
 
 const G = { biz: 'homt', loaded: '', loading: false, err: '', list: [], docs: {}, month: '전체', status: '전체', site: '', q: '', page: 1, size: 20,
-  pick: new Set(), open: null, zoom: '', reason: '', img: {}, full: {}, busy: '', reg: null, view: 'list', wait: [], waitBusy: '', waitMeta: {}, waitOpen: '', waitOff: new Set(), wimg: {} };
+  pick: new Set(), open: null, zoom: '', reason: '', img: {}, full: {}, busy: '', reg: null, view: 'list', wait: [], waitBusy: '', waitMeta: {}, waitOpen: '', waitOn: new Set(), wimg: {} };
 let ctx = { rerender: () => {}, goStart: () => {}, go: () => {}, me: () => '', slips: async () => ({ slips: [] }), helper: async () => ({}), helperUp: () => false };
 
 // ── 데이터 ─────────────────────────────────────────
@@ -269,14 +269,14 @@ function cardHtml(d) {
 // 올릴 전표 (10/27 대표) — 이카운트에 있는데 목록에 아직 없는 공간제작소 판매전표, [올리기] 누르면 바로 목록에
 function waitHtml() {
   const btn = (on) => `height:36px;padding:0 16px;border:0;border-radius:8px;font:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;${on ? 'background:#E6E4DF;color:#6B6B6B' : 'background:#E8732C;color:#fff'}`;
-  const picked = G.wait.filter((d) => !G.waitOff.has(d.id));
+  const picked = G.wait.filter((d) => G.waitOn.has(d.id));   // 처음엔 아무것도 안 고름 — 고른 장만 [반영하기]
   const sum = picked.reduce((a, d) => a + d.total, 0);
   return `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h1 class="gb-h1" style="margin:0;font-size:22px">올릴 전표 <span style="font-size:15px;color:#6B6B6B;font-weight:500;margin-left:4px">${G.wait.length}장</span></h1>
       <span style="flex:1"></span><button type="button" data-gb="wait-sync" ${G.waitSync ? 'disabled' : ''} style="height:36px;padding:0 14px;border:0;border-radius:8px;background:#F1EFEA;color:#3D3D3D;font:inherit;font-size:13px;font-weight:600;cursor:pointer">${G.waitSync ? '새로고침 중…' : '새로고침'}</button>
       <span style="font-size:13px;color:#5C5C5C">${picked.length}장 · <b style="color:#1F2328;font-variant-numeric:tabular-nums">${won(sum)}원</b></span>
       <button type="button" data-gb="wait-apply" ${G.waitBusy || !picked.length ? 'disabled' : ''} style="${btn(G.waitBusy || !picked.length)}">${G.waitBusy === 'apply' ? '반영하는 중…' : '반영하기'}</button></div>
     ${G.err ? `<div style="padding:12px 14px;border-radius:8px;background:#FDECEC;color:#7A1A12;font-size:13px">${esc(G.err)}</div>` : ''}
-    <div style="display:flex;flex-direction:column;gap:10px">${G.wait.map((d) => { const on = !G.waitOff.has(d.id), ss = waitSlips(d); return `<div data-gb="wait-open" data-id="${esc(d.id)}" style="background:${on ? '#fff' : '#F4F3F0'};border-radius:12px;padding:14px 16px;display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;cursor:pointer;${on ? 'box-shadow:0 1px 2px rgba(0,0,0,.06)' : 'opacity:.6'}">
+    <div style="display:flex;flex-direction:column;gap:10px">${G.wait.map((d) => { const on = G.waitOn.has(d.id), ss = waitSlips(d); return `<div data-gb="wait-open" data-id="${esc(d.id)}" style="background:#fff;border-radius:12px;padding:14px 16px;display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.06);${on ? 'outline:2px solid #E8732C;outline-offset:-2px' : ''}">
       <input type="checkbox" data-gb="wait-pick" data-id="${esc(d.id)}" ${on ? 'checked' : ''} aria-label="반영할 장" style="width:18px;height:18px;accent-color:#E8732C;cursor:pointer;flex:0 0 auto">
       <div style="flex:0 0 auto;min-width:84px"><b>${md(d.ymd)}</b><div style="font-size:11px;color:#6B6B6B">${esc(ss.map((x) => x.slice(4)).join(' + '))}</div></div>
       <div style="flex:1 1 280px;min-width:0"><div style="font-weight:600">${esc(d.site ? d.site + ' · ' : '')}${esc(itemTitle(d))}</div>
@@ -328,12 +328,12 @@ async function waitSkip(id) {
   G.waitBusy = ''; await load(G.biz, true);
 }
 async function waitApply() {
-  const picked = G.wait.filter((d) => !G.waitOff.has(d.id)); if (!picked.length || G.waitBusy) return;
+  const picked = G.wait.filter((d) => G.waitOn.has(d.id)); if (!picked.length || G.waitBusy) return;
   if (!confirm(`${picked.length}장을 공간제작소 목록에 반영하시겠습니까?\n${won(picked.reduce((a, d) => a + d.total, 0))}원`)) return;
   G.waitBusy = 'apply'; G.err = ''; ctx.rerender();
   const n = new Date(), p = (v) => String(v).padStart(2, '0');
   const reg = `${n.getFullYear()}-${p(n.getMonth() + 1)}-${p(n.getDate())} ${p(n.getHours())}:${p(n.getMinutes())}`;
-  try { for (const d of picked) await S.putWaitRows(waitSlips(d), d.rows, reg); G.waitOff = new Set(); G.waitOpen = ''; }
+  try { for (const d of picked) await S.putWaitRows(waitSlips(d), d.rows, reg); G.waitOn = new Set(); G.waitOpen = ''; }
   catch (e) { G.err = e.message || String(e); }
   G.waitBusy = ''; await load(G.biz, true);
 }
@@ -693,7 +693,7 @@ export function bind(app, c) {
     if (a === 'view') { G.view = t.dataset.v; G.open = null; if (G.biz === 'ace') { setBiz('homt'); ctx.go('gonggan'); } else ctx.rerender(); return; }   // 올릴 전표는 홈트 것 — 에이스에서 누르면 홈트로
     if (a === 'wait-sync') { waitSync(); return; }   // 올릴 전표 새로고침 (11/03)
     if (a === 'wait-apply') { waitApply(); return; }
-    if (a === 'wait-pick' && id) { if (G.waitOff.has(id)) G.waitOff.delete(id); else G.waitOff.add(id); ctx.rerender(); return; }
+    if (a === 'wait-pick' && id) { if (G.waitOn.has(id)) G.waitOn.delete(id); else G.waitOn.add(id); ctx.rerender(); return; }
     if (a === 'wait-skip' && id) { waitSkip(id); return; }
     if (a === 'wait-open' && id) { if (e.target.closest('button,input')) return; G.open = id; G.panel = 'tax'; ctx.rerender(); return; }
     if (a === 'wait-close' || (a === 'wait-bg' && e.target === t)) { G.waitOpen = ''; ctx.rerender(); return; }
