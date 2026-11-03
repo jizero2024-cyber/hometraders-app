@@ -10,7 +10,7 @@ import * as CN from './cheonan.js?v=7';   // 천안 재고 (10/31)
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const won = (n) => Math.round(Number(n) || 0).toLocaleString();
 const H = { gwait: 0, fare: null, fareErr: '', inbox: {}, inboxErr: '', at: 0, loading: false, fareAll: false, toast: '', busy: false, box: false, text: '', frame: null };
-try { H.grp = sessionStorage.getItem('ht_grp') || ''; if (H.grp === '창고') H.grp = ''; } catch (_) { /* 무시 */ }   // 새로고침해도 창고·거래처 묶음 그대로 (11/02)
+try { H.grp = sessionStorage.getItem('ht_grp') || ''; if (H.grp === '창고' || H.grp === '거래처') H.grp = ''; } catch (_) { /* 무시 */ }   // 새로고침해도 창고·거래처 묶음 그대로 (11/02)
 let ctx = { rerender: () => {}, go: () => {}, me: () => '', helper: async () => ({}) };
 
 const svg = (stroke, d) => `<svg viewBox="0 0 24 24" style="width:38px;height:38px;fill:none;stroke:${stroke};stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round">${d}</svg>`;
@@ -46,7 +46,13 @@ function top(back, nav) {
     ${nav ? navHtml() : ''}
     ${fareBadge()}
     <span class="sp"></span><a class="hm-sheet" href="${BOARD_SHEET}" target="_blank" rel="noopener">출고일보 ↗</a><b class="hm-me">${esc(ctx.me())}</b>
-    <button type="button" class="hm-link" data-hm="go" data-r="start">처음 화면</button></div></header>`;
+    <button type="button" class="hm-link" data-hm="go" data-r="start">처음 화면</button>${jumpHtml()}</div></header>`;
+}
+// 바로가기 (11/03 대표 "거래처 탭 없애고 맨 오른쪽에 바로가기") — 협업툴로 바로
+function jumpHtml() {
+  const n = H.gwait ? `<b>${H.gwait}</b>` : '';
+  return `<div class="hm-jump"><button type="button" class="hm-jb ${H.jump ? 'on' : ''}" data-hm="jump">바로가기${n}</button>${H.jump ? `<div class="hm-jm">
+    <a href="/gonggan/">공간 협업툴${n}</a><span class="off">뉴하우징 협업툴<i>준비중</i></span></div>` : ''}</div>`;
 }
 
 // 운송비 '업데이트 MM/DD HH:MM' = 정리 엑셀을 마지막으로 고친 시각 (10/29 대표)
@@ -133,7 +139,7 @@ function closeN() { return FL.closeItems({ fare: H.fare || [], inbox: (H.inbox.w
 function navHtml() {
   const c = FL.counts(), g = curGrp(), n = (k) => (k ? `<b>${k}</b>` : '');
   const t = (k, lab, badge) => `<button type="button" class="hm-t1 ${g === k ? 'on' : ''}" data-hm="grp" data-g="${k}">${lab}${badge || ''}</button>`;
-  return `<nav class="hm-nav" aria-label="메뉴">${t('출고', '출고', n(closeN()))}${t('전표', '전표 확인', n(c.miss + c.missOld))}${t('거래처', '거래처', n(H.gwait))}<button type="button" class="hm-t1 off" disabled>창고<i>준비중</i></button></nav>`;   // 창고는 준비중으로 막음 (11/02 대표)
+  return `<nav class="hm-nav" aria-label="메뉴">${t('출고', '출고', n(closeN()))}${t('전표', '전표 확인', n(c.miss + c.missOld))}<button type="button" class="hm-t1 off" disabled>창고<i>준비중</i></button></nav>`;   // 창고는 준비중으로 막음 (11/02 대표)
 }
 function subHtml() {
   const c = FL.counts(), v = FL.view(), g = curGrp(), n = (k) => (k ? `<b>${k}</b>` : '');
@@ -145,7 +151,6 @@ function subHtml() {
     서류: [it('거래명세표', 'data-hm="go" data-r="stmt"'), it('납품확인서', 'data-hm="form" data-r="deliv"'), it('자재승인원', 'data-hm="form" data-r="approval"'),
       it('입금표', 'data-hm="frame" data-src="./deposit.html?embed=1" data-title="입금표"'), it('견적서', 'data-hm="form" data-r="quote"'), it('전자 송장', 'data-hm="form" data-r="esong"')],
     창고: [it('천안 재고', 'data-hm="grp" data-g="창고"', true, n(CN.waitN()))],
-    거래처: [`<a class="hm-t2" href="/gonggan/">공간 협업툴${n(H.gwait)}</a>`, it('뉴하우징 협업툴', 'disabled', false, '<i>준비중</i>', 'off')],
   }[g] || [];
   return items.length ? `<div class="hm-subnav"><div class="hm-sin">${items.join('')}</div></div>` : '';
 }
@@ -214,6 +219,7 @@ export function bind(app, c) {
     else if (a === 'fv') { FL.setView(t.dataset.v); H.grp = ''; H.quick = false; saveGrp(); ctx.rerender(); }
     else if (a === 'grp') { const g = t.dataset.g; if (g === '출고') { FL.setView('flow'); H.grp = ''; } else if (g === '전표') { FL.setView('전체'); H.grp = ''; } else if (g !== '창고') { H.grp = g; } saveGrp(); ctx.rerender(); }
     else if (a === 'quick') { H.quick = !H.quick; ctx.rerender(); }
+    else if (a === 'jump') { H.jump = !H.jump; ctx.rerender(); }
     else if (a === 'fare-all') { H.fareAll = !H.fareAll; ctx.rerender(); }
     else if (a === 'fare-open') { H.fareOpen = !H.fareOpen; ctx.rerender(); if (H.fareOpen) setTimeout(() => { const x = document.querySelector('.hm-fare'); if (x) x.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 0); }
     else if (a === 'sent') {
