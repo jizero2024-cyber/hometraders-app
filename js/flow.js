@@ -51,7 +51,7 @@ const filt = (rs, k) => {
   return rs.filter((r) => (!ps.length || ps.includes(r.partner)) && (a == null || (r.md ?? 0) >= a) && (b == null || (r.md ?? 9999) <= b)
     && (!w || `${r.partner} ${r.site_full} ${r.site} ${r.boss} ${r.item} ${r.items} ${r.from} ${r.veh} ${r.memo} ${r.no} ${(r.lines || []).flatMap((l) => l.slips || []).join(' ')}`.toLowerCase().includes(w)));
 };
-const baseOf = (k) => (k === '전표 전체' ? [...new Set([...rowsOf('입력 누락'), ...baseOf('입력 완료')])] : k === '기록' ? rowsOf('기록') : k === '입력 완료' ? (FL.data ? FL.data.rows.filter((r) => (r.lines || []).length && (slipOk(r) || (r.steps.includes('입력 완료') && !slipTodo().includes(r)))) : []) : FL.all || FL.view === '견적' ? rowsOf(k) : TODAY_ONLY.includes(k) ? rowsOf(k).filter((r) => [r.day, r.arr].includes((FL.data || {}).today) || (k !== '출고 완료' && [md(r.day), r.arr].includes(tmr()))) : k === '견적' ? rowsOf(k).filter(dueToday) : rowsOf(k));
+const baseOf = (k) => (k === '전표 전체' ? [...new Set([...rowsOf('입력 누락'), ...baseOf('입력 확인'), ...baseOf('최종 완료')])] : k === '입력 확인' ? (FL.data ? FL.data.rows.filter((r) => (r.lines || []).length && r.steps.includes('입력 완료') && !slipOk(r)) : []) : k === '최종 완료' ? (FL.data ? FL.data.rows.filter((r) => (r.lines || []).length && slipOk(r)) : []) : k === '기록' ? rowsOf('기록') : k === '입력 완료' ? (FL.data ? FL.data.rows.filter((r) => (r.lines || []).length && (slipOk(r) || (r.steps.includes('입력 완료') && !slipTodo().includes(r)))) : []) : FL.all || FL.view === '견적' ? rowsOf(k) : TODAY_ONLY.includes(k) ? rowsOf(k).filter((r) => [r.day, r.arr].includes((FL.data || {}).today) || (k !== '출고 완료' && [md(r.day), r.arr].includes(tmr()))) : k === '견적' ? rowsOf(k).filter(dueToday) : rowsOf(k));
 const listOf = (k) => (barOn(k) ? filt(baseOf(k), k) : baseOf(k));
 const yst = () => { const x = new Date(Date.now() - 864e5); return `${String(x.getMonth() + 1).padStart(2, '0')}/${String(x.getDate()).padStart(2, '0')}`; };
 const slipOk = (r) => !!FL.marks[`slipok:${r.no}`] || (!!FL.marks[`slipok:${r.case}`] && allIn1(r));   // 전표 확인 체크 → 입력 완료로 (10/28 대표) · 출고 건마다 따로 — 두 번 나간 건은 판매도 두 번일 때가 있음 (11/02 대표)
@@ -85,6 +85,8 @@ const BTN = { 견적: [['quote', '견적서']], 발주: [], '배차 요청': [['
   '출고 완료': [['deliv', '납품확인서'], ['approval', '자재승인원'], ['esong', '전자 송장']] };
 BTN['기록'] = [...BTN['출고 완료'], ['cmp', '대조']];
 BTN['입력 완료'] = [['cmp', '대조']];
+BTN['입력 확인'] = [['cmp', '대조']];
+BTN['최종 완료'] = [['cmp', '대조']];
 BTN['전표'] = [['cmp', '대조']];
 BTN['전표 전체'] = [['cmp', '대조']];   // 전표 확인 › 전체보기 (11/02 대표)   // 입력 완료 — 한 줄씩 리스트, [대조] (10/28 대표)
 
@@ -107,8 +109,8 @@ function stepsHtml() {
   return `<nav class="fl-steps" aria-label="단계">${STEPS.map((k) => `<button type="button" class="fl-st ${FL.cur === k ? 'on' : ''} ${hotOf(k) ? 'hot' : ''}" data-fl="step" data-k="${k}">
     <i>${IC[k]}</i>${LABEL[k] || k}<b>${['명세표', '입금'].includes(k) ? '' : countOf(k)}</b></button>`).join('')}</nav>`;
 }
-const STMT_STEPS = ['배차 완료', '출고 완료', '기록', '입력 누락', '입력 완료', '전표', '전표 전체'];
-const DATE_FIRST = ['기록', '입력 누락', '입력 완료', '전표', '전표 전체'];   // 날짜를 왼쪽에 진하게 (10/29 대표, 최종 마감 = 출고 날짜)
+const STMT_STEPS = ['배차 완료', '출고 완료', '기록', '입력 누락', '입력 완료', '입력 확인', '최종 완료', '전표', '전표 전체'];
+const DATE_FIRST = ['기록', '입력 누락', '입력 완료', '입력 확인', '최종 완료', '전표', '전표 전체'];   // 날짜를 왼쪽에 진하게 (10/29 대표, 최종 마감 = 출고 날짜)
 const saleSlips = (r) => [...new Set((r.lines || []).filter((l) => l.k === '판매' && l.st === '입력').flatMap((l) => l.slips || []))];
 function docHtml(r) {   // 전표 전체 — 서류 버튼 맨 오른쪽에 나란히 (11/02 대표)
   const no = esc(r.no), b = (a, t) => `<button type="button" class="fl-gh" data-fl="${a}" data-no="${no}">${t}</button>`;
@@ -125,7 +127,7 @@ function rowHtml(r) {
   const btns = (BTN[FL.cur] || []).filter(([a]) => a !== 'cmp' || allIn(r) || FL.cur === '전표 전체').map(([a, t], i) => (a === 'cmp' && !allIn(r) ? `<span class="fl-go fl-ph" aria-hidden="true">${t}</span>` : `<button type="button" class="${i ? 'fl-gh' : 'fl-go'}" data-fl="${a}" data-no="${esc(r.no)}">${t}</button>`)).join('');   // 전표 전체 — 없는 버튼은 빈자리로 두어 줄 맞춤 (11/02 대표 "어긋나 보여")
   const asked = FL.cur === '배차 요청' && S.getShipments().find((s) => String(s.note || '').includes(`출고 흐름 ${r.no})`));
   const cn = caseRows(r).length;
-  const chips = [FL.cur === '입력 완료' && slipOk(r) ? '<span class="fl-chip ok">마감 확인</span>' : '', FL.cur === '전표 전체' ? (r.steps.includes('입력 누락') ? '<span class="fl-chip no">입력 누락</span>' : '<span class="fl-chip ok">입력 완료</span>') : '', ...[...(r.imgs || []), ...((r.rq || {}).imgs || []).slice(0, 1)].map((x) => `<button type="button" class="fl-chip blu" data-fl="img" data-id="${esc(x.id)}" data-n="${esc(x.name)}">사진</button>`), cn > 1 ? `<span class="fl-chip blu">같은 주문 ${cn}건</span>` : '', (() => { const L = caseRows(r).flatMap((x) => x.miss || []).reduce((a, m) => a + Math.max(0, mLeft(m, Object.fromEntries((FL.data ? FL.data.rows : []).map((x) => [x.no, x])))), 0); return L > 0 ? `<span class="fl-chip no">누락 남음 ${L.toLocaleString()}</span>` : ''; })(), ...(r.chips || []).map((c) => `<span class="fl-chip amb">${esc(c)}</span>`), ['배차 요청', '발주'].includes(FL.cur) && sugBest(r) ? `<span class="fl-chip ${sugBest(r).one ? 'ok' : 'amb'}">추천 ${esc(sugBest(r).pick.map((p) => p.n.slice(0, 4)).join('+'))}</span>` : '', asked ? `<span class="fl-chip blu">요청함 ${esc((String(asked.note).match(/요청함 (\d\d:\d\d)/) || ['', ''])[1])}</span>` : '', r.late && FL.cur === '배차 요청' ? '<span class="fl-chip no">누락</span>' : '', FL.cur === '배차 완료' && !r.driver ? '<span class="fl-chip amb">기사·운임 확인</span>' : ''].join('');
+  const chips = [FL.cur === '전표 전체' ? (slipOk(r) ? '<span class="fl-chip ok">최종 완료</span>' : r.steps.includes('입력 누락') ? '<span class="fl-chip no">입력 누락</span>' : '<span class="fl-chip amb">입력 확인</span>') : '', ...[...(r.imgs || []), ...((r.rq || {}).imgs || []).slice(0, 1)].map((x) => `<button type="button" class="fl-chip blu" data-fl="img" data-id="${esc(x.id)}" data-n="${esc(x.name)}">사진</button>`), cn > 1 ? `<span class="fl-chip blu">같은 주문 ${cn}건</span>` : '', (() => { const L = caseRows(r).flatMap((x) => x.miss || []).reduce((a, m) => a + Math.max(0, mLeft(m, Object.fromEntries((FL.data ? FL.data.rows : []).map((x) => [x.no, x])))), 0); return L > 0 ? `<span class="fl-chip no">누락 남음 ${L.toLocaleString()}</span>` : ''; })(), ...(r.chips || []).map((c) => `<span class="fl-chip amb">${esc(c)}</span>`), ['배차 요청', '발주'].includes(FL.cur) && sugBest(r) ? `<span class="fl-chip ${sugBest(r).one ? 'ok' : 'amb'}">추천 ${esc(sugBest(r).pick.map((p) => p.n.slice(0, 4)).join('+'))}</span>` : '', asked ? `<span class="fl-chip blu">요청함 ${esc((String(asked.note).match(/요청함 (\d\d:\d\d)/) || ['', ''])[1])}</span>` : '', r.late && FL.cur === '배차 요청' ? '<span class="fl-chip no">누락</span>' : '', FL.cur === '배차 완료' && !r.driver ? '<span class="fl-chip amb">기사·운임 확인</span>' : ''].join('');
   const route = FL.cur === '견적' ? '' : `${esc(r.from || '상차지 확인')} → ${esc(r.site || '하차지 확인')}`;
   return `<div class="fl-row ${FL.sel === r.no ? 'sel' : ''}" data-fl="row" data-no="${esc(r.no)}">
     <div class="fl-c fl-tm ${r.late || dday(r) === FL.data.today ? 'now' : ''}">${(DATE_FIRST.includes(FL.cur) || ['배차 완료', '출고 완료'].includes(FL.cur)) ? `<b>${esc(dday(r))}</b><span>${esc(r.time || '')}</span>` : `<b>${esc(r.time || (r.day === '미정' ? '미정' : '시간 미정'))}</b><span>${esc(dday(r) === '미정' ? '' : dday(r))}</span>`}</div>
@@ -133,7 +135,7 @@ function rowHtml(r) {
     <div class="fl-c fl-ds">${chips}${esc(r.item)}</div>
     <div class="fl-c fl-ds fl-rt">${route}</div>
     <div class="fl-c fl-ds fl-v">${FL.cur === '견적' ? '' : esc(r.size || '')}</div>
-    <div class="fl-acts${FL.cur === '전표 전체' ? ' dz' : ''}">${STMT_STEPS.includes(FL.cur) ? stmtHtml(r) : ''}${btns}${FL.cur === '전표' ? `<button type="button" class="fl-sent" data-fl="slipok" data-no="${esc(r.no)}"><i></i>입력 확인</button>` : ''}${FL.cur === '입력 누락' || (FL.cur === '전표 전체' && r.steps.includes('입력 누락') && !slipOk(r)) ? `<button type="button" class="fl-go" data-fl="slipok" data-ask="1" data-no="${esc(r.no)}">완료</button>` : ''}${FL.cur === '전표 전체' ? docHtml(r) : ''}</div></div>${FL.sel === r.no ? detailHtml(r) : ''}`;
+    <div class="fl-acts${FL.cur === '전표 전체' ? ' dz' : ''}">${STMT_STEPS.includes(FL.cur) ? stmtHtml(r) : ''}${btns}${FL.cur === '전표' ? `<button type="button" class="fl-sent" data-fl="slipok" data-no="${esc(r.no)}"><i></i>입력 확인</button>` : ''}${['입력 누락', '입력 확인'].includes(FL.cur) || (FL.cur === '전표 전체' && !slipOk(r)) ? `<button type="button" class="fl-go" data-fl="slipok" data-ask="1" data-no="${esc(r.no)}">완료</button>` : ''}${FL.cur === '전표 전체' ? docHtml(r) : ''}</div></div>${FL.sel === r.no ? detailHtml(r) : ''}`;
 }
 const stLab = (x) => (x.steps.includes('출고 완료') || x.steps.includes('기록') ? '출고 완료' : x.steps.includes('배차 완료') ? '배차 완료' : x.steps.includes('배차 요청') ? '배차 요청' : x.steps.includes('발주') ? '발주' : x.steps[0] || '');
 const mGone = (t, by) => by[t.no] && ['출고 완료', '배차 완료'].includes(stLab(by[t.no]));   // 차가 잡힌 것만 보낸 걸로
@@ -322,6 +324,7 @@ function fitActs() {
 }
 const today = () => (FL.data || {}).today;
 export const counts = () => ({
+  chk: baseOf('입력 확인').length,
   miss: rowsOf('입력 누락').filter((r) => r.day === today()).length, missOld: rowsOf('입력 누락').filter((r) => r.day !== today()).length,
   quote: rowsOf('견적').length, disp: rowsOf('배차 요청').length, songjang: [...rowsOf('배차 완료'), ...rowsOf('출고 완료')].filter((r) => r.day === today()).length,
 });
@@ -381,7 +384,8 @@ export function main(x) {
   if (FL.view === '기록') { FL.cur = '기록'; return `<section class="fl"><h1 class="fl-h1">전체 출고</h1>${listBox('기록', 760)}</section>`; }
   if (FL.view === '전체') { FL.cur = '전표 전체'; return `<section class="fl"><h1 class="fl-h1">전표 전체</h1>${listBox('전표 전체', 300)}</section>`; }
   if (FL.view === '누락') { FL.cur = '입력 누락'; return `<section class="fl"><h1 class="fl-h1">입력 누락</h1>${listBox('입력 누락', 290)}</section>`; }   // 입력 완료와 같은 줄 모양 (10/29 대표)
-  if (FL.view === '완료') { FL.cur = '입력 완료'; return `<section class="fl"><h1 class="fl-h1">입력 완료</h1>${listBox('입력 완료', 300)}</section>`; }
+  if (FL.view === '확인') { FL.cur = '입력 확인'; return `<section class="fl"><h1 class="fl-h1">입력 확인</h1>${listBox('입력 확인', 300)}</section>`; }
+  if (FL.view === '완료') { FL.cur = '최종 완료'; return `<section class="fl"><h1 class="fl-h1">최종 완료</h1>${listBox('최종 완료', 300)}</section>`; }
   const tg = `<div class="fl-sub fl-tg"><button type="button" class="fl-sb mid ${FL.all ? '' : 'on'}" data-fl="all" data-k="0">오늘</button><button type="button" class="fl-sb mid ${FL.all ? 'on' : ''}" data-fl="all" data-k="1">전체보기</button><button type="button" class="fl-sb mid fl-sync ${FL.syncing ? 'on' : ''}" data-fl="sync" ${FL.syncing ? 'disabled' : ''}>${FL.syncing ? '새로고침 중' : '새로고침'}</button></div>`;   // [바로 반영] 이카운트 다시 받기 → 출고 흐름 (10/30 대표)
   return `<section class="fl" id="fl-list" aria-label="오늘 마감">${tg}${stepsHtml()}${listBox(FL.cur, [0, 130, 240, 350, 460][(BTN[FL.cur] || []).length] + (STMT_STEPS.includes(FL.cur) ? 290 : 0))}</section>`;   // 출고 흐름과 같은 모양, 오늘 건만 (10/28 대표)
 }
@@ -510,7 +514,7 @@ export function bind(app, c) {
       document.body.appendChild(ov);
     }
     else if (a === 'srced' && r) { FL.srcEd = r.no; ctx.rerender(); setTimeout(() => { const i = document.querySelector(`.fd-srci[data-fl-src="${CSS.escape(r.no)}"]`); if (i) i.focus(); }, 0); }
-    else if (a === 'slipok' && r) { if (t.dataset.ask && !ask(t, `${r.partner} · ${r.site} 입력 완료로 옮길까요?`)) return; const key = `slipok:${r.no}`, me = ctx.me ? ctx.me() : ''; S.addFlowMark(key, `${r.partner} ${r.site}`, me).then((err) => { if (err) alert('저장 못 했어요 — ' + err); else { FL.marks[key] = { created_at: new Date().toISOString() }; S.setShipCase(r.no, { checked: true, checked_by: me || null }, me).catch(() => {}); ctx.rerender(); } }); }
+    else if (a === 'slipok' && r) { if (t.dataset.ask && !ask(t, `${r.partner} · ${r.site} 최종 완료로 옮길까요?`)) return; const key = `slipok:${r.no}`, me = ctx.me ? ctx.me() : ''; S.addFlowMark(key, `${r.partner} ${r.site}`, me).then((err) => { if (err) alert('저장 못 했어요 — ' + err); else { FL.marks[key] = { created_at: new Date().toISOString() }; S.setShipCase(r.no, { checked: true, checked_by: me || null }, me).catch(() => {}); ctx.rerender(); } }); }
     else if (a === 'sent' && r) { if (!ask(t, `${r.partner} · ${r.site} 거래처 전달 체크할까요?`)) return; S.addFlowMark(`sent:${r.no}`, `${r.partner} ${r.site}`, ctx.me ? ctx.me() : '').then((err) => { if (err) alert('저장 못 했어요 — ' + err); else { FL.marks[`sent:${r.no}`] = { created_at: new Date().toISOString() }; ctx.rerender(); } }); }
     else if (a === 'stmtgo' && r) { FM.presetStmt(/공간/.test(r.partner) ? 'stmt-gong' : 'stmt-etc', (t.dataset.s || '').split(',').join(' '), r.salerows); ctx.rerender(); }
     else if (a === 'rfq' && r) rfqOpen(r);

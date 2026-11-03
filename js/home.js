@@ -4,7 +4,7 @@
 //   서류 화면은 모두 js/forms.js (같은 머리·카드·버튼)
 import * as S from './store-supabase.js?v=13';
 import * as FM from './forms.js?v=26';
-import * as FL from './flow.js?v=118';   // 맨 위 출고 흐름 (10/28)
+import * as FL from './flow.js?v=119';   // 맨 위 출고 흐름 (10/28)
 import * as CN from './cheonan.js?v=7';   // 천안 재고 (10/31)
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -133,7 +133,7 @@ export function screen(view) {
 }
 
 // 위 2단 메뉴 (10/31 대표 "사이드 메뉴는 상단으로, 투뎁스") — 1단: 출고·전표 확인·서류·거래처, 2단: 고른 묶음의 항목
-const GRP_OF = { flow: '출고', 견적: '출고', 기록: '출고', 누락: '전표', 완료: '전표', 전체: '전표' };
+const GRP_OF = { flow: '출고', 견적: '출고', 기록: '출고', 누락: '전표', 확인: '전표', 완료: '전표', 전체: '전표' };
 function curGrp() { return H.grp || GRP_OF[FL.view()] || '출고'; }
 function closeN() { return FL.closeItems({ fare: H.fare || [], inbox: (H.inbox.wait || 0) + (H.inbox.got || 0) + (H.inbox.check || 0) }).filter((i) => i.n).length; }
 function navHtml() {
@@ -147,7 +147,7 @@ function subHtml() {
   const fv = (lab, k, badge) => it(lab, `data-hm="fv" data-v="${k}"`, !H.grp && v === k, badge);
   const items = {
     출고: [],   // 2단 탭 뺌 — 견적 요청은 흐름 단계에 있음 (11/02 대표 "출고 밑에 탭 필요 없어")
-    전표: [fv('전체보기', '전체'), fv('입력 누락', '누락', n(c.miss + c.missOld)), fv('입력 완료', '완료')],
+    전표: [fv('전체보기', '전체'), fv('입력 누락', '누락', n(c.miss + c.missOld)), fv('입력 확인', '확인', n(FL.counts().chk)), fv('최종 완료', '완료')],
     서류: [it('거래명세표', 'data-hm="go" data-r="stmt"'), it('납품확인서', 'data-hm="form" data-r="deliv"'), it('자재승인원', 'data-hm="form" data-r="approval"'),
       it('입금표', 'data-hm="frame" data-src="./deposit.html?embed=1" data-title="입금표"'), it('견적서', 'data-hm="form" data-r="quote"'), it('전자 송장', 'data-hm="form" data-r="esong"')],
     창고: [it('천안 재고', 'data-hm="grp" data-g="창고"', true, n(CN.waitN()))],
