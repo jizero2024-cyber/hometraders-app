@@ -78,6 +78,7 @@ export async function load(biz, force) {
     G.syncAt = [...sales.map((r) => r.updated_at), ...docs.map((x) => x.updated_at)].filter(Boolean).map((t) => new Date(t)).sort((a, b) => b - a)[0] || null;
     G.feed = feedOf(G.list);
     G.loaded = biz;
+    CACHE[biz] = { list: G.list, docs: G.docs, feed: G.feed, syncAt: G.syncAt };
   } catch (e) { G.err = e.message || String(e); }
   G.loading = false; ctx.rerender();
 }
@@ -750,7 +751,13 @@ function feedGo(id) {
   });
 }
 export function openWait() { G.view = 'wait'; }
-export function setBiz(biz) { if (G.biz !== biz) { G.biz = biz; G.loaded = ''; G.page = 1; G.pick.clear(); G.open = null; G.month = '전체'; G.status = '전체'; G.site = ''; } }
+const CACHE = {};   // 회사별 목록 — 홈트↔에이스 오갈 때 다른 회사 목록이 잠깐 보였다 바뀌며 번쩍이던 것 (11/03 대표) → 받아 둔 목록을 바로 보여 주고 뒤에서 새로
+export function setBiz(biz) {
+  if (G.biz === biz) return;
+  G.biz = biz; G.loaded = ''; G.page = 1; G.pick.clear(); G.open = null; G.month = '전체'; G.status = '전체'; G.site = '';
+  const c = CACHE[biz];
+  G.list = c ? c.list : []; G.docs = c ? c.docs : {}; G.feed = c ? c.feed : []; G.syncAt = c ? c.syncAt : null;
+}
 export function bind(app, c) {
   ctx = c;
   app.addEventListener('click', async (e) => {
