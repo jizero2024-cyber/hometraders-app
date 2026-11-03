@@ -3,7 +3,7 @@
 //   공간제작소 계정은 코드 한 칸으로 로그인. 직원 계정도 같은 화면 (직원만: 직접 등록 · 올릴 전표 · 처음 화면).
 //   권한(staff · edit · view)은 DB 의 staff_accounts · partner_accounts 가 정함 (2026-10-28-security-step1.sql).
 import * as S from './gonggan-store.js?v=10';
-import * as GB from './gbms.js?v=52';
+import * as GB from './gbms.js?v=53';
 
 const app = document.getElementById('app');
 const CODE_LOGINS = { space1234: 'view', space1225: 'staff' };   // 코드 한 칸 로그인 계정 (권한은 DB 가 정하고, DB 에 아직 없을 때만 이 값)

@@ -432,6 +432,13 @@ function taxCopyBar(d) {
       <button type="button" data-gb="taxcopy" data-k="reset" style="height:30px;padding:0 10px;border:0;border-radius:6px;background:transparent;color:#5C5C5C;font:inherit;font-size:12px;cursor:pointer">처음부터</button></div>
     <div style="display:flex;gap:6px;flex-wrap:wrap">${f.map(([lab, v], i) => `<button type="button" data-gb="taxcopy" data-k="${i}" style="height:30px;padding:0 10px;border:0;border-radius:15px;font:inherit;font-size:12px;cursor:pointer;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${i === k % f.length ? 'background:#1D4F91;color:#fff;font-weight:700' : i < k % f.length || (k >= f.length) ? 'background:#E3EAF4;color:#5C6B80' : 'background:#fff;color:#1F2328'}">${esc(lab)} ${esc(show(lab, v))}</button>`).join('')}</div></div>`;
 }
+// 품목 복사용 품명 (11/03 대표) — 꼬리표 [..] 빼고, 구조재는 사이즈 + 등급만 ("2*6*10_JAS/J-Grade (VIDA)", mm 치수·수종·산지 뺌)
+const copyName = (n) => {
+  const s = String(n || '').replace(/\s*\[\d{4}\/.*$/, '').replace(/\s*\[[^\]]*\]\s*$/, '').trim();   // [1020/공간/화성우정 [2.8M 50M]] 처럼 겹친 꼬리표도 통째로
+  if (!/^구조재/.test(s)) return s;
+  const m = /(\d+\*\d+\*\d+)\s*(?:\([^)]*\))?(.*)$/.exec(s);
+  return m ? `${m[1]}${m[2]}`.trim() : s;
+};
 // 거래명세표 품명 — 직원 계정만 글자로 복사 (11/03 대표 "품명은 복사 붙여넣기 할 수 있게")
 function nameList(d) {
   const rows = d.items.map((i, k) => `<div style="display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:6px;background:${k % 2 ? '#fff' : '#F7F7F5'}">
@@ -760,7 +767,7 @@ export function bind(app, c) {
     }
     if (a === 'copyname') {   // 품명 복사 — 전체는 줄마다 한 줄씩
       const d = G.open && findSheet(G.open); if (!d) return;
-      const txt = t.dataset.k === 'all' ? d.items.map((i) => i.name).join('\n') : (d.items[+t.dataset.k] || {}).name || '';
+      const txt = t.dataset.k === 'all' ? d.items.map((i) => copyName(i.name)).join('\n') : copyName((d.items[+t.dataset.k] || {}).name);
       const done = () => { const o = t.textContent; t.textContent = '복사됨'; setTimeout(() => { t.textContent = o; }, 1200); };
       (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(done).catch(() => { const ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); done(); });
       return;
