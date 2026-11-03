@@ -62,6 +62,19 @@ export async function putWaitRows(slips, rows, reg) {
   if (error) throw new Error(error.message);
   await sb.from('site_inbox').delete().in('id', slips.map((sl) => `gw:${sl}`));
 }
+// [새로고침] (11/03 대표 "올릴 전표 새로고침 버튼도 안 보여") — 사무실 맥 /api/refresh(이카운트 다시 받기 + 공간 조회 깨우기)를 site_inbox 'read' 로 부탁
+export async function askRefresh() {
+  const id = 'read_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  const { error } = await sb.from('site_inbox').insert({ id, kind: 'read', name: '/api/refresh', status: 'wait', body: JSON.stringify({ path: '/api/refresh', body: {} }) });
+  if (error) throw new Error(error.message);
+  return id;
+}
+export async function refreshDone(id) {   // 끝났으면 부탁 줄 지우고 true
+  const { data } = await sb.from('site_inbox').select('status').eq('id', id).maybeSingle();
+  if (data && data.status === 'wait') return false;
+  sb.from('site_inbox').delete().eq('id', id).then(() => {});
+  return true;
+}
 // [빼기] — 이미 올라간 것. 맥은 gskip 을 보고 다시 안 올림
 export async function skipWait(slips) {
   const { error } = await sb.from('site_inbox').update({ status: 'gskip', updated_at: new Date().toISOString() }).in('id', slips.map((sl) => `gw:${sl}`));

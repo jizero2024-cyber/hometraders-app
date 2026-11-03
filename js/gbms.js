@@ -267,7 +267,8 @@ function cardHtml(d) {
 // 올릴 전표 (10/27 대표) — 이카운트에 있는데 목록에 아직 없는 공간제작소 판매전표, [올리기] 누르면 바로 목록에
 function waitHtml() {
   const btn = (on) => `height:36px;padding:0 16px;border:0;border-radius:8px;font:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;${on ? 'background:#E6E4DF;color:#6B6B6B' : 'background:#E8732C;color:#fff'}`;
-  return `<h1 class="gb-h1" style="margin:0;font-size:22px">올릴 전표 <span style="font-size:15px;color:#6B6B6B;font-weight:500;margin-left:4px">${G.wait.length}건</span></h1>
+  return `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h1 class="gb-h1" style="margin:0;font-size:22px">올릴 전표 <span style="font-size:15px;color:#6B6B6B;font-weight:500;margin-left:4px">${G.wait.length}건</span></h1>
+      <span style="flex:1"></span><button type="button" data-gb="wait-sync" ${G.waitSync ? 'disabled' : ''} style="${btn(G.waitSync)}">${G.waitSync ? '새로고침 중…' : '새로고침'}</button></div>
     ${G.err ? `<div style="padding:12px 14px;border-radius:8px;background:#FDECEC;color:#7A1A12;font-size:13px">${esc(G.err)}</div>` : ''}
     <div style="display:flex;flex-direction:column;gap:10px">${G.wait.map((d) => `<div data-gb="wait-open" data-id="${esc(d.id)}" style="background:#fff;border:1px solid #E6E4DF;border-radius:12px;padding:14px 16px;display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;cursor:pointer">
       <div style="flex:0 0 auto;min-width:84px"><b>${md(d.ymd)}</b><div style="font-size:11px;color:#6B6B6B">${esc((d.slips || [d.slip]).map((x) => x.slice(4)).join(', '))}</div></div>
@@ -294,6 +295,18 @@ function waitModal() {
       ${pdfs.length ? pdfs.map((x) => `<iframe src="${esc(x.pdf)}" title="판매전표 ${esc(x.slip)}" style="width:100%;height:72vh;border:1px solid #E6E4DF;border-radius:8px"></iframe>`).join('')
         : `<div style="padding:40px;text-align:center;color:#6B6B6B;background:#FAFAF8;border-radius:8px">전표 PDF 받는 중</div>`}
     </div></div>`;
+}
+// [새로고침] — 맥이 이카운트를 다시 받고 공간 조회(담당자 이최원 → 목록, 그 외 → 올릴 전표)를 돌린 뒤 다시 읽음 · 최대 6분 (11/03 대표)
+async function waitSync() {
+  if (G.waitSync) return;
+  G.waitSync = true; ctx.rerender();
+  const t0 = Date.now(), wait = (ms) => new Promise((ok) => setTimeout(ok, ms));
+  try {
+    const id = await S.askRefresh();
+    while (Date.now() - t0 < 240000 && !(await S.refreshDone(id).catch(() => true))) await wait(5000);
+    for (let i = 0; i < 6 && Date.now() - t0 < 360000; i++) { await load(G.biz, true); ctx.rerender(); await wait(20000); }   // 공간 조회가 뒤이어 1~2분
+  } catch (e) { G.err = e.message || String(e); }
+  G.waitSync = false; await load(G.biz, true); ctx.rerender();
 }
 async function waitSkip(id) {
   const d = G.wait.find((x) => x.id === id); if (!d || G.waitBusy) return;
@@ -665,6 +678,7 @@ export function bind(app, c) {
     const a = t.dataset.gb, id = t.dataset.id, cur = G.open && G.list.find((d) => d.id === G.open);
     if (LIM() && (LIM_ACTS.has(a) || !LIM_OK.has(a))) return;
     if (a === 'view') { G.view = t.dataset.v; G.open = null; if (G.biz === 'ace') { setBiz('homt'); ctx.go('gonggan'); } else ctx.rerender(); return; }   // 올릴 전표는 홈트 것 — 에이스에서 누르면 홈트로
+    if (a === 'wait-sync') { waitSync(); return; }   // 올릴 전표 새로고침 (11/03)
     if (a === 'wait-up' && id) { waitUp(id); return; }
     if (a === 'wait-skip' && id) { waitSkip(id); return; }
     if (a === 'wait-open' && id) { if (e.target.closest('button')) return; G.waitOpen = id; ctx.rerender(); return; }
