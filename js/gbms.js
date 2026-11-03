@@ -765,7 +765,7 @@ export function bind(app, c) {
       (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(done).catch(() => { const ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); done(); });
       return;
     }
-    if (a === 'revert' && cur) { revertDoc(cur); return; }
+    if (a === 'revert' && cur && ctx.role() === 'staff') { revertDoc(cur); return; }
     if (a === 'wait-up' && id) { waitUp(id); return; }
     if (a === 'wait-apply') { waitApply(); return; }
     if (a === 'wait-pick' && id) { if (G.waitOn.has(id)) G.waitOn.delete(id); else G.waitOn.add(id); ctx.rerender(); return; }
