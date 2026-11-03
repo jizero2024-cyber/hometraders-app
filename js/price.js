@@ -45,18 +45,24 @@ function askHtml() {
   const out = [];
   for (const r of P.flow.rows || []) {
     if (!(r.steps || []).some((k) => ['입력 누락', '입력 완료', '배차 완료', '출고 완료', '배차 요청', '발주'].includes(k))) continue;
+    if ((r.lines || []).some((l) => l.k === '판매' && l.st === '입력') && !(r.chips || []).some((c) => /판매 빠짐/.test(c))) continue;   // 판매전표 들어간 건은 빼고 — 판가 몰라 못 넣은 것만 (11/03)
     for (const x of r.itab || []) {
       if (x.sale) continue;
       const ws = toks(x.it); if (!ws.length) continue;
       const hit = sale.filter((y) => ws.every((w) => y.n.includes(w)));
-      const mine = hit.filter((y) => normP(y.p).slice(0, 4) === normP(r.partner).slice(0, 4)).sort((a, b) => b.d.localeCompare(a.d))[0];
+      let mine = hit.filter((y) => normP(y.p).slice(0, 4) === normP(r.partner).slice(0, 4)).sort((a, b) => b.d.localeCompare(a.d))[0];
+      if (!mine) {   // 색 번호(3951)만 다른 같은 계열 — 그 거래처에 판 같은 종류 (아이큐브 V16 가격군, 11/03)
+        const ws2 = ws.filter((w) => !/^\d{3,}$/.test(w));
+        if (ws2.length && ws2.length < ws.length) mine = sale.filter((y) => normP(y.p).slice(0, 4) === normP(r.partner).slice(0, 4) && ws2.every((w) => y.n.includes(w))).sort((a, b) => b.d.localeCompare(a.d))[0];
+        if (mine) mine = { ...mine, fam: 1 };
+      }
       const other = hit.filter((y) => y !== mine).sort((a, b) => b.d.localeCompare(a.d)).slice(0, 2);
       out.push({ r, x, mine, other });
     }
   }
   const q = P.q.trim().toLowerCase();
-  const rs = out.filter((o) => !q || `${o.r.partner} ${o.r.site} ${o.x.it}`.toLowerCase().includes(q));
-  const pv = (y) => (y ? `${jaOf(y.n, y.pr) ? `자당 ${won(jaOf(y.n, y.pr))}` : won(y.pr)}<em>${esc(y.p.replace(/\(주\)|주식회사|㈜/g, '').trim())} · ${md(y.d)}</em>` : '');
+  const rs = out.filter((o) => !q || `${o.r.partner} ${o.r.site} ${o.x.it}`.toLowerCase().includes(q)).sort((a, b) => (b.r.md ?? 0) - (a.r.md ?? 0) || String(a.r.no).localeCompare(String(b.r.no)));
+  const pv = (y) => (y ? `${jaOf(y.n, y.pr) ? `자당 ${won(jaOf(y.n, y.pr))}` : won(y.pr)}<em>${y.fam ? '같은 계열 · ' : ''}${esc(y.p.replace(/\(주\)|주식회사|㈜/g, '').trim())} · ${md(y.d)}</em>` : '');
   return `<div class="pr-bar"><input id="pr-q" type="search" placeholder="거래처·현장·품목" value="${esc(P.q)}" autocomplete="off"><span class="pr-cnt" id="pr-cnt">${rs.length}품목</span></div>
   <div class="pr-tw"><table class="pr-t"><thead><tr><th>출고일</th><th>판매처 · 현장</th><th>품목</th><th>수량</th><th class="pr-num">구매가 <i>별도</i></th><th class="pr-num">이 거래처 마지막 판가</th><th class="pr-num">다른 거래처 판가</th></tr></thead>
   <tbody>${rs.map((o) => `<tr><td class="pr-d">${esc(o.r.day || '')}</td><td>${esc(o.r.partner)} · ${esc(o.r.site || '')}</td><td class="pr-n">${esc(o.x.it)}</td><td>${esc(o.x.q || '')}</td>
