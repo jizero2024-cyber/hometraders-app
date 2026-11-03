@@ -387,6 +387,15 @@ function docBox0(kind, d) {
   const del = kind === 'stmt' && canDelStmt ? `<button type="button" data-gb="delstmt" aria-label="거래명세표 지우기" style="position:absolute;bottom:8px;right:46px;width:30px;height:30px;border-radius:15px;border:1px solid #F1B5AF;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">${TRASH}</button>` : kind === 'tax' && staff ? `<button type="button" data-gb="deltax" aria-label="세금계산서 지우기" style="position:absolute;bottom:8px;right:46px;width:30px;height:30px;border-radius:15px;border:1px solid #F1B5AF;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">${TRASH}</button>` : '';   // 잘못 넣은 세금계산서 지우기 (10/23 대표)
   return `<figure data-gb="panel" data-k="${kind}" style="margin:0;display:flex;flex-direction:column;gap:8px;${G.panel === kind ? 'outline:2px solid #1D4F91;outline-offset:6px;border-radius:6px' : ''}">${cap}<div ${kind === 'tax' ? 'data-gb-drop="tax"' : ''} style="position:relative;aspect-ratio:1588/1400;border:1px solid #D9D9D9;border-radius:6px;overflow:hidden;background:#fff">${pdf && !pdfView(d.id, src) ? '<div style="height:100%;display:flex;align-items:center;justify-content:center;color:#6B6B6B;font-size:13px">불러오는 중…</div>' : `<button type="button" data-gb="zoom" data-k="${kind}" aria-label="${label} 크게 보기" style="display:flex;align-items:flex-start;justify-content:center;width:100%;height:100%;padding:0;border:0;background:none;cursor:zoom-in"><img src="${pdf ? pdfView(d.id, src) : src}" alt="${label}" style="max-width:100%;max-height:100%;object-fit:contain;display:block"></button>`}${del}${pen}</div></figure>`;
 }
+// 거래명세표 품명 — 직원 계정만 글자로 복사 (11/03 대표 "품명은 복사 붙여넣기 할 수 있게")
+function nameList(d) {
+  const rows = d.items.map((i, k) => `<div style="display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:6px;background:${k % 2 ? '#fff' : '#F7F7F5'}">
+    <span style="flex:1;min-width:0;user-select:text;-webkit-user-select:text;font-size:13px;word-break:break-all">${esc(i.name)}</span>
+    <span style="flex:0 0 auto;font-size:12px;color:#6B6B6B;font-variant-numeric:tabular-nums">${won(i.qty)}</span>
+    <button type="button" data-gb="copyname" data-k="${k}" style="flex:0 0 auto;height:28px;padding:0 10px;border:0;border-radius:6px;background:#EDEBE6;color:#3D3D3D;font:inherit;font-size:12px;cursor:pointer">복사</button></div>`).join('');
+  return `<div style="display:flex;flex-direction:column;gap:6px"><div style="display:flex;align-items:center;gap:8px"><b style="font-size:14px">품명</b><span style="flex:1"></span>
+    <button type="button" data-gb="copyname" data-k="all" style="height:30px;padding:0 12px;border:0;border-radius:6px;background:#1F2328;color:#fff;font:inherit;font-size:12px;font-weight:600;cursor:pointer">전체 복사</button></div>${rows}</div>`;
+}
 function modalHtml(d) {
   ensureImg(d); ensureFull(d.id);
   const st = statusOf(d), x = G.docs[d.id] || {};
@@ -403,7 +412,7 @@ function modalHtml(d) {
           <button type="button" data-gb="close" aria-label="닫기" style="width:40px;height:40px;border:1px solid #E6E4DF;border-radius:20px;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">${X}</button>
         </div>
       </div>
-      <div class="gb-two" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px">${docBox('stmt', d)}${docBox('tax', d)}</div>${isWaitSheet(d) ? waitInfo(d).filter((w) => w.pdf).map((w) => `<div style="font-size:13px;font-weight:600;color:#5C5C5C">이카운트 판매전표 ${esc(w.slip.slice(4))}</div><iframe src="${esc(w.pdf)}" title="판매전표 ${esc(w.slip)}" style="width:100%;height:60vh;border:0;border-radius:8px;background:#FAFAF8"></iframe>`).join('') : ''}
+      <div class="gb-two" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px">${docBox('stmt', d)}${docBox('tax', d)}</div>${ctx.role() === 'staff' ? nameList(d) : ''}${isWaitSheet(d) ? waitInfo(d).filter((w) => w.pdf).map((w) => `<div style="font-size:13px;font-weight:600;color:#5C5C5C">이카운트 판매전표 ${esc(w.slip.slice(4))}</div><iframe src="${esc(w.pdf)}" title="판매전표 ${esc(w.slip)}" style="width:100%;height:60vh;border:0;border-radius:8px;background:#FAFAF8"></iframe>`).join('') : ''}
       ${st === '수정요청' && x.reason ? `<div style="padding:12px 14px;border-radius:8px;background:#FDECEC;border:1px solid #F5C2C0;color:#7A1A12;font-size:13px;line-height:1.5"><b>수정요청</b><br>${esc(x.reason)}</div>` : ''}
       <div style="margin:4px -22px -22px;padding:18px 22px 22px;background:#F3F4F6;border-radius:0 0 14px 14px;display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px">
         <label style="flex:1 1 480px;display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#3F3F46">수정요청 사유
@@ -692,6 +701,13 @@ export function bind(app, c) {
     if (LIM() && (LIM_ACTS.has(a) || !LIM_OK.has(a))) return;
     if (a === 'view') { G.view = t.dataset.v; G.open = null; if (G.biz === 'ace') { setBiz('homt'); ctx.go('gonggan'); } else ctx.rerender(); return; }   // 올릴 전표는 홈트 것 — 에이스에서 누르면 홈트로
     if (a === 'wait-sync') { waitSync(); return; }   // 올릴 전표 새로고침 (11/03)
+    if (a === 'copyname') {   // 품명 복사 — 전체는 줄마다 한 줄씩
+      const d = G.open && findSheet(G.open); if (!d) return;
+      const txt = t.dataset.k === 'all' ? d.items.map((i) => i.name).join('\n') : (d.items[+t.dataset.k] || {}).name || '';
+      const done = () => { const o = t.textContent; t.textContent = '복사됨'; setTimeout(() => { t.textContent = o; }, 1200); };
+      (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(done).catch(() => { const ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); done(); });
+      return;
+    }
     if (a === 'wait-apply') { waitApply(); return; }
     if (a === 'wait-pick' && id) { if (G.waitOn.has(id)) G.waitOn.delete(id); else G.waitOn.add(id); ctx.rerender(); return; }
     if (a === 'wait-skip' && id) { waitSkip(id); return; }
