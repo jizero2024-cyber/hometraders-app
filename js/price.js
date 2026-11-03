@@ -4,7 +4,7 @@ import { inboxBody } from './dbread.js?v=1';
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const won = (n) => (n == null ? '' : Math.round(n).toLocaleString());
-const P = { data: null, err: '', q: '', k: '', c: '', p: '', by: 'item', sort: '', dir: 1, lim: 600 };
+const P = { tab: 'table', flow: null, data: null, err: '', q: '', k: '', c: '', p: '', by: 'item', sort: '', dir: 1, lim: 600 };
 let ctx = null;
 
 const jaOf = (n, pr) => { const m = String(n).match(/구조재.*?\d+\s*\*\s*\d+\s*\*\s*(\d+)/); return m && +m[1] ? Math.round((pr * 1.1) / +m[1]) : null; };
@@ -34,7 +34,37 @@ function bodyHtml() {
   return { head, html: body || `<tr><td colspan="${cols.length + 1}" class="pr-none">없음</td></tr>`, n: items.length };
 }
 
+export const tab = () => P.tab;
+
+// 단가 확인 요청 (11/03 대표) — 출고 건 품목 중 판가가 안 들어간 것 · 그 거래처 마지막 판가 / 같은 품목 다른 거래처 판가 / 구매가
+const toks = (s) => (String(s).match(/[가-힣A-Za-z]{2,}|\d+\*\d+(?:\*\d+)?|\d{3,}/g) || []).filter((w) => !/^(EA|ea|PLT|개|장|봉|줄)$/.test(w));
+const normP = (p) => String(p || '').replace(/\(주\)|주식회사|㈜|\s/g, '');
+function askHtml() {
+  if (!P.flow) { inboxBody('flow:board', true).then((d) => { P.flow = d || { rows: [] }; ctx && ctx.rerender(); }).catch(() => { P.flow = { rows: [] }; ctx && ctx.rerender(); }); return '<div class="pr-none">불러오는 중…</div>'; }
+  const sale = ((P.data && P.data.rows) || []).filter((r) => r.k === 's');
+  const out = [];
+  for (const r of P.flow.rows || []) {
+    if (!(r.steps || []).some((k) => ['입력 누락', '입력 완료', '배차 완료', '출고 완료', '배차 요청', '발주'].includes(k))) continue;
+    for (const x of r.itab || []) {
+      if (x.sale) continue;
+      const ws = toks(x.it); if (!ws.length) continue;
+      const hit = sale.filter((y) => ws.every((w) => y.n.includes(w)));
+      const mine = hit.filter((y) => normP(y.p).slice(0, 4) === normP(r.partner).slice(0, 4)).sort((a, b) => b.d.localeCompare(a.d))[0];
+      const other = hit.filter((y) => y !== mine).sort((a, b) => b.d.localeCompare(a.d)).slice(0, 2);
+      out.push({ r, x, mine, other });
+    }
+  }
+  const q = P.q.trim().toLowerCase();
+  const rs = out.filter((o) => !q || `${o.r.partner} ${o.r.site} ${o.x.it}`.toLowerCase().includes(q));
+  const pv = (y) => (y ? `${jaOf(y.n, y.pr) ? `자당 ${won(jaOf(y.n, y.pr))}` : won(y.pr)}<em>${esc(y.p.replace(/\(주\)|주식회사|㈜/g, '').trim())} · ${md(y.d)}</em>` : '');
+  return `<div class="pr-bar"><input id="pr-q" type="search" placeholder="거래처·현장·품목" value="${esc(P.q)}" autocomplete="off"><span class="pr-cnt" id="pr-cnt">${rs.length}품목</span></div>
+  <div class="pr-tw"><table class="pr-t"><thead><tr><th>출고일</th><th>판매처 · 현장</th><th>품목</th><th>수량</th><th class="pr-num">구매가 <i>별도</i></th><th class="pr-num">이 거래처 마지막 판가</th><th class="pr-num">다른 거래처 판가</th></tr></thead>
+  <tbody>${rs.map((o) => `<tr><td class="pr-d">${esc(o.r.day || '')}</td><td>${esc(o.r.partner)} · ${esc(o.r.site || '')}</td><td class="pr-n">${esc(o.x.it)}</td><td>${esc(o.x.q || '')}</td>
+    <td class="pr-num">${o.x.bp ? won(o.x.bp) : o.x.buy === '—' ? '재고' : ''}</td><td class="pr-num">${pv(o.mine) || '<b class="pr-need">확인 필요</b>'}</td><td class="pr-num">${o.other.map(pv).join('')}</td></tr>`).join('') || '<tr><td colspan="7" class="pr-none">없음</td></tr>'}</tbody></table></div>`;
+}
+
 export function screen() {
+  if (P.tab === 'ask') { if (!P.data && !P.err) inboxBody('price:table').then((d) => { P.data = d || { rows: [] }; ctx && ctx.rerender(); }).catch(() => {}); return `<section class="pr"><h1 class="fl-h1">단가 확인 요청</h1>${askHtml()}</section>`; }
   if (!P.data && !P.err) { inboxBody('price:table').then((d) => { P.data = d || { rows: [] }; ctx && ctx.rerender(); }).catch((e) => { P.err = String(e); ctx && ctx.rerender(); }); }
   if (!P.data) return `<section class="pr"><h1 class="fl-h1">단가표</h1><div class="pr-none">${P.err ? esc(P.err) : '불러오는 중…'}</div></section>`;
   const sale = (P.data.rows || []).filter((r) => r.k === 's');
@@ -62,9 +92,10 @@ function refreshBody() {   // 글자 칠 때는 표만 다시 (한글 입력 안
 export function bind(app, c) {
   ctx = c;
   app.addEventListener('input', (e) => {
-    if (e.target.id === 'pr-q') { P.q = e.target.value; P.lim = 600; refreshBody(); }
+    if (e.target.id === 'pr-q') { P.q = e.target.value; P.lim = 600; if (P.tab === 'ask') { if (e.isComposing) return; const pos = e.target.selectionStart; ctx.rerender(); const i = document.getElementById('pr-q'); if (i) { i.focus(); i.setSelectionRange(pos, pos); } } else refreshBody(); }
     else if (e.target.id === 'pr-p') { const v = e.target.value.trim(); const all = (P.data && P.data.rows) || []; if (!v || all.some((r) => r.p === v)) { P.p = v; P.lim = 600; refreshBody(); } }
   });
+  app.addEventListener('compositionend', (e) => { if (e.target.id === 'pr-q' && P.tab === 'ask') e.target.dispatchEvent(new Event('input', { bubbles: true })); });
   app.addEventListener('change', (e) => {
     const t = e.target.closest('[data-pr]'); if (!t || t.tagName !== 'SELECT') return;
     P[t.dataset.pr] = t.value; P.lim = 600; ctx.rerender();
@@ -72,7 +103,8 @@ export function bind(app, c) {
   app.addEventListener('click', (e) => {
     const t = e.target.closest('[data-pr]'); if (!t || t.tagName === 'SELECT') return;
     const a = t.dataset.pr;
-    if (a === 'by') { P.by = t.dataset.v; P.sort = ''; ctx.rerender(); }
+    if (a === 'tab') { P.tab = t.dataset.v; P.q = ''; if (P.tab === 'ask') P.flow = null; ctx.rerender(); }
+    else if (a === 'by') { P.by = t.dataset.v; P.sort = ''; ctx.rerender(); }
     else if (a === 'sort') { const k = t.dataset.k; P.sort = P.sort === k ? '' : k; ctx.rerender(); }   // 거래처 칸 누르면 그 거래처에 판 품목이 위로
     else if (a === 'more') { P.lim += 1000; ctx.rerender(); }
   });
