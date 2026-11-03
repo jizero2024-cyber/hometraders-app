@@ -4,7 +4,8 @@
 //   서류 화면은 모두 js/forms.js (같은 머리·카드·버튼)
 import * as S from './store-supabase.js?v=13';
 import * as FM from './forms.js?v=26';
-import * as FL from './flow.js?v=120';   // 맨 위 출고 흐름 (10/28)
+import * as PR from './price.js?v=1';   // 단가표 (11/03)
+import * as FL from './flow.js?v=121';   // 맨 위 출고 흐름 (10/28)
 import * as CN from './cheonan.js?v=7';   // 천안 재고 (10/31)
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -129,7 +130,7 @@ export function screen(view) {
   }
   const wait = (H.inbox.wait || 0) + (H.inbox.got || 0), chk = H.inbox.check || 0;
   return `<div class="hm">${top('', true)}${subHtml()}<div class="hm-body top"><main class="hm-main">
-    ${curGrp() === '창고' ? CN.screen() : `${FL.main({ fare: H.fare || [], inbox: wait + chk })}${farePanel()}`}</main></div>${quickHtml(wait, chk)}${boxModal()}${FM.popup()}<input type="file" id="hm-file" multiple accept="image/*,.heic,.pdf,.xlsx,.xls,.csv,.txt" hidden></div>`;
+    ${curGrp() === '창고' ? CN.screen() : curGrp() === '단가표' ? PR.screen() : `${FL.main({ fare: H.fare || [], inbox: wait + chk })}${farePanel()}`}</main></div>${quickHtml(wait, chk)}${boxModal()}${FM.popup()}<input type="file" id="hm-file" multiple accept="image/*,.heic,.pdf,.xlsx,.xls,.csv,.txt" hidden></div>`;
 }
 
 // 위 2단 메뉴 (10/31 대표 "사이드 메뉴는 상단으로, 투뎁스") — 1단: 출고·전표 확인·서류·거래처, 2단: 고른 묶음의 항목
@@ -139,7 +140,7 @@ function closeN() { return FL.closeItems({ fare: H.fare || [], inbox: (H.inbox.w
 function navHtml() {
   const c = FL.counts(), g = curGrp(), n = (k) => (k ? `<b>${k}</b>` : '');
   const t = (k, lab, badge) => `<button type="button" class="hm-t1 ${g === k ? 'on' : ''}" data-hm="grp" data-g="${k}">${lab}${badge || ''}</button>`;
-  return `<nav class="hm-nav" aria-label="메뉴">${t('출고', '출고', n(closeN()))}${t('전표', '전표 확인', n(c.miss + c.missOld))}<button type="button" class="hm-t1 off" disabled>창고<i>준비중</i></button></nav>`;   // 창고는 준비중으로 막음 (11/02 대표)
+  return `<nav class="hm-nav" aria-label="메뉴">${t('출고', '출고', n(closeN()))}${t('전표', '전표 확인', n(c.miss + c.missOld))}${t('단가표', '단가표')}<button type="button" class="hm-t1 off" disabled>창고<i>준비중</i></button></nav>`;   // 창고는 준비중으로 막음 (11/02 대표)
 }
 function subHtml() {
   const c = FL.counts(), v = FL.view(), g = curGrp(), n = (k) => (k ? `<b>${k}</b>` : '');
@@ -211,6 +212,7 @@ export function bind(app, c) {
   FL.bind(app, { rerender: () => ctx.rerender(), openFrame, go: (r) => ctx.go(r), me: () => ctx.me(),
     home: (k) => { if (k === 'fare') { H.fareOpen = true; ctx.rerender(); setTimeout(() => { const x = document.querySelector('.hm-fare'); if (x) x.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 0); } else { H.box = true; ctx.rerender(); } } });
   CN.bind(app, { rerender: () => ctx.rerender(), me: () => ctx.me() });
+  PR.bind(app, { rerender: () => ctx.rerender() });
   const on = () => app.querySelector('.hm');
   app.addEventListener('click', (e) => {
     const t = e.target.closest('[data-hm]'); if (!t || !on()) return;

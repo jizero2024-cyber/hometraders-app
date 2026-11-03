@@ -3,6 +3,7 @@
 // 버튼은 있는 화면을 그 건 값으로 엶: 배차 요청(/homt) · 전자 송장 · 납품확인서 · 자재승인원 · 견적서 · 공간 올릴 전표
 import * as S from './store-supabase.js?v=13';
 import * as FM from './forms.js?v=26';
+import { inboxBody } from './dbread.js?v=1';
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const sv = (d) => `<svg viewBox="0 0 24 24" aria-hidden="true">${d}</svg>`;
@@ -269,13 +270,14 @@ function galHtml(r) {
   return `<div class="fd-gal">${ph}${docs}${pdf}</div>`;
 }
 function itabHtml(r) {
-  const pr = (v, p, need) => (v === '—' ? '<td class="fd-st na">—</td>' : v ? `<td class="fd-st ok" title="${esc(v)}">${p ? won(p) : esc(v)}</td>` : need ? '<td class="fd-st amb">확인 필요</td>' : '<td class="fd-st no">✕</td>');   // 구매가·판매가 — 이카운트 단가, 몰라서 못 넣은 건 확인 필요 (11/03 대표)
+  const ja = (it, p) => { const m = String(it).match(/구조재.*?\d+\s*\*\s*\d+\s*\*\s*(\d+)/); return m && p && +m[1] ? `<i class="fd-ja">자당 ${Math.round((p * 1.1) / +m[1]).toLocaleString()} 포함</i>` : ''; };
+  const pr = (v, p, need, it) => (v === '—' ? '<td class="fd-st na">—</td>' : v ? `<td class="fd-st ok" title="${esc(v)}">${p ? won(p) + ja(it, p) : esc(v)}</td>` : need ? '<td class="fd-st amb">확인 필요</td>' : '<td class="fd-st no">✕</td>');   // 구매가·판매가 — 이카운트 단가, 몰라서 못 넣은 건 확인 필요 (11/03 대표)
   const un = (x) => ['un', 'no'].includes(x.sc || 'un') && x.buy !== '—';
   const srcTd = (x) => (FL.srcEd === r.no && un(x) ? `<input class="fd-srci" data-fl-src="${esc(r.no)}" list="fd-srcl" placeholder="구매처·창고" autocomplete="off">` : un(x) ? `<button type="button" class="fd-src ${esc(x.sc || 'un')}" data-fl="srced" data-no="${esc(r.no)}">${esc(x.src)}</button>` : `<span class="fd-src ${esc(x.sc || 'un')}">${esc(x.src)}</span>`);
   const due = r.arr || (r.day && r.day !== '미정' ? r.day : '');   // 납기일 — 언제까지 발주해 달라는 날 (11/02 대표 "나간 날짜는 납기일로")
-  const rows = (r.itab || []).map((x) => `<tr class="${x.miss ? 'fd-miss' : ''}"><td>${esc(x.rd || '')}</td><td>${esc(x.rw || '')}</td><td class="fd-ti">${esc(x.it)}</td><td>${esc(x.q)}</td><td>${srcTd(x)}</td><td>${esc(due || '미정')}</td>${pr(x.buy, x.bp, un(x))}${pr(x.sale, x.sp, !x.buy || un(x))}</tr>`).join('');
+  const rows = (r.itab || []).map((x) => `<tr class="${x.miss ? 'fd-miss' : ''}"><td>${esc(x.rd || '')}</td><td>${esc(x.rw || '')}</td><td class="fd-ti">${esc(x.it)}</td><td>${esc(x.q)}</td><td>${srcTd(x)}</td><td>${esc(due || '미정')}</td>${pr(x.buy, x.bp, un(x), x.it)}${pr(x.sale, x.sp, !x.buy || un(x), x.it)}</tr>`).join('');
   const dl = FL.srcEd === r.no ? `<datalist id="fd-srcl">${['천안창고', ...new Set(S.getPartners().map((p) => p.name).filter(Boolean))].map((n) => `<option value="${esc(n)}">`).join('')}</datalist>` : '';
-  return `<div class="fd-tw"><table class="fd-itab"><thead><tr><th>발주요청일</th><th>요청자</th><th>발주요청품목</th><th>수량</th><th>출고처</th><th>납기일</th><th>구매가</th><th>판매가</th></tr></thead><tbody>${rows}</tbody></table>${dl}</div>`;
+  return `<div class="fd-tw"><table class="fd-itab"><thead><tr><th>발주요청일</th><th>요청자</th><th>발주요청품목</th><th>수량</th><th>출고처</th><th>납기일</th><th>구매가 <i class="fd-vat">부가세 별도</i></th><th>판매가 <i class="fd-vat">부가세 별도</i></th></tr></thead><tbody>${rows}</tbody></table>${dl}</div>`;
 }
 function linesHtml(r) {
   return (r.lines || []).map((l) => {
@@ -288,7 +290,7 @@ function linesHtml(r) {
   }).join('');
 }
 const evLinks = (es) => (es || []).map((e) => (e.u ? `<a class="fl-evl" href="${esc(e.u)}" target="_blank" rel="noopener">${esc(e.t)}</a>`
-  : `<button type="button" class="fl-evl ${/^카톡/.test(e.t) ? 'k' : 'm'}" data-fl="evx" data-x="${esc(e.x || e.t)}">${esc(e.t)}</button>`)).join('');   // 카톡·문자는 출고일보 원문 시트 글 (10/28 대표 "톡·문자도")
+  : `<button type="button" class="fl-evl ${/^카톡/.test(e.t) ? 'k' : 'm'}" data-fl="evx" data-x="${esc(e.x || e.t)}"${e.c ? ` data-c="${esc(e.c)}"` : ''}>${esc(e.t)}</button>`)).join('');   // 카톡·문자는 출고일보 원문 시트 글 (10/28 대표 "톡·문자도")
 function evHtml(r) {
   const ev = evLinks(r.ev);
   return `<div class="fl-ev"><div class="fl-eh"><b>${title(r)}</b>${plHtml(r)}${cmpBtn(r)}<span>${esc(r.day)}</span></div>${linesHtml(r)}${r.memo || ev ? `<div class="fl-memo">${r.memo ? `<span>${esc(r.memo)}</span>` : ''}${ev}</div>` : ''}</div>`;
@@ -521,7 +523,8 @@ export function bind(app, c) {
     else if (a === 'sug' && r) sugOpen(r);
     else if (a === 'evx') {   // 카톡·문자 원문 — 같은 방 앞뒤 대화 (배차안내까지)
       closeQ(); const ov = document.createElement('div'); ov.className = 'hm-ov fl-qov';
-      ov.innerHTML = `<div class="hm-modal fl-txm" role="dialog" aria-label="원문"><div class="hm-mh"><b>${esc(t.textContent)}</b><button type="button" class="hm-x" aria-label="닫기">✕</button></div><pre class="fl-tx">${esc(t.dataset.x || '')}</pre></div>`;
+      ov.innerHTML = `<div class="hm-modal fl-txm" role="dialog" aria-label="원문"><div class="hm-mh"><b>${esc(t.textContent)}</b><button type="button" class="hm-x" aria-label="닫기">✕</button></div><pre class="fl-tx">${esc(t.dataset.c ? '불러오는 중…' : t.dataset.x || '')}</pre></div>`;
+      if (t.dataset.c) inboxBody('calls:full').then((m) => { const p = ov.querySelector('.fl-tx'); if (p) p.textContent = (m && m[t.dataset.c]) || t.dataset.x || ''; }).catch(() => { const p = ov.querySelector('.fl-tx'); if (p) p.textContent = t.dataset.x || ''; });   // 통화 = 전체 전문 (11/03 대표)
       ov.addEventListener('click', (ev) => { if (ev.target === ov || ev.target.closest('.hm-x')) ov.remove(); });
       document.body.appendChild(ov);
     }
