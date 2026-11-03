@@ -752,7 +752,7 @@ export function bind(app, c) {
     const t = e.target.closest('[data-gb]'); if (!t || !app.querySelector('.gb')) return;
     const a = t.dataset.gb, id = t.dataset.id, cur = G.open && findSheet(G.open);
     if (LIM() && (LIM_ACTS.has(a) || !LIM_OK.has(a))) return;
-    if (a === 'view') { G.view = t.dataset.v; G.open = null; if (G.biz === 'ace') { setBiz('homt'); ctx.go('gonggan'); } else ctx.rerender(); return; }   // 올릴 전표는 홈트 것 — 에이스에서 누르면 홈트로
+    if (a === 'view') { G.view = t.dataset.v; G.open = null; ctx.rerender(); return; }   // 에이스도 자기 올릴 전표 (11/03)
     if (a === 'wait-sync') { waitSync(); return; }   // 올릴 전표 새로고침 (11/03)
     if (a === 'taxcopy') {   // 계산서 칸 하나 복사 → 다음 칸으로
       const d = G.open && findSheet(G.open); if (!d) return;
