@@ -623,27 +623,27 @@ const PRINT_CSS = `
   .items td.c{text-align:center} .items td.n{text-align:right} .items td.nm{white-space:normal;word-break:break-all;line-height:1.3}
   .items tfoot .tot{background:#F0B346;color:#fff;font-weight:700;text-align:center}
   .items tfoot td{font-weight:700;background:#f5f5f5}
-  .sheet.ace{--navy:#20365c;--navy2:#2c4470}
+  .sheet.ace{--navy:#1f1f1f;--navy2:#1f1f1f}   /* 칸에 색 바탕 없이 흑백 (11/03 대표 "블럭에 색깔 다 없애") */
   .sheet.ace,.sheet.ace td,.sheet.ace th{font-family:'Noto Serif KR',serif}   /* 에이스는 명조 — 홈트(Pretendard)와 다르게 (11/03 대표) */
   .sheet.ace .n,.sheet.ace .sum{font-family:Pretendard,sans-serif}
   .sheet.ace .top{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2.5px solid var(--navy);padding-bottom:8px;margin:0 0 6mm}
   .sheet.ace .ttl{background:none;color:var(--navy);border:0;letter-spacing:.45em;font-size:22pt;font-weight:900;padding:0;margin:0;text-align:left}
-  .sheet.ace .ttl small{display:block;font-size:7pt;letter-spacing:.32em;font-weight:600;color:#6b7891;margin-top:4px}
+  .sheet.ace .ttl small{display:block;font-size:7pt;letter-spacing:.32em;font-weight:600;color:#777;margin-top:4px}
   .sheet.ace .top .no{width:46%;margin:0}
-  .sheet.ace .top .no td{border:0;border-bottom:1px solid #c9cfda;padding:3px 8px;text-align:left}
+  .sheet.ace .top .no td{border:0;border-bottom:1px solid #c8c8c8;padding:3px 8px;text-align:left}
   .sheet.ace .top .no td.lb{background:none;text-align:left;width:32%}
   .sheet.ace table{border-collapse:collapse;width:100%;margin-bottom:3mm;table-layout:fixed}
-  .sheet.ace td,.sheet.ace th{border:1px solid #c9cfda;padding:5px 8px;font-size:8.5pt;color:#1e2430}
-  .sheet.ace .lb{background:#eef1f6;font-weight:700;text-align:center;white-space:nowrap;color:var(--navy)}
-  .sheet.ace .hd{background:var(--navy);color:#fff;font-weight:700;text-align:center;border-color:var(--navy)}
-  .sheet.ace .hd.sum{background:#eef1f6;color:var(--navy);text-align:center;font-weight:800;font-size:10pt}
+  .sheet.ace td,.sheet.ace th{border:1px solid #c8c8c8;padding:5px 8px;font-size:8.5pt;color:#1f1f1f}
+  .sheet.ace .lb{background:none;font-weight:700;text-align:center;white-space:nowrap;color:var(--navy)}
+  .sheet.ace .hd{background:none;color:var(--navy);font-weight:700;text-align:center;border-bottom:1.5px solid var(--navy)}
+  .sheet.ace .hd.sum{background:none;color:var(--navy);text-align:center;font-weight:800;font-size:10pt}
   .sheet.ace .c{text-align:center} .sheet.ace .n{text-align:right} .sheet.ace .b{font-weight:700}
   .sheet.ace .say{margin:4mm 0 2mm;text-align:left;font-size:9pt;font-weight:600}
-  .sheet.ace .items th{background:var(--navy);color:#fff;border-color:var(--navy);font-weight:700;font-size:8.5pt;text-align:center}
+  .sheet.ace .items th{background:none;color:var(--navy);border-bottom:1.5px solid var(--navy);font-weight:700;font-size:8.5pt;text-align:center}
   .sheet.ace .items td{height:22px}
   .sheet.ace .items td.nm{font-size:8pt;text-align:left;white-space:normal;word-break:keep-all;overflow-wrap:anywhere}
-  .sheet.ace .items tfoot .tot{background:var(--navy2);color:#fff;text-align:center;font-weight:700;border-color:var(--navy2)}
-  .sheet.ace .items tfoot td{background:#f4f6fa;font-weight:700}
+  .sheet.ace .items tfoot .tot{background:none;color:var(--navy);text-align:center;font-weight:700}
+  .sheet.ace .items tfoot td{background:none;font-weight:700;border-top:1.5px solid var(--navy)}
   .sheet.ace .items tfoot .big{font-size:10pt}
   .sheet.ace .total{margin-bottom:0}
   .sheet.ace .foot2 td{height:24px}
