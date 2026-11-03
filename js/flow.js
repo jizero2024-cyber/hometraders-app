@@ -38,7 +38,7 @@ const tkey = (t) => {   // 같은 날 안에서 도착 이른 것 먼저, 시간
   const m = String(t || '').match(/(\d{1,2})(?::(\d\d))?\s*시?/);
   if (m) return +m[1] * 60 + (+m[2] || 0) + (/오후/.test(t) && +m[1] < 12 ? 720 : 0);
   return /새벽/.test(t) ? 300 : /아침|오전/.test(t) ? 540 : /점심|정오/.test(t) ? 720 : /오후/.test(t) ? 840 : /저녁/.test(t) ? 1080 : 9999; };
-const rowsOf = (k) => (FL.data ? FL.data.rows : []).filter((r) => r.steps.includes(k));
+const rowsOf = (k) => (FL.data ? FL.data.rows : []).filter((r) => r.steps.includes(k) && !(k === '입력 누락' && slipOk(r)));   // 입력 누락에서 [완료] 누른 건은 입력 완료로 (11/03 대표 "천안창고서 나간 것도 있어서 수동으로도")
 const TODAY_ONLY = ['배차 요청', '배차 완료', '출고 완료'];   // 오늘 마감 — 오늘 건만 (10/28 대표). 견적 요청·발주는 날짜가 앞이라 다
 const dueToday = (r) => { const t = (FL.data || {}).today || '', d = t.replace(/^0/, '');   // 견적 — 오늘까지 보내야 하는 것 (10/28 대표)
   const txt = `${r.time} ${r.item} ${r.memo || ''}`; return r.day === t || new RegExp(`(^|[^\\d/])(${t}|${d})(?![\\d/])`).test(txt); };   // '오늘' 글자는 옛 메모에도 있어서 오늘 날짜가 적힌 것만
@@ -125,7 +125,7 @@ function rowHtml(r) {
   const btns = (BTN[FL.cur] || []).filter(([a]) => a !== 'cmp' || allIn(r) || FL.cur === '전표 전체').map(([a, t], i) => (a === 'cmp' && !allIn(r) ? `<span class="fl-go fl-ph" aria-hidden="true">${t}</span>` : `<button type="button" class="${i ? 'fl-gh' : 'fl-go'}" data-fl="${a}" data-no="${esc(r.no)}">${t}</button>`)).join('');   // 전표 전체 — 없는 버튼은 빈자리로 두어 줄 맞춤 (11/02 대표 "어긋나 보여")
   const asked = FL.cur === '배차 요청' && S.getShipments().find((s) => String(s.note || '').includes(`출고 흐름 ${r.no})`));
   const cn = caseRows(r).length;
-  const chips = [FL.cur === '입력 완료' && slipOk(r) ? '<span class="fl-chip ok">마감 확인</span>' : '', FL.cur === '전표 전체' ? (r.steps.includes('입력 누락') ? '<span class="fl-chip no">입력 누락</span>' : '<span class="fl-chip ok">입력 완료</span>') : '', ...(r.imgs || []).map((x) => `<button type="button" class="fl-chip blu" data-fl="img" data-id="${esc(x.id)}" data-n="${esc(x.name)}">사진</button>`), cn > 1 ? `<span class="fl-chip blu">같은 주문 ${cn}건</span>` : '', (() => { const L = caseRows(r).flatMap((x) => x.miss || []).reduce((a, m) => a + Math.max(0, mLeft(m, Object.fromEntries((FL.data ? FL.data.rows : []).map((x) => [x.no, x])))), 0); return L > 0 ? `<span class="fl-chip no">누락 남음 ${L.toLocaleString()}</span>` : ''; })(), ...(r.chips || []).map((c) => `<span class="fl-chip amb">${esc(c)}</span>`), ['배차 요청', '발주'].includes(FL.cur) && sugBest(r) ? `<span class="fl-chip ${sugBest(r).one ? 'ok' : 'amb'}">추천 ${esc(sugBest(r).pick.map((p) => p.n.slice(0, 4)).join('+'))}</span>` : '', asked ? `<span class="fl-chip blu">요청함 ${esc((String(asked.note).match(/요청함 (\d\d:\d\d)/) || ['', ''])[1])}</span>` : '', r.late && FL.cur === '배차 요청' ? '<span class="fl-chip no">누락</span>' : '', FL.cur === '배차 완료' && !r.driver ? '<span class="fl-chip amb">기사·운임 확인</span>' : ''].join('');
+  const chips = [FL.cur === '입력 완료' && slipOk(r) ? '<span class="fl-chip ok">마감 확인</span>' : '', FL.cur === '전표 전체' ? (r.steps.includes('입력 누락') ? '<span class="fl-chip no">입력 누락</span>' : '<span class="fl-chip ok">입력 완료</span>') : '', ...[...(r.imgs || []), ...((r.rq || {}).imgs || []).slice(0, 1)].map((x) => `<button type="button" class="fl-chip blu" data-fl="img" data-id="${esc(x.id)}" data-n="${esc(x.name)}">사진</button>`), cn > 1 ? `<span class="fl-chip blu">같은 주문 ${cn}건</span>` : '', (() => { const L = caseRows(r).flatMap((x) => x.miss || []).reduce((a, m) => a + Math.max(0, mLeft(m, Object.fromEntries((FL.data ? FL.data.rows : []).map((x) => [x.no, x])))), 0); return L > 0 ? `<span class="fl-chip no">누락 남음 ${L.toLocaleString()}</span>` : ''; })(), ...(r.chips || []).map((c) => `<span class="fl-chip amb">${esc(c)}</span>`), ['배차 요청', '발주'].includes(FL.cur) && sugBest(r) ? `<span class="fl-chip ${sugBest(r).one ? 'ok' : 'amb'}">추천 ${esc(sugBest(r).pick.map((p) => p.n.slice(0, 4)).join('+'))}</span>` : '', asked ? `<span class="fl-chip blu">요청함 ${esc((String(asked.note).match(/요청함 (\d\d:\d\d)/) || ['', ''])[1])}</span>` : '', r.late && FL.cur === '배차 요청' ? '<span class="fl-chip no">누락</span>' : '', FL.cur === '배차 완료' && !r.driver ? '<span class="fl-chip amb">기사·운임 확인</span>' : ''].join('');
   const route = FL.cur === '견적' ? '' : `${esc(r.from || '상차지 확인')} → ${esc(r.site || '하차지 확인')}`;
   return `<div class="fl-row ${FL.sel === r.no ? 'sel' : ''}" data-fl="row" data-no="${esc(r.no)}">
     <div class="fl-c fl-tm ${r.late || dday(r) === FL.data.today ? 'now' : ''}">${(DATE_FIRST.includes(FL.cur) || ['배차 완료', '출고 완료'].includes(FL.cur)) ? `<b>${esc(dday(r))}</b><span>${esc(r.time || '')}</span>` : `<b>${esc(r.time || (r.day === '미정' ? '미정' : '시간 미정'))}</b><span>${esc(dday(r) === '미정' ? '' : dday(r))}</span>`}</div>
@@ -133,7 +133,7 @@ function rowHtml(r) {
     <div class="fl-c fl-ds">${chips}${esc(r.item)}</div>
     <div class="fl-c fl-ds fl-rt">${route}</div>
     <div class="fl-c fl-ds fl-v">${FL.cur === '견적' ? '' : esc(r.size || '')}</div>
-    <div class="fl-acts${FL.cur === '전표 전체' ? ' dz' : ''}">${STMT_STEPS.includes(FL.cur) ? stmtHtml(r) : ''}${btns}${FL.cur === '전표' ? `<button type="button" class="fl-sent" data-fl="slipok" data-no="${esc(r.no)}"><i></i>입력 확인</button>` : ''}${FL.cur === '전표 전체' ? docHtml(r) : ''}</div></div>${FL.sel === r.no ? detailHtml(r) : ''}`;
+    <div class="fl-acts${FL.cur === '전표 전체' ? ' dz' : ''}">${STMT_STEPS.includes(FL.cur) ? stmtHtml(r) : ''}${btns}${FL.cur === '전표' ? `<button type="button" class="fl-sent" data-fl="slipok" data-no="${esc(r.no)}"><i></i>입력 확인</button>` : ''}${FL.cur === '입력 누락' || (FL.cur === '전표 전체' && r.steps.includes('입력 누락') && !slipOk(r)) ? `<button type="button" class="fl-go" data-fl="slipok" data-ask="1" data-no="${esc(r.no)}">완료</button>` : ''}${FL.cur === '전표 전체' ? docHtml(r) : ''}</div></div>${FL.sel === r.no ? detailHtml(r) : ''}`;
 }
 const stLab = (x) => (x.steps.includes('출고 완료') || x.steps.includes('기록') ? '출고 완료' : x.steps.includes('배차 완료') ? '배차 완료' : x.steps.includes('배차 요청') ? '배차 요청' : x.steps.includes('발주') ? '발주' : x.steps[0] || '');
 const mGone = (t, by) => by[t.no] && ['출고 완료', '배차 완료'].includes(stLab(by[t.no]));   // 차가 잡힌 것만 보낸 걸로
@@ -156,11 +156,12 @@ function detailHtml(r) {
     ${r.why ? `<div class="fl-why">${esc(r.why)}</div>` : ''}
     ${['배차 요청', '발주', '견적'].includes(FL.cur) ? bestHtml(r) : ''}
     ${r.itab ? itabHtml(r) : buys || `<div class="fl-it">${esc(r.items)}</div>`}
+    ${r.itab && ((r.rq || {}).imgs || []).length + (r.docs || []).length + (r.dpdf || []).length ? galHtml(r) : ''}
     ${caseHtml(r)}
     ${['배차 요청', '발주', '견적'].includes(FL.cur) ? (r.sug ? sugHtml(r) : (r.itab || r.qitems || []).length || FL.cur === '견적' ? `<div class="fl-k">견적 요청 추천 <button type="button" class="fl-go fd-rfqb" data-fl="rfq" data-no="${esc(r.no)}">견적요청서</button></div>` : '') : `<details class="fd-more" data-mo="ln:${esc(r.no)}" ${(FL.mo || {})['ln:' + r.no] ? 'open' : ''}><summary>전표${(() => { const n = (r.lines || []).filter((l) => l.st !== '입력').length; return n ? ` · 미입력 ${n}` : ''; })()}</summary>${linesHtml(r)}</details>`}
     ${r.pl ? `<div class="fl-k">순이익</div><div class="fl-pld"><span>판매 ${won(r.pl.sale)}</span><i>−</i><span>구매 ${won(r.pl.buy)}</span><i>−</i><span>운반비 ${won(r.pl.fare)}</span><i>=</i><b class="${r.pl.net < 0 ? 'no' : ''}">${won(r.pl.net)}</b><em>${r.pl.sale ? Math.round((100 * r.pl.net) / r.pl.sale) : 0}% · 공급가</em></div>` : ''}
     ${(r.ev || []).length ? `<div class="fl-k">근거</div><div class="fl-memo">${evLinks(r.ev)}</div>` : ''}
-    ${r.itab ? `<details class="fd-more" data-mo="rq:${esc(r.no)}" ${(FL.mo || {})['rq:' + r.no] ? 'open' : ''}><summary>발주 요청${r.rq && r.rq.t ? ` · ${esc(r.rq.t.slice(0, 11))}` : ''}</summary>${rqHtml(r).replace('<div class="fl-k">발주 요청</div>', '')}${galHtml(r)}</details>` : ''}
+    ${r.itab ? `<details class="fd-more" data-mo="rq:${esc(r.no)}" ${(FL.mo || {})['rq:' + r.no] ? 'open' : ''}><summary>발주 요청${r.rq && r.rq.t ? ` · ${esc(r.rq.t.slice(0, 11))}` : ''}</summary>${rqHtml(r).replace('<div class="fl-k">발주 요청</div>', '')}</details>` : ''}
     ${!r.no.startsWith('Q') || r.veh || r.memo ? `<details class="fd-more" data-mo="${esc(r.no)}" ${(FL.mo || {})[r.no] ? 'open' : ''}><summary>메모</summary>${r.no.startsWith('Q') ? '' : `<div class="fl-k">상차 → 하차</div><div class="fl-it"><b>${esc(r.from || '상차지 확인')}</b> → <b>${esc(r.site_full || r.site || '하차지 확인')}</b></div>`}${r.veh ? `<div class="fl-k">차량</div><div class="fl-it">${esc(r.veh)}</div>` : ''}${r.memo ? `<div class="fl-k">메모</div><div class="fl-it fl-memo">${memoHtml(r)}</div>` : ''}${['배차 요청', '발주', '견적'].includes(FL.cur) ? fareHtml(r) : ''}</details>` : ''}
     ${(r.imgs || []).length ? `<div class="fl-k">사진</div><div class="fl-imgs">${r.imgs.map((x) => `<iframe src="https://drive.google.com/file/d/${encodeURIComponent(x.id)}/preview" title="${esc(x.name)}" loading="lazy"></iframe>`).join('')}</div>` : ''}</div>`;   // 견적 요청 사진 — 펼치면 바로 (10/28 대표)
 }
@@ -266,10 +267,13 @@ function galHtml(r) {
   return `<div class="fd-gal">${ph}${docs}${pdf}</div>`;
 }
 function itabHtml(r) {
-  const st = (v) => (v === '—' ? '<td class="fd-st na">—</td>' : v ? `<td class="fd-st ok">${esc(v)}</td>` : '<td class="fd-st no">✕</td>');
+  const pr = (v, p, need) => (v === '—' ? '<td class="fd-st na">—</td>' : v ? `<td class="fd-st ok" title="${esc(v)}">${p ? won(p) : esc(v)}</td>` : need ? '<td class="fd-st amb">확인 필요</td>' : '<td class="fd-st no">✕</td>');   // 구매가·판매가 — 이카운트 단가, 몰라서 못 넣은 건 확인 필요 (11/03 대표)
+  const un = (x) => ['un', 'no'].includes(x.sc || 'un') && x.buy !== '—';
+  const srcTd = (x) => (FL.srcEd === r.no && un(x) ? `<input class="fd-srci" data-fl-src="${esc(r.no)}" list="fd-srcl" placeholder="구매처·창고" autocomplete="off">` : un(x) ? `<button type="button" class="fd-src ${esc(x.sc || 'un')}" data-fl="srced" data-no="${esc(r.no)}">${esc(x.src)}</button>` : `<span class="fd-src ${esc(x.sc || 'un')}">${esc(x.src)}</span>`);
   const due = r.arr || (r.day && r.day !== '미정' ? r.day : '');   // 납기일 — 언제까지 발주해 달라는 날 (11/02 대표 "나간 날짜는 납기일로")
-  const rows = (r.itab || []).map((x) => `<tr class="${x.miss ? 'fd-miss' : ''}"><td>${esc(x.rd || '')}</td><td>${esc(x.rw || '')}</td><td class="fd-ti">${esc(x.it)}</td><td>${esc(x.q)}</td><td><span class="fd-src ${esc(x.sc || 'un')}">${esc(x.src)}</span></td><td>${esc(due || '미정')}</td>${st(x.buy)}${st(x.sale)}</tr>`).join('');
-  return `<div class="fd-tw"><table class="fd-itab"><thead><tr><th>발주요청일</th><th>요청자</th><th>발주요청품목</th><th>수량</th><th>출고처</th><th>납기일</th><th>구매</th><th>판매</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  const rows = (r.itab || []).map((x) => `<tr class="${x.miss ? 'fd-miss' : ''}"><td>${esc(x.rd || '')}</td><td>${esc(x.rw || '')}</td><td class="fd-ti">${esc(x.it)}</td><td>${esc(x.q)}</td><td>${srcTd(x)}</td><td>${esc(due || '미정')}</td>${pr(x.buy, x.bp, un(x))}${pr(x.sale, x.sp, !x.buy || un(x))}</tr>`).join('');
+  const dl = FL.srcEd === r.no ? `<datalist id="fd-srcl">${['천안창고', ...new Set(S.getPartners().map((p) => p.name).filter(Boolean))].map((n) => `<option value="${esc(n)}">`).join('')}</datalist>` : '';
+  return `<div class="fd-tw"><table class="fd-itab"><thead><tr><th>발주요청일</th><th>요청자</th><th>발주요청품목</th><th>수량</th><th>출고처</th><th>납기일</th><th>구매가</th><th>판매가</th></tr></thead><tbody>${rows}</tbody></table>${dl}</div>`;
 }
 function linesHtml(r) {
   return (r.lines || []).map((l) => {
@@ -477,6 +481,20 @@ export function bind(app, c) {
     if (L) L.innerHTML = listHtml(); if (n) n.textContent = `${listOf(FL.cur).length}건`;
   };
   app.addEventListener('input', onRq);
+  const setSrc = (i) => {   // 출고처 직접 — 구매처 확인 칸에 이름 넣으면 그 출고 건 구매처·출고처로 (11/03 대표 "구매처 확인이라고 적혀 있으면 내가 어케") · 맥 도우미 _disp_from 이 구매 줄로
+    const no = i.dataset.flSrc, v = i.value.trim(), r = (FL.data ? FL.data.rows : []).find((x) => x.no === no);
+    FL.srcEd = null;
+    if (!v || !r || !S.addShipEvidence) { ctx.rerender(); return; }
+    const kind = /창고|재고/.test(v) ? '창고' : '직접';
+    S.addShipEvidence(no, `배차 상차지 ${v.replace(/\s*재고$/, '')} |  | ${kind}`, ctx.me ? ctx.me() : '').then((err) => {
+      if (err) { alert('저장 못 했어요 — ' + err); return; }
+      const nm = kind === '창고' && !/재고/.test(v) ? `${v} 재고` : v;
+      r.from = nm; (r.itab || []).forEach((x) => { if (['un', 'no'].includes(x.sc || 'un') && x.buy !== '—') { x.src = nm.replace(/ 재고$/, ''); x.sc = kind === '창고' ? 'ca' : 'ok'; } });
+      ctx.rerender();
+    }).catch((e) => alert('저장 못 했어요 — ' + e));
+  };
+  app.addEventListener('change', (e) => { if (e.target.matches && e.target.matches('.fd-srci')) setSrc(e.target); });
+  app.addEventListener('keydown', (e) => { if (e.target.matches && e.target.matches('.fd-srci')) { if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); } else if (e.key === 'Escape') { e.target.value = ''; FL.srcEd = null; ctx.rerender(); } } });
   document.addEventListener('click', (e) => { const d = document.querySelector('.fl-rqp[open]'); if (d && !d.contains(e.target)) d.open = false; document.querySelectorAll('.fl-doc[open]').forEach((x) => { if (!x.contains(e.target) || e.target.closest('.fl-docm button')) x.open = false; }); });
   app.addEventListener('input', (e) => { const f = e.target.closest('[data-rqf]'); if (!f) return; const w = f.value.trim().toLowerCase(); f.parentNode.querySelectorAll('label').forEach((l) => { l.style.display = !w || l.textContent.toLowerCase().includes(w) ? '' : 'none'; }); });
   const onClick = (e) => {
@@ -491,7 +509,8 @@ export function bind(app, c) {
       ov.addEventListener('click', (ev) => { if (ev.target === ov || ev.target.closest('.hm-x')) ov.remove(); });
       document.body.appendChild(ov);
     }
-    else if (a === 'slipok' && r) { const key = `slipok:${r.no}`, me = ctx.me ? ctx.me() : ''; S.addFlowMark(key, `${r.partner} ${r.site}`, me).then((err) => { if (err) alert('저장 못 했어요 — ' + err); else { FL.marks[key] = { created_at: new Date().toISOString() }; S.setShipCase(r.no, { checked: true, checked_by: me || null }, me).catch(() => {}); ctx.rerender(); } }); }
+    else if (a === 'srced' && r) { FL.srcEd = r.no; ctx.rerender(); setTimeout(() => { const i = document.querySelector(`.fd-srci[data-fl-src="${CSS.escape(r.no)}"]`); if (i) i.focus(); }, 0); }
+    else if (a === 'slipok' && r) { if (t.dataset.ask && !ask(t, `${r.partner} · ${r.site} 입력 완료로 옮길까요?`)) return; const key = `slipok:${r.no}`, me = ctx.me ? ctx.me() : ''; S.addFlowMark(key, `${r.partner} ${r.site}`, me).then((err) => { if (err) alert('저장 못 했어요 — ' + err); else { FL.marks[key] = { created_at: new Date().toISOString() }; S.setShipCase(r.no, { checked: true, checked_by: me || null }, me).catch(() => {}); ctx.rerender(); } }); }
     else if (a === 'sent' && r) { if (!ask(t, `${r.partner} · ${r.site} 거래처 전달 체크할까요?`)) return; S.addFlowMark(`sent:${r.no}`, `${r.partner} ${r.site}`, ctx.me ? ctx.me() : '').then((err) => { if (err) alert('저장 못 했어요 — ' + err); else { FL.marks[`sent:${r.no}`] = { created_at: new Date().toISOString() }; ctx.rerender(); } }); }
     else if (a === 'stmtgo' && r) { FM.presetStmt(/공간/.test(r.partner) ? 'stmt-gong' : 'stmt-etc', (t.dataset.s || '').split(',').join(' '), r.salerows); ctx.rerender(); }
     else if (a === 'rfq' && r) rfqOpen(r);
