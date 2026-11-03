@@ -626,8 +626,8 @@ const PRINT_CSS = `
   .sheet.ace{--navy:#1f1f1f;--navy2:#1f1f1f;--top:#20365c}   /* 맨 위 제목만 남색 (11/03 대표) */   /* 칸에 색 바탕 없이 흑백 (11/03 대표 "블럭에 색깔 다 없애") */
   .sheet.ace,.sheet.ace td,.sheet.ace th{font-family:'Noto Serif KR',serif}   /* 에이스는 명조 — 홈트(Pretendard)와 다르게 (11/03 대표) */
   .sheet.ace .n,.sheet.ace .sum{font-family:Pretendard,sans-serif}
-  .sheet.ace .top{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2.5px solid var(--top);padding-bottom:8px;margin:0 0 6mm}
-  .sheet.ace .ttl{background:none;color:var(--top);border:0;letter-spacing:.45em;font-size:22pt;font-weight:900;padding:0;margin:0;text-align:left}
+  .sheet.ace .top{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2.5px solid var(--navy);padding-bottom:8px;margin:0 0 6mm}
+  .sheet.ace .ttl{background:none;color:var(--navy);border:0;letter-spacing:.45em;font-size:22pt;font-weight:900;padding:0;margin:0;text-align:left}
   .sheet.ace .ttl small{display:block;font-size:7pt;letter-spacing:.32em;font-weight:600;color:#777;margin-top:4px}
   .sheet.ace .top .no{width:46%;margin:0}
   .sheet.ace .top .no td{border:0;border-bottom:1px solid #c8c8c8;padding:3px 8px;text-align:left}
@@ -636,6 +636,7 @@ const PRINT_CSS = `
   .sheet.ace td,.sheet.ace th{border:1px solid #c8c8c8;padding:5px 8px;font-size:8.5pt;color:#1f1f1f}
   .sheet.ace .lb{background:none;font-weight:700;text-align:center;white-space:nowrap;color:var(--navy)}
   .sheet.ace .hd{background:none;color:var(--navy);font-weight:700;text-align:center;border-bottom:1.5px solid var(--navy)}
+  .sheet.ace .who tr:first-child .hd{background:var(--top);color:#fff;border-color:var(--top)}   /* 맨 위 한 블럭(공급받는자·공급자 머리)만 남색 바탕 (11/03 대표) */
   .sheet.ace .hd.sum{background:none;color:var(--navy);text-align:center;font-weight:800;font-size:10pt}
   .sheet.ace .c{text-align:center} .sheet.ace .n{text-align:right} .sheet.ace .b{font-weight:700}
   .sheet.ace .say{margin:4mm 0 2mm;text-align:left;font-size:9pt;font-weight:600}

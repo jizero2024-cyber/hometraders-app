@@ -3,7 +3,7 @@
 // 왼쪽 = 현장('<지역>-<소장 이니셜>'), 현장 안 = 거래명세표·세금계산서 / 납품송장 / 세트 대조표(nh_sites).
 // 장마다 상태·세금계산서 = nh_docs (첫 화면 출고 흐름 명세표 탭도 같은 표). 뉴하우징 계정(view)은 보기·다운로드만 — 상태·세금계산서 넣기는 직원만.
 import * as S from './nh-store.js?v=2';
-import * as SM from './stmt.js?v=109';
+import * as SM from './stmt.js?v=110';
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const won = (n) => Math.round(Number(n) || 0).toLocaleString();
