@@ -484,9 +484,8 @@ function aceHtml(doc) {
       <td class="n">${won(it.supply)}</td><td class="n">${won(it.vat)}</td></tr>`).join('')
     + ('<tr>' + '<td></td>'.repeat(8) + '</tr>').repeat(Math.max(0, 11 - doc.items.length));
   return `<section class="sheet ace">
-    <div class="ttl">거 래 명 세 서</div>
-    <table class="no"><colgroup><col style="width:18%"><col style="width:35%"><col style="width:20%"><col></colgroup>
-      <tr><td class="lb">문서번호 NO.</td><td class="c b">${no}</td><td class="lb">발행일자</td><td class="c b">${iso}</td></tr></table>
+    <div class="top"><div class="ttl">거 래 명 세 서<small>STATEMENT OF TRANSACTION</small></div>
+      <table class="no"><tr><td class="lb">문서번호</td><td class="b">${no}</td></tr><tr><td class="lb">발행일자</td><td class="b">${iso}</td></tr></table></div>
     <table class="who"><colgroup><col style="width:18%"><col style="width:32%"><col style="width:18%"><col></colgroup>
       <tr><td class="hd" colspan="2">공 급 받 는 자　(수신)</td><td class="hd" colspan="2">공 급 자　(발신)</td></tr>
       <tr><td class="lb">상호</td><td>${esc2(doc.partner)}</td><td class="lb">상호</td><td>${ACE.name}</td></tr>
@@ -625,14 +624,21 @@ const PRINT_CSS = `
   .items tfoot .tot{background:#F0B346;color:#fff;font-weight:700;text-align:center}
   .items tfoot td{font-weight:700;background:#f5f5f5}
   .sheet.ace{--navy:#20365c;--navy2:#2c4470}
-  .sheet.ace .ttl{background:none;color:var(--navy);border:0;border-bottom:2.5px solid var(--navy);letter-spacing:.55em;font-size:19pt;font-weight:800;padding:0 0 7px;margin:0 0 6mm}
+  .sheet.ace,.sheet.ace td,.sheet.ace th{font-family:'Noto Serif KR',serif}   /* 에이스는 명조 — 홈트(Pretendard)와 다르게 (11/03 대표) */
+  .sheet.ace .n,.sheet.ace .sum{font-family:Pretendard,sans-serif}
+  .sheet.ace .top{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2.5px solid var(--navy);padding-bottom:8px;margin:0 0 6mm}
+  .sheet.ace .ttl{background:none;color:var(--navy);border:0;letter-spacing:.45em;font-size:22pt;font-weight:900;padding:0;margin:0;text-align:left}
+  .sheet.ace .ttl small{display:block;font-size:7pt;letter-spacing:.32em;font-weight:600;color:#6b7891;margin-top:4px}
+  .sheet.ace .top .no{width:46%;margin:0}
+  .sheet.ace .top .no td{border:0;border-bottom:1px solid #c9cfda;padding:3px 8px;text-align:left}
+  .sheet.ace .top .no td.lb{background:none;text-align:left;width:32%}
   .sheet.ace table{border-collapse:collapse;width:100%;margin-bottom:3mm;table-layout:fixed}
   .sheet.ace td,.sheet.ace th{border:1px solid #c9cfda;padding:5px 8px;font-size:8.5pt;color:#1e2430}
   .sheet.ace .lb{background:#eef1f6;font-weight:700;text-align:center;white-space:nowrap;color:var(--navy)}
   .sheet.ace .hd{background:var(--navy);color:#fff;font-weight:700;text-align:center;border-color:var(--navy)}
   .sheet.ace .hd.sum{background:#eef1f6;color:var(--navy);text-align:center;font-weight:800;font-size:10pt}
   .sheet.ace .c{text-align:center} .sheet.ace .n{text-align:right} .sheet.ace .b{font-weight:700}
-  .sheet.ace .say{margin:4mm 0 2mm;text-align:center;font-size:9pt;font-weight:600}
+  .sheet.ace .say{margin:4mm 0 2mm;text-align:left;font-size:9pt;font-weight:600}
   .sheet.ace .items th{background:var(--navy);color:#fff;border-color:var(--navy);font-weight:700;font-size:8.5pt;text-align:center}
   .sheet.ace .items td{height:22px}
   .sheet.ace .items td.nm{font-size:8pt;text-align:left;white-space:normal;word-break:keep-all;overflow-wrap:anywhere}
@@ -651,7 +657,7 @@ export function printSheets(docs, style) {
   const w = window.open('', '_blank');
   if (!w) throw new Error('팝업이 막혔어요 — 주소창 오른쪽에서 팝업을 허용해 주세요.');
   w.document.write(`<!doctype html><meta charset="utf-8"><title>거래명세표 ${docs.length}장</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700;900&display=swap">
     <style>${PRINT_CSS}</style>${docs.map((d) => html_(d, style)).join('')}
     <script>window.onload=function(){setTimeout(function(){window.print();},400);};<\/script>`);
   w.document.close();
@@ -719,7 +725,7 @@ async function renderImage(doc, scale = 2, style) {
     const d = fr.contentDocument;
     d.open();
     d.write(`<!doctype html><meta charset="utf-8">
-      <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700;900&display=swap">
       <style>${PRINT_CSS}\nbody{background:#fff;padding:0;width:${A4_W}px}.sheet{width:${A4_W}px;margin:0;box-shadow:none;padding:10mm}</style>
       ${html_(doc, style)}`);
     d.close();
