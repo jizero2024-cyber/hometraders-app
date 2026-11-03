@@ -156,7 +156,7 @@ function detailHtml(r) {
     ${r.why ? `<div class="fl-why">${esc(r.why)}</div>` : ''}
     ${['배차 요청', '발주', '견적'].includes(FL.cur) ? bestHtml(r) : ''}
     ${r.itab ? itabHtml(r) : buys || `<div class="fl-it">${esc(r.items)}</div>`}
-    ${r.itab && ((r.rq || {}).imgs || []).length + (r.docs || []).length + (r.dpdf || []).length ? galHtml(r) : ''}
+    ${r.itab && ((r.rq || {}).imgs || []).length + (r.docs || []).length + (r.dpdf || []).length ? `<details class="fd-more" data-mo="gal:${esc(r.no)}" ${(FL.mo || {})['gal:' + r.no] ? 'open' : ''}><summary>사진 보기${((r.rq || {}).imgs || []).length ? ' · 발주 사진' : ''}${(r.docs || []).length + (r.dpdf || []).length ? ' · 명세서' : ''}</summary>${galHtml(r)}</details>` : ''}
     ${caseHtml(r)}
     ${['배차 요청', '발주', '견적'].includes(FL.cur) ? (r.sug ? sugHtml(r) : (r.itab || r.qitems || []).length || FL.cur === '견적' ? `<div class="fl-k">견적 요청 추천 <button type="button" class="fl-go fd-rfqb" data-fl="rfq" data-no="${esc(r.no)}">견적요청서</button></div>` : '') : `<details class="fd-more" data-mo="ln:${esc(r.no)}" ${(FL.mo || {})['ln:' + r.no] ? 'open' : ''}><summary>전표${(() => { const n = (r.lines || []).filter((l) => l.st !== '입력').length; return n ? ` · 미입력 ${n}` : ''; })()}</summary>${linesHtml(r)}</details>`}
     ${r.pl ? `<div class="fl-k">순이익</div><div class="fl-pld"><span>판매 ${won(r.pl.sale)}</span><i>−</i><span>구매 ${won(r.pl.buy)}</span><i>−</i><span>운반비 ${won(r.pl.fare)}</span><i>=</i><b class="${r.pl.net < 0 ? 'no' : ''}">${won(r.pl.net)}</b><em>${r.pl.sale ? Math.round((100 * r.pl.net) / r.pl.sale) : 0}% · 공급가</em></div>` : ''}
