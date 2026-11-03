@@ -65,7 +65,9 @@ export async function load(biz, force) {
       const w = ws.flatMap((x) => x.rows || []);
       w.sort((a, b) => String(a.id).split('|')[0].localeCompare(String(b.id).split('|')[0]) || lineNo(a.id) - lineNo(b.id));
       const wl = w.length ? SM.splitSheets(SM.parseSales([[HEAD, ...w.map((r) => [r.slip, r.partner, r.name, r.qty, r.price, r.supply, r.vat])]]), {}) : [];
-      G.wait = wl.map((d) => ({ ...d, id: docId(d), total: itemsTotal(d), rows: w.filter((r) => (d.slips || [d.slip]).includes(slipKey(r.slip))) }))
+      const used = new Set();                            // 장에 보이는 품목 줄 = 올라갈 줄 (묶인 장은 d.slips 가 비어 첫 전표 줄만 가던 것 — 11/03)
+      const rowsOf = (d) => d.items.map((it) => { const r = w.find((x, k) => !used.has(k) && x.ymd === d.ymd && Math.round(+x.supply) === Math.round(it.supply) && Math.round(+x.vat) === Math.round(it.vat) && +x.qty === +it.qty && String(x.name).includes(String(it.name).slice(0, 12))); if (r) used.add(w.indexOf(r)); return r; }).filter(Boolean);
+      G.wait = wl.map((d) => ({ ...d, id: docId(d), total: itemsTotal(d), rows: rowsOf(d) }))
         .sort((a, b) => (b.ymd + b.slip).localeCompare(a.ymd + a.slip));
     }
     G.syncAt = [...sales.map((r) => r.updated_at), ...docs.map((x) => x.updated_at)].filter(Boolean).map((t) => new Date(t)).sort((a, b) => b - a)[0] || null;
@@ -285,11 +287,12 @@ function waitHtml() {
       ${(G.docs[d.id] || {}).tax_name ? '<span style="flex:0 0 auto;padding:3px 8px;border-radius:10px;background:#EEF6EE;color:#1E6B34;font-size:12px;font-weight:600">계산서</span>' : ''}
       <span style="flex:0 0 auto;font-size:12px;color:#5C5C5C">입력 <b style="color:#1F2328">${esc(waitWho(d) || '—')}</b></span>
       <b style="flex:0 0 auto;font-variant-numeric:tabular-nums">${won(d.total)}원</b>
-      <button type="button" data-gb="wait-skip" data-id="${esc(d.id)}" ${G.waitBusy ? 'disabled' : ''} style="flex:0 0 auto;height:34px;padding:0 12px;border:0;border-radius:8px;background:#F1EFEA;color:#5C5C5C;font:inherit;font-size:13px;cursor:pointer">빼기</button>
+      <span style="flex:0 0 auto;display:flex;gap:6px"><button type="button" data-gb="wait-skip" data-id="${esc(d.id)}" ${G.waitBusy ? 'disabled' : ''} style="height:34px;padding:0 12px;border:0;border-radius:8px;background:#F1EFEA;color:#5C5C5C;font:inherit;font-size:13px;cursor:pointer">빼기</button>
+      <button type="button" data-gb="wait-up" data-id="${esc(d.id)}" ${G.waitBusy ? 'disabled' : ''} style="${btn(G.waitBusy === d.id)}">${G.waitBusy === d.id ? '올리는 중…' : '올리기'}</button></span>
     </div>`; }).join('') || `<div style="padding:40px;text-align:center;color:#6B6B6B;background:#fff;border-radius:12px">${G.loading ? '불러오는 중…' : '없어요'}</div>`}</div>`;
 }
 const originOf = (rid) => { const m = /^\d{8}-\d+\|(\d{8}-\d+)-/.exec(String(rid)); return m ? m[1] : String(rid).split('|')[0]; };
-const waitSlips = (d) => [...new Set([...(d.slips || [d.slip]).map(slipKey), ...d.rows.map((r) => originOf(r.id))])];
+const waitSlips = (d) => [...new Set([...d.rows.map((r) => String(r.id).split('|')[0]), ...d.rows.map((r) => originOf(r.id))])];
 const waitInfo = (d) => (d.slips || [d.slip]).map((sl) => ({ slip: sl, ...(G.waitMeta[sl] || {}) }));
 const waitWho = (d) => [...new Set(waitInfo(d).map((x) => x.who).filter(Boolean))].join(', ');
 // 올릴 전표 누르면 — 이카운트 판매전표 PDF (출고일보에 붙던 것) + [올리기]
@@ -327,8 +330,18 @@ async function waitSkip(id) {
   catch (e) { G.err = e.message || String(e); }
   G.waitBusy = ''; await load(G.biz, true);
 }
+async function waitUp(id) {   // 장마다 [올리기] (11/03 대표 "올리기 버튼 어디 갔어") — 묶인 전표 줄까지 그 장 그대로
+  const d = G.wait.find((x) => x.id === id); if (!d || G.waitBusy) return;
+  if (d.rows.length !== d.items.length) { alert(`이 장 품목 ${d.items.length}줄 중 ${d.rows.length}줄만 찾았어요. 새로고침 뒤 다시 눌러 주세요.`); return; }
+  G.waitBusy = id; G.err = ''; ctx.rerender();
+  const n = new Date(), p = (v) => String(v).padStart(2, '0');
+  try { await S.putWaitRows(waitSlips(d), d.rows, `${n.getFullYear()}-${p(n.getMonth() + 1)}-${p(n.getDate())} ${p(n.getHours())}:${p(n.getMinutes())}`); G.waitOn.delete(id); if (G.open === id) G.open = null; }
+  catch (e) { G.err = e.message || String(e); }
+  G.waitBusy = ''; await load(G.biz, true);
+}
 async function waitApply() {
   const picked = G.wait.filter((d) => G.waitOn.has(d.id)); if (!picked.length || G.waitBusy) return;
+  const bad = picked.filter((d) => d.rows.length !== d.items.length); if (bad.length) { alert(`${bad.map((d) => md(d.ymd) + ' ' + (d.site || '')).join(', ')} 장의 줄을 다 못 찾았어요. 새로고침 뒤 다시 해 주세요.`); return; }
   if (!confirm(`${picked.length}장을 공간제작소 목록에 반영하시겠습니까?\n${won(picked.reduce((a, d) => a + d.total, 0))}원`)) return;
   G.waitBusy = 'apply'; G.err = ''; ctx.rerender();
   const n = new Date(), p = (v) => String(v).padStart(2, '0');
@@ -738,6 +751,7 @@ export function bind(app, c) {
       (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(done).catch(() => { const ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); done(); });
       return;
     }
+    if (a === 'wait-up' && id) { waitUp(id); return; }
     if (a === 'wait-apply') { waitApply(); return; }
     if (a === 'wait-pick' && id) { if (G.waitOn.has(id)) G.waitOn.delete(id); else G.waitOn.add(id); ctx.rerender(); return; }
     if (a === 'wait-skip' && id) { waitSkip(id); return; }
