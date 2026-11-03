@@ -3,9 +3,9 @@
 // 버튼: 배차 요청 · 자료 넣기(site_inbox — 출고일보 업데이트 때 판매·구매입력) · 거래명세표(공간제작소 · 그 외 · 에이스) · 납품확인서 · 자재승인원 · 견적서 · 입금표
 //   서류 화면은 모두 js/forms.js (같은 머리·카드·버튼)
 import * as S from './store-supabase.js?v=13';
-import * as FM from './forms.js?v=26';
+import * as FM from './forms.js?v=27';
 import * as PR from './price.js?v=6';   // 단가표 (11/03)
-import * as FL from './flow.js?v=124';   // 맨 위 출고 흐름 (10/28)
+import * as FL from './flow.js?v=125';   // 맨 위 출고 흐름 (10/28)
 import * as CN from './cheonan.js?v=7';   // 천안 재고 (10/31)
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
