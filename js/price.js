@@ -27,8 +27,8 @@ function bodyHtml() {
   let items = [...by.values()];
   if (P.sort) items.sort((a, b) => ((b.m[P.sort] || {}).d || '').localeCompare((a.m[P.sort] || {}).d || '') || a.n.localeCompare(b.n));
   else items.sort((a, b) => a.c.localeCompare(b.c) || a.n.localeCompare(b.n));
-  const head = `<tr><th class="pr-n">품목 <i>판가 · 부가세 별도</i></th>${cols.map((c) => `<th data-pr="sort" data-k="${esc(c)}" class="pr-pc ${P.sort === c ? 'on' : ''}">${esc(c.replace(/\(주\)|주식회사|㈜/g, '').trim())}</th>`).join('')}</tr>`;
-  const cell = (n, r) => { if (!r) return '<td></td>'; const ja = jaOf(n, r.pr); return `<td class="pr-num" title="${esc(r.p)} · ${esc(r.s)}${r.pp ? ` · 직전 ${won(r.pp)} (${md(r.pd)})` : ''}"><b class="${r.pp ? (r.pr > r.pp ? 'up' : 'dn') : ''}">${won(r.pr)}</b>${ja ? `<i>자당 ${won(ja)}</i>` : ''}<em>${md(r.d)}</em></td>`; };
+  const head = `<tr><th class="pr-n">품목 <i>판가 · 부가세 별도 (구조재는 자당 · 포함)</i></th>${cols.map((c) => `<th data-pr="sort" data-k="${esc(c)}" class="pr-pc ${P.sort === c ? 'on' : ''}">${esc(c.replace(/\(주\)|주식회사|㈜/g, '').trim())}</th>`).join('')}</tr>`;
+  const cell = (n, r) => { if (!r) return '<td></td>'; const ja = jaOf(n, r.pr); const up = r.pp ? (r.pr > r.pp ? 'up' : 'dn') : ''; return `<td class="pr-num" title="${esc(r.p)} · ${esc(r.s)}${r.pp ? ` · 직전 ${won(r.pp)} (${md(r.pd)})` : ''}">${ja ? `<b class="${up}">자당 ${won(ja)}</b><i>전표 ${won(r.pr)} 별도</i>` : `<b class="${up}">${won(r.pr)}</b>`}<em>${md(r.d)}</em></td>`; };   // 구조재는 자당(부가세 포함)이 크게, 전표 단가는 작게 (11/03 대표)
   let lastC = null;
   const body = items.slice(0, P.lim).map((it) => { const g = !P.sort && it.c !== lastC; lastC = it.c; return `${g ? `<tr class="pr-cat"><td colspan="${cols.length + 1}">${esc(it.c)}</td></tr>` : ''}<tr><td class="pr-n">${esc(it.n)}</td>${cols.map((c) => cell(it.n, it.m[c])).join('')}</tr>`; }).join('');
   return { head, html: body || `<tr><td colspan="${cols.length + 1}" class="pr-none">없음</td></tr>`, n: items.length };

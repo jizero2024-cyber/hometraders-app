@@ -270,8 +270,8 @@ function galHtml(r) {
   return `<div class="fd-gal">${ph}${docs}${pdf}</div>`;
 }
 function itabHtml(r) {
-  const ja = (it, p) => { const m = String(it).match(/구조재.*?\d+\s*\*\s*\d+\s*\*\s*(\d+)/); return m && p && +m[1] ? `<i class="fd-ja">자당 ${Math.round((p * 1.1) / +m[1]).toLocaleString()} 포함</i>` : ''; };
-  const pr = (v, p, need, it) => (v === '—' ? '<td class="fd-st na">—</td>' : v ? `<td class="fd-st ok" title="${esc(v)}">${p ? won(p) + ja(it, p) : esc(v)}</td>` : need ? '<td class="fd-st amb">확인 필요</td>' : '<td class="fd-st no">✕</td>');   // 구매가·판매가 — 이카운트 단가, 몰라서 못 넣은 건 확인 필요 (11/03 대표)
+  const ja = (it, p) => { const m = String(it).match(/구조재.*?\d+\s*\*\s*\d+\s*\*\s*(\d+)/); return m && p && +m[1] ? `자당 ${Math.round((p * 1.1) / +m[1]).toLocaleString()}원` : ''; };   // 구조재는 자당(부가세 포함)이 크게, 전표 단가는 밑에 작게 (11/03 대표)
+  const pr = (v, p, need, it) => (v === '—' ? '<td class="fd-st na">—</td>' : v ? `<td class="fd-st ok" title="${esc(v)}">${p ? (ja(it, p) ? `${ja(it, p)}<i class="fd-jp">전표 ${won(p)} 별도</i>` : won(p)) : esc(v)}</td>` : need ? '<td class="fd-st amb">확인 필요</td>' : '<td class="fd-st no">✕</td>');   // 구매가·판매가 — 이카운트 단가, 몰라서 못 넣은 건 확인 필요 (11/03 대표)
   const un = (x) => ['un', 'no'].includes(x.sc || 'un') && x.buy !== '—';
   const srcTd = (x) => (FL.srcEd === r.no && un(x) ? `<input class="fd-srci" data-fl-src="${esc(r.no)}" list="fd-srcl" placeholder="구매처·창고" autocomplete="off">` : un(x) ? `<button type="button" class="fd-src ${esc(x.sc || 'un')}" data-fl="srced" data-no="${esc(r.no)}">${esc(x.src)}</button>` : `<span class="fd-src ${esc(x.sc || 'un')}">${esc(x.src)}</span>`);
   const due = r.arr || (r.day && r.day !== '미정' ? r.day : '');   // 납기일 — 언제까지 발주해 달라는 날 (11/02 대표 "나간 날짜는 납기일로")
