@@ -623,11 +623,11 @@ const PRINT_CSS = `
   .items td.c{text-align:center} .items td.n{text-align:right} .items td.nm{white-space:normal;word-break:break-all;line-height:1.3}
   .items tfoot .tot{background:#F0B346;color:#fff;font-weight:700;text-align:center}
   .items tfoot td{font-weight:700;background:#f5f5f5}
-  .sheet.ace{--navy:#1f1f1f;--navy2:#1f1f1f}   /* 칸에 색 바탕 없이 흑백 (11/03 대표 "블럭에 색깔 다 없애") */
+  .sheet.ace{--navy:#1f1f1f;--navy2:#1f1f1f;--top:#20365c}   /* 맨 위 제목만 남색 (11/03 대표) */   /* 칸에 색 바탕 없이 흑백 (11/03 대표 "블럭에 색깔 다 없애") */
   .sheet.ace,.sheet.ace td,.sheet.ace th{font-family:'Noto Serif KR',serif}   /* 에이스는 명조 — 홈트(Pretendard)와 다르게 (11/03 대표) */
   .sheet.ace .n,.sheet.ace .sum{font-family:Pretendard,sans-serif}
-  .sheet.ace .top{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2.5px solid var(--navy);padding-bottom:8px;margin:0 0 6mm}
-  .sheet.ace .ttl{background:none;color:var(--navy);border:0;letter-spacing:.45em;font-size:22pt;font-weight:900;padding:0;margin:0;text-align:left}
+  .sheet.ace .top{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2.5px solid var(--top);padding-bottom:8px;margin:0 0 6mm}
+  .sheet.ace .ttl{background:none;color:var(--top);border:0;letter-spacing:.45em;font-size:22pt;font-weight:900;padding:0;margin:0;text-align:left}
   .sheet.ace .ttl small{display:block;font-size:7pt;letter-spacing:.32em;font-weight:600;color:#777;margin-top:4px}
   .sheet.ace .top .no{width:46%;margin:0}
   .sheet.ace .top .no td{border:0;border-bottom:1px solid #c8c8c8;padding:3px 8px;text-align:left}
