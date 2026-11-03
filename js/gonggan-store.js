@@ -49,18 +49,20 @@ export async function getGongganSales(biz) {
   return out;
 }
 // 올릴 전표 (10/27 대표) — 맥이 직원 전용 표 site_inbox(kind=gwait, 공간제작소 계정은 못 읽음)에 전표마다 {rows, pdf, who} 를 둠
-export async function getWaitSlips() {
-  const { data, error } = await sb.from('site_inbox').select('id,body').eq('kind', 'gwait').eq('status', 'gwait').limit(500);
+const WAIT_KIND = (biz) => (biz === 'ace' ? 'gwait_ace' : 'gwait');   // 에이스 올릴 전표는 따로 (11/03 — 맥 조회가 홈트 것만 지우고 다시 씀)
+const WAIT_PRE = (biz) => (biz === 'ace' ? 'ga:' : 'gw:');
+export async function getWaitSlips(biz) {
+  const { data, error } = await sb.from('site_inbox').select('id,body').eq('kind', WAIT_KIND(biz)).eq('status', 'gwait').limit(500);
   if (error) throw new Error(error.message);
   return (data || []).map((x) => { try { return JSON.parse(x.body || '{}'); } catch (e) { return {}; } }).filter((x) => x.slip);
 }
 // [올리기] — 줄을 목록(gonggan_sales, biz=homt)에 넣고 올릴 전표에서 지움
-export async function putWaitRows(slips, rows, reg) {
+export async function putWaitRows(slips, rows, reg, biz = 'homt') {
   const live = rows.map((r) => ({ id: r.id, ymd: r.ymd, slip: r.slip, partner: r.partner, name: r.name, qty: r.qty, price: r.price, supply: r.supply, vat: r.vat,
-    logi: false, biz: 'homt', reg, updated_at: new Date().toISOString() }));
+    logi: false, biz, reg, updated_at: new Date().toISOString() }));
   const { error } = await sb.from('gonggan_sales').upsert(live, { onConflict: 'id' });
   if (error) throw new Error(error.message);
-  await sb.from('site_inbox').delete().in('id', slips.flatMap((sl) => [`gw:${sl}`, `gb:${sl}`]));   // 되돌렸던 전표를 다시 올리면 되돌리기 표시도 지움
+  await sb.from('site_inbox').delete().in('id', slips.flatMap((sl) => (biz === 'ace' ? [`ga:${sl}`] : [`gw:${sl}`, `gb:${sl}`])));   // 되돌렸던 전표를 다시 올리면 되돌리기 표시도 지움
 }
 // [되돌리기] (11/03 대표) — 목록 줄을 지우고 맥에 '되돌림'(site_inbox kind=gback) 표시 → 다음 조회 때 올릴 전표로
 export async function revertSheet(slips, rowIds) {
@@ -83,8 +85,8 @@ export async function refreshDone(id) {   // 끝났으면 부탁 줄 지우고 t
   return true;
 }
 // [빼기] — 이미 올라간 것. 맥은 gskip 을 보고 다시 안 올림
-export async function skipWait(slips) {
-  const { error } = await sb.from('site_inbox').update({ status: 'gskip', updated_at: new Date().toISOString() }).in('id', slips.map((sl) => `gw:${sl}`));
+export async function skipWait(slips, biz = 'homt') {
+  const { error } = await sb.from('site_inbox').update({ status: 'gskip', updated_at: new Date().toISOString() }).in('id', slips.map((sl) => `${WAIT_PRE(biz)}${sl}`));
   if (error) throw new Error(error.message);
 }
 export async function getGongganDocs(biz) {
