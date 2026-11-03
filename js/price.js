@@ -10,64 +10,53 @@ let ctx = null;
 const jaOf = (n, pr) => { const m = String(n).match(/구조재.*?\d+\s*\*\s*\d+\s*\*\s*(\d+)/); return m && +m[1] ? Math.round((pr * 1.1) / +m[1]) : null; };
 const md = (d) => (d ? d.slice(2).replace(/-/g, '.') : '');
 
-function rows() {
-  const all = (P.data && P.data.rows) || [];
+function rows() {   // 판가만 (11/03 대표 "판가만 나오게, 상단 셀에 거래처명들 좌르륵")
+  const all = ((P.data && P.data.rows) || []).filter((r) => r.k === 's');
   const ws = P.q.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  let rs = all.filter((r) => (!P.k || r.k === P.k) && (!P.c || r.c === P.c) && (!P.p || r.p === P.p)
-    && (!ws.length || ws.every((w) => `${r.n} ${r.p}`.toLowerCase().includes(w))));
-  const key = { n: (r) => r.n, p: (r) => r.p, pr: (r) => r.pr, d: (r) => r.d, cnt: (r) => r.cnt, k: (r) => r.k };
-  if (P.sort) rs = rs.slice().sort((a, b) => { const x = key[P.sort](a), y = key[P.sort](b); return (x > y ? 1 : x < y ? -1 : 0) * P.dir; });
-  else if (P.by === 'partner') rs = rs.slice().sort((a, b) => a.p.localeCompare(b.p) || a.n.localeCompare(b.n));
-  else rs = rs.slice().sort((a, b) => a.c.localeCompare(b.c) || a.n.localeCompare(b.n) || (a.k === b.k ? 0 : a.k === 'b' ? -1 : 1) || b.d.localeCompare(a.d));
-  return rs;
+  return all.filter((r) => (!P.c || r.c === P.c) && (!ws.length || ws.every((w) => `${r.n} ${r.p}`.toLowerCase().includes(w))));
 }
 
 function bodyHtml() {
-  const rs = rows(), grpKey = P.sort ? null : P.by === 'partner' ? 'p' : 'n';
-  let last = null;
-  const tr = rs.slice(0, P.lim).map((r) => {
-    const g = grpKey ? r[grpKey] : null, first = g !== last; last = g;
-    const ja = jaOf(r.n, r.pr), pja = r.pp ? jaOf(r.n, r.pp) : null;
-    const up = r.pp ? (r.pr > r.pp ? 'up' : 'dn') : '';
-    return `<tr class="${first && grpKey ? 'pr-g' : ''}">
-      <td class="pr-n">${grpKey === 'n' && !first ? '' : esc(r.n)}</td>
-      <td><span class="pr-k ${r.k}">${r.k === 's' ? '판매' : '구매'}</span></td>
-      <td class="pr-p">${grpKey === 'p' && !first ? '' : esc(r.p)}</td>
-      <td class="pr-num"><b>${won(r.pr)}</b>${ja ? `<i>자당 ${won(ja)} 포함</i>` : ''}</td>
-      <td class="pr-d">${md(r.d)}</td>
-      <td class="pr-num pr-pv ${up}">${r.pp ? `${won(r.pp)}${pja ? `<i>자당 ${won(pja)}</i>` : ''}<em>${md(r.pd)}</em>` : ''}</td>
-      <td class="pr-num">${r.cnt}</td>
-      <td class="pr-s">${esc(r.s.replace(/^\d{4}(\d\d)(\d\d)-/, '$1/$2-'))}</td></tr>`;
-  }).join('');
-  return { html: tr || '<tr><td colspan="8" class="pr-none">없음</td></tr>', n: rs.length };
+  const rs = rows();
+  const cnt = {};
+  rs.forEach((r) => { cnt[r.p] = (cnt[r.p] || 0) + r.cnt; });
+  let cols = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a] || a.localeCompare(b));
+  if (P.p) cols = cols.filter((c) => c === P.p);
+  const by = new Map();
+  rs.forEach((r) => { if (!cols.includes(r.p)) return; if (!by.has(r.n)) by.set(r.n, { n: r.n, c: r.c, m: {} }); by.get(r.n).m[r.p] = r; });
+  let items = [...by.values()];
+  if (P.sort) items.sort((a, b) => ((b.m[P.sort] || {}).d || '').localeCompare((a.m[P.sort] || {}).d || '') || a.n.localeCompare(b.n));
+  else items.sort((a, b) => a.c.localeCompare(b.c) || a.n.localeCompare(b.n));
+  const head = `<tr><th class="pr-n">품목 <i>판가 · 부가세 별도</i></th>${cols.map((c) => `<th data-pr="sort" data-k="${esc(c)}" class="pr-pc ${P.sort === c ? 'on' : ''}">${esc(c.replace(/\(주\)|주식회사|㈜/g, '').trim())}</th>`).join('')}</tr>`;
+  const cell = (n, r) => { if (!r) return '<td></td>'; const ja = jaOf(n, r.pr); return `<td class="pr-num" title="${esc(r.p)} · ${esc(r.s)}${r.pp ? ` · 직전 ${won(r.pp)} (${md(r.pd)})` : ''}"><b class="${r.pp ? (r.pr > r.pp ? 'up' : 'dn') : ''}">${won(r.pr)}</b>${ja ? `<i>자당 ${won(ja)}</i>` : ''}<em>${md(r.d)}</em></td>`; };
+  let lastC = null;
+  const body = items.slice(0, P.lim).map((it) => { const g = !P.sort && it.c !== lastC; lastC = it.c; return `${g ? `<tr class="pr-cat"><td colspan="${cols.length + 1}">${esc(it.c)}</td></tr>` : ''}<tr><td class="pr-n">${esc(it.n)}</td>${cols.map((c) => cell(it.n, it.m[c])).join('')}</tr>`; }).join('');
+  return { head, html: body || `<tr><td colspan="${cols.length + 1}" class="pr-none">없음</td></tr>`, n: items.length };
 }
 
 export function screen() {
   if (!P.data && !P.err) { inboxBody('price:table').then((d) => { P.data = d || { rows: [] }; ctx && ctx.rerender(); }).catch((e) => { P.err = String(e); ctx && ctx.rerender(); }); }
   if (!P.data) return `<section class="pr"><h1 class="fl-h1">단가표</h1><div class="pr-none">${P.err ? esc(P.err) : '불러오는 중…'}</div></section>`;
-  const all = P.data.rows || [];
-  const cats = [...new Set(all.map((r) => r.c))].sort();
-  const parts = [...new Set(all.filter((r) => !P.k || r.k === P.k).map((r) => r.p))].sort();
+  const sale = (P.data.rows || []).filter((r) => r.k === 's');
+  const cats = [...new Set(sale.map((r) => r.c))].sort();
+  const parts = [...new Set(sale.map((r) => r.p))].sort();
   const b = bodyHtml();
-  const th = (k, lab) => `<th data-pr="sort" data-k="${k}" class="${P.sort === k ? 'on' : ''}">${lab}${P.sort === k ? (P.dir > 0 ? ' ▲' : ' ▼') : ''}</th>`;
-  return `<section class="pr"><div class="pr-hd"><h1 class="fl-h1">단가표</h1><span class="pr-at">이카운트 ${esc(md((P.data.at || '').slice(0, 10)))} ${esc((P.data.at || '').slice(11, 16))}</span></div>
+  return `<section class="pr"><div class="pr-hd"><h1 class="fl-h1">단가표</h1><span class="pr-at">판가 · 부가세 별도 · 이카운트 ${esc(md((P.data.at || '').slice(0, 10)))} ${esc((P.data.at || '').slice(11, 16))}</span></div>
     <div class="pr-bar">
       <input id="pr-q" type="search" placeholder="품목·거래처" value="${esc(P.q)}" autocomplete="off">
-      <select data-pr="k"><option value="">판매·구매</option><option value="s" ${P.k === 's' ? 'selected' : ''}>판매</option><option value="b" ${P.k === 'b' ? 'selected' : ''}>구매</option></select>
       <select data-pr="c"><option value="">분류 전체</option>${cats.map((c) => `<option ${P.c === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select>
       <input id="pr-p" list="pr-pl" placeholder="거래처 전체" value="${esc(P.p)}" autocomplete="off"><datalist id="pr-pl">${parts.map((p) => `<option value="${esc(p)}">`).join('')}</datalist>
-      <span class="pr-seg"><button type="button" data-pr="by" data-v="item" class="${P.by === 'item' ? 'on' : ''}">품목별</button><button type="button" data-pr="by" data-v="partner" class="${P.by === 'partner' ? 'on' : ''}">거래처별</button></span>
-      <span class="pr-cnt" id="pr-cnt">${b.n.toLocaleString()}건</span>
+      <span class="pr-cnt" id="pr-cnt">${b.n.toLocaleString()}품목</span>
     </div>
-    <div class="pr-tw"><table class="pr-t"><thead><tr>${th('n', '품목')}${th('k', '구분')}${th('p', '거래처')}${th('pr', '단가 <i>부가세 별도</i>')}${th('d', '날짜')}<th>직전 단가</th>${th('cnt', '횟수')}<th>전표</th></tr></thead>
-    <tbody id="pr-body">${b.html}</tbody></table></div>
+    <div class="pr-tw"><table class="pr-t pr-pv2"><thead id="pr-head">${b.head}</thead><tbody id="pr-body">${b.html}</tbody></table></div>
     ${b.n > P.lim ? `<button type="button" class="pr-more" data-pr="more">더 보기 (${(b.n - P.lim).toLocaleString()})</button>` : ''}</section>`;
 }
 
 function refreshBody() {   // 글자 칠 때는 표만 다시 (한글 입력 안 끊기게)
-  const b = bodyHtml(), t = document.getElementById('pr-body'), c = document.getElementById('pr-cnt');
+  const b = bodyHtml(), t = document.getElementById('pr-body'), h = document.getElementById('pr-head'), c = document.getElementById('pr-cnt');
   if (t) t.innerHTML = b.html;
-  if (c) c.textContent = `${b.n.toLocaleString()}건`;
+  if (h) h.innerHTML = b.head;
+  if (c) c.textContent = `${b.n.toLocaleString()}품목`;
 }
 
 export function bind(app, c) {
@@ -84,7 +73,7 @@ export function bind(app, c) {
     const t = e.target.closest('[data-pr]'); if (!t || t.tagName === 'SELECT') return;
     const a = t.dataset.pr;
     if (a === 'by') { P.by = t.dataset.v; P.sort = ''; ctx.rerender(); }
-    else if (a === 'sort') { const k = t.dataset.k; if (P.sort === k) { if (P.dir > 0) P.dir = -1; else { P.sort = ''; P.dir = 1; } } else { P.sort = k; P.dir = k === 'd' || k === 'cnt' || k === 'pr' ? -1 : 1; } ctx.rerender(); }
+    else if (a === 'sort') { const k = t.dataset.k; P.sort = P.sort === k ? '' : k; ctx.rerender(); }   // 거래처 칸 누르면 그 거래처에 판 품목이 위로
     else if (a === 'more') { P.lim += 1000; ctx.rerender(); }
   });
 }
