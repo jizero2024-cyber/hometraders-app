@@ -289,8 +289,8 @@ function linesHtml(r) {
     return `<div class="fl-ln"><span class="fl-lk">${esc(l.k)}</span><span class="fl-c">${esc(who)}${info}</span><span class="fl-by">${esc(l.by || '')}</span>${st}</div>`;
   }).join('');
 }
-const evLinks = (es) => (es || []).map((e) => (e.u ? `<a class="fl-evl" href="${esc(e.u)}" target="_blank" rel="noopener">${esc(e.t)}</a>`
-  : `<button type="button" class="fl-evl ${/^카톡/.test(e.t) ? 'k' : 'm'}" data-fl="evx" data-x="${esc(e.x || e.t)}"${e.c ? ` data-c="${esc(e.c)}"` : ''}>${esc(e.t)}</button>`)).join('');   // 카톡·문자는 출고일보 원문 시트 글 (10/28 대표 "톡·문자도")
+const evLinks = (es) => (es || []).map((e) => (e.u && !e.c ? `<a class="fl-evl" href="${esc(e.u)}" target="_blank" rel="noopener">${esc(e.t)}</a>`
+  : `<button type="button" class="fl-evl ${/^카톡/.test(e.t) ? 'k' : 'm'}" data-fl="evx" data-x="${esc(e.x || e.t)}"${e.c ? ` data-c="${esc(e.c)}"` : ''}>${esc(e.t)}</button>`)).join('');   // 카톡·문자는 출고일보 원문 시트 글 (10/28 대표 "톡·문자도") · 통화(c)는 링크가 있어도 전체 전문 창 (11/03 대표 "통화내용 전문 안 보여")
 function evHtml(r) {
   const ev = evLinks(r.ev);
   return `<div class="fl-ev"><div class="fl-eh"><b>${title(r)}</b>${plHtml(r)}${cmpBtn(r)}<span>${esc(r.day)}</span></div>${linesHtml(r)}${r.memo || ev ? `<div class="fl-memo">${r.memo ? `<span>${esc(r.memo)}</span>` : ''}${ev}</div>` : ''}</div>`;
