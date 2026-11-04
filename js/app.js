@@ -4990,6 +4990,11 @@ function render() {
       e.preventDefault(); e.stopPropagation(); window.parent.postMessage({ kiRow: row.dataset.no }, location.origin);
     }, true);
   }
+  if (state.route === 'main' && !/[?&]wall=1/.test(location.search)) {   // /main 닫음 — 키오스크 가로(wall)만 그대로 (11/04 대표 "아무도 못 들어가게, 준비중입니다만")
+    document.body.classList.remove('erp');
+    app.innerHTML = '<div style="min-height:100vh;display:grid;place-items:center;font-size:22px;font-weight:600;color:#555">준비중입니다</div>';
+    return;
+  }
   if (state.route === 'main' || state.route === 'stmt') {   // 홈트 새 첫 화면 (10/23) — 미송금 · 배차 요청 · 자료 넣기 · 거래명세표 …
     document.body.classList.remove('erp');
     app.innerHTML = HM.screen(state.route);
