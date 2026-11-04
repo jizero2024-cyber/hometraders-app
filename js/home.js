@@ -11,7 +11,7 @@ import * as CN from './cheonan.js?v=7';   // 천안 재고 (10/31)
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const won = (n) => Math.round(Number(n) || 0).toLocaleString();
 const H = { gwait: 0, fare: null, fareErr: '', inbox: {}, inboxErr: '', at: 0, loading: false, fareAll: false, toast: '', busy: false, box: false, text: '', frame: null };
-try { H.grp = sessionStorage.getItem('ht_grp') || ''; if (H.grp === '창고' || H.grp === '거래처') H.grp = ''; } catch (_) { /* 무시 */ }   // 새로고침해도 창고·거래처 묶음 그대로 (11/02)
+try { H.grp = sessionStorage.getItem('ht_grp') || ''; if (H.grp === '창고' || H.grp === '거래처' || H.grp === '단가표') H.grp = ''; } catch (_) { /* 무시 */ }   // 새로고침해도 창고·거래처 묶음 그대로 (11/02)
 let ctx = { rerender: () => {}, go: () => {}, me: () => '', helper: async () => ({}) };
 
 const svg = (stroke, d) => `<svg viewBox="0 0 24 24" style="width:38px;height:38px;fill:none;stroke:${stroke};stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round">${d}</svg>`;
@@ -140,7 +140,7 @@ function closeN() { return FL.closeItems({ fare: H.fare || [], inbox: (H.inbox.w
 function navHtml() {
   const c = FL.counts(), g = curGrp(), n = (k) => (k ? `<b>${k}</b>` : '');
   const t = (k, lab, badge) => `<button type="button" class="hm-t1 ${g === k ? 'on' : ''}" data-hm="grp" data-g="${k}">${lab}${badge || ''}</button>`;
-  return `<nav class="hm-nav" aria-label="메뉴">${t('출고', '출고', n(closeN()))}${t('전표', '전표 확인', n(c.miss + c.missOld))}${t('단가표', '단가표')}<button type="button" class="hm-t1 off" disabled>창고<i>준비중</i></button></nav>`;   // 창고는 준비중으로 막음 (11/02 대표)
+  return `<nav class="hm-nav" aria-label="메뉴">${t('출고', '출고', n(closeN()))}${t('전표', '전표 확인', n(c.miss + c.missOld))}<button type="button" class="hm-t1 off" disabled>창고<i>준비중</i></button></nav>`;   // 창고는 준비중으로 막음 (11/02 대표) · 단가표 메뉴 숨김 (11/04 대표)
 }
 function subHtml() {
   const c = FL.counts(), v = FL.view(), g = curGrp(), n = (k) => (k ? `<b>${k}</b>` : '');
