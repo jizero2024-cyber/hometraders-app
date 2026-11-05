@@ -275,9 +275,9 @@ function itabHtml(r) {
   const un = (x) => ['un', 'no'].includes(x.sc || 'un') && x.buy !== '—';
   const srcTd = (x) => (FL.srcEd === r.no && un(x) ? `<input class="fd-srci" data-fl-src="${esc(r.no)}" list="fd-srcl" placeholder="구매처·창고" autocomplete="off">` : un(x) ? `<button type="button" class="fd-src ${esc(x.sc || 'un')}" data-fl="srced" data-no="${esc(r.no)}">${esc(x.src)}</button>` : `<span class="fd-src ${esc(x.sc || 'un')}">${esc(x.src)}</span>`);
   const due = r.arr || (r.day && r.day !== '미정' ? r.day : '');   // 납기일 — 언제까지 발주해 달라는 날 (11/02 대표 "나간 날짜는 납기일로")
-  const rows = (r.itab || []).map((x) => `<tr class="${x.miss ? 'fd-miss' : ''}"><td>${esc(x.rd || '')}</td><td>${esc(x.rw || '')}</td><td class="fd-ti">${esc(x.it)}</td><td>${esc(x.q)}</td><td>${srcTd(x)}</td><td>${esc(due || '미정')}</td>${pr(x.buy, x.bp, un(x), x.it)}${pr(x.sale, x.sp, !x.buy || un(x), x.it)}</tr>`).join('');
+  const rows = (r.itab || []).map((x) => `<tr class="${x.miss ? 'fd-miss' : ''}"><td>${esc(x.rd || '')}</td><td>${esc(x.rw || '')}</td><td class="fd-ti">${esc(x.it)}</td><td>${esc(x.q)}</td><td>${srcTd(x)}</td><td>${esc(due || '미정')}</td></tr>`).join('');
   const dl = FL.srcEd === r.no ? `<datalist id="fd-srcl">${['천안창고', ...new Set(S.getPartners().map((p) => p.name).filter(Boolean))].map((n) => `<option value="${esc(n)}">`).join('')}</datalist>` : '';
-  return `<div class="fd-tw"><table class="fd-itab"><thead><tr><th>발주요청일</th><th>요청자</th><th>발주요청품목</th><th>수량</th><th>출고처</th><th>납기일</th><th>구매가 <i class="fd-vat">부가세 별도</i></th><th>판매가 <i class="fd-vat">부가세 별도</i></th></tr></thead><tbody>${rows}</tbody></table>${dl}</div>`;
+  return `<div class="fd-tw"><table class="fd-itab"><thead><tr><th>발주요청일</th><th>요청자</th><th>발주요청품목</th><th>수량</th><th>출고처</th><th>납기일</th></tr></thead><tbody>${rows}</tbody></table>${dl}</div>`;
 }
 function linesHtml(r) {
   return (r.lines || []).map((l) => {
